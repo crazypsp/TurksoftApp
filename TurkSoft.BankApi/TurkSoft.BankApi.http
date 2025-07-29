@@ -1,0 +1,6 @@
+@TurkSoft.BankApi_HostAddress = http://localhost:5215
+
+GET {{TurkSoft.BankApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

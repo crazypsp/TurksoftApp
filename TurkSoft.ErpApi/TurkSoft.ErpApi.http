@@ -1,0 +1,6 @@
+@TurkSoft.ErpApi_HostAddress = http://localhost:5261
+
+GET {{TurkSoft.ErpApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
