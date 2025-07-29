@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TurkSoft.Entities
+namespace TurkSoft.Entities.EntityDB
 {
-    public class SmsGonderim:BaseEntity
+    public class WhatsappGonderim:BaseEntity
     {
         public string AliciNumara { get; set; }
         public string Mesaj { get; set; }

@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TurkSoft.Business\TurkSoft.Business.csproj" />
+    <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
+  </ItemGroup>
+
 </Project>

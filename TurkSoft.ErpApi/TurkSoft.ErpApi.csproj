@@ -21,8 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TurkSoft.Business\TurkSoft.Business.csproj" />
     <ProjectReference Include="..\TurkSoft.Data\TurkSoft.Data.csproj" />
     <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
+    <ProjectReference Include="..\TurkSoft.Service\TurkSoft.Service.csproj" />
   </ItemGroup>
 
 </Project>

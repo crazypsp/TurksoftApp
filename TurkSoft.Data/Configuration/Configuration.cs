@@ -1,7 +1,7 @@
 ﻿// GEREKLİ USING'LER
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TurkSoft.Entities;
+using TurkSoft.Entities.EntityDB;
 
 namespace TurkSoft.Data.Configuration
 {

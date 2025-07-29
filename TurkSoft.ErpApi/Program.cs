@@ -1,5 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;                 // EF Core için gerekli
 using TurkSoft.Data.Context;                         // AppDbContext erişimi için gerekli
+using TurkSoft.Service.Interface;
+using TurkSoft.Service.Manager;
+using TurkSoft.Business.Interface;
+using TurkSoft.Business.Managers;
+using TurkSoft.Entities.EntityDB;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +16,51 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// ✅ Service ve Business Katmanı Bağlantısı
+builder.Services.AddScoped<IKullaniciService, KullaniciManager>();
+builder.Services.AddScoped<IBaseService<Kullanici>, BaseManager<Kullanici>>();
+
+builder.Services.AddScoped<IFirmaService, FirmaManager>();
+builder.Services.AddScoped<IBaseService<Firma>, BaseManager<Firma>>();
+
+builder.Services.AddScoped<ILisansService, LisansManager>();
+builder.Services.AddScoped<IBaseService<Lisans>, BaseManager<Lisans>>();
+
+builder.Services.AddScoped<ILisansAdetService, LisansAdetManager>();
+builder.Services.AddScoped<IBaseService<LisansAdet>, BaseManager<LisansAdet>>();
+
+builder.Services.AddScoped<ILogService, LogManager>();
+builder.Services.AddScoped<IBaseService<Log>, BaseManager<Log>>();
+
+builder.Services.AddScoped<IMailAyarService, MailAyarManager>();
+builder.Services.AddScoped<IBaseService<MailAyar>, BaseManager<MailAyar>>();
+
+builder.Services.AddScoped<IMailGonderimService, MailGonderimManager>();
+builder.Services.AddScoped<IBaseService<MailGonderim>, BaseManager<MailGonderim>>();
+
+builder.Services.AddScoped<IMaliMusavirService, MaliMusavirManager>();
+builder.Services.AddScoped<IBaseService<MaliMusavir>, BaseManager<MaliMusavir>>();
+
+builder.Services.AddScoped<IPaketService, PaketManager>();
+builder.Services.AddScoped<IBaseService<Paket>, BaseManager<Paket>>();
+
+builder.Services.AddScoped<ISmsAyarService, SmsAyarManager>();
+builder.Services.AddScoped<IBaseService<SmsAyar>, BaseManager<SmsAyar>>();
+
+builder.Services.AddScoped<ISmsGonderimService, SmsGonderimManager>();
+builder.Services.AddScoped<IBaseService<SmsGonderim>, BaseManager<SmsGonderim>>();
+
+builder.Services.AddScoped<IUrunFiyatService, UrunFiyatManager>();
+builder.Services.AddScoped<IBaseService<UrunFiyat>, BaseManager<UrunFiyat>>();
+
+builder.Services.AddScoped<IUrunTipiService, UrunTipiManager>();
+builder.Services.AddScoped<IBaseService<UrunTipi>, BaseManager<UrunTipi>>();
+
+builder.Services.AddScoped<IWhatsappAyarService, WhatsappAyarManager>();
+builder.Services.AddScoped<IBaseService<WhatsappAyar>, BaseManager<WhatsappAyar>>();
+
+builder.Services.AddScoped<IWhatsappGonderimService, WhatsappGonderimManager>();
+builder.Services.AddScoped<IBaseService<WhatsappGonderim>, BaseManager<WhatsappGonderim>>();
 
 // --------------------------------------------------
 // ⚙️ Controller servisini DI (Dependency Injection) ile ekliyoruz
