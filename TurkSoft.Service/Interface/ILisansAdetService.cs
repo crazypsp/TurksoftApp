@@ -1,24 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TurkSoft.Entities.EntityDB;
-
-namespace TurkSoft.Service.Interface
-{
-    internal interface ILisansAdetService
-    {
-    }
-}// Gerekli sistem kütüphaneleri
+﻿// Gerekli sistem kütüphaneleri
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 // LisansAdet entity'sinin tanımlı olduğu namespace (varlık sınıfı)
-using TurkSoft.Entities;
+using TurkSoft.Entities.EntityDB;
+
 
 namespace TurkSoft.Service.Interface
 {
