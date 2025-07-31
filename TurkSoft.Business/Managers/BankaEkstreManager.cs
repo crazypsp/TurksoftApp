@@ -1,0 +1,158 @@
+﻿using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Canvas.Parser;
+using Microsoft.AspNetCore.Http;
+using OfficeOpenXml;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Reflection.PortableExecutable;
+using System.Text;
+using System.Threading.Tasks;
+using TurkSoft.Business.Interface;
+using TurkSoft.Entities.Document;
+
+namespace TurkSoft.Business.Managers
+{
+    public class BankaEkstreManager : IBankaEkstreBusiness
+    {
+        private readonly string[] basliklar = ["tarih", "açıklama", "aciklama", "tutar", "bakiye"];
+        public async Task<List<BankaHareket>> OkuExcelAsync(IFormFile dosya, string klasorYolu)
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            using var stream = new MemoryStream();
+            await dosya.CopyToAsync(stream);
+            using var package = new ExcelPackage(stream);
+            var sheet = package.Workbook.Worksheets.FirstOrDefault();
+            if (sheet == null) return new();
+
+            var headerRow = FindHeaderRow(sheet);
+            if (headerRow == -1) return new();
+
+            var indexes = FindColumnIndexes(sheet, headerRow);
+
+            var hareketler = new List<BankaHareket>();
+            for (int i = headerRow + 1; i <= sheet.Dimension.End.Row; i++)
+            {
+                string tarihStr = sheet.Cells[i, indexes["tarih"]].Text.Trim();
+                string aciklama = sheet.Cells[i, indexes["aciklama"]].Text.Trim();
+                string tutarStr = sheet.Cells[i, indexes["tutar"]].Text.Trim();
+                string bakiyeStr = sheet.Cells[i, indexes["bakiye"]].Text.Trim();
+
+                if (DateTime.TryParse(tarihStr, out var tarih) &&
+                    decimal.TryParse(tutarStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var tutar) &&
+                    decimal.TryParse(bakiyeStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var bakiye))
+                {
+                    hareketler.Add(new BankaHareket
+                    {
+                        Tarih = tarih,
+                        Aciklama = aciklama,
+                        Tutar = tutar,
+                        Bakiye = bakiye,
+                        HesapKodu = "",
+                        KaynakDosya = dosya.FileName,
+                        BankaAdi = Path.GetFileNameWithoutExtension(dosya.FileName),
+                        KlasorYolu = klasorYolu
+                    });
+                }
+            }
+            return hareketler;
+        }
+
+        public async Task<List<BankaHareket>> OkuPDFAsync(IFormFile dosya, string KlasorYolu)
+        {
+            var hareketler = new List<BankaHareket>();
+
+            using var stream = new MemoryStream();
+            await dosya.CopyToAsync(stream);
+            using var reader = new PdfReader(stream);
+            using var pdf = new PdfDocument(reader);
+
+            for (int i = 1; i <= pdf.GetNumberOfPages(); i++)
+            {
+                var text = PdfTextExtractor.GetTextFromPage(pdf.GetPage(i));
+                var lines = text.Split('\n');
+
+                foreach (var line in lines)
+                {
+                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length < 4) continue;
+
+                    if (DateTime.TryParse(parts[0], out var tarih) &&
+                        decimal.TryParse(parts[^2], NumberStyles.Any, CultureInfo.InvariantCulture, out var tutar) &&
+                        decimal.TryParse(parts[^1], NumberStyles.Any, CultureInfo.InvariantCulture, out var bakiye))
+                    {
+                        string aciklama = string.Join(' ', parts.Skip(1).Take(parts.Length - 3));
+                        hareketler.Add(new BankaHareket
+                        {
+                            Tarih = tarih,
+                            Aciklama = aciklama,
+                            Tutar = tutar,
+                            Bakiye = bakiye,
+                            HesapKodu = "",
+                            KaynakDosya = dosya.FileName,
+                            BankaAdi = Path.GetFileNameWithoutExtension(dosya.FileName),
+                            KlasorYolu = KlasorYolu
+                        });
+                    }
+                }
+            }
+
+            return hareketler;
+        }
+
+        public async Task<List<HesapKodEsleme>> OkuTxtAsync(IFormFile dosya, string KlasorYolu)
+        {
+            var liste = new List<HesapKodEsleme>();
+            using var reader = new StreamReader(dosya.OpenReadStream());
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                var parts = line?.Split('=');
+                if (parts?.Length == 2)
+                {
+                    liste.Add(new HesapKodEsleme
+                    {
+                        AnahtarKelime = parts[0].Trim(),
+                        HesapKodu = parts[1].Trim()
+                    });
+                }
+            }
+            return liste;
+        }
+
+        public async Task<bool> YazTxtAsync(List<HesapKodEsleme> eslemeler, string KlasorYolu)
+        {
+            var path = Path.Combine("Dosyalar", KlasorYolu.Replace('/', Path.DirectorySeparatorChar), "accounting_match.txt");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            var lines = eslemeler.Select(x => $"{x.AnahtarKelime}={x.HesapKodu}");
+            await File.WriteAllLinesAsync(path, lines);
+            return true;
+        }
+
+        private int FindHeaderRow(ExcelWorksheet sheet)
+        {
+            for (int row = 1; row < sheet.Dimension.End.Row; row++)
+            {
+                var headers = Enumerable.Range(1, sheet.Dimension.End.Column)
+                    .Select(col => sheet.Cells[row, col].Text.Trim().ToLower()).ToList();
+                if (headers.Any(h => basliklar.Any(b => headers.Contains(b))))
+                    return row;
+            }
+            return -1;
+        }
+        private Dictionary<string, int> FindColumnIndexes(ExcelWorksheet sheet, int headerRow)
+        {
+            var map=new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int col = 1; col <= sheet.Dimension.End.Column; col++)
+            {
+                string val = sheet.Cells[headerRow, col].Text.Trim().ToLower();
+                if (val.Contains("tarih")) map["tarih"] = col;
+                else if (val.Contains("açıklama") || val.Contains("aciklama")) map["aciklama"] = col;
+                else if (val.Contains("tutar")) map["tutar"] = col;
+                else if (val.Contains("bakiye")) map["bakiye"] = col;
+            }
+            return map;
+        }
+    }
+}

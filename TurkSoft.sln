@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36212.18 d17.14
+VisualStudioVersion = 17.14.36212.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.Entities", "TurkSoft.Entities\TurkSoft.Entities.csproj", "{BC734FD7-DB9F-4760-950C-47613897260D}"
 EndProject
@@ -18,6 +18,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.WebUI", "TurkSoft.WebUI\TurkSoft.WebUI.csproj", "{EBD28F85-1DD8-4130-8AE4-E2586FBFC304}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.DestopUI", "TurkSoft.DestopUI\TurkSoft.DestopUI.csproj", "{655FB5BC-47B0-47E6-9112-5A16991BD748}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.DocumentApi", "TurkSoft.DocumentApi\TurkSoft.DocumentApi.csproj", "{9BDD043A-5E30-47AE-99A0-D42F7A17A83A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +59,10 @@ Global
 		{655FB5BC-47B0-47E6-9112-5A16991BD748}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{655FB5BC-47B0-47E6-9112-5A16991BD748}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{655FB5BC-47B0-47E6-9112-5A16991BD748}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BDD043A-5E30-47AE-99A0-D42F7A17A83A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BDD043A-5E30-47AE-99A0-D42F7A17A83A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BDD043A-5E30-47AE-99A0-D42F7A17A83A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BDD043A-5E30-47AE-99A0-D42F7A17A83A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
