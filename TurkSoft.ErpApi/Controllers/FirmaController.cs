@@ -20,6 +20,7 @@ namespace TurkSoft.ErpApi.Controllers
         public async Task<IActionResult> GetAll()
         {
             var result=await _service.GetAllAsync();
+
             return Ok(result);
         }
         //GET: api/firma/{id}
