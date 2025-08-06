@@ -1,0 +1,6 @@
+@TurkSoft.MatchingApi_HostAddress = http://localhost:5234
+
+GET {{TurkSoft.MatchingApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,6 @@
+@TurkSoft.LucaApi_HostAddress = http://localhost:5192
+
+GET {{TurkSoft.LucaApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
