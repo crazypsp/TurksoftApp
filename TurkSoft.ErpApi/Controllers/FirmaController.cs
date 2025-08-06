@@ -12,6 +12,7 @@ namespace TurkSoft.ErpApi.Controllers
         private readonly IFirmaService _service;
         public FirmaController(IFirmaService service)
         {
+
             _service=service;
         }
         //GET: api/firma
