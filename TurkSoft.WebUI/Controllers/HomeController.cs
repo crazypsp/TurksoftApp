@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using TurkSoft.WebUI.Models;
+using WebUI.Models;
 
 namespace TurkSoft.WebUI.Controllers
 {
