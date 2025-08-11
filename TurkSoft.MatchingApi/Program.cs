@@ -3,19 +3,36 @@ using TurkSoft.Service.Interface;
 using TurkSoft.Service.Manager;
 
 var builder = WebApplication.CreateBuilder(args);
-// ? Service ve Business Katmaný Baðlantýsý
+
+// Service & Business
 builder.Services.AddScoped<IBankaEkstreAnalyzerService, BankaEkstreAnalyzerManagerSrv>();
 builder.Services.AddScoped<IBankaEkstreAnalyzerBusiness, BankaEkstreAnalyzerManager>();
-// Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// ******** CORS ********
+// WebUI origin’in: https://localhost:7228 (gerekirse http varyantýný da ekleyebilirsin)
+const string CorsPolicyName = "AllowWebUI";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        policy
+            .WithOrigins(
+                "https://localhost:7228"  // WebUI
+                                          // ,"http://localhost:7228" // UI http kullanýyorsa aç
+            )
+            .AllowAnyMethod()     // POST/GET/OPTIONS vs.
+            .AllowAnyHeader()     // Content-Type, Authorization vs.
+                                  // .AllowCredentials() // Cookie/tabanlý auth gerekiyorsa aç; açarsan WithOrigins zorunlu (AllowAnyOrigin ile birlikte kullanýlamaz)
+            .SetPreflightMaxAge(TimeSpan.FromHours(1)); // opsiyonel: preflight cache
+    });
+});
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -23,6 +40,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// !!! CORS middleware'ini Authorization'dan ÖNCE çaðýr
+app.UseCors(CorsPolicyName);
 
 app.UseAuthorization();
 

@@ -1,0 +1,56 @@
+<div class="col-xl-8 col-lg-6 col-md-6">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-4">
+                <div>
+                    <h6 class="text-body">Ekstre Yükle</h6>
+                </div>
+                <div class="avatar bg-primary text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                    <i class="ti ti-building-bank fs-2"></i>
+                </div>
+            </div>
+
+            <!-- Firma Seçme Alanı -->
+            <div class="mb-3">
+                <label for="firmaSelect" class="form-label">Firma Seç</label>
+                <select id="firmaSelect" class="form-select select2" data-placeholder="Firma ara...">
+                    <option value="">Firma seçiniz</option>
+                    <option value="8316616-456789">YUSUF1</option>
+                    <option value="7856554-ysf*.123456">YUSUFBEY</option>
+                    <option value="3">Firma 3</option>
+                </select>
+            </div>
+
+            <!-- Butonlar -->
+            <div class="d-flex gap-2">
+                <button type="button" id="btnMatch" class="btn btn-info" disabled>
+                    <i class="ti ti-link me-1"></i> Hesap Eşleştirme
+                </button>
+                <!-- Transfer (şimdilik pasif bırakıyorum; sonra bağlarız) -->
+                <button type="button" id="btnTransfer" class="btn btn-success" disabled>
+                    <i class="ti ti-transfer me-1"></i> Transfer İşlemi
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="col-xl-4 col-lg-6 col-md-6">
+    <div class="card h-100">
+        <div class="row h-100">
+            <div class="col-sm-12">
+                <div class="d-flex align-items-end h-100 justify-content-center mt-sm-0 mt-4">
+                    <form action="/upload" class="dropzone needsclick" id="dropzone-basic">
+                        <div class="dz-message needsclick">
+                            Ekstre Dosyası Seçiniz
+                        </div>
+                        <div class="fallback">
+                            <input name="file" type="file" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

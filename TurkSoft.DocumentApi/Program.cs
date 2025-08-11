@@ -2,14 +2,11 @@
 using TurkSoft.Business.Managers;
 using TurkSoft.Service.Interface;
 using TurkSoft.Service.Manager;
-using Microsoft.OpenApi.Models;
-using TurkSoft.Entities.Document;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ---------------------------------------------------
-// ✅ Service ve Business Katmanı Bağlantısı
-// DI (Dependency Injection) ile sınıflar sisteme tanıtılıyor
+// ✅ Service ve Business Katmanı Bağlantısı (Dependency Injection ile tanımlama)
 // ---------------------------------------------------
 builder.Services.AddScoped<IBankaEkstreService, BankaEkstreManagerSrv>();
 builder.Services.AddScoped<IBankaEkstreBusiness, BankaEkstreManager>();
@@ -24,24 +21,27 @@ builder.Services.AddControllers();
 // ---------------------------------------------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-//builder.Services.AddSwaggerGen(options =>
-//{
-//    options.SwaggerDoc("v1", new OpenApiInfo
-//    {
-//        Title = "TurkSoft Banka Ekstre API",
-//        Version = "v1",
-//        Description = "Excel, PDF ve TXT Banka ekstre işlemleri için Web API"
-//    });
-//});
+// (İsteğe bağlı Swagger yapılandırması buraya eklenebilir)
 
 // ---------------------------------------------------
-// ✅ Uygulama nesnesi oluşturuluyor
+// ✅ CORS politikası tanımlama (AllowAll adında bir politika)
+// Bu satırı builder.Build() ÇAĞRILMADAN ÖNCE ekleyin
+// ---------------------------------------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policyBuilder =>
+        policyBuilder.AllowAnyOrigin()
+                     .AllowAnyMethod()
+                     .AllowAnyHeader());
+});
+
+// ---------------------------------------------------
+// ✅ Uygulama oluşturuluyor
 // ---------------------------------------------------
 var app = builder.Build();
 
 // ---------------------------------------------------
-// ✅ Hata ayıklama ve Swagger UI yapılandırması
-// Geliştirme ortamında detaylı hataları göster
+// ✅ Geliştirme ortamında Swagger UI etkinleştir
 // ---------------------------------------------------
 if (app.Environment.IsDevelopment())
 {
@@ -50,13 +50,18 @@ if (app.Environment.IsDevelopment())
 }
 
 // ---------------------------------------------------
-// HTTPS yönlendirme ve yetkilendirme
+// ✅ HTTP istek işleme ardışık düzeni (middleware pipeline)
 // ---------------------------------------------------
 app.UseHttpsRedirection();
+
+// CORS politikasını uygulama (AllowAll politikasını kullan)
+// Bunu Authorization'dan ÖNCE çağırmak gerekir:
+app.UseCors("AllowAll");
+
 app.UseAuthorization();
 app.MapControllers();
 
 // ---------------------------------------------------
-// ✅ Uygulama çalıştırılır
+// ✅ Uygulamayı çalıştır
 // ---------------------------------------------------
 app.Run();

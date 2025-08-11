@@ -52,7 +52,7 @@ namespace TurkSoft.MatchingApi.Controllers
         public List<BankaHareket> Hareketler { get; set; } = new();
         public List<AccountingCode> HesapKodlari { get; set; } = new();
         public Dictionary<string, string> KeywordMap { get; set; } = new();
-        public string BankaHesapKodu { get; set; }
+        public string BankaHesapKodu { get; set; } = "102.01.001";
     }
 }
 

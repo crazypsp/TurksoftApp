@@ -4,18 +4,42 @@ using TurkSoft.Service.Interface;
 using TurkSoft.Service.Manager;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// -------------------------
+// DI
+// -------------------------
 builder.Services.AddScoped<ILucaAutomationService, LucaAutomationManagerSrv>();
 builder.Services.AddScoped<ILucaAutomationBussiness, LucaAutomationManager>();
-// Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// -------------------------
+// CORS
+// -------------------------
+const string WebUiCorsPolicy = "AllowWebUI";
+// UI origin'in tam adresi (proto + host + port)
+var uiOrigin = "https://localhost:7228";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(WebUiCorsPolicy, policy =>
+    {
+        policy.WithOrigins(uiOrigin)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              // Cookie/Session veya Authorization header ile çalýþýyorsan açýk kalsýn:
+              .AllowCredentials();
+        // NOT: AllowCredentials() ile '*' kullanýlamaz, tek tek origin yazýlmalý.
+    });
+});
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// -------------------------
+// Middleware Pipeline
+// -------------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -23,6 +47,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// CORS, Authorization'dan ve MapControllers'tan ÖNCE olmalý
+app.UseCors(WebUiCorsPolicy);
 
 app.UseAuthorization();
 

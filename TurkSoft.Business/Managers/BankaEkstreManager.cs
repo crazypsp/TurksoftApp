@@ -1,5 +1,6 @@
 ﻿using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
+using iText.Kernel.Pdf.Canvas.Parser.Listener;
 using Microsoft.AspNetCore.Http;
 using OfficeOpenXml;
 using System;
@@ -39,9 +40,13 @@ namespace TurkSoft.Business.Managers
                 string tutarStr = sheet.Cells[i, indexes["tutar"]].Text.Trim();
                 string bakiyeStr = sheet.Cells[i, indexes["bakiye"]].Text.Trim();
 
-                if (DateTime.TryParse(tarihStr, out var tarih) &&
-                    decimal.TryParse(tutarStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var tutar) &&
-                    decimal.TryParse(bakiyeStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var bakiye))
+                // Tarih parse (Türkçe format ve '-' düzeltme)
+                var turkceCulture = new CultureInfo("tr-TR");
+                tarihStr = tarihStr.Replace("-", " "); // 04/07/2025 11:39:10
+
+                if (DateTime.TryParse(tarihStr, turkceCulture, DateTimeStyles.None, out var tarih) &&
+                    decimal.TryParse(tutarStr, NumberStyles.Number, turkceCulture, out var tutar) &&
+                    decimal.TryParse(bakiyeStr, NumberStyles.Number, turkceCulture, out var bakiye))
                 {
                     hareketler.Add(new BankaHareket
                     {
@@ -59,30 +64,61 @@ namespace TurkSoft.Business.Managers
             return hareketler;
         }
 
-        public async Task<List<BankaHareket>> OkuPDFAsync(IFormFile dosya, string KlasorYolu)
+        public async Task<List<BankaHareket>> OkuPDFAsync(IFormFile dosya, string klasorYolu)
         {
             var hareketler = new List<BankaHareket>();
 
+            // PDF stream yükle
             using var stream = new MemoryStream();
             await dosya.CopyToAsync(stream);
-            using var reader = new PdfReader(stream);
+            stream.Position = 0;
+
+            // PDF format kontrolü
+            byte[] header = new byte[5];
+            await stream.ReadAsync(header, 0, 5);
+            string headerText = Encoding.ASCII.GetString(header);
+            if (!headerText.StartsWith("%PDF", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Gönderilen dosya geçerli bir PDF formatında değil.");
+            }
+
+            // Tekrar başa al
+            stream.Position = 0;
+
+            // Şifreli PDF desteği için ReaderProperties
+            var readerProps = new ReaderProperties();
+            // readerProps.SetPassword(Encoding.UTF8.GetBytes("PAROLA")); // Gerekirse aktif et
+
+            using var reader = new PdfReader(stream, readerProps);
             using var pdf = new PdfDocument(reader);
+
+            var turkceCulture = new CultureInfo("tr-TR");
 
             for (int i = 1; i <= pdf.GetNumberOfPages(); i++)
             {
-                var text = PdfTextExtractor.GetTextFromPage(pdf.GetPage(i));
-                var lines = text.Split('\n');
+                // Daha iyi satır koruması için LocationTextExtractionStrategy kullan
+                var strategy = new LocationTextExtractionStrategy();
+                string pageText = PdfTextExtractor.GetTextFromPage(pdf.GetPage(i), strategy);
+
+                // Satırlara ayır ve boşlukları temizle
+                var lines = pageText
+                    .Replace("\r", "")
+                    .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .ToList();
 
                 foreach (var line in lines)
                 {
                     var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length < 4) continue;
 
-                    if (DateTime.TryParse(parts[0], out var tarih) &&
-                        decimal.TryParse(parts[^2], NumberStyles.Any, CultureInfo.InvariantCulture, out var tutar) &&
-                        decimal.TryParse(parts[^1], NumberStyles.Any, CultureInfo.InvariantCulture, out var bakiye))
+                    // İlk alan tarih mi kontrol et
+                    if (DateTime.TryParse(parts[0], turkceCulture, DateTimeStyles.None, out var tarih) &&
+                        decimal.TryParse(parts[^2], NumberStyles.Number, turkceCulture, out var tutar) &&
+                        decimal.TryParse(parts[^1], NumberStyles.Number, turkceCulture, out var bakiye))
                     {
                         string aciklama = string.Join(' ', parts.Skip(1).Take(parts.Length - 3));
+
                         hareketler.Add(new BankaHareket
                         {
                             Tarih = tarih,
@@ -92,7 +128,7 @@ namespace TurkSoft.Business.Managers
                             HesapKodu = "",
                             KaynakDosya = dosya.FileName,
                             BankaAdi = Path.GetFileNameWithoutExtension(dosya.FileName),
-                            KlasorYolu = KlasorYolu
+                            KlasorYolu = klasorYolu
                         });
                     }
                 }
@@ -100,6 +136,7 @@ namespace TurkSoft.Business.Managers
 
             return hareketler;
         }
+    
 
         public async Task<List<HesapKodEsleme>> OkuTxtAsync(IFormFile dosya, string KlasorYolu)
         {
