@@ -1,99 +1,95 @@
-﻿// Entity Framework Core kütüphanesi, DbContext ve DbSet gibi yapıları kullanmak için gereklidir
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-// Uygulamaya özel DbContext sınıfı (veri tabanı bağlantısı ve DbSet'ler burada tanımlanır)
-using TurkSoft.Data.Context;
-// Tüm varlıkların (entity) temel sınıfı BaseEntity burada tanımlı
-// Generic servis arayüzü (interface) burada tanımlı
-using TurkSoft.Business.Interface;
-using TurkSoft.Entities.EntityDB;
+﻿using Microsoft.EntityFrameworkCore;   // EF Core DbContext/DbSet/EF.Property için
+using System;                          // Guid / DateTime için
+using System.Collections.Generic;      // List<T> için
+using System.Threading;                // CancellationToken için
+using System.Threading.Tasks;          // Task tabanlı imzalar için
+using TurkSoft.Business.Interface;     // IBaseService<T> sözleşmesi için
+using TurkSoft.Data.Context;           // AppDbContext için
 
-namespace TurkSoft.Business.Managers
+namespace TurkSoft.Business.Manager
 {
-    // BaseManager sınıfı, IBaseService<T> arayüzünü implement eder
-    // T: BaseEntity'den türeyen bir sınıf olmalıdır (where T : BaseEntity)
-    public class BaseManager<T> : IBaseService<T> where T : BaseEntity
+    /// <summary>
+    /// EF Core tabanlı generic servis implementasyonu.
+    /// - T => herhangi bir entity (class)
+    /// - Soft-delete: DeleteDate gölge/CLR alanını doldurur, varsa IsActive=false yapar
+    /// - Global soft-delete filtresi AppDbContext'te tanımlıdır (DeleteDate == null)
+    /// </summary>
+    public class BaseManager<T> : IBaseService<T> where T : class
     {
-        // protected tanımlanan context, bu sınıftan türetilen alt sınıflar tarafından da erişilebilir
-        protected readonly AppDbContext _context;
+        // DbContext referansı: EF işlemlerinin merkezi
+        private readonly AppDbContext _db;
 
-        // Generic DbSet tanımı; örneğin DbSet<User> gibi çalışır
-        private readonly DbSet<T> _dbSet;
+        // T tipi için doğrudan DbSet; Sorgu/Ekleme/Güncelleme/Silme işlemleri buradan yürür
+        private readonly DbSet<T> _set;
 
-        // Constructor metodu: DI (Dependency Injection) ile AppDbContext sınıfı enjekte edilir
-        public BaseManager(AppDbContext context)
+        /// <summary>
+        /// DI (Dependency Injection) ile DbContext enjekte edilir.
+        /// </summary>
+        public BaseManager(AppDbContext db)
         {
-            _context = context;
-
-            // Generic tipteki DbSet nesnesi context üzerinden alınır
-            _dbSet = _context.Set<T>();
+            _db = db;             // Field'a atama
+            _set = _db.Set<T>();  // İlgili entity için DbSet elde edilir
         }
 
-        // Yeni bir kayıt eklemek için kullanılan asenkron metot
-        public async Task<T> AddAsync(T entity)
+        /// <inheritdoc />
+        public async Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            // DbSet üzerinden nesne eklenir
-            await _dbSet.AddAsync(entity);
+            // EF.Property<Guid>(e, "Id"): CLR property olmasa bile (shadow) Id alanını güvenle erişir
+            return await _set.FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id, ct);
+        }
 
-            // Değişiklikler veritabanına kaydedilir
-            await _context.SaveChangesAsync();
+        /// <inheritdoc />
+        public async Task<List<T>> GetAllAsync(CancellationToken ct = default)
+        {
+            // AsNoTracking: Okuma senaryolarında değişiklik takibini kapatır ⇒ performans kazanımı
+            return await _set.AsNoTracking().ToListAsync(ct);
+        }
 
-            // Eklenen nesne geri döner
+        /// <inheritdoc />
+        public async Task<T> AddAsync(T entity, CancellationToken ct = default)
+        {
+            // Ekleme işlemine entity'i al ve EF değişiklik izleyicisine ekle
+            await _set.AddAsync(entity, ct);
+
+            // AppDbContext.SaveChanges* içinde CreateDate/IsActive güvenceye alınır
+            await _db.SaveChangesAsync(ct);
+
+            // Persist edilen nesneyi geri döndür
             return entity;
         }
 
-        // Verilen id’ye sahip kaydı silmek için kullanılır (soft delete mantığıyla)
-        public async Task<bool> DeleteAsync(Guid id)
+        /// <inheritdoc />
+        public async Task<T> UpdateAsync(T entity, CancellationToken ct = default)
         {
-            // İlgili id’ye sahip kayıt bulunur
-            var entity = await _dbSet.FindAsync(id);
+            // Var olan kaydı güncelle (değişmiş alanları EF izler)
+            _set.Update(entity);
 
-            // Kayıt bulunamazsa false döner
-            if (entity == null) return false;
+            // AppDbContext.SaveChanges* içinde UpdateDate güncellenir
+            await _db.SaveChangesAsync(ct);
 
-            // Soft delete işlemi: IsActive false yapılır ve silinme tarihi atanır
-            entity.IsActive = false;
-            entity.DeleteDate = DateTime.Now;
-
-            // Değişiklikler veritabanına kaydedilir
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        // Tüm aktif kayıtları listeleyen metot
-        public async Task<List<T>> GetAllAsync()
-        {
-            return await _dbSet
-                .AsNoTracking()         // Performans için takip edilmeden sorgulanır (read-only)
-                .Where(x => x.IsActive) // Sadece aktif kayıtlar getirilir
-                .ToListAsync();         // Liste olarak döndürülür
-        }
-
-        // Belirli bir id'ye sahip olan ve aktif olan kaydı getiren metot
-        public async Task<T> GetByIdAsync(Guid id)
-        {
-            return await _dbSet
-                .AsNoTracking()                         // Performans amaçlı tracking kapalı
-                .FirstOrDefaultAsync(x => x.Id == id && x.IsActive); // ID’ye ve aktifliğe göre filtreleme
-        }
-
-        // Mevcut bir nesneyi güncelleyen metot
-        public async Task<T> UpdateAsync(T entity)
-        {
-            // Güncellenme zamanı güncellenir
-            entity.UpdateDate = DateTime.Now;
-
-            // Entity güncellenir
-            _dbSet.Update(entity);
-
-            // Değişiklikler veritabanına kaydedilir
-            await _context.SaveChangesAsync();
-
-            // Güncellenmiş nesne geri döner
+            // Güncellenen nesne geri döner
             return entity;
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+        {
+            // Önce silinecek kaydı getir
+            var entity = await GetByIdAsync(id, ct);
+            if (entity == null) return false; // Yoksa false
+
+            // Soft-delete: DeleteDate alanına UTC zamanını yaz
+            _db.Entry(entity).Property<DateTime?>("DeleteDate").CurrentValue = DateTime.UtcNow;
+
+            // Varsa IsActive alanını false yap (shadow/CLR fark etmeksizin)
+            var isActiveProp = _db.Entry(entity).Property<bool?>("IsActive");
+            if (isActiveProp != null)
+                isActiveProp.CurrentValue = false;
+
+            // Değişiklikleri kalıcılaştır
+            await _db.SaveChangesAsync(ct);
+
+            return true; // Başarılı
         }
     }
 }

@@ -7,8 +7,35 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="CodeGen\Generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Generated.tt</DependentUpon>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TurkSoft.Business\TurkSoft.Business.csproj" />
     <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="CodeGen\Generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Generated.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="CodeGen\Generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Generated.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 </Project>

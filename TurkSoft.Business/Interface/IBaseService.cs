@@ -1,35 +1,41 @@
-﻿// Gerekli sistem kütüphaneleri
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;                         // Guid tipi ve temel sistem tipleri için
+using System.Collections.Generic;     // List<T> için
+using System.Threading;               // CancellationToken için
+using System.Threading.Tasks;         // Task tabanlı asenkron imzalar için
 
-// Bu interface, iş katmanında kullanılacak genel servis şablonlarını içerir
 namespace TurkSoft.Business.Interface
 {
-    // Generic bir interface tanımlanıyor. T, class tipinde olmak zorunda.
-    // Bu sayede tüm entity'ler için tekrar tekrar CRUD yazmak yerine bu şablon kullanılabilir.
+    /// <summary>
+    /// Tüm entity'ler için ortak CRUD işlevlerini tanımlayan generic servis sözleşmesi.
+    /// Bu arayüz; veri erişim katmanıyla iş katmanı arasında arabulucu görevi görür.
+    /// </summary>
+    /// <typeparam name="T">İşlemlerin yapılacağı entity tipi (ör. Firma, Satis...)</typeparam>
     public interface IBaseService<T> where T : class
     {
-        // Verilen GUID (id) değerine göre T tipinde (örneğin User, Firma vs.) bir nesne döner.
-        // Asenkron çalışır, yani işlem tamamlandığında sonucu döner.
-        Task<T> GetByIdAsync(Guid id);
+        /// <summary>
+        /// Verilen Id'ye göre tekil kaydı döndürür. Kaydı bulamazsa null döner.
+        /// </summary>
+        Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
-        // Veritabanındaki tüm T tipindeki nesneleri listeler.
-        // Örneğin tüm kullanıcıları, tüm firmaları vs.
-        Task<List<T>> GetAllAsync();
+        /// <summary>
+        /// Tüm aktif (soft-delete uygulanmamış) kayıtları listeler.
+        /// </summary>
+        Task<List<T>> GetAllAsync(CancellationToken ct = default);
 
-        // Verilen T tipindeki (örneğin yeni bir kullanıcı) nesneyi veritabanına ekler.
-        // Eklenen nesneyi geri döner.
-        Task<T> AddAsync(T entity);
+        /// <summary>
+        /// Yeni bir kayıt ekler ve eklenen nesneyi döndürür.
+        /// </summary>
+        Task<T> AddAsync(T entity, CancellationToken ct = default);
 
-        // Verilen T nesnesini günceller.
-        // Güncellenmiş haliyle geri döner.
-        Task<T> UpdateAsync(T entity);
+        /// <summary>
+        /// Var olan bir kaydı günceller ve güncellenen nesneyi döndürür.
+        /// </summary>
+        Task<T> UpdateAsync(T entity, CancellationToken ct = default);
 
-        // Verilen GUID'e göre bir nesneyi siler.
-        // Silme işlemi başarılıysa true, değilse false döner.
-        Task<bool> DeleteAsync(Guid id);
+        /// <summary>
+        /// Soft delete uygular (DeleteDate alanını doldurur, varsa IsActive=false yapar).
+        /// Başarılıysa true, değilse false döner.
+        /// </summary>
+        Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
     }
 }
