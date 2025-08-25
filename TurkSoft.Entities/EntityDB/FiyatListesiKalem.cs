@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.EntityDB
 {
-    public class UrunFiyat:BaseEntity
+    public class FiyatListesiKalem:BaseEntity
     {
+        public Guid FiyatListesiId { get; set; }
+        public FiyatListesi FiyatListesi { get; set; }
+
         public Guid PaketId { get; set; }
         public Paket Paket { get; set; }
-        public decimal Fiyat { get; set; }
-        public string ParaBirimi { get; set; }
-        public DateTime GecerlilikBaslangic { get; set; }
-        public DateTime? GecerlilikBitis { get; set; }
+
+        public decimal BirimFiyat { get; set; }
     }
 }

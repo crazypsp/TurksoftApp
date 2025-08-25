@@ -10,7 +10,7 @@ namespace TurkSoft.ErpApi.Controllers
     public class KeyAccountController : ControllerBase
     {
         private readonly IFirmaService _service;
-        public FirmaController(IFirmaService service)
+        public KeyAccountController(IFirmaService service)
         {
 
             _service = service;

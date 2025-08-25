@@ -6,13 +6,15 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.EntityDB
 {
-    public class Kullanici:BaseEntity
+    public class IletisimKisi:BaseEntity
     {
+        public Guid FirmaId { get; set; }
+        public Firma Firma { get; set; }
+
         public string AdSoyad { get; set; }
         public string Eposta { get; set; }
-        public string Sifre { get; set; }
         public string Telefon { get; set; }
-        public string Rol { get; set; }
-        public string? ProfilResmiUrl { get; set; }
+
+        public Adres Adres { get; set; }
     }
 }

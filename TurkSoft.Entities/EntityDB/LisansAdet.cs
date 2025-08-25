@@ -8,9 +8,10 @@ namespace TurkSoft.Entities.EntityDB
 {
     public class LisansAdet:BaseEntity
     {
-        public int MaxCihazSayisi { get; set; }
+        public Guid LisansId { get; set; }
+        public Lisans Lisans { get; set; }
+
         public int KuruluCihazSayisi { get; set; }
-        public Guid MaliMusavirId { get; set; }
-        public MaliMusavir MaliMusavir { get; set; }
+        public int? Limit { get; set; }
     }
 }

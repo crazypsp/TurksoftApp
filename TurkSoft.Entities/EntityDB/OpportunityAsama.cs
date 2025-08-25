@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.EntityDB
 {
-    public class UrunTipi:BaseEntity
+    public class OpportunityAsama:BaseEntity
     {
+        public string Kod { get; set; }    // NEW, QUAL, PROP, WON, LOST...
         public string Ad { get; set; }
-        public string Aciklama { get; set; }
-        public ICollection<Paket> Paketler { get; set; } = new List<Paket>();
+        public decimal OlasilikYuzde { get; set; }
     }
 }

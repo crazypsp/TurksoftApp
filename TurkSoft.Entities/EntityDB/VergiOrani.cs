@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.EntityDB
 {
-    public class Log:BaseEntity
+    public class VergiOrani:BaseEntity
     {
-        public string Islem {  get; set; }
-        public string IpAdres { get; set; }
-        public string Tarayici { get; set; }
+        public string Kod { get; set; }   // KDV18 vb.
+        public decimal Oran { get; set; }
     }
 }

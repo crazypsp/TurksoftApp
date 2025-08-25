@@ -12,5 +12,10 @@ namespace TurkSoft.Entities.EntityDB
         public string Aciklama { get; set; }
         public Guid UrunTipiId { get; set; }
         public UrunTipi UrunTipi { get; set; }
+        public ICollection<UrunFiyat> UrunFiyatlar { get; set; } = new List<UrunFiyat>();
+        public ICollection<Satis> Satislar { get; set; } = new List<Satis>();
+        public ICollection<Teklif> Teklifler { get; set; } = new List<Teklif>();
+        public ICollection<BayiKomisyonTarife> BayiKomisyonTarifeleri { get; set; } = new List<BayiKomisyonTarife>();
+        public ICollection<PaketIskonto> PaketIskontolar { get; set; } = new List<PaketIskonto>();
     }
 }

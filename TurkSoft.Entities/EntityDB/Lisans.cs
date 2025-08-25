@@ -11,8 +11,9 @@ namespace TurkSoft.Entities.EntityDB
         public string LisansAnahtari { get; set; }
         public DateTime BaslangicTarihi { get; set; }
         public DateTime BitisTarihi { get; set; }
-        public bool AktifMi { get; set; }
-        public Guid MaliMusavirId { get; set; }
-        public MaliMusavir MaliMusavir { get; set; }
+        public bool YenilendiMi { get; set; }
+
+        public Guid SatisId { get; set; }
+        public Satis Satis { get; set; }
     }
 }

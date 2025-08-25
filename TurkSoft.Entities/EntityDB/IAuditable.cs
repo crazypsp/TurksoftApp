@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.EntityDB
 {
-    public class Log:BaseEntity
+    // Audit için (SaveChanges içinde doldurulur)
+    public interface IAuditable
     {
-        public string Islem {  get; set; }
-        public string IpAdres { get; set; }
-        public string Tarayici { get; set; }
+        Guid CreatedByUserId { get; set; }
+        Guid UpdatedByUserId { get; set; }
     }
 }

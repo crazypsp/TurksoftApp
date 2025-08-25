@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.EntityDB
 {
+    // === BASE & COMMON ===
     public abstract class BaseEntity
     {
         public Guid Id { get; set; } = Guid.NewGuid();

@@ -11,6 +11,6 @@ namespace TurkSoft.Entities.EntityDB
         public string UyeNo { get; set; }
         public string KullaniciAdi { get; set; }
         public string Parola { get; set; }
-        public ICollection<MaliMusavir> MaliMusavirs { get; set; }
+        public ICollection<MaliMusavir> MaliMusavirs { get; set; } = new List<MaliMusavir>();
     }
 }
