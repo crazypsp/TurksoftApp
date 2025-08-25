@@ -1,6 +1,8 @@
-﻿using iText.Kernel.Pdf;
+﻿// iText7
+using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
+using iText.Kernel.Geom;
 using Microsoft.AspNetCore.Http;
 using OfficeOpenXml;
 using System;
@@ -56,7 +58,7 @@ namespace TurkSoft.Business.Managers
                         Bakiye = bakiye,
                         HesapKodu = "",
                         KaynakDosya = dosya.FileName,
-                        BankaAdi = Path.GetFileNameWithoutExtension(dosya.FileName),
+                        BankaAdi = System.IO.Path.GetFileNameWithoutExtension(dosya.FileName),
                         KlasorYolu = klasorYolu
                     });
                 }
@@ -127,7 +129,7 @@ namespace TurkSoft.Business.Managers
                             Bakiye = bakiye,
                             HesapKodu = "",
                             KaynakDosya = dosya.FileName,
-                            BankaAdi = Path.GetFileNameWithoutExtension(dosya.FileName),
+                            BankaAdi = System.IO.Path.GetFileNameWithoutExtension(dosya.FileName),
                             KlasorYolu = klasorYolu
                         });
                     }
@@ -160,8 +162,8 @@ namespace TurkSoft.Business.Managers
 
         public async Task<bool> YazTxtAsync(List<HesapKodEsleme> eslemeler, string KlasorYolu)
         {
-            var path = Path.Combine("Dosyalar", KlasorYolu.Replace('/', Path.DirectorySeparatorChar), "accounting_match.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            var path = System.IO.Path.Combine("Dosyalar", KlasorYolu.Replace('/', System.IO.Path.DirectorySeparatorChar), "accounting_match.txt");
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
             var lines = eslemeler.Select(x => $"{x.AnahtarKelime}={x.HesapKodu}");
             await File.WriteAllLinesAsync(path, lines);
             return true;

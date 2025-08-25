@@ -33,7 +33,8 @@ namespace TurkSoft.Data.Context
         public DbSet<UrunTipi> UrunTipiler { get; set; }               // Ürün tipi tanımları
         public DbSet<WhatsappAyar> WhatsappAyarlar { get; set; }       // WhatsApp API ayarları
         public DbSet<WhatsappGonderim> WhatsappGonderimler { get; set; } // WhatsApp gönderim logları
-
+        public DbSet<KeyAccount> KeyAccount { get; set; } //Eşleştirme işleminde kullanılan anahtar kelimeler
+        public DbSet<Luca> Luca { get; set; } // İlgili mali müşavirin luca login bilgilerinin tutulur.
         // Fluent API konfigürasyonları burada uygulanır
         // Configuration klasöründe yer alan her entity konfigürasyon sınıfı burada tanıtılır
         protected override void OnModelCreating(ModelBuilder modelBuilder)

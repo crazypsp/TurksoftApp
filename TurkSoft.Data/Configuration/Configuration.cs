@@ -255,4 +255,113 @@ namespace TurkSoft.Data.Configuration
             builder.Property(x => x.Mesaj).HasMaxLength(1000);
         }
     }
+
+    // LUCA CONFIGURATION
+    // Mali müşavirlerin Luca sistemine giriş yapabilmeleri için gerekli kullanıcı bilgilerini tutar.
+    // Her Luca kaydı bir mali müşavire veya birden fazla mali müşavire bağlanabilir.
+    public class LucaConfiguration : IEntityTypeConfiguration<Luca>
+    {
+        public void Configure(EntityTypeBuilder<Luca> builder)
+        {
+            // Id alanı Primary Key
+            builder.HasKey(x => x.Id);
+            // Ortak alanları uygular (Id, CreateDate, UpdateDate, DeleteDate, IsActive)
+            builder.ConfigureBase();
+
+            // Tablo adı
+            builder.ToTable("Luca");
+
+            // Üye numarası zorunlu, max 50 karakter
+            builder.Property(x => x.UyeNo)
+                   .IsRequired()
+                   .HasMaxLength(50);
+
+            // Kullanıcı adı zorunlu, max 100 karakter
+            builder.Property(x => x.KullaniciAdi)
+                   .IsRequired()
+                   .HasMaxLength(100);
+
+            // Parola zorunlu, max 200 karakter
+            // (Not: gerçek hayatta hash/salt ile saklanmalı)
+            builder.Property(x => x.Parola)
+                   .IsRequired()
+                   .HasMaxLength(200);
+
+            // İlişki: Luca ↔ MaliMüşavir (çoktan çoğa)
+            builder
+                .HasMany(x => x.MaliMusavirs)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "LucaMaliMusavir", // Join tablo adı
+                    right => right
+                        .HasOne<MaliMusavir>()
+                        .WithMany()
+                        .HasForeignKey("MaliMusavirId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    left => left
+                        .HasOne<Luca>()
+                        .WithMany()
+                        .HasForeignKey("LucaId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.ToTable("Luca_MaliMusavir");
+                        join.HasKey("LucaId", "MaliMusavirId");
+                    }
+                );
+        }
+    }
+
+    // KEYACCOUNT CONFIGURATION
+    // Mali müşavirler ile sistemdeki eşleştirme/bağlantı işlemlerinde kullanılan anahtar kelimeleri tutar.
+    // Her KeyAccount kaydı birden fazla mali müşavire bağlanabilir.
+    public class KeyAccountConfiguration : IEntityTypeConfiguration<KeyAccount>
+    {
+        public void Configure(EntityTypeBuilder<KeyAccount> builder)
+        {
+            // Id alanı Primary Key
+            builder.HasKey(x => x.Id);
+            // Ortak alanları uygular (Id, CreateDate, UpdateDate, DeleteDate, IsActive)
+            builder.ConfigureBase();
+
+            // Tablo adı
+            builder.ToTable("KeyAccount");
+
+            // Kod alanı zorunlu ve max 50 karakter
+            builder.Property(x => x.Kod)
+                   .IsRequired()
+                   .HasMaxLength(50);
+
+            // Açıklama alanı opsiyonel, max 300 karakter
+            builder.Property(x => x.Aciklama)
+                   .HasMaxLength(300);
+
+            // Kod alanı benzersiz olmalı
+            builder.HasIndex(x => x.Kod).IsUnique();
+
+            // İlişki: KeyAccount ↔ MaliMüşavir (çoktan çoğa)
+            builder
+                .HasMany(x => x.MaliMusavirs)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "KeyAccountMaliMusavir", // Join tablo adı
+                    right => right
+                        .HasOne<MaliMusavir>()
+                        .WithMany()
+                        .HasForeignKey("MaliMusavirId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    left => left
+                        .HasOne<KeyAccount>()
+                        .WithMany()
+                        .HasForeignKey("KeyAccountId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.ToTable("KeyAccount_MaliMusavir");
+                        join.HasKey("KeyAccountId", "MaliMusavirId");
+                    }
+                );
+        }
+    }
 }
+

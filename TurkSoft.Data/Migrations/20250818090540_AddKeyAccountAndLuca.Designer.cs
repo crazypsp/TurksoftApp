@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TurkSoft.Data.Context;
 
@@ -11,9 +12,11 @@ using TurkSoft.Data.Context;
 namespace TurkSoft.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250818090540_AddKeyAccountAndLuca")]
+    partial class AddKeyAccountAndLuca
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,36 +24,6 @@ namespace TurkSoft.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("KeyAccountMaliMusavir", b =>
-                {
-                    b.Property<Guid>("KeyAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("MaliMusavirId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("KeyAccountId", "MaliMusavirId");
-
-                    b.HasIndex("MaliMusavirId");
-
-                    b.ToTable("KeyAccount_MaliMusavir", (string)null);
-                });
-
-            modelBuilder.Entity("LucaMaliMusavir", b =>
-                {
-                    b.Property<Guid>("LucaId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("MaliMusavirId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("LucaId", "MaliMusavirId");
-
-                    b.HasIndex("MaliMusavirId");
-
-                    b.ToTable("Luca_MaliMusavir", (string)null);
-                });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Firma", b =>
                 {
@@ -120,8 +93,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.Property<string>("Aciklama")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -130,24 +102,18 @@ namespace TurkSoft.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<string>("Kod")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdateDate")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Kod")
-                        .IsUnique();
-
-                    b.ToTable("KeyAccount", (string)null);
+                    b.ToTable("KeyAccount");
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Kullanici", b =>
@@ -350,31 +316,26 @@ namespace TurkSoft.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<string>("KullaniciAdi")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Parola")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdateDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UyeNo")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Luca", (string)null);
+                    b.ToTable("Luca");
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.MailAyar", b =>
@@ -492,6 +453,12 @@ namespace TurkSoft.Data.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<Guid?>("KeyAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("LucaId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("TCKN")
                         .IsRequired()
                         .HasMaxLength(11)
@@ -516,6 +483,10 @@ namespace TurkSoft.Data.Migrations
                         .HasColumnType("nvarchar(15)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("KeyAccountId");
+
+                    b.HasIndex("LucaId");
 
                     b.ToTable("MaliMusavirler");
                 });
@@ -792,36 +763,6 @@ namespace TurkSoft.Data.Migrations
                     b.ToTable("WhatsappGonderimler");
                 });
 
-            modelBuilder.Entity("KeyAccountMaliMusavir", b =>
-                {
-                    b.HasOne("TurkSoft.Entities.EntityDB.KeyAccount", null)
-                        .WithMany()
-                        .HasForeignKey("KeyAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("TurkSoft.Entities.EntityDB.MaliMusavir", null)
-                        .WithMany()
-                        .HasForeignKey("MaliMusavirId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LucaMaliMusavir", b =>
-                {
-                    b.HasOne("TurkSoft.Entities.EntityDB.Luca", null)
-                        .WithMany()
-                        .HasForeignKey("LucaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("TurkSoft.Entities.EntityDB.MaliMusavir", null)
-                        .WithMany()
-                        .HasForeignKey("MaliMusavirId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Firma", b =>
                 {
                     b.HasOne("TurkSoft.Entities.EntityDB.MaliMusavir", "MaliMusavir")
@@ -870,6 +811,17 @@ namespace TurkSoft.Data.Migrations
                     b.Navigation("MaliMusavir");
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.MaliMusavir", b =>
+                {
+                    b.HasOne("TurkSoft.Entities.EntityDB.KeyAccount", null)
+                        .WithMany("MaliMusavirs")
+                        .HasForeignKey("KeyAccountId");
+
+                    b.HasOne("TurkSoft.Entities.EntityDB.Luca", null)
+                        .WithMany("MaliMusavirs")
+                        .HasForeignKey("LucaId");
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Paket", b =>
                 {
                     b.HasOne("TurkSoft.Entities.EntityDB.UrunTipi", "UrunTipi")
@@ -892,9 +844,19 @@ namespace TurkSoft.Data.Migrations
                     b.Navigation("UrunTipi");
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.KeyAccount", b =>
+                {
+                    b.Navigation("MaliMusavirs");
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Kullanici", b =>
                 {
                     b.Navigation("Loglar");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.Luca", b =>
+                {
+                    b.Navigation("MaliMusavirs");
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.MaliMusavir", b =>

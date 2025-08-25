@@ -58,42 +58,54 @@ public class BankaEkstreAnalyzerManager : IBankaEkstreAnalyzerBusiness
             ))
             .ToList();
 
+        // Yardımcı
+        bool Is3Digits(string? code) =>
+            !string.IsNullOrWhiteSpace(code) && code!.Length == 3 && code.All(char.IsDigit);
+
         foreach (var h in hareketler ?? Enumerable.Empty<BankaHareket>())
         {
             var aciklama = h?.Aciklama ?? string.Empty;
             var aciklamaNorm = NormalizeForMatch(aciklama);
-
-            // IBAN, numara ve stopword’leri temizleyip "ad odaklı" token’lar
             var nameTokens = TokenizeName(aciklamaNorm);
 
             var tutar = h?.Tutar ?? 0m;
             var abs = Math.Abs(tutar);
 
-            // Öne alınacak prefiks (giriş=120, çıkış=320)
             string[] preferPrefixes = tutar > 0 ? new[] { "120" } :
                                       tutar < 0 ? new[] { "320" } :
                                       Array.Empty<string>();
 
-            // Açıklamada yakalanan keyword (varsa) – sadece son çare olarak kullanacağız
             var kw = kwNorm.FirstOrDefault(k => aciklamaNorm.Contains(k.KeyNorm));
             string? keywordTargetCode = kw?.Code;
 
-            // 1) Önce 120/320 havuzunda isim eşleşmesi
             string? karsiKod = PickBestByName(planNorm, preferPrefixes, aciklamaNorm, nameTokens);
-
-            // 2) 120/320 havuzunda tatmin edici yoksa genel planda isim eşleşmesi
             if (string.IsNullOrEmpty(karsiKod))
                 karsiKod = PickBestByName(planNorm, Array.Empty<string>(), aciklamaNorm, nameTokens);
-
-            // 3) Hâlâ yoksa, keywordMap devreye sadece burada girsin
             if (string.IsNullOrEmpty(karsiKod) && !string.IsNullOrEmpty(keywordTargetCode))
                 karsiKod = keywordTargetCode;
-
-            // 4) En azından bir şey seçelim: en iyi genel isim adayı
             if (string.IsNullOrEmpty(karsiKod))
                 karsiKod = FallbackBestName(planNorm, aciklamaNorm, nameTokens);
 
-            // 0 tutarlı hareketi atla
+            // Bu işlem için banka kodunu satır içi kopyala
+            var bankaKod = bankaHesapKodu;
+
+            // ÖZEL KURAL: bankaHesapKodu ve karsiKod 3 hane ise İKİSİNİ de 771.01 yap
+            if (Is3Digits(bankaKod))
+            {
+                bankaKod = "771.01";
+            }
+            if (Is3Digits(karsiKod))
+            {
+                karsiKod = "771.01";
+            }
+            if (bankaKod=="255.03")
+            {
+                bankaKod = "771.01";
+            }
+            if (karsiKod=="255.03")
+            {
+                karsiKod = "771.01";
+            }
             if (tutar == 0m) continue;
 
             if (tutar > 0m)
@@ -103,7 +115,7 @@ public class BankaEkstreAnalyzerManager : IBankaEkstreAnalyzerBusiness
                 {
                     Tarih = h!.Tarih,
                     EvrakNo = "TS01",
-                    HesapKodu = bankaHesapKodu,
+                    HesapKodu = bankaKod,
                     Aciklama = aciklama,
                     Borc = abs,
                     Alacak = 0m
@@ -134,13 +146,14 @@ public class BankaEkstreAnalyzerManager : IBankaEkstreAnalyzerBusiness
                 {
                     Tarih = h.Tarih,
                     EvrakNo = "TS01",
-                    HesapKodu = bankaHesapKodu,
+                    HesapKodu = bankaKod,
                     Aciklama = aciklama,
                     Borc = 0m,
                     Alacak = abs
                 });
             }
         }
+
 
         return Task.FromResult<IDataResult<List<LucaFisRow>>>(
             new DataResult<List<LucaFisRow>>(fisSatirlari, true, "Fiş satırları başarıyla oluşturuldu."));

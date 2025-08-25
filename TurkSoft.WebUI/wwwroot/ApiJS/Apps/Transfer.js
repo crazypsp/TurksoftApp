@@ -2,12 +2,14 @@
 // View: <table id="accountCode-table"> ... </table>
 // View: <table id="keyCode-table"> ... </table>
 // View: <table id="transfer-table"> ... </table>
+// View: <button id="btnMatch">...</button>
+// View: <button id="btnTransfer">...</button>
 // View: <form class="dropzone needsclick" id="dropzone-basic">...</form>
 
 (function () {
   // ========= API Bazları =========
   const BANKA_EKSTRE_API = 'https://localhost:7285/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
-  const LUCA_API = 'https://localhost:7032/api/luca';                 // login/hesap-plani
+  const LUCA_API = 'https://localhost:7032/api/luca';                 // login/hesap-plani/fis-gonder
   const MATCHING_API = 'https://localhost:7018/api/bankaekstre';      // eslestir (Swagger değil, gerçek base!)
 
   const USE_SWEETALERT = true;
@@ -15,46 +17,51 @@
 
   // ========= keyCode-table için map (Açıklama=key, HesapKodu=value) =========
   const keywordMap = {
-    "maaş": "771.01.001",
-    "kira": "771.01.001",
-    "kredi": "771.01.001",
-    "elektrik": "771.01.001",
-    "su": "771.01.001",
-    "internet": "771.01.001",
-    "telefon": "771.01.001",
-    "yakıt": "771.01.001",
-    "yemek": "771.01.001",
-    "seyahat": "771.01.001",
-    "konaklama": "771.01.001",
-    "reklam": "771.01.001",
-    "bakım": "771.01.001",
-    "onarım": "771.01.001",
-    "danışmanlık": "771.01.001",
-    "temsil": "771.01.001",
-    "nakliye": "771.01.001",
-    "kargo": "771.01.001",
-    "posta": "771.01.001",
-    "sigorta": "771.01.001",
-    "amortisman": "771.01.001",
-    "faiz": "771.01.001",
-    "komisyon": "771.01.001",
-    "vergi": "771.01.001",
-    "stopaj": "771.01.001",
-    "prim": "771.01.001",
-    "personel": "771.01.001",
-    "malzeme": "771.01.001",
-    "donanım": "771.01.001",
-    "yazılım": "771.01.001",
-    "ekipman": "771.01.001",
-    "ofis": "771.01.001",
-    "abonman": "771.01.001",
-    "eğitim": "771.01.001",
-    "tedarik": "771.01.001",
-    "yedek": "771.01.001",
-    "bsmv": "771.01.001",
-    "eft ücret": "771.01.001",
-    "ücret": "771.01.001",
-    "fatura":"771.01.001"
+    "maaş": "771.01",
+    "kira": "771.01",
+    "kredi": "771.01",
+    "elektrik": "771.01",
+    "su": "771.01",
+    "internet": "771.01",
+    "telefon": "771.01",
+    "yakıt": "771.01",
+    "yemek": "771.01",
+    "seyahat": "771.01",
+    "konaklama": "771.01",
+    "reklam": "771.01",
+    "bakım": "771.01",
+    "onarım": "771.01",
+    "danışmanlık": "771.01",
+    "temsil": "771.01",
+    "nakliye": "771.01",
+    "kargo": "771.01",
+    "posta": "771.01",
+    "sigorta": "771.01",
+    "amortisman": "771.01",
+    "faiz": "771.01",
+    "komisyon": "771.01",
+    "vergi": "771.01",
+    "stopaj": "771.01",
+    "prim": "771.01",
+    "personel": "771.01",
+    "malzeme": "771.01",
+    "donanım": "771.01",
+    "yazılım": "771.01",
+    "ekipman": "771.01",
+    "ofis": "771.01",
+    "abonman": "771.01",
+    "eğitim": "771.01",
+    "tedarik": "771.01",
+    "yedek": "771.01",
+    "bsmv": "771.01",
+    "eft ücret": "771.01",
+    "ücret": "771.01",
+    "fatura": "771.01",
+    "yazarkasa": "771.01",
+    "eft masraf": "771.01",
+    "masraf": "771.01",
+    "para iade": "771.01",
+    "40355":"771.01"
   };
 
   // ========= State =========
@@ -103,6 +110,10 @@
     // Eşleştirme butonu
     const btnMatch = document.getElementById('btnMatch');
     if (btnMatch) btnMatch.addEventListener('click', onMatchClick);
+
+    // Transfer butonu (Luca'ya gönder)
+    const btnTransfer = document.getElementById('btnTransfer');
+    if (btnTransfer) btnTransfer.addEventListener('click', onTransferClick);
 
     // Transfer tablosunda işlem butonları için event delegation
     bindTransferTableActions();
@@ -192,6 +203,97 @@
       notifyError('Eşleştirme servisine ulaşılamadı veya hata oluştu.');
       console.error(err);
     }
+  }
+
+  // ========= TRANSFER (SendFis) =========
+  async function onTransferClick() {
+    if (!Array.isArray(transferData) || transferData.length === 0) {
+      return notifyError('Gönderilecek kayıt bulunamadı.');
+    }
+
+    // transferData -> LucaFisRow listesi (alan adları birebir)
+    const rows = buildLucaFisRowsFromTransferData(transferData);
+    if (!rows.length) {
+      return notifyError('Geçerli fiş satırı yok.');
+    }
+
+    try {
+      setBusy(true, 'Fiş satırları Luca’ya gönderiliyor...');
+      const result = await postJson(join(LUCA_API, 'fis-gonder'), rows);
+      setBusy(false);
+
+      // Başarılı/başarısız mesajı (service standardına göre result.Success tutulabilir)
+      if (result && (result.success === true || result.Success === true)) {
+        notifyOk('Fiş satırları başarıyla gönderildi.');
+      } else {
+        notifyOk('Gönderim tamamlandı.'); // bazı servisler success alanı döndürmeyebilir
+      }
+    } catch (err) {
+      setBusy(false);
+      notifyError((err && err.message) ? err.message : 'Fiş gönderimi sırasında hata oluştu.');
+      console.error(err);
+    }
+  }
+
+  function buildLucaFisRowsFromTransferData(list) {
+    const out = [];
+    for (var i = 0; i < list.length; i++) {
+      const r = list[i];
+
+      const hesapKodu = val(r, ['HesapKodu', 'hesapKodu', 'Code', 'code', 'LucaFisRow.HesapKodu']) || '';
+      const aciklama = val(r, ['Aciklama', 'aciklama', 'Description', 'description', 'LucaFisRow.Aciklama']) || '';
+      const tarihRaw = val(r, ['Tarih', 'tarih', 'Date', 'date', 'LucaFisRow.Tarih']);
+      const borcRaw = val(r, ['Borc', 'borc', 'Debit', 'debit', 'LucaFisRow.Borc']);
+      const alacakRaw = val(r, ['Alacak', 'alacak', 'Credit', 'credit', 'LucaFisRow.Alacak']);
+
+      // !!! YENİ: EvrakNo zorunlu => satırdan oku, yoksa üret
+      const evrakNo = 'YSF01';
+
+      if (!hesapKodu) continue;
+
+      const borc = parseTrNumber(borcRaw);
+      const alacak = parseTrNumber(alacakRaw);
+      const tarihIso = toIsoDateString(tarihRaw);
+
+      out.push({
+        HesapKodu: String(hesapKodu),
+        Tarih: tarihIso || (tarihRaw == null ? '' : String(tarihRaw)),
+        Aciklama: aciklama == null ? '' : String(aciklama),
+        Borc: borc,
+        Alacak: alacak,
+        EvrakNo: String(evrakNo) // <-- ZORUNLU ALAN
+      });
+    }
+    return out;
+  }
+
+
+  function toIsoDateString(v) {
+    if (!v && v !== 0) return '';
+    // Zaten Date ise
+    if (v instanceof Date && !isNaN(v)) {
+      return v.toISOString().slice(0, 10);
+    }
+    // Metin ise dd.MM.yyyy, dd/MM/yyyy, yyyy-MM-dd vb. kabul etmeye çalış
+    const s = String(v).trim();
+    // yyyy-MM-dd veya yyyy/MM/dd gibi
+    let m = s.match(/^(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})$/);
+    if (m) {
+      const y = +m[1], mo = +m[2], d = +m[3];
+      const dt = new Date(y, mo - 1, d);
+      if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
+    }
+    // dd.MM.yyyy veya dd/MM/yyyy gibi
+    m = s.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{4})$/);
+    if (m) {
+      const d = +m[1], mo = +m[2], y = +m[3];
+      const dt = new Date(y, mo - 1, d);
+      if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
+    }
+    // Date parse fallback
+    const dt = new Date(s);
+    if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
+    return '';
   }
 
   function updateButtonStates() {
@@ -331,7 +433,7 @@
     const rowsHtml = slice.map(function (r, idx) {
       const globalIndex = start + idx;
 
-      // Alanları esnekçe yakala (CSV’de LucafisRow.* olabilir; API’de PascalCase / camelCase olabilir)
+      // Alanları esnekçe yakala
       const banka = val(r, ['BankaAdi', 'bankaAdi', 'Banka', 'banka']) || '';
       const hesapKodu = val(r, ['HesapKodu', 'hesapKodu', 'Code', 'code', 'LucaFisRow.HesapKodu']) || '';
       const tarihRaw = val(r, ['Tarih', 'tarih', 'Date', 'date', 'LucaFisRow.Tarih']) || '';
@@ -339,16 +441,13 @@
       const borcRaw = val(r, ['Borc', 'borc', 'Debit', 'debit', 'LucaFisRow.Borc']);
       const alacakRaw = val(r, ['Alacak', 'alacak', 'Credit', 'credit', 'LucaFisRow.Alacak']);
 
-      // TR sayı çözümleme ve formatlama
       const borcNum = parseTrNumber(borcRaw);
       const alacakNum = parseTrNumber(alacakRaw);
       const borcText = formatNumber(borcNum);
       const alacakText = formatNumber(alacakNum);
 
-      // Tarih
       const tarihText = formatDate(tarihRaw);
 
-      // Hesap Kodu hücresi: düzenleme modunda input; değilse düz metin
       let hesapKoduCell;
       if (editingRowIndex === globalIndex) {
         hesapKoduCell =
@@ -359,7 +458,6 @@
         hesapKoduCell = '<span>' + escapeHtml(hesapKodu) + '</span>';
       }
 
-      // İşlemler (Vuexy ikonlu)
       let actions;
       if (editingRowIndex === globalIndex) {
         actions =
@@ -372,11 +470,10 @@
           '<button class="btn btn-icon btn-sm btn-text-secondary" title="Düzenle" data-action="edit" data-index="' + globalIndex + '"><i class="ti ti-pencil"></i></button>';
       }
 
-      // İlk iki kolon (responsive control ve checkbox) Tables.cshtml’deki thead ile hizalı boş hücreler
       return '' +
         '<tr>' +
-        '<td class="control"></td>' +                                   // responsive control
-        '<td class="dt-checkboxes-cell"><input type="checkbox"/></td>' +// checkbox sütunu
+        '<td class="control"></td>' +
+        '<td class="dt-checkboxes-cell"><input type="checkbox"/></td>' +
         '<td>' + escapeHtml(banka) + '</td>' +
         '<td>' + hesapKoduCell + '</td>' +
         '<td>' + escapeHtml(tarihText) + '</td>' +
@@ -393,13 +490,11 @@
   }
 
   /* ==================== yardımcılar ==================== */
-  // r nesnesinde olası anahtar varyasyonlarını sırayla dene
   function val(obj, keys) {
     if (!obj) return undefined;
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       if (k in obj) return obj[k];
-      // Bazı JSON’larda anahtar sonunda/başında boşluk olabiliyor
       for (var kk in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, kk)) {
           if (String(kk).trim().toLowerCase() === String(k).trim().toLowerCase()) {
@@ -411,23 +506,16 @@
     return undefined;
   }
 
-  // "12.345,67" / "12,8" / 12.8 gibi TR sayılarını number’a çevir
   function parseTrNumber(v) {
     if (v == null || v === '') return 0;
     if (typeof v === 'number') return v;
     var s = String(v).trim();
-    // CSV’de ondalık virgül, binlik nokta kullanılıyor
-    // Ayrıca tırnak vb. karakterleri temizleyelim
     s = s.replace(/\s/g, '').replace(/"/g, '');
-    // binlik noktaları sil, ondalık virgülü noktaya çevir
     s = s.replace(/\./g, '').replace(/,/g, '.');
     var n = Number(s);
     return isNaN(n) ? 0 : n;
   }
 
-
-
-  // İşlem butonları (edit / save / cancel) -> event delegation
   function bindTransferTableActions() {
     const tbl = document.getElementById('transfer-table');
     if (!tbl) return;
@@ -444,11 +532,9 @@
       if (isNaN(rowIndex) || rowIndex < 0 || rowIndex >= transferData.length) return;
 
       if (action === 'edit') {
-        // sadece tek satır düzenleyelim
         editingRowIndex = rowIndex;
         editingOriginalCode = transferData[rowIndex].HesapKodu || '';
         renderTransferTablePage();
-        // fokus ver
         setTimeout(function () {
           const inp = document.getElementById('hk-input-' + rowIndex);
           if (inp) { inp.focus(); inp.select(); }
@@ -465,7 +551,6 @@
       }
       else if (action === 'cancel') {
         if (editingRowIndex === rowIndex) {
-          // eski değeri geri koy
           transferData[rowIndex].HesapKodu = editingOriginalCode;
         }
         editingRowIndex = null;
@@ -475,7 +560,6 @@
     });
   }
 
-  // ========= PAGER (bootstrap tarzı) =========
   function mountPager(prefix, totalPages, currentPage, onChange) {
     var tableId = prefix === 'accountCode' ? 'accountCode-table'
       : prefix === 'keyCode' ? 'keyCode-table'

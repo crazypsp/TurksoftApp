@@ -51,7 +51,7 @@ namespace TurkSoft.Business.Managers
                 // CAPTCHA kontrol edilir ve çözülürse çözüm akışı başlatılır
                 var captchaElement = _popup.Locator("div.captcha img");
                 if (await captchaElement.IsVisibleAsync())
-                    await HandleCaptchaAsync(user, captchaElement);
+                     await HandleCaptchaAsync(user, captchaElement);
 
                 // Giriş sonrası yönlendirme yapılır
                 await _popup.ClickAsync(".lucaMmpLogo");
@@ -168,51 +168,111 @@ namespace TurkSoft.Business.Managers
                 const string tableSelector = "table#TBL";
                 bool newFisStart = true;
 
+                const int BATCH_SIZE = 400;
+                int rowsInCurrentFis = 0;
+
                 for (int i = 0; i < rows.Count; i++)
                 {
-                    // Her 600 kayıttan sonra fişi kaydet ve yeni fiş aç
-                    if (i > 0 && i % 600 == 0)
-                    {
-                        await fisFrame.ClickAsync("button#kaydetHref");
-                        await fisFrame.WaitForTimeoutAsync(2000);
-                        await fisFrame.ClickAsync("button#yeniFisHref");
-                        await fisFrame.WaitForTimeoutAsync(2000);
-                        newFisStart = true; // yeni fişte ilk satır boş geliyor
-                    }
-
-                    // İlk kayıtta hazır gelen satırı kullan, diğerlerinde en sondaki '+' butonuna bas
+                    // --- SATIR EKLEME ---
                     if (!newFisStart)
                     {
-                        // son satırdaki ekle butonunu tıkla
                         await fisFrame.ClickAsync($"{tableSelector} tr:last-child td.add_delete.btn-td input[value='+']");
-                        // yeni satırın DOM’a eklenmesini bekle
                         await fisFrame.WaitForSelectorAsync($"{tableSelector} tr:last-child input[name='HESAP_KODU']");
                     }
                     newFisStart = false;
 
-                    // Artık doldurulacak satır hep son satırdır
                     var currentRowSelector = $"{tableSelector} tr:last-child";
-                    LucaFisRow r = rows[i];
+                    var r = rows[i];
 
-                    // Hesap planından kodu seç
-                    string escaped = EscapeCssId(r.HesapKodu);
-                    var accRow = fisFrame.Locator($"table#hsptable tr#{escaped}");
-                    await accRow.DblClickAsync(); // double click kod satırına:contentReference[oaicite:1]{index=1}
+                    // -----------------------------
+                    // HESAP KODU – SAĞLAM DOLDURMA
+                    // -----------------------------
+                    if (string.IsNullOrWhiteSpace(r.HesapKodu))
+                        throw new InvalidOperationException($"[{i + 1}. satır] Hesap Kodu boş olamaz.");
 
-                    // Alanları doldur
+                    var hesapInput = fisFrame.Locator($"{currentRowSelector} input[name='HESAP_KODU']");
+                    await hesapInput.ClickAsync();                  // odayı bu hücreye getir
+                    await hesapInput.FillAsync(r.HesapKodu.Trim()); // doğrudan yaz
+                    await hesapInput.PressAsync("Tab");             // blur/validate
+
+                    // küçük bir bekleme ve doğrulama
+                    await fisFrame.WaitForTimeoutAsync(120);
+                    var typed = (await hesapInput.InputValueAsync())?.Trim();
+
+                    if (string.IsNullOrEmpty(typed))
+                    {
+                        // Yedek yol: F9 ile hesap seçimi aç, metne göre bul ve çift tıkla
+                        await hesapInput.ClickAsync();
+                        await hesapInput.PressAsync("F9");
+
+                        // liste açılana kadar bekle
+                        await fisFrame.WaitForSelectorAsync("table#hsptable");
+                        var rowInList = fisFrame.Locator("table#hsptable tr").Filter(new() { HasText = r.HesapKodu.Trim() });
+                        await rowInList.First.DblClickAsync();
+
+                        // tekrar doğrula
+                        await fisFrame.WaitForTimeoutAsync(120);
+                        typed = (await hesapInput.InputValueAsync())?.Trim();
+                        if (string.IsNullOrEmpty(typed))
+                            throw new Exception($"[{i + 1}. satır] Hesap Kodu '{r.HesapKodu}' alanına yazılamadı.");
+                    }
+
+                    // -----------------------------
+                    // Diğer alanlar
+                    // -----------------------------
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='EVRAK_NO']", r.EvrakNo);
-                    await fisFrame.FillAsync($"{currentRowSelector} input[name='EVRAK_TARIHI']", r.Tarih.ToString("dd.MM.yyyy"));
+                    await fisFrame.FillAsync($"{currentRowSelector} input[name='EVRAK_TARIHI']",
+                        r.Tarih.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("tr-TR")));
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='BELGE_TUR_KOD']", "MK");
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='ACIKLAMA']", r.Aciklama);
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='BORC']", ToMoney(r.Borc));
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='ALACAK']", ToMoney(r.Alacak));
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='MIKTAR']", "0,00000");
+
+                    rowsInCurrentFis++;
+
+                    // --- 400'de bir kaydet + yeni fiş ---
+                    if (rowsInCurrentFis >= BATCH_SIZE)
+                    {
+                        await Task.WhenAll(
+                            fisFrame.ClickAsync("button#kaydetHref"),
+                            fisFrame.WaitForLoadStateAsync(LoadState.NetworkIdle)
+                        );
+
+                        await fisFrame.ClickAsync("button#yeniHref");
+
+                        var sw = Stopwatch.StartNew();
+                        IFrame? newFrame = null;
+                        while (sw.ElapsedMilliseconds < 15000)
+                        {
+                            var frames = LucaSession.MmpPage.Context.Pages.Last().Frames;
+                            newFrame = frames.FirstOrDefault(f => f.Url.Contains("addFis.do"));
+                            if (newFrame != null)
+                            {
+                                var ok = await newFrame.Locator("table#TBL tr:last-child input[name='HESAP_KODU']")
+                                                       .IsVisibleAsync(new() { Timeout = 2000 });
+                                if (ok) break;
+                            }
+                            await Task.Delay(300);
+                        }
+                        if (newFrame == null)
+                            throw new TimeoutException("Yeni fiş ekranı yüklenemedi.");
+
+                        fisFrame = newFrame;
+                        newFisStart = true;
+                        rowsInCurrentFis = 0;
+
+                        await fisFrame.ClickAsync("button#kaydetHref");
+                        await fisFrame.WaitForLoadStateAsync(LoadState.NetworkIdle);
+                    }
                 }
+
+
 
                 // Fişi kaydet ve bağlantıyı kapat
                 await fisFrame.ClickAsync("button#kaydetHref");
                 await LucaSession.MmpPage.Context.CloseAsync();
-                await _browser.CloseAsync();
+                //await _browser.CloseAsync();
 
                 return new SuccessResult("Fiş satırları başarıyla gönderildi.");
             }
