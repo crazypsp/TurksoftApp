@@ -1231,6 +1231,192 @@ namespace TurkSoft.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciBayi", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AtananRol")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("BaslangicTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("BayiId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("BitisTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeleteDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("KullaniciId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BayiId");
+
+                    b.HasIndex("CreateDate");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("KullaniciId")
+                        .IsUnique()
+                        .HasFilter("[IsPrimary] = 1");
+
+                    b.HasIndex("KullaniciId", "BayiId")
+                        .IsUnique();
+
+                    b.ToTable("Kullanici_Bayi", (string)null);
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciFirma", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AtananRol")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("BaslangicTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("BitisTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeleteDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FirmaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("KullaniciId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreateDate");
+
+                    b.HasIndex("FirmaId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("KullaniciId")
+                        .IsUnique()
+                        .HasFilter("[IsPrimary] = 1");
+
+                    b.HasIndex("KullaniciId", "FirmaId")
+                        .IsUnique();
+
+                    b.ToTable("Kullanici_Firma", (string)null);
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciMaliMusavir", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AtananRol")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("BaslangicTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("BitisTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeleteDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("KullaniciId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MaliMusavirId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreateDate");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("KullaniciId")
+                        .IsUnique()
+                        .HasFilter("[IsPrimary] = 1");
+
+                    b.HasIndex("MaliMusavirId");
+
+                    b.HasIndex("KullaniciId", "MaliMusavirId")
+                        .IsUnique();
+
+                    b.ToTable("Kullanici_MaliMusavir", (string)null);
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Kupon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3340,6 +3526,63 @@ namespace TurkSoft.Data.Migrations
                     b.Navigation("Bayi");
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciBayi", b =>
+                {
+                    b.HasOne("TurkSoft.Entities.EntityDB.Bayi", "Bayi")
+                        .WithMany("KullaniciBaglantilari")
+                        .HasForeignKey("BayiId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TurkSoft.Entities.EntityDB.Kullanici", "Kullanici")
+                        .WithMany("BayiBaglantilari")
+                        .HasForeignKey("KullaniciId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Bayi");
+
+                    b.Navigation("Kullanici");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciFirma", b =>
+                {
+                    b.HasOne("TurkSoft.Entities.EntityDB.Firma", "Firma")
+                        .WithMany("KullaniciBaglantilari")
+                        .HasForeignKey("FirmaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TurkSoft.Entities.EntityDB.Kullanici", "Kullanici")
+                        .WithMany("FirmaBaglantilari")
+                        .HasForeignKey("KullaniciId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Firma");
+
+                    b.Navigation("Kullanici");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciMaliMusavir", b =>
+                {
+                    b.HasOne("TurkSoft.Entities.EntityDB.Kullanici", "Kullanici")
+                        .WithMany("MaliMusavirBaglantilari")
+                        .HasForeignKey("KullaniciId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TurkSoft.Entities.EntityDB.MaliMusavir", "MaliMusavir")
+                        .WithMany("KullaniciBaglantilari")
+                        .HasForeignKey("MaliMusavirId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Kullanici");
+
+                    b.Navigation("MaliMusavir");
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Kupon", b =>
                 {
                     b.HasOne("TurkSoft.Entities.EntityDB.Bayi", "Bayi")
@@ -3723,6 +3966,8 @@ namespace TurkSoft.Data.Migrations
 
                     b.Navigation("KomisyonTarifeleri");
 
+                    b.Navigation("KullaniciBaglantilari");
+
                     b.Navigation("Kuponlar");
 
                     b.Navigation("Leadler");
@@ -3763,12 +4008,23 @@ namespace TurkSoft.Data.Migrations
 
                     b.Navigation("IletisimKisileri");
 
+                    b.Navigation("KullaniciBaglantilari");
+
                     b.Navigation("Satislar");
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.FiyatListesi", b =>
                 {
                     b.Navigation("Kalemler");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.EntityDB.Kullanici", b =>
+                {
+                    b.Navigation("BayiBaglantilari");
+
+                    b.Navigation("FirmaBaglantilari");
+
+                    b.Navigation("MaliMusavirBaglantilari");
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.MaliMusavir", b =>
@@ -3778,6 +4034,8 @@ namespace TurkSoft.Data.Migrations
                     b.Navigation("Firmalar");
 
                     b.Navigation("Firsatlar");
+
+                    b.Navigation("KullaniciBaglantilari");
 
                     b.Navigation("Satislar");
                 });

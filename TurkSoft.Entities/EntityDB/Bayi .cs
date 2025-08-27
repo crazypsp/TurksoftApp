@@ -34,5 +34,6 @@ namespace TurkSoft.Entities.EntityDB
         public ICollection<KomisyonOdemePlani> KomisyonOdemePlanlari { get; set; } = new List<KomisyonOdemePlani>();
         public ICollection<Kupon> Kuponlar { get; set; } = new List<Kupon>();
         public ICollection<WebhookAbonelik> WebhookAbonelikleri { get; set; } = new List<WebhookAbonelik>();
+        public ICollection<KullaniciBayi> KullaniciBaglantilari { get; set; } = new List<KullaniciBayi>();
     }
 }

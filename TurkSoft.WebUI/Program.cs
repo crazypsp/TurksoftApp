@@ -1,5 +1,7 @@
-
+using TurkSoft.WebUI.AppSettings;
 var builder = WebApplication.CreateBuilder(args);
+//"Api" bölümünü Options olarak kaydet
+builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("Api"));
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 // Add services to the container.
 builder.Services.AddControllersWithViews();

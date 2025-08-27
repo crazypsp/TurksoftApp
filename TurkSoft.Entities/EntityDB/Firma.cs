@@ -26,5 +26,6 @@ namespace TurkSoft.Entities.EntityDB
         public ICollection<Fatura> Faturalar { get; set; } = new List<Fatura>();
         public ICollection<EntegrasyonHesabi> EntegrasyonHesaplari { get; set; } = new List<EntegrasyonHesabi>();
         public ICollection<Opportunity> Firsatlar { get; set; } = new List<Opportunity>();
+        public ICollection<KullaniciFirma> KullaniciBaglantilari { get; set; } = new List<KullaniciFirma>();
     }
 }

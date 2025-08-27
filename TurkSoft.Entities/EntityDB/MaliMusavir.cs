@@ -22,5 +22,6 @@ namespace TurkSoft.Entities.EntityDB
         public ICollection<Satis> Satislar { get; set; } = new List<Satis>();
         public ICollection<EntegrasyonHesabi> EntegrasyonHesaplari { get; set; } = new List<EntegrasyonHesabi>();
         public ICollection<Opportunity> Firsatlar { get; set; } = new List<Opportunity>();
+        public ICollection<KullaniciMaliMusavir> KullaniciBaglantilari { get; set; } = new List<KullaniciMaliMusavir>();
     }
 }

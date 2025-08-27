@@ -8,7 +8,8 @@
 }
 
 @inject IHttpContextAccessor httpContextAccessor
-
+@using Microsoft.Extensions.Options
+@inject IOptions<TurkSoft.WebUI.AppSettings.ApiSettings> Api
 <!DOCTYPE html>
 <html lang="en"
   class='light-style @(ViewData["navbarType"] is string navbarType ? navbarType : "") @(ViewData["menuFixed"] is string menuFixed ? menuFixed : "") @(ViewData["menuCollapsed"] is string menuCollapsed ? menuCollapsed : "") @(ViewData["contentType"] is string contentType ? contentType : "") @(ViewData["footerFixed"] is string footerFixed ? footerFixed : "") @(ViewData["customizerHidden"] is string customizerHidden ? customizerHidden : "")'
@@ -26,7 +27,8 @@
     }
   <title>@title | @appName - Asp.Net Core MVC Admin Template</title>
   <meta name="description" content="" />
-
+    <!-- JS tarafına API kök adresini sağlayan meta -->
+    <meta name="api-base" content="@Api.Value.BaseUrl" />
   <!-- Canonical SEO -->
   <link rel="canonical" href='@productPage'>
   <!-- Favicon -->

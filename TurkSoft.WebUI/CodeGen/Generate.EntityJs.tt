@@ -1,0 +1,92 @@
+<#@ template language="C#" hostspecific="True" debug="False" #>
+<#@ output extension=".log.txt" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+
+<#
+    // ===================== 1) Entity listesi (PascalCase) =====================
+    var entities = new[]{
+        "Kullanici","Log","MailAyar","MailGonderim","SmsAyar","SmsGonderim","WhatsappAyar","WhatsappGonderim",
+        "Luca","KeyAccount","UrunTipi","Paket","UrunFiyat","PaketIskonto",
+        "Bayi","BayiFirma","MaliMusavir","Firma",
+        "Satis","SatisKalem","Lisans","LisansAdet",
+        "Odeme","SanalPos","EntegrasyonHesabi",
+        "Lead","OpportunityAsama","Opportunity","OpportunityAsamaGecis",
+        "Teklif","TeklifKalem",
+        "Aktivite","AktiviteAtama","IletisimKisi",
+        "Fatura","FaturaKalem",
+        "BayiCari","BayiCariHareket","KomisyonOdemePlani","BayiKomisyonTarife",
+        "FiyatListesi","FiyatListesiKalem","VergiOrani","Kupon",
+        "Not","DosyaEk","Etiket","EtiketIliski",
+        "SistemBildirim","OutboxMesaj","WebhookAbonelik"
+    };
+
+    // ===================== 2) Çıkış klasörü (stabil) =====================
+    // Host.TemplateFile → bu .tt dosyasının tam yolu. Dizinini alıp proje köküne çıkıyoruz.
+    var thisDir    = Path.GetDirectoryName(Host.TemplateFile);
+    var projectDir = Path.GetFullPath(Path.Combine(thisDir, @".."));                 // CodeGen/.. = proje kökü
+    var outDir     = Path.GetFullPath(Path.Combine(projectDir, @"wwwroot\js\api\entities"));
+    Directory.CreateDirectory(outDir);
+
+    // ===================== 3) JS Şablonu (interpolated DEĞİL) =====================
+    var template = @"
+// wwwroot/js/api/entities/__ENTITY__.js
+// ======================================================================
+// Bu dosya otomatik üretildi. İlgili entity için REST API sarmalayıcısı.
+// - API kök adresini _Layout.cshtml meta etiketi üzerinden alır (BaseApiService).
+// - Her satır, kurumsal bakım kolaylığı için açıklamalıdır.
+// ======================================================================
+
+import BaseApiService from '../core/BaseApiService.js'; // Ortak REST tabanı
+
+// (1) Controller segmenti: backend'deki route segmenti (örn: 'firma', 'kullanici').
+const RESOURCE = '__RESOURCE__';
+
+// (2) (Opsiyonel) Kimlik doğrulama gerekiyorsa token sağlayıcıyı burada uygula.
+const getToken = () => null; // Ör: return localStorage.getItem('access_token');
+
+// (3) Bu entity için tekil servis örneği oluşturuyoruz.
+const svc = new BaseApiService(RESOURCE, getToken);
+
+// (4) CRUD işlevleri
+async function list(params = null)  { return svc.list(params);  } // GET /__RESOURCE__
+async function get(id)              { return svc.get(id);        } // GET /__RESOURCE__/{id}
+async function create(data)         { return svc.create(data);   } // POST /__RESOURCE__
+async function update(id, data)     { return svc.update(id, data);} // PUT  /__RESOURCE__/{id}
+async function remove(id)           { return svc.remove(id);     } // DELETE /__RESOURCE__/{id}
+
+// (5) Export
+export const __ENTITY__Api = { list, get, create, update, remove };
+export default __ENTITY__Api;
+";
+
+    // ===================== 4) Dosyaları üret =====================
+    var logsb = new StringBuilder();
+    logsb.AppendLine("Generated JavaScript service files:");
+    foreach (var e in entities)
+    {
+        var resource = e.ToLowerInvariant(); // 'Firma' -> 'firma'
+        var js = template.Replace("__ENTITY__", e).Replace("__RESOURCE__", resource);
+        var filePath = Path.Combine(outDir, e + ".js");
+        File.WriteAllText(filePath, js, Encoding.UTF8);
+        logsb.AppendLine(" - " + filePath);
+    }
+
+    // ===================== 5) Barrel (index.js) - default export'u adlandırarak re-export et =====================
+    var indexPath = Path.Combine(outDir, "index.js");
+    var idx = new StringBuilder();
+    idx.AppendLine("// wwwroot/js/api/entities/index.js");
+    idx.AppendLine("// Otomatik üretilen barrel: tüm entity API’lerini tek yerden dışa aktarır.");
+    idx.AppendLine();
+    foreach (var e in entities)
+    {
+        // Not: default export'u {Entity}Api adıyla re-export ediyoruz → import { FirmaApi } from '.../index.js'
+        idx.AppendLine($"export {{ default as {e}Api }} from './{e}.js';");
+    }
+    File.WriteAllText(indexPath, idx.ToString(), Encoding.UTF8);
+#>
+<#= logsb.ToString() #>

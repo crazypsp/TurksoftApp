@@ -98,7 +98,9 @@ namespace TurkSoft.Data.Context
         public DbSet<SistemBildirim> SistemBildirimleri { get; set; }
         public DbSet<OutboxMesaj> OutboxMesajlari { get; set; }
         public DbSet<WebhookAbonelik> WebhookAbonelikleri { get; set; }
-
+        public DbSet<KullaniciBayi> KullaniciBayiler { get; set; } = default!;
+        public DbSet<KullaniciFirma> KullaniciFirmalar { get; set; } = default!;
+        public DbSet<KullaniciMaliMusavir> KullaniciMaliMusavirler { get; set; } = default!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

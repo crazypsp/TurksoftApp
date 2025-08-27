@@ -56,8 +56,99 @@ namespace TurkSoft.Data.Configuration
             b.Property(x => x.Telefon).HasMaxLength(20);
             b.Property(x => x.Rol).HasMaxLength(50);
             b.Property(x => x.ProfilResmiUrl).HasMaxLength(500);
+            // Nav: Kullanici -> Pivotlar
+            b.HasMany(x => x.BayiBaglantilari)
+             .WithOne(x => x.Kullanici)
+             .HasForeignKey(x => x.KullaniciId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasMany(x => x.FirmaBaglantilari)
+             .WithOne(x => x.Kullanici)
+             .HasForeignKey(x => x.KullaniciId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasMany(x => x.MaliMusavirBaglantilari)
+             .WithOne(x => x.Kullanici)
+             .HasForeignKey(x => x.KullaniciId)
+             .OnDelete(DeleteBehavior.Restrict);
         }
     }
+    // KULLANICI ↔ BAYİ
+    public class KullaniciBayiConfiguration : BaseEntityConfig<KullaniciBayi>
+    {
+        public override void Configure(EntityTypeBuilder<KullaniciBayi> b)
+        {
+            // Ortak alanlar (Id, IsActive, Create/Update/Delete, RowVersion, indexler)
+            base.Configure(b);
+
+            b.ToTable("Kullanici_Bayi");
+
+            b.Property(x => x.AtananRol).HasMaxLength(50);
+
+            b.HasOne(x => x.Bayi)
+             .WithMany(p => p.KullaniciBaglantilari)
+             .HasForeignKey(x => x.BayiId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Aynı kullanıcı-bayi çifti tekrar eklenmesin
+            b.HasIndex(x => new { x.KullaniciId, x.BayiId }).IsUnique();
+
+            // Bir kullanıcının tek bir "primary" bayisi olsun (filtered unique)
+            b.HasIndex(x => x.KullaniciId)
+             .IsUnique()
+             .HasFilter("[IsPrimary] = 1");
+        }
+    }
+
+
+    // KULLANICI ↔ FİRMA
+    public class KullaniciFirmaConfiguration : BaseEntityConfig<KullaniciFirma>
+    {
+        public override void Configure(EntityTypeBuilder<KullaniciFirma> b)
+        {
+            base.Configure(b);
+
+            b.ToTable("Kullanici_Firma");
+
+            b.Property(x => x.AtananRol).HasMaxLength(50);
+
+            b.HasOne(x => x.Firma)
+             .WithMany(p => p.KullaniciBaglantilari)
+             .HasForeignKey(x => x.FirmaId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasIndex(x => new { x.KullaniciId, x.FirmaId }).IsUnique();
+
+            b.HasIndex(x => x.KullaniciId)
+             .IsUnique()
+             .HasFilter("[IsPrimary] = 1");
+        }
+    }
+
+    // KULLANICI ↔ MALİ MÜŞAVİR
+    public class KullaniciMaliMusavirConfiguration : BaseEntityConfig<KullaniciMaliMusavir>
+    {
+        public override void Configure(EntityTypeBuilder<KullaniciMaliMusavir> b)
+        {
+            base.Configure(b);
+
+            b.ToTable("Kullanici_MaliMusavir");
+
+            b.Property(x => x.AtananRol).HasMaxLength(50);
+
+            b.HasOne(x => x.MaliMusavir)
+             .WithMany(p => p.KullaniciBaglantilari)
+             .HasForeignKey(x => x.MaliMusavirId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasIndex(x => new { x.KullaniciId, x.MaliMusavirId }).IsUnique();
+
+            b.HasIndex(x => x.KullaniciId)
+             .IsUnique()
+             .HasFilter("[IsPrimary] = 1");
+        }
+    }
+
 
     public class LogConfiguration : BaseEntityConfig<Log>
     {

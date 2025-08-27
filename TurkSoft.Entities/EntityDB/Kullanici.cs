@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.EntityDB
 {
+    /// <summary>
+    /// Sistem kullanıcısı. Artık Bayi/Firma/MaliMüşavir bağlantıları navigation ile tutuluyor.
+    /// </summary>
     public class Kullanici:BaseEntity
     {
         public string AdSoyad { get; set; }
@@ -14,5 +17,10 @@ namespace TurkSoft.Entities.EntityDB
         public string Telefon { get; set; }
         public string Rol { get; set; }
         public string? ProfilResmiUrl { get; set; }
+
+        // === İlişkiler (çok-çok) ===
+        public ICollection<KullaniciBayi> BayiBaglantilari { get; set; } = new List<KullaniciBayi>();
+        public ICollection<KullaniciFirma> FirmaBaglantilari { get; set; } = new List<KullaniciFirma>();
+        public ICollection<KullaniciMaliMusavir> MaliMusavirBaglantilari { get; set; } = new List<KullaniciMaliMusavir>();
     }
 }

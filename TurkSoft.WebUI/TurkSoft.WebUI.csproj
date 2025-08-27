@@ -6,4 +6,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Update="CodeGen\Generate.EntityJs.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Generate.EntityJs.log.txt</LastGenOutput>
+    </None>
+    <None Update="CodeGen\Generate.EntityJs.log.txt">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Generate.EntityJs.tt</DependentUpon>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
 </Project>
