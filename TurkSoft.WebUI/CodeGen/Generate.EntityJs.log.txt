@@ -1,4 +1,13 @@
 
+
+
+
+
+
+
+
+
+
 Generated JavaScript service files:
  - C:\Users\yusuf\source\repos\crazypsp\TurksoftApp\TurkSoft.WebUI\wwwroot\js\api\entities\Kullanici.js
  - C:\Users\yusuf\source\repos\crazypsp\TurksoftApp\TurkSoft.WebUI\wwwroot\js\api\entities\Log.js
