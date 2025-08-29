@@ -1,132 +1,154 @@
-import BaseAPIService from './baseAPIService.js';
+// wwwroot/ApiJS/Apps/Kullanici.js
+// ======================================================================
+// Bu modül, Kullanıcı Index.cshtml sayfasını sürer:
+//  - Listeyi çeker, tabloya basar (DataTables varsa entegre olur).
+//  - Arama kutusu filtreler.
+//  - Yeni/Düzenle modalını açar, kaydeder (create/update).
+//  - Silme işlemini yapar.
+// ======================================================================
 
-const api = new BaseAPIService('https://erpapi.hizliekstre.com/api/roles');
+import { KullaniciApi } from '../entities/index.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadRoles();
-});
+let all = [];              // son çekilen liste (cache)
+let dt = null;            // DataTables örneği (varsa)
 
-// Tüm rolleri getirir ve tabloyu oluşturur.
-async function loadRoles() {
-  try {
-    const roles = await api.getAll();
-    renderRolesDataTable(roles);
-  } catch (error) {
-    console.error("Roller yüklenirken hata oluştu:", error);
+function $(sel) { return document.querySelector(sel); }
+function $$(sel) { return document.querySelectorAll(sel); }
+
+function toast(msg, type = 'success') {
+  // Basit: istersen kendi toast sisteminle değiştir
+  console.log(`[${type}]`, msg);
+}
+
+// === Tabloyu doldur ===
+function renderTable(items) {
+  const tbody = $('#userTable tbody');
+  tbody.innerHTML = items.map(u => `
+    <tr data-id="${u.Id}">
+      <td>${u.AdSoyad ?? ''}</td>
+      <td>${u.Eposta ?? ''}</td>
+      <td>${u.Telefon ?? ''}</td>
+      <td>${u.Rol ?? ''}</td>
+      <td>${u.IsActive ? '<span class="badge bg-label-success">Aktif</span>' : '<span class="badge bg-label-secondary">Pasif</span>'}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-primary me-2 btn-edit"><i class="ti ti-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger btn-del"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>
+  `).join('');
+
+  // DataTables varsa initialize et
+  if (window.DataTable) {
+    if (dt) dt.destroy();
+    dt = new window.DataTable('#userTable', {
+      responsive: true,
+      searching: false, // kendi aramamızı kullanıyoruz
+      lengthChange: false
+    });
   }
 }
 
-// Yeni rol oluşturur.
-async function createRole(roleData) {
-  try {
-    const result = await api.create(roleData);
-    console.log('Rol başarıyla oluşturuldu:', result);
-    loadRoles(); // Tabloyu güncelle
-  } catch (error) {
-    console.error("Rol oluşturulurken hata oluştu:", error);
-  }
+// === Kart istatistiklerini güncelle ===
+function renderStats(items) {
+  $('#statTotal').textContent = items.length;
+  const admins = items.filter(x => (x.Rol || '').toLowerCase() === 'admin').length;
+  $('#statAdmins').textContent = admins;
+  $('#statOther').textContent = items.length - admins;
 }
 
-// Rol güncelleme
-async function updateRole(roleData) {
-  try {
-    const result = await api.update(roleData);
-    console.log('Rol başarıyla güncellendi:', result);
-    loadRoles(); // Tabloyu güncelle
-  } catch (error) {
-    console.error("Rol güncellenirken hata oluştu:", error);
-  }
+// === Sunucudan çek ===
+async function load() {
+  const data = await KullaniciApi.list();
+  all = Array.isArray(data) ? data : [];
+  renderTable(all);
+  renderStats(all);
 }
 
-// Id ile rol getirme
-async function getRoleById(id) {
-  try {
-    const role = await api.getById(id);
-    console.log('Getirilen rol:', role);
-    return role;
-  } catch (error) {
-    console.error("Rol getirilirken hata oluştu:", error);
-  }
-}
-
-// Id ile rol silme
-async function deleteRole(id) {
-  try {
-    const result = await api.delete(id);
-    console.log('Rol başarıyla silindi:', result);
-    loadRoles(); // Tabloyu güncelle
-  } catch (error) {
-    console.error("Rol silinirken hata oluştu:", error);
-  }
-}
-
-// DataTable Render işlemi
-function renderRolesDataTable(roles) {
-  $('.datatables-users').DataTable({
-    data: roles,
-    responsive: true,
-    destroy: true,
-    columns: [
-      { data: null, defaultContent: '' },
-      { data: null, defaultContent: '' },
-      { data: 'userName' },
-      { data: 'roleName' },
-      { data: 'plan' },
-      { data: 'billing' },
-      { data: 'status', render: renderStatus },
-      { data: null, render: renderActions }
-    ]
+// === Arama ===
+function applyFilter() {
+  const q = ($('#txtSearch').value || '').toLowerCase().trim();
+  const filtered = !q ? all : all.filter(u => {
+    const hay = `${u.AdSoyad ?? ''} ${u.Eposta ?? ''} ${u.Rol ?? ''}`.toLowerCase();
+    return hay.includes(q);
   });
+  renderTable(filtered);
 }
 
-// Status kolonunu formatlama
-function renderStatus(data) {
-  const badgeClass = data === 'Active' ? 'success' : 'danger';
-  return `<span class="badge bg-label-${badgeClass}">${data}</span>`;
+// === Modal aç/doldur ===
+function openModal(entity = null) {
+  $('#userModalTitle').textContent = entity ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı';
+  $('#userId').value = entity?.Id ?? '';
+  $('#fAdSoyad').value = entity?.AdSoyad ?? '';
+  $('#fEposta').value = entity?.Eposta ?? '';
+  $('#fSifre').value = entity?.Sifre ?? '';
+  $('#fTelefon').value = entity?.Telefon ?? '';
+  $('#fRol').value = entity?.Rol ?? 'Bayi';
+  $('#fProfil').value = entity?.ProfilResmiUrl ?? '';
+  $('#formError').style.display = 'none';
+
+  const modal = new bootstrap.Modal(document.getElementById('userModal'));
+  modal.show();
 }
 
-// Actions kolonunu formatlama
-function renderActions(data, type, row) {
-  return `
-        <div class="dropdown">
-            <button class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                Actions
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" class="dropdown-item" onclick="viewRole('${row.id}')">View</a></li>
-                <li><a href="#" class="dropdown-item" onclick="editRole('${row.id}')">Edit</a></li>
-                <li><a href="#" class="dropdown-item" onclick="deleteRole('${row.id}')">Delete</a></li>
-            </ul>
-        </div>`;
-}
-
-// Role detay görüntüleme (örnek)
-window.viewRole = async function (id) {
-  const role = await getRoleById(id);
-  Swal.fire('Role Details', JSON.stringify(role), 'info');
-};
-
-// Rol düzenleme modal açılması (örnek kullanım)
-window.editRole = async function (id) {
-  const role = await getRoleById(id);
-  // Modalda form doldurma işlemi (örnek kullanım)
-  $('#roleNameInput').val(role.roleName);
-  $('#roleIdInput').val(role.id);
-  $('#addRoleModal').modal('show');
-};
-
-// Rol oluşturma/güncelleme modal işlemi
-document.getElementById('saveRoleBtn').addEventListener('click', async () => {
-  const roleData = {
-    id: $('#roleIdInput').val(),
-    roleName: $('#roleNameInput').val(),
+// === Kaydet (create/update) ===
+async function save() {
+  const id = $('#userId').value || null;
+  const payload = {
+    Id: id || undefined,
+    AdSoyad: $('#fAdSoyad').value.trim(),
+    Eposta: $('#fEposta').value.trim(),
+    Sifre: $('#fSifre').value,        // not: canlıda hash
+    Telefon: $('#fTelefon').value.trim(),
+    Rol: $('#fRol').value,
+    ProfilResmiUrl: $('#fProfil').value.trim(),
+    IsActive: true
   };
 
-  if (roleData.id) {
-    await updateRole(roleData);
-  } else {
-    await createRole(roleData);
+  // basit doğrulama
+  if (!payload.AdSoyad || !payload.Eposta || !payload.Sifre) {
+    const box = $('#formError'); box.textContent = 'Ad Soyad, E-posta ve Şifre zorunludur.'; box.style.display = 'block';
+    return;
   }
 
-  $('#addRoleModal').modal('hide');
+  if (id) await KullaniciApi.update(id, payload);
+  else await KullaniciApi.create(payload);
+
+  bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+  toast('Kayıt kaydedildi');
+  await load();
+}
+
+// === Sil ===
+async function remove(id) {
+  if (!confirm('Kullanıcı silinsin mi?')) return;
+  await KullaniciApi.remove(id);
+  toast('Kayıt silindi', 'warning');
+  await load();
+}
+
+// === Event binding ===
+document.addEventListener('DOMContentLoaded', async () => {
+  await load();
+
+  // arama
+  $('#txtSearch').addEventListener('input', applyFilter);
+
+  // yeni
+  $('#btnNewUser').addEventListener('click', () => openModal(null));
+
+  // kaydet
+  $('#btnSaveUser').addEventListener('click', save);
+
+  // satır butonları
+  document.getElementById('userTable').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr) return;
+    const id = tr.getAttribute('data-id');
+    if (e.target.closest('.btn-edit')) {
+      const entity = all.find(x => x.Id === id);
+      openModal(entity);
+    } else if (e.target.closest('.btn-del')) {
+      remove(id);
+    }
+  });
 });

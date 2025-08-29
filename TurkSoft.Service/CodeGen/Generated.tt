@@ -22,7 +22,7 @@ namespace TurkSoft.Service.Interface
 {
 <#
     var entities = new[]{
-        "Kullanici","Log","MailAyar","MailGonderim","SmsAyar","SmsGonderim","WhatsappAyar","WhatsappGonderim",
+        "Kullanici","KullaniciBayi","KullaniciFirma","KullaniciMaliMusavir","Log","MailAyar","MailGonderim","SmsAyar","SmsGonderim","WhatsappAyar","WhatsappGonderim",
         "Luca","KeyAccount","UrunTipi","Paket","UrunFiyat","PaketIskonto",
         "Bayi","BayiFirma","MaliMusavir","Firma",
         "Satis","SatisKalem","Lisans","LisansAdet",

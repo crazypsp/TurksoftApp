@@ -13,7 +13,8 @@
 using Microsoft.AspNetCore.Mvc;                                   // Controller öznitelikleri için
 using TurkSoft.ErpApi.Controllers.Common;                         // CrudController<> base sınıfı
 using TurkSoft.Entities.EntityDB;                                 // Entity sınıfları (T tipi)
-using TurkSoft.Service.Interface;                                 // I{Entity}Service arayüzleri
+using TurkSoft.Service.Interface;
+using Asp.Versioning;                                 // I{Entity}Service arayüzleri
 
 namespace TurkSoft.ErpApi.Controllers
 {
@@ -27,6 +28,42 @@ namespace TurkSoft.ErpApi.Controllers
     {
         // DI ile ilgili servisi al ve base sınıfa ilet
         public KullaniciController(IKullaniciService service) : base(service) { }
+    }
+
+    /// <summary>
+    /// KullaniciBayi CRUD API — Standart aksiyonlar (GET/GET{id}/POST/PUT/DELETE) CrudController’dan miras alınır.
+    /// </summary>
+    [ApiVersion("1.0")]                                             // v1.0 etiket
+    [Route("api/v{version:apiVersion}/[controller]")]               // Örn: /api/v1/Firma
+    [ApiController]                                                 // Otomatik model doğrulama vb.
+    public partial class KullaniciBayiController : CrudController<KullaniciBayi, IKullaniciBayiService>
+    {
+        // DI ile ilgili servisi al ve base sınıfa ilet
+        public KullaniciBayiController(IKullaniciBayiService service) : base(service) { }
+    }
+
+    /// <summary>
+    /// KullaniciFirma CRUD API — Standart aksiyonlar (GET/GET{id}/POST/PUT/DELETE) CrudController’dan miras alınır.
+    /// </summary>
+    [ApiVersion("1.0")]                                             // v1.0 etiket
+    [Route("api/v{version:apiVersion}/[controller]")]               // Örn: /api/v1/Firma
+    [ApiController]                                                 // Otomatik model doğrulama vb.
+    public partial class KullaniciFirmaController : CrudController<KullaniciFirma, IKullaniciFirmaService>
+    {
+        // DI ile ilgili servisi al ve base sınıfa ilet
+        public KullaniciFirmaController(IKullaniciFirmaService service) : base(service) { }
+    }
+
+    /// <summary>
+    /// KullaniciMaliMusavir CRUD API — Standart aksiyonlar (GET/GET{id}/POST/PUT/DELETE) CrudController’dan miras alınır.
+    /// </summary>
+    [ApiVersion("1.0")]                                             // v1.0 etiket
+    [Route("api/v{version:apiVersion}/[controller]")]               // Örn: /api/v1/Firma
+    [ApiController]                                                 // Otomatik model doğrulama vb.
+    public partial class KullaniciMaliMusavirController : CrudController<KullaniciMaliMusavir, IKullaniciMaliMusavirService>
+    {
+        // DI ile ilgili servisi al ve base sınıfa ilet
+        public KullaniciMaliMusavirController(IKullaniciMaliMusavirService service) : base(service) { }
     }
 
     /// <summary>

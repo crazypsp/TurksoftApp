@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Views\_Partials\Apps\Bayi\Tables.cshtml" />
+    <None Include="Views\_Partials\Apps\Firma\Filters.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="CodeGen\Generate.EntityJs.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Generate.EntityJs.log.txt</LastGenOutput>

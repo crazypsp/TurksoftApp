@@ -65,11 +65,19 @@ builder.Services.AddTransient<IConfigureOptions<Swashbuckle.AspNetCore.SwaggerGe
 // 6) HealthChecks
 builder.Services.AddHealthChecks()
     .AddCheck<TurkSoft.ErpApi.HealthChecks.DbContextHealthCheck>("sql");
-
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 // 7) CORS
 builder.Services.AddCors(o =>
 {
-    o.AddDefaultPolicy(p => p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
+    o.AddPolicy("WebUICors", p =>
+    {
+        // Cookie/credentials ile çalışmak için AllowAnyOrigin KULLANILMAZ!
+        p.WithOrigins(allowedOrigins)
+         .AllowAnyHeader()
+         .AllowAnyMethod()
+         .AllowCredentials(); // önemli
+    });
 });
 
 // 8) ProblemDetails
@@ -110,7 +118,7 @@ app.UseWhen(ctx =>
     {
         branch.UseMiddleware<TurkSoft.ErpApi.Middleware.GlobalExceptionMiddleware>();
     });
-
+app.UseCors("WebUICors");
 // Swagger JSON + UI (çoklu versiyon desteği)
 app.UseSwagger();
 

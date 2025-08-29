@@ -1,4 +1,4 @@
-﻿
+
 // wwwroot/js/api/entities/AktiviteAtama.js
 // ======================================================================
 // Bu dosya otomatik üretildi. İlgili entity için REST API sarmalayıcısı.
@@ -6,7 +6,7 @@
 // - Her satır, kurumsal bakım kolaylığı için açıklamalıdır.
 // ======================================================================
 
-import BaseApiService from '../core/BaseApiService.js'; // Ortak REST tabanı
+import BaseApiService from '../Base/BaseApiService.js'; // Ortak REST tabanı
 
 // (1) Controller segmenti: backend'deki route segmenti (örn: 'firma', 'kullanici').
 const RESOURCE = 'aktiviteatama';

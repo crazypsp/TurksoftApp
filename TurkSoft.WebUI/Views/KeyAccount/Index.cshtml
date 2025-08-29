@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Firma - Apps";
+    ViewData["Title"] = "KeyAccount - Apps";
 }
 
 @section VendorStyles {
@@ -16,25 +16,14 @@
 }
 
 @section PageScripts {
-    <script src="~/js/app-access-roles.js"></script>
-    <script src="~/js/modal-add-role.js"></script>
+    <script type="module" src="~/ApiJS/Apps/KeyAccount.js"></script>
 }
 
-<h4 class="mb-1">Roles List</h4>
+<h4 class="mb-1">KeyAccount</h4>
+<p class="mb-6">KeyAccount kodlarını yönetin.</p>
 
-<p class="mb-6">
-    A role provided access to predefined menus and features so that depending on <br> assigned role an administrator can have access to what user needs.
-</p>
-
-<!-- Partial View: Role Cards -->
 <div class="row g-6">
-    @await Html.PartialAsync("../_Partials/_RoleCards")
-
-    <!-- Partial View: Roles DataTable -->
-    <div class="col-12">
-        @await Html.PartialAsync("../_Partials/_RolesDataTable")
-    </div>
+    @await Html.PartialAsync("../_Partials/Apps/KeyAccount/Filters")
+    <div class="col-12">@await Html.PartialAsync("../_Partials/Apps/KeyAccount/Tables")</div>
 </div>
-
-<!-- Add Role Modal -->
-@await Html.PartialAsync("../_Partials/_Modals/ModalAddRole")
+@await Html.PartialAsync("../_Partials/Apps/KeyAccount/Modals")

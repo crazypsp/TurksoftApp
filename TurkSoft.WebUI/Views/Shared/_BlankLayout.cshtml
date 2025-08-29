@@ -2,7 +2,8 @@
   Layout = "_CommonMasterLayout";
   ViewData["customizerHidden"] = (ViewData["customizerHidden"] ??= "customizer-hide");
 }
-
+@using Microsoft.Extensions.Options
+@inject IOptions<TurkSoft.WebUI.AppSettings.ApiSettings> Api
 @section VendorStyles { @RenderSection("VendorStyles", required: false) }
 
 @section PageStyles { @RenderSection("PageStyles", required: false) }

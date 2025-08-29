@@ -1,132 +1,86 @@
-import BaseAPIService from './baseAPIService.js';
-
-const api = new BaseAPIService('https://erpapi.hizliekstre.com/api/roles');
+import { MaliMusavirApi, BayiApi } from '../entities/index.js';
+const $ = s => document.querySelector(s); const $$ = s => Array.from(document.querySelectorAll(s));
+const val = el => (el?.value ?? '').trim();
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadRoles();
-});
+  const tbody = $('#tbl-mm-body');
+  const fAd = $('#fltAdSoyad');
+  const fEpo = $('#fltEposta');
+  const fBayi = $('#fltBayiId');
 
-// Tüm rolleri getirir ve tabloyu oluşturur.
-async function loadRoles() {
-  try {
-    const roles = await api.getAll();
-    renderRolesDataTable(roles);
-  } catch (error) {
-    console.error("Roller yüklenirken hata oluştu:", error);
+  const btnNew = $('#btnNewMM');
+  const modalEl = $('#mdlMM'); const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+  const formEl = $('#frmMM');
+
+  const fmId = $('#frmId'), fmAd = $('#frmAdSoyad'), fmTel = $('#frmTelefon'), fmEpo = $('#frmEposta'),
+    fmUnv = $('#frmUnvan'), fmVergi = $('#frmVergiNo'), fmTckn = $('#frmTCKN'), fmBayi = $('#frmBayiId');
+
+  async function loadLookups() {
+    const bayiler = await BayiApi.list();
+    fillSelect(fBayi, bayiler, true);
+    fillSelect(fmBayi, bayiler, true);
   }
-}
-
-// Yeni rol oluşturur.
-async function createRole(roleData) {
-  try {
-    const result = await api.create(roleData);
-    console.log('Rol başarıyla oluşturuldu:', result);
-    loadRoles(); // Tabloyu güncelle
-  } catch (error) {
-    console.error("Rol oluşturulurken hata oluştu:", error);
+  function fillSelect(sel, items, addEmpty) {
+    if (!sel) return; sel.innerHTML = '';
+    if (addEmpty) { const o = document.createElement('option'); o.value = ''; o.textContent = '— Seçiniz —'; sel.appendChild(o); }
+    (items || []).forEach(x => { const o = document.createElement('option'); o.value = x.Id; o.textContent = x.Unvan; sel.appendChild(o); });
   }
-}
 
-// Rol güncelleme
-async function updateRole(roleData) {
-  try {
-    const result = await api.update(roleData);
-    console.log('Rol başarıyla güncellendi:', result);
-    loadRoles(); // Tabloyu güncelle
-  } catch (error) {
-    console.error("Rol güncellenirken hata oluştu:", error);
+  async function loadTable() {
+    const list = await MaliMusavirApi.list();
+    const qAd = val(fAd).toLowerCase(); const qE = val(fEpo).toLowerCase(); const qBayi = val(fBayi);
+    const filtered = (list || []).filter(x => {
+      const okAd = !qAd || (x.AdSoyad || '').toLowerCase().includes(qAd);
+      const okE = !qE || (x.Eposta || '').toLowerCase().includes(qE);
+      const okB = !qBayi || x.BayiId === qBayi;
+      return okAd && okE && okB;
+    });
+    tbody.innerHTML = (filtered || []).map(r => `
+      <tr>
+        <td>${r.AdSoyad || ''}</td>
+        <td>${r.Unvan || ''}</td>
+        <td>${r.VergiNo || ''}</td>
+        <td>${r.TCKN || ''}</td>
+        <td>${r.Telefon || ''}</td>
+        <td>${r.Eposta || ''}</td>
+        <td>${r.Bayi?.Unvan || ''}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-primary act-edit" data-id="${r.Id}">Düzenle</button>
+          <button class="btn btn-sm btn-danger act-del"  data-id="${r.Id}">Sil</button>
+        </td>
+      </tr>`).join('');
+    bindRowActions();
   }
-}
 
-// Id ile rol getirme
-async function getRoleById(id) {
-  try {
-    const role = await api.getById(id);
-    console.log('Getirilen rol:', role);
-    return role;
-  } catch (error) {
-    console.error("Rol getirilirken hata oluştu:", error);
+  function bindRowActions() {
+    $$('.act-edit').forEach(b => b.addEventListener('click', async e => {
+      const id = e.currentTarget.getAttribute('data-id');
+      const r = await MaliMusavirApi.get(id);
+      fmId.value = r.Id; fmAd.value = r.AdSoyad || ''; fmTel.value = r.Telefon || ''; fmEpo.value = r.Eposta || '';
+      fmUnv.value = r.Unvan || ''; fmVergi.value = r.VergiNo || ''; fmTckn.value = r.TCKN || ''; fmBayi.value = r.BayiId || '';
+      modal?.show();
+    }));
+    $$('.act-del').forEach(b => b.addEventListener('click', async e => {
+      const id = e.currentTarget.getAttribute('data-id');
+      if (!confirm('Silinsin mi?')) return;
+      await MaliMusavirApi.remove(id); await loadTable();
+    }));
   }
-}
 
-// Id ile rol silme
-async function deleteRole(id) {
-  try {
-    const result = await api.delete(id);
-    console.log('Rol başarıyla silindi:', result);
-    loadRoles(); // Tabloyu güncelle
-  } catch (error) {
-    console.error("Rol silinirken hata oluştu:", error);
-  }
-}
+  btnNew?.addEventListener('click', () => { formEl.reset(); fmId.value = ''; modal?.show(); });
 
-// DataTable Render işlemi
-function renderRolesDataTable(roles) {
-  $('.datatables-users').DataTable({
-    data: roles,
-    responsive: true,
-    destroy: true,
-    columns: [
-      { data: null, defaultContent: '' },
-      { data: null, defaultContent: '' },
-      { data: 'userName' },
-      { data: 'roleName' },
-      { data: 'plan' },
-      { data: 'billing' },
-      { data: 'status', render: renderStatus },
-      { data: null, render: renderActions }
-    ]
+  formEl?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const dto = {
+      Id: fmId.value || undefined, AdSoyad: fmAd.value, Telefon: fmTel.value, Eposta: fmEpo.value,
+      Unvan: fmUnv.value, VergiNo: fmVergi.value, TCKN: fmTckn.value,
+      BayiId: fmBayi.value || null
+    };
+    if (dto.Id) await MaliMusavirApi.update(dto.Id, dto); else await MaliMusavirApi.create(dto);
+    modal?.hide(); await loadTable();
   });
-}
 
-// Status kolonunu formatlama
-function renderStatus(data) {
-  const badgeClass = data === 'Active' ? 'success' : 'danger';
-  return `<span class="badge bg-label-${badgeClass}">${data}</span>`;
-}
+  [fAd, fEpo, fBayi].forEach(el => { el?.addEventListener('input', loadTable); el?.addEventListener('change', loadTable); });
 
-// Actions kolonunu formatlama
-function renderActions(data, type, row) {
-  return `
-        <div class="dropdown">
-            <button class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                Actions
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" class="dropdown-item" onclick="viewRole('${row.id}')">View</a></li>
-                <li><a href="#" class="dropdown-item" onclick="editRole('${row.id}')">Edit</a></li>
-                <li><a href="#" class="dropdown-item" onclick="deleteRole('${row.id}')">Delete</a></li>
-            </ul>
-        </div>`;
-}
-
-// Role detay görüntüleme (örnek)
-window.viewRole = async function (id) {
-  const role = await getRoleById(id);
-  Swal.fire('Role Details', JSON.stringify(role), 'info');
-};
-
-// Rol düzenleme modal açılması (örnek kullanım)
-window.editRole = async function (id) {
-  const role = await getRoleById(id);
-  // Modalda form doldurma işlemi (örnek kullanım)
-  $('#roleNameInput').val(role.roleName);
-  $('#roleIdInput').val(role.id);
-  $('#addRoleModal').modal('show');
-};
-
-// Rol oluşturma/güncelleme modal işlemi
-document.getElementById('saveRoleBtn').addEventListener('click', async () => {
-  const roleData = {
-    id: $('#roleIdInput').val(),
-    roleName: $('#roleNameInput').val(),
-  };
-
-  if (roleData.id) {
-    await updateRole(roleData);
-  } else {
-    await createRole(roleData);
-  }
-
-  $('#addRoleModal').modal('hide');
+  (async () => { await loadLookups(); await loadTable(); })();
 });

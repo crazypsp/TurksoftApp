@@ -1,0 +1,103 @@
+@{
+    Layout = "_BlankLayout";
+    ViewData["Title"] = "Login Cover - Pages";
+}
+
+@section VendorStyles {
+    <link rel="stylesheet" href="~/vendor/libs/&#64;form-validation/form-validation.css" />
+}
+
+@section VendorScripts {
+    <script src="~/vendor/libs/&#64;form-validation/popular.js"></script>
+    <script src="~/vendor/libs/&#64;form-validation/bootstrap5.js"></script>
+    <script src="~/vendor/libs/&#64;form-validation/auto-focus.js"></script>
+}
+
+@section PageStyles {
+    <link rel="stylesheet" href="~/vendor/css/pages/page-auth.css">
+}
+
+@section PageScripts {
+    <!-- Sayfaya özel script (ES module) -->
+    <script type="module" src="~/ApiJS/Apps/login-cover.js"></script>
+}
+
+
+<div class="authentication-wrapper authentication-cover">
+    <div class="authentication-inner row m-0">
+        <!-- Sol taraf (görsel/branding) -->
+        <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center p-5">
+            <div class="w-100 d-flex justify-content-center">
+                <img src="~/img/illustrations/boy-with-rocket-light.png" class="img-fluid my-5" alt="Login" />
+            </div>
+        </div>
+
+        <!-- Sağ taraf (form) -->
+        <div class="d-flex col-12 col-lg-5 col-xl-4 align-items-center authentication-bg p-sm-5 p-4">
+            <div class="w-px-400 mx-auto">
+
+                <!-- Logo / Başlık -->
+                <div class="app-brand mb-4">
+                    <a href="/" class="app-brand-link gap-2">
+                        <span class="app-brand-logo demo">
+                            <img src="~/img/favicon/favicon.ico" style="width:28px;height:28px" />
+                        </span>
+                        <span class="app-brand-text demo text-body fw-bold">TurkSoft ERP</span>
+                    </a>
+                </div>
+
+                <h4 class="mb-1">Tekrar hoş geldiniz! 👋</h4>
+                <p class="mb-4">Hesabınızla devam edin.</p>
+
+                <!-- Hata kutusu -->
+                <div id="loginError" class="alert alert-danger" style="display:none"></div>
+
+                <!-- Giriş Formu -->
+                <form id="loginForm" autocomplete="off">
+                    <!-- E-posta -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-posta</label>
+                        <input type="email" class="form-control" id="email" name="email"
+                               placeholder="ornek@firma.com" autofocus required />
+                    </div>
+
+                    <!-- Şifre -->
+                    <div class="mb-3 form-password-toggle">
+                        <label class="form-label" for="password">Şifre</label>
+                        <div class="input-group input-group-merge">
+                            <input type="password" id="password" class="form-control" name="password" required
+                                   placeholder="••••••••" aria-describedby="password" />
+                            <span class="input-group-text cursor-pointer" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">
+                                <i class="ti ti-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Beni hatırla / Şifremi unuttum -->
+                    <div class="mb-3 d-flex justify-content-between">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="remember-me" disabled>
+                            <label class="form-check-label" for="remember-me"> Beni hatırla (yakında) </label>
+                        </div>
+                        <a href="javascript:void(0);">
+                            <span>Şifremi unuttum?</span>
+                        </a>
+                    </div>
+
+                    <!-- Giriş Butonu -->
+                    <div class="mb-3">
+                        <button id="btnLogin" class="btn btn-primary d-grid w-100" type="submit">
+                            Giriş Yap
+                        </button>
+                    </div>
+                </form>
+
+                <p class="text-center mt-3">
+                    Hesabınız yok mu?
+                    <a href="javascript:void(0);">Yönetici ile iletişime geçin</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+

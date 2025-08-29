@@ -17,6 +17,12 @@ namespace TurkSoft.Service.Interface
 {
     /// <summary> Kullanici varlığı için uygulama servis sözleşmesi. </summary>
     public partial interface IKullaniciService : IEntityService<Kullanici> { }
+    /// <summary> KullaniciBayi varlığı için uygulama servis sözleşmesi. </summary>
+    public partial interface IKullaniciBayiService : IEntityService<KullaniciBayi> { }
+    /// <summary> KullaniciFirma varlığı için uygulama servis sözleşmesi. </summary>
+    public partial interface IKullaniciFirmaService : IEntityService<KullaniciFirma> { }
+    /// <summary> KullaniciMaliMusavir varlığı için uygulama servis sözleşmesi. </summary>
+    public partial interface IKullaniciMaliMusavirService : IEntityService<KullaniciMaliMusavir> { }
     /// <summary> Log varlığı için uygulama servis sözleşmesi. </summary>
     public partial interface ILogService : IEntityService<Log> { }
     /// <summary> MailAyar varlığı için uygulama servis sözleşmesi. </summary>
@@ -126,6 +132,48 @@ namespace TurkSoft.Service.Manager
     {
         /// <summary> DI ile IBaseService&lt;Kullanici&gt; enjekte edilir. </summary>
         public KullaniciManager(IBaseService<Kullanici> baseBusiness) : base(baseBusiness)
+        {
+            OnConstructed();
+        }
+
+        /// <summary>
+        /// Manuel partial sınıfta opsiyonel olarak implement edilebilen "constructor sonrası" kanca.
+        /// </summary>
+        partial void OnConstructed();
+    }
+    /// <summary> KullaniciBayi varlığı için servis implementasyonu (iş katmanı). </summary>
+    public partial class KullaniciBayiManager : EntityManager<KullaniciBayi>, TurkSoft.Service.Interface.IKullaniciBayiService
+    {
+        /// <summary> DI ile IBaseService&lt;KullaniciBayi&gt; enjekte edilir. </summary>
+        public KullaniciBayiManager(IBaseService<KullaniciBayi> baseBusiness) : base(baseBusiness)
+        {
+            OnConstructed();
+        }
+
+        /// <summary>
+        /// Manuel partial sınıfta opsiyonel olarak implement edilebilen "constructor sonrası" kanca.
+        /// </summary>
+        partial void OnConstructed();
+    }
+    /// <summary> KullaniciFirma varlığı için servis implementasyonu (iş katmanı). </summary>
+    public partial class KullaniciFirmaManager : EntityManager<KullaniciFirma>, TurkSoft.Service.Interface.IKullaniciFirmaService
+    {
+        /// <summary> DI ile IBaseService&lt;KullaniciFirma&gt; enjekte edilir. </summary>
+        public KullaniciFirmaManager(IBaseService<KullaniciFirma> baseBusiness) : base(baseBusiness)
+        {
+            OnConstructed();
+        }
+
+        /// <summary>
+        /// Manuel partial sınıfta opsiyonel olarak implement edilebilen "constructor sonrası" kanca.
+        /// </summary>
+        partial void OnConstructed();
+    }
+    /// <summary> KullaniciMaliMusavir varlığı için servis implementasyonu (iş katmanı). </summary>
+    public partial class KullaniciMaliMusavirManager : EntityManager<KullaniciMaliMusavir>, TurkSoft.Service.Interface.IKullaniciMaliMusavirService
+    {
+        /// <summary> DI ile IBaseService&lt;KullaniciMaliMusavir&gt; enjekte edilir. </summary>
+        public KullaniciMaliMusavirManager(IBaseService<KullaniciMaliMusavir> baseBusiness) : base(baseBusiness)
         {
             OnConstructed();
         }

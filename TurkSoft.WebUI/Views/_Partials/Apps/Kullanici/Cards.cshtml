@@ -1,44 +1,40 @@
-<div class="col-xl-8 col-lg-6 col-md-6">
+@* Basit özet kartları *@
+<div class="col-12 col-md-4">
     <div class="card">
         <div class="card-body">
-            <div class="d-flex justify-content-between mb-4">
+            <div class="d-flex align-items-center">
+                <div class="avatar me-3"><span class="avatar-initial rounded bg-label-primary"><i class="ti ti-users"></i></span></div>
                 <div>
-                    <h6 class="text-body">Toplam Kullanıcı</h6>
-                    <h3 id="card-total">0</h3>
-                </div>
-                <div class="avatar bg-primary text-white">
-                    <i class="ti ti-users"></i>
-                </div>
-            </div>
-            <div class="d-flex justify-content-between">
-                <div>
-                    <small>Aktif</small>
-                    <h5 id="card-active">0</h5>
-                </div>
-                <div>
-                    <small>Pasif</small>
-                    <h5 id="card-inactive">0</h5>
+                    <h5 class="mb-1" id="statTotal">0</h5>
+                    <small class="text-muted">Toplam Kullanıcı</small>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<div class="col-xl-4 col-lg-6 col-md-6">
-    <div class="card h-100">
-        <div class="row h-100">
-            <div class="col-sm-5">
-                <div class="d-flex align-items-end h-100 justify-content-center mt-sm-0 mt-4">
-                    <img src="~/img/illustrations/add-new-roles.png" class="img-fluid mt-sm-4 mt-md-0" alt="add-new-roles" width="83">
-                </div>
-            </div>
-            <div class="col-sm-7">
-                <div class="card-body text-sm-end text-center ps-sm-0">
-                    <button data-bs-target="#kullaniciModal" data-bs-toggle="modal" class="btn btn-sm btn-primary mb-4 text-nowrap add-new-role">Add New Role</button>
-                    <p class="mb-0"> Add new role, <br> if it doesn't exist.</p>
+<div class="col-12 col-md-4">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="avatar me-3"><span class="avatar-initial rounded bg-label-success"><i class="ti ti-shield"></i></span></div>
+                <div>
+                    <h5 class="mb-1" id="statAdmins">0</h5>
+                    <small class="text-muted">Admin Sayısı</small>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
+<div class="col-12 col-md-4">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="avatar me-3"><span class="avatar-initial rounded bg-label-info"><i class="ti ti-phone-call"></i></span></div>
+                <div>
+                    <h5 class="mb-1" id="statOther">0</h5>
+                    <small class="text-muted">Diğer Roller</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
