@@ -51,7 +51,7 @@ namespace TurkSoft.Business.Managers
                 // CAPTCHA kontrol edilir ve çözülürse çözüm akışı başlatılır
                 var captchaElement = _popup.Locator("div.captcha img");
                 if (await captchaElement.IsVisibleAsync())
-                     await HandleCaptchaAsync(user, captchaElement);
+                    await HandleCaptchaAsync(user, captchaElement);
 
                 // Giriş sonrası yönlendirme yapılır
                 await _popup.ClickAsync(".lucaMmpLogo");
@@ -148,7 +148,7 @@ namespace TurkSoft.Business.Managers
 
                 // 🧠 RAM'e al
                 LucaSession.CachedHesapPlani = list;
-                
+
                 return new DataResult<List<AccountingCode>>(list, true, "Hesap planı başarıyla alındı.");
             }
             catch (Exception ex)
