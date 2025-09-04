@@ -380,5 +380,10 @@ namespace TurkSoft.Business.Managers
                 return 1000;
             }
         }
+
+        public Task<IDataResult<List<CompanyCode>>> GetCompanyAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -447,12 +447,28 @@
           </a>
         </li>
         <li>
-          <div class="d-grid px-2 pt-2 pb-1">
-            <a class="btn btn-sm btn-danger d-flex" asp-controller="Auth" asp-action="LoginCover" target="_blank">
-              <small class="align-middle">Logout</small>
-              <i class="ti ti-logout ms-2 ti-14px"></i>
-            </a>
-          </div>
+                    <div class="d-grid px-2 pt-2 pb-1">
+                        <form id="logoutFormMenu"
+                              asp-controller="LoginCover"
+                              asp-action="Logout"
+                              method="post"
+                              class="d-grid w-100 m-0 p-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger d-flex w-100">
+                                <small class="align-middle">Logout</small>
+                                <i class="ti ti-logout ms-2 ti-14px"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    @section Scripts {
+                        <script>
+                            // İstemci tarafı storage’ları da temizle
+                            document.getElementById('logoutFormMenu')?.addEventListener('submit', function () {
+                              try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+                            });
+                        </script>
+                    }
         </li>
       </ul>
     </li>

@@ -10,10 +10,10 @@ namespace TurkSoft.Entities.EntityDB
     public class KullaniciBayi:BaseEntity
     {
         public Guid KullaniciId { get; set; }
-        public Kullanici Kullanici { get; set; } = null!;
+        public Kullanici? Kullanici { get; set; } = null!;
 
         public Guid BayiId { get; set; }
-        public Bayi Bayi { get; set; } = null!;
+        public Bayi? Bayi { get; set; } = null!;
 
         public bool IsPrimary { get; set; } = false;     // Kullanıcının birincil bayisi?
         public string? AtananRol { get; set; }           // "BayiAdmin","Satis","Destek" vb.

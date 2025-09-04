@@ -18,6 +18,10 @@ namespace TurkSoft.Entities.Luca
         /// <summary>
         /// Hesap planı verileri bellekte tutulur, tekrar siteye gitmeye gerek kalmaz.
         /// </summary>
+        public static List<CompanyCode> CachedFirma { get; set; } = new();
+        /// <summary>
+        /// Hesap planı verileri bellekte tutulur, tekrar siteye gitmeye gerek kalmaz.
+        /// </summary>
         public static List<AccountingCode> CachedHesapPlani { get; set; } = new();
     }
 }

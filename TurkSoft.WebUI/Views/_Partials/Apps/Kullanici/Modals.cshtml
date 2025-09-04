@@ -1,62 +1,95 @@
+@* Ekle/Düzenle Modal – JS, #userModal içindeki alanları dolduruyor *@
 <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
+
             <div class="modal-header">
-                <h5 class="modal-title" id="userModalTitle">Kullanıcı</h5>
+                <h5 id="userModalTitle" class="modal-title">Yeni Kullanıcı</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
 
             <div class="modal-body">
-                <form id="userForm" autocomplete="off">
-                    <input type="hidden" id="userId" />
+                <input type="hidden" id="userId" />
 
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <label class="form-label">Ad Soyad</label>
-                            <input type="text" id="fAdSoyad" class="form-control" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">E-posta</label>
-                            <input type="email" id="fEposta" class="form-control" required />
-                        </div>
+                <div id="formError" class="alert alert-danger" style="display:none"></div>
 
-                        <div class="col-md-6">
-                            <label class="form-label">Şifre</label>
-                            <input type="password" id="fSifre" class="form-control" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Telefon</label>
-                            <input type="text" id="fTelefon" class="form-control" />
-                        </div>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="fAdSoyad">Ad Soyad</label>
+                        <input id="fAdSoyad" type="text" class="form-control" placeholder="Ad Soyad" />
+                    </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label">Rol</label>
-                            <select id="fRol" class="form-select">
-                                <option value="Admin">Admin</option>
-                                <option value="Bayi">Bayi</option>
-                                <option value="MaliMusavir">MaliMusavir</option>
-                                <option value="Firma">Firma</option>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="fEposta">E-posta</label>
+                        <input id="fEposta" type="email" class="form-control" placeholder="ornek@firma.com" />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="fSifre">Şifre</label>
+                        <input id="fSifre" type="password" class="form-control" placeholder="••••••••" />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="fTelefon">Telefon</label>
+                        <input id="fTelefon" type="text" class="form-control" placeholder="+90..." />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="fRol">Rol</label>
+                        <select id="fRol" class="form-select">
+                            <option value="Admin">Admin</option>
+                            <option value="Bayi">Bayi</option>
+                            <option value="MaliMusavir">Mali Müşavir</option>
+                            <option value="Firma">Firma</option>
+                        </select>
+                    </div>
+                    <div id="grpUserBayi" class="mb-3 d-none">
+                        <label class="form-label">Bayi</label>
+                        <select id="ddlUserBayi" class="form-select"></select>
+                        <div class="form-text">Bayi rolündeki kullanıcılar için zorunludur (Admin bağlar).</div>
+                    </div>
+
+                    <div id="grpUserMM" class="mb-3 d-none">
+                        <label class="form-label">Mali Müşavir</label>
+                        <select id="ddlUserMM" class="form-select"></select>
+                        <div class="form-text">Mali müşavir rolündeki kullanıcılar için zorunludur.</div>
+                    </div>
+                    <div class="col-12 col-md-6 d-none" id="grpProfilUrl">
+                        <label class="form-label" for="fProfil">Profil Resmi URL</label>
+                        <input id="fProfil" type="text" class="form-control" placeholder="https://..." />
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                @* 2.5 – MM Kullanıcısı ise ilişkilendirme alanı *@
+                <div id="mmLinkSection" style="display:none">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-md-8">
+                            <label class="form-label" for="mmSelect">Mali Müşavir Seç</label>
+                            <select id="mmSelect" class="form-select">
+                                <option value="">— Seçiniz —</option>
+                                @* JS tarafı, MaliMusavirApi.list() ile dolduracak *@
                             </select>
                         </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Profil Resmi URL</label>
-                            <input type="text" id="fProfil" class="form-control" placeholder="https://..." />
-                        </div>
-
-                        <div class="col-12">
-                            <div id="formError" class="alert alert-danger" style="display:none"></div>
+                        <div class="col-12 col-md-4">
+                            <button id="btnAttachMM" type="button" class="btn btn-outline-primary w-100">
+                                <i class="ti ti-link"></i> MM’ye Bağla
+                            </button>
                         </div>
                     </div>
-                </form>
+                    <small class="text-muted">Not: “Rol” alanında “Mali Müşavir” seçildiğinde görünür.</small>
+                </div>
+
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
-                <button type="button" class="btn btn-primary" id="btnSaveUser">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button id="btnSaveUser" type="button" class="btn btn-primary">
                     <i class="ti ti-device-floppy"></i> Kaydet
                 </button>
             </div>
+
         </div>
     </div>
 </div>

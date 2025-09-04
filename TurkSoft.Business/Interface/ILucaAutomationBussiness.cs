@@ -11,6 +11,7 @@ namespace TurkSoft.Business.Interface
     public interface ILucaAutomationBussiness
     {
         Task<IResult> LoginAsync(LucaLoginRequest request);
+        Task<IDataResult<List<CompanyCode>>> GetCompanyAsync();
         Task<IDataResult<List<AccountingCode>>> GetAccountingPlanAsync();
         Task<IResult> SendFisRowsAsync(List<LucaFisRow> rows);
     }

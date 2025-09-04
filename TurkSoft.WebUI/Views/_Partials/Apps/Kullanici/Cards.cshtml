@@ -1,39 +1,37 @@
-@* Basit özet kartları *@
-<div class="col-12 col-md-4">
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex align-items-center">
-                <div class="avatar me-3"><span class="avatar-initial rounded bg-label-primary"><i class="ti ti-users"></i></span></div>
+@* Basit istatistik kartları: JS, #statTotal / #statAdmins / #statOther'ı dolduruyor *@
+<div class="row g-6">
+    <div class="col-12 col-md-4">
+        <div class="card">
+            <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-1" id="statTotal">0</h5>
-                    <small class="text-muted">Toplam Kullanıcı</small>
+                    <h6 class="mb-1">Toplam Kullanıcı</h6>
+                    <h4 id="statTotal" class="mb-0">0</h4>
                 </div>
+                <span class="avatar"><i class="ti ti-users"></i></span>
             </div>
         </div>
     </div>
-</div>
-<div class="col-12 col-md-4">
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex align-items-center">
-                <div class="avatar me-3"><span class="avatar-initial rounded bg-label-success"><i class="ti ti-shield"></i></span></div>
+
+    <div class="col-12 col-md-4">
+        <div class="card">
+            <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-1" id="statAdmins">0</h5>
-                    <small class="text-muted">Admin Sayısı</small>
+                    <h6 class="mb-1">Admin</h6>
+                    <h4 id="statAdmins" class="mb-0">0</h4>
                 </div>
+                <span class="avatar"><i class="ti ti-shield"></i></span>
             </div>
         </div>
     </div>
-</div>
-<div class="col-12 col-md-4">
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex align-items-center">
-                <div class="avatar me-3"><span class="avatar-initial rounded bg-label-info"><i class="ti ti-phone-call"></i></span></div>
+
+    <div class="col-12 col-md-4">
+        <div class="card">
+            <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-1" id="statOther">0</h5>
-                    <small class="text-muted">Diğer Roller</small>
+                    <h6 class="mb-1">Diğer Roller</h6>
+                    <h4 id="statOther" class="mb-0">0</h4>
                 </div>
+                <span class="avatar"><i class="ti ti-user"></i></span>
             </div>
         </div>
     </div>

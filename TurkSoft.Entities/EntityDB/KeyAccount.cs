@@ -10,6 +10,7 @@ namespace TurkSoft.Entities.EntityDB
     {
         public string Kod { get; set; }
         public string Aciklama { get; set; }
-        public ICollection<MaliMusavir> MaliMusavirs { get; set; }
+        public Guid? MaliMusavirId { get; set; }
+        public ICollection<MaliMusavir> MaliMusavirs { get; set; } = new List<MaliMusavir>();
     }
 }

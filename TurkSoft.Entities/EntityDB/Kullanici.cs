@@ -17,7 +17,7 @@ namespace TurkSoft.Entities.EntityDB
         public string Telefon { get; set; }
         public string Rol { get; set; }
         public string? ProfilResmiUrl { get; set; }
-
+        public Guid? OlusturanKullaniciId { get; set; }
         // === İlişkiler (çok-çok) ===
         public ICollection<KullaniciBayi> BayiBaglantilari { get; set; } = new List<KullaniciBayi>();
         public ICollection<KullaniciFirma> FirmaBaglantilari { get; set; } = new List<KullaniciFirma>();

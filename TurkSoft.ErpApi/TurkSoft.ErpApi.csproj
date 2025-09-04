@@ -11,11 +11,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\Custom\KullaniciController.Assign.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="Controllers\CodeGen\Generated.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Generated.tt</DependentUpon>
     </None>
+    <None Include="Controllers\Custom\KullaniciController.Assign.cs" />
   </ItemGroup>
 
   <ItemGroup>

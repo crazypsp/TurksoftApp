@@ -5,13 +5,12 @@
 // View: <button id="btnMatch">...</button>
 // View: <button id="btnTransfer">...</button>
 // View: <form class="dropzone needsclick" id="dropzone-basic">...</form>
-
 (function () {
   // ========= API Bazları =========
   const BANKA_EKSTRE_API = 'https://localhost:7285/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
   const LUCA_API = 'https://localhost:7032/api/luca';                 // login/hesap-plani/fis-gonder
   const MATCHING_API = 'https://localhost:7018/api/bankaekstre';      // eslestir (Swagger değil, gerçek base!)
-
+  
   const USE_SWEETALERT = true;
   const DEFAULT_API_KEY = '1cd8c11693648aa213509c3a12738708';
 
@@ -144,6 +143,10 @@
         setBusy(true, 'Luca giriş yapılıyor...');
         const token = await lucaLogin({ CustumerNo, UserName, Password, ApiKey: DEFAULT_API_KEY });
         setBusy(false);
+
+        //setBusy(true, 'Cari listesi çekiliyor...');
+        //accountPlanData = await getCompany(token);
+        //setBusy(false);
 
         setBusy(true, 'Hesap planı çekiliyor...');
         accountPlanData = await getAccountingPlan(token);
@@ -317,6 +320,21 @@
     });
     const json = await readJsonOrThrow(res);
     return (json && (json.token || (json.data && json.data.token) || (json.result && json.result.token))) || null;
+  }
+
+  async function getCompany(token) {
+    const headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(join(LUCA_API, 'cari-list'), {
+      method: 'GET',
+      headers: headers,
+      mode: 'cors'
+    });
+    const json = await readJsonOrThrow(res);
+    if (Array.isArray(json)) return json;
+    if (json && Array.isArray(json.data)) return json.data;
+    if (json && Array.isArray(json.result)) return json.result;
+    return [];
   }
 
   async function getAccountingPlan(token) {

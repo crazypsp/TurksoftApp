@@ -17,10 +17,11 @@ namespace TurkSoft.Service
         {
             // Generic base
             services.AddScoped(typeof(IBaseService<>), typeof(BaseManager<>));
-
+            services.AddScoped(typeof(IEntityService<>), typeof(EntityManager<>));
             // Buraya tüm I{Entity}Service → {Entity}Manager eşleşmelerini ekliyoruz:
             services.AddScoped<IKullaniciService, KullaniciManager>();
             services.AddScoped<ILogService, LogManager>();
+            services.AddScoped<IMaliMusavirService, MaliMusavirManager>();
             services.AddScoped<IMailAyarService, MailAyarManager>();
             services.AddScoped<IMailGonderimService, MailGonderimManager>();
             services.AddScoped<ISmsAyarService, SmsAyarManager>();
@@ -70,7 +71,10 @@ namespace TurkSoft.Service
             services.AddScoped<ISistemBildirimService, SistemBildirimManager>();
             services.AddScoped<IOutboxMesajService, OutboxMesajManager>();
             services.AddScoped<IWebhookAbonelikService, WebhookAbonelikManager>();
-
+            // --- PİVOT SERVİSLERİ MUTLAKA EKLE ---
+            services.AddScoped<IKullaniciBayiService, KullaniciBayiManager>();
+            services.AddScoped<IKullaniciFirmaService, KullaniciFirmaManager>();
+            services.AddScoped<IKullaniciMaliMusavirService, KullaniciMaliMusavirManager>();
             return services;
         }
     }

@@ -10,10 +10,10 @@ namespace TurkSoft.Entities.EntityDB
     public class KullaniciMaliMusavir : BaseEntity
     {
         public Guid KullaniciId { get; set; }
-        public Kullanici Kullanici { get; set; } = null!;
+        public Kullanici? Kullanici { get; set; } = null!;
 
         public Guid MaliMusavirId { get; set; }
-        public MaliMusavir MaliMusavir { get; set; } = null!;
+        public MaliMusavir? MaliMusavir { get; set; } = null!;
 
         public bool IsPrimary { get; set; } = false;
         public string? AtananRol { get; set; }           // "MMAdmin","Stajyer","Personel" vb.

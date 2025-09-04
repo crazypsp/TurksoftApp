@@ -22,19 +22,21 @@
 }
 
 <h4 class="mb-1">Kullanıcılar</h4>
-<p class="mb-6">
-    Sistemdeki kullanıcıları görüntüleyebilir, yeni kullanıcı ekleyebilir veya mevcut kullanıcıları güncelleyebilirsiniz.
+<p class="text-muted mb-6">
+    Sistemdeki kullanıcıları görüntüleyebilir, arayabilir, yeni kullanıcı ekleyip düzenleyebilirsiniz.
 </p>
 
 <div class="row g-6">
-    <!-- Özet kartları -->
-    @await Html.PartialAsync("../_Partials/Apps/Kullanici/Cards")
-
-    <!-- DataTable -->
     <div class="col-12">
-        @await Html.PartialAsync("../_Partials/Apps/Kullanici/Tables")
+        @await Html.PartialAsync("../_Partials/Apps/Kullanici/Filters")   @* Arama & “Yeni” butonu *@
+    </div>
+
+    <div class="col-12">
+        @await Html.PartialAsync("../_Partials/Apps/Kullanici/Cards")    @* Küçük istatistik kartları *@
+    </div>
+
+    <div class="col-12">
+        @await Html.PartialAsync("../_Partials/Apps/Kullanici/Tables")   @* Liste tablosu *@
     </div>
 </div>
-
-<!-- Ekle/Düzenle Modal -->
-@await Html.PartialAsync("../_Partials/Apps/Kullanici/Modals")
+@await Html.PartialAsync("../_Partials/Apps/Kullanici/Modals")           @* Ekle/Düzenle Modal *@

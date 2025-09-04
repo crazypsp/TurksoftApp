@@ -16,12 +16,12 @@ namespace TurkSoft.Entities.EntityDB
         public string TCKN { get; set; }
 
         public Guid? BayiId { get; set; }
-        public Bayi Bayi { get; set; }
+        public Bayi? Bayi { get; set; }
 
-        public ICollection<Firma> Firmalar { get; set; } = new List<Firma>();
-        public ICollection<Satis> Satislar { get; set; } = new List<Satis>();
-        public ICollection<EntegrasyonHesabi> EntegrasyonHesaplari { get; set; } = new List<EntegrasyonHesabi>();
-        public ICollection<Opportunity> Firsatlar { get; set; } = new List<Opportunity>();
-        public ICollection<KullaniciMaliMusavir> KullaniciBaglantilari { get; set; } = new List<KullaniciMaliMusavir>();
+        public ICollection<Firma>? Firmalar { get; set; } = new List<Firma>();
+        public ICollection<Satis>? Satislar { get; set; } = new List<Satis>();
+        public ICollection<EntegrasyonHesabi>? EntegrasyonHesaplari { get; set; } = new List<EntegrasyonHesabi>();
+        public ICollection<Opportunity>? Firsatlar { get; set; } = new List<Opportunity>();
+        public ICollection<KullaniciMaliMusavir>? KullaniciBaglantilari { get; set; } = new List<KullaniciMaliMusavir>();
     }
 }

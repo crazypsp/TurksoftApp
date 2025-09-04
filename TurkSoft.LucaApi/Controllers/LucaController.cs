@@ -30,6 +30,16 @@ namespace TurkSoft.LucaApi.Controllers
         }
 
         /// <summary>
+        /// Luca’dan Cari Listesini getirir
+        /// </summary>
+        [HttpGet("cari-list")]
+        public async Task<IActionResult> GetCompany()
+        {
+            var result = await _lucaService.GetCompanyAsync();
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
         /// Luca’dan hesap planını getirir
         /// </summary>
         [HttpGet("hesap-plani")]

@@ -1,5 +1,13 @@
+// -------------------------------------------------------------
+// Bayi ekranı: listele/filtrele/ekle-düzenle/sil
+// - Yeni oluştururken OlusturanKullaniciId = getSession().userId
+// - Admin'in kendini otomatik pivotla bağlaması kaldırıldı (istenmiyor).
+// -------------------------------------------------------------
 import { BayiApi } from '../entities/index.js';
-const $ = s => document.querySelector(s); const $$ = s => Array.from(document.querySelectorAll(s));
+import { getSession } from '../Service/LoginService.js';
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
 const val = el => (el?.value ?? '').trim();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,20 +16,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const fUnv = $('#fltUnvan');
 
   const btnNew = $('#btnNewBayi');
-  const modalEl = $('#mdlBayi'); const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+  const modalEl = $('#mdlBayi');
+  const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
   const formEl = $('#frmBayi');
 
-  const fmId = $('#frmId'); const fmKod = $('#frmKod'); const fmUnv = $('#frmUnvan');
-  const fmTel = $('#frmTelefon'); const fmEpo = $('#frmEposta');
+  const fmId = $('#frmId');
+  const fmKod = $('#frmKod');
+  const fmUnv = $('#frmUnvan');
+  const fmTel = $('#frmTelefon');
+  const fmEpo = $('#frmEposta');
 
   async function loadTable() {
     const list = await BayiApi.list();
-    const k = val(fKod).toLowerCase(); const u = val(fUnv).toLowerCase();
+    const k = val(fKod).toLowerCase();
+    const u = val(fUnv).toLowerCase();
+
     const filtered = (list || []).filter(x => {
       const okK = !k || (x.Kod || '').toLowerCase().includes(k);
       const okU = !u || (x.Unvan || '').toLowerCase().includes(u);
       return okK && okU;
     });
+
     tbody.innerHTML = (filtered || []).map(r => `
       <tr>
         <td>${r.Kod || ''}</td>
@@ -30,9 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${r.Eposta || ''}</td>
         <td class="text-end">
           <button class="btn btn-sm btn-primary act-edit" data-id="${r.Id}">Düzenle</button>
-          <button class="btn btn-sm btn-danger act-del" data-id="${r.Id}">Sil</button>
+          <button class="btn btn-sm btn-danger  act-del"  data-id="${r.Id}">Sil</button>
         </td>
-      </tr>`).join('');
+      </tr>
+    `).join('');
     bindRowActions();
   }
 
@@ -40,26 +56,48 @@ document.addEventListener('DOMContentLoaded', () => {
     $$('.act-edit').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
       const r = await BayiApi.get(id);
-      fmId.value = r.Id; fmKod.value = r.Kod || ''; fmUnv.value = r.Unvan || '';
-      fmTel.value = r.Telefon || ''; fmEpo.value = r.Eposta || '';
+      fmId.value = r.Id;
+      fmKod.value = r.Kod || '';
+      fmUnv.value = r.Unvan || '';
+      fmTel.value = r.Telefon || '';
+      fmEpo.value = r.Eposta || '';
       modal?.show();
     }));
+
     $$('.act-del').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
       if (!confirm('Silinsin mi?')) return;
-      await BayiApi.remove(id); await loadTable();
+      await BayiApi.remove(id);
+      await loadTable();
     }));
   }
 
-  btnNew?.addEventListener('click', () => { formEl.reset(); fmId.value = ''; modal?.show(); });
+  btnNew?.addEventListener('click', () => { formEl?.reset(); fmId.value = ''; modal?.show(); });
 
   formEl?.addEventListener('submit', async e => {
     e.preventDefault();
-    const dto = { Id: fmId.value || undefined, Kod: fmKod.value, Unvan: fmUnv.value, Telefon: fmTel.value, Eposta: fmEpo.value };
-    if (dto.Id) await BayiApi.update(dto.Id, dto); else await BayiApi.create(dto);
-    modal?.hide(); await loadTable();
+    const dto = {
+      Id: fmId.value || undefined,
+      Kod: fmKod.value,
+      Unvan: fmUnv.value,
+      Telefon: fmTel.value,
+      Eposta: fmEpo.value
+    };
+    try {
+      const sess = getSession();
+      if (!dto.Id && sess?.userId) dto.OlusturanKullaniciId = sess.userId; // önemli
+
+      if (dto.Id) await BayiApi.update(dto.Id, dto);
+      else await BayiApi.create(dto);
+
+      modal?.hide(); await loadTable();
+    } catch (err) {
+      console.error('Bayi kaydet hatası:', err, err?.payload);
+      alert((err?.payload && (err.payload.message || err.payload.title)) || err?.message || 'Bayi kaydedilemedi.');
+    }
   });
 
-  [fKod, fUnv].forEach(el => { el?.addEventListener('input', loadTable); });
+  [fKod, fUnv].forEach(el => { el?.addEventListener('input', loadTable); el?.addEventListener('change', loadTable); });
+
   loadTable();
 });
