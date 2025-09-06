@@ -87,7 +87,7 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  function init() {
+  function init() {    
     // Firma seçilince login → plan → tablo
     bindFirmaSelect();
 
@@ -122,6 +122,7 @@
 
   // ========= Firma Select =========
   function bindFirmaSelect() {
+    console.log("Test");    
     const sel = document.getElementById('firmaSelect');
     if (!sel) return;
 
@@ -140,6 +141,7 @@
       const UserName = (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].text || '').trim() || 'KULLANICI';
 
       try {
+        TSLoader.show('Luca', 'Luca giriş yapılıyor..');
         setBusy(true, 'Luca giriş yapılıyor...');
         const token = await lucaLogin({ CustumerNo, UserName, Password, ApiKey: DEFAULT_API_KEY });
         setBusy(false);
@@ -147,7 +149,7 @@
         //setBusy(true, 'Cari listesi çekiliyor...');
         //accountPlanData = await getCompany(token);
         //setBusy(false);
-
+        TSLoader.show('Luca', 'Hesap planı çekiliyor...');
         setBusy(true, 'Hesap planı çekiliyor...');
         accountPlanData = await getAccountingPlan(token);
         setBusy(false);
@@ -158,6 +160,7 @@
         setBusy(false);
         notifyError(err && err.message ? err.message : 'Luca login/hesap planı hatası.');
       } finally {
+        TSLoader.hide();
         updateButtonStates();
       }
     };
@@ -194,17 +197,21 @@
     };
 
     try {
+      TSLoader.show('Eşleme İşlemi', 'Yüklenen Dosya ve Çekilen Hesap Planı Eşleştirmesi Devam Ediyor...');
       setBusy(true, 'Eşleştirme yapılıyor...');
       const json = await postJson(join(MATCHING_API, 'eslestir'), wrapper);
       setBusy(false);
 
       notifyOk('Eşleştirme tamamlandı.');
       window.dispatchEvent(new CustomEvent('ekstre:eslesti', { detail: { fisRows: json } }));
-      updateButtonStates();
+      
     } catch (err) {
       setBusy(false);
       notifyError('Eşleştirme servisine ulaşılamadı veya hata oluştu.');
       console.error(err);
+    } finally {
+      TSLoader.hide();
+      updateButtonStates();
     }
   }
 
@@ -221,20 +228,27 @@
     }
 
     try {
+      TSLoader.show('Transfer', 'Fiş satırları Luca’ya gönderiliyor...');
       setBusy(true, 'Fiş satırları Luca’ya gönderiliyor...');
       const result = await postJson(join(LUCA_API, 'fis-gonder'), rows);
       setBusy(false);
 
       // Başarılı/başarısız mesajı (service standardına göre result.Success tutulabilir)
       if (result && (result.success === true || result.Success === true)) {
+        TSLoader.show('Transfer', 'Fiş satırları başarıyla gönderildi.');
         notifyOk('Fiş satırları başarıyla gönderildi.');
+        TSLoader.hide();
       } else {
+        TSLoader.show('Transfer', 'Fiş satırları başarıyla gönderildi.');
         notifyOk('Gönderim tamamlandı.'); // bazı servisler success alanı döndürmeyebilir
+        TSLoader.hide();
       }
     } catch (err) {
       setBusy(false);
+      TSLoader.show('Transfer', 'Fiş gönderimi sırasında hata oluştu. Sistem Yöneticinin ile İletişime Geçiniz...');
       notifyError((err && err.message) ? err.message : 'Fiş gönderimi sırasında hata oluştu.');
       console.error(err);
+      TSLoader.hide();
     }
   }
 
