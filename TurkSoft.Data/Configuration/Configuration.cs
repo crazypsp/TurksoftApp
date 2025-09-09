@@ -1,17 +1,22 @@
-﻿// GEREKLİ USING'LER
+﻿// TurkSoft.Data.Configuration/EntityConfigurations.cs
+
+// GEREKLİ USING'LER
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System.Diagnostics;
 using TurkSoft.Entities.EntityDB;
 
 namespace TurkSoft.Data.Configuration
 {
+    // ======== BASE ========
     public abstract class BaseEntityConfig<T> : IEntityTypeConfiguration<T> where T : class
     {
         public virtual void Configure(EntityTypeBuilder<T> b)
         {
-            // 1) Türü belli gölge/gerçek property'ler
-            b.Property<Guid>("Id");                 // CLR'da varsa onu bağlar, yoksa shadow olarak oluşturur
+            // 1) Ortak alanlar (CLR'da varsa bağlar, yoksa shadow oluşturur)
+            b.Property<Guid>("Id")
+             .ValueGeneratedOnAdd()
+             .HasDefaultValueSql("NEWID()"); // İstersen kaldırabilirsin
+
             b.Property<bool>("IsActive").HasDefaultValue(true);
             b.Property<DateTime>("CreateDate");
             b.Property<DateTime?>("UpdateDate");
@@ -26,7 +31,7 @@ namespace TurkSoft.Data.Configuration
 
             // 3) Faydalı indeksler
             b.HasIndex("IsActive");
-            b.HasIndex("CreateDate"); ;
+            b.HasIndex("CreateDate");
         }
     }
 
@@ -51,12 +56,12 @@ namespace TurkSoft.Data.Configuration
             base.Configure(b);
             b.Property(x => x.AdSoyad).IsRequired().HasMaxLength(100);
             b.Property(x => x.Eposta).IsRequired().HasMaxLength(150);
-            b.HasIndex(x => x.Eposta).IsUnique();
+            b.HasIndex(x => x.Eposta).IsUnique();              // E-posta benzersiz kalsın
             b.Property(x => x.Sifre).IsRequired().HasMaxLength(100);
             b.Property(x => x.Telefon).HasMaxLength(20);
             b.Property(x => x.Rol).HasMaxLength(50);
             b.Property(x => x.ProfilResmiUrl).HasMaxLength(500);
-            // Nav: Kullanici -> Pivotlar
+
             b.HasMany(x => x.BayiBaglantilari)
              .WithOne(x => x.Kullanici)
              .HasForeignKey(x => x.KullaniciId)
@@ -73,16 +78,15 @@ namespace TurkSoft.Data.Configuration
              .OnDelete(DeleteBehavior.Restrict);
         }
     }
+
     // KULLANICI ↔ BAYİ
     public class KullaniciBayiConfiguration : BaseEntityConfig<KullaniciBayi>
     {
         public override void Configure(EntityTypeBuilder<KullaniciBayi> b)
         {
-            // Ortak alanlar (Id, IsActive, Create/Update/Delete, RowVersion, indexler)
             base.Configure(b);
 
             b.ToTable("Kullanici_Bayi");
-
             b.Property(x => x.AtananRol).HasMaxLength(50);
 
             b.HasOne(x => x.Bayi)
@@ -90,16 +94,13 @@ namespace TurkSoft.Data.Configuration
              .HasForeignKey(x => x.BayiId)
              .OnDelete(DeleteBehavior.Restrict);
 
-            // Aynı kullanıcı-bayi çifti tekrar eklenmesin
             b.HasIndex(x => new { x.KullaniciId, x.BayiId }).IsUnique();
 
-            // Bir kullanıcının tek bir "primary" bayisi olsun (filtered unique)
             b.HasIndex(x => x.KullaniciId)
              .IsUnique()
              .HasFilter("[IsPrimary] = 1");
         }
     }
-
 
     // KULLANICI ↔ FİRMA
     public class KullaniciFirmaConfiguration : BaseEntityConfig<KullaniciFirma>
@@ -109,7 +110,6 @@ namespace TurkSoft.Data.Configuration
             base.Configure(b);
 
             b.ToTable("Kullanici_Firma");
-
             b.Property(x => x.AtananRol).HasMaxLength(50);
 
             b.HasOne(x => x.Firma)
@@ -133,7 +133,6 @@ namespace TurkSoft.Data.Configuration
             base.Configure(b);
 
             b.ToTable("Kullanici_MaliMusavir");
-
             b.Property(x => x.AtananRol).HasMaxLength(50);
 
             b.HasOne(x => x.MaliMusavir)
@@ -148,7 +147,6 @@ namespace TurkSoft.Data.Configuration
              .HasFilter("[IsPrimary] = 1");
         }
     }
-
 
     public class LogConfiguration : BaseEntityConfig<Log>
     {
@@ -169,12 +167,9 @@ namespace TurkSoft.Data.Configuration
             b.Property(x => x.Eposta).IsRequired().HasMaxLength(150);
             b.Property(x => x.SmtpServer).IsRequired().HasMaxLength(100);
             b.Property(x => x.Sifre).IsRequired().HasMaxLength(100);
-            // Ek alanlar
             b.Property(x => x.Port).HasDefaultValue(587);
             b.Property(x => x.SSLKullan).HasDefaultValue(true);
-
-            // (Opsiyonel) aynı e-posta & sunucu kombinasyonu birden çok kayda izinli olsun
-            b.HasIndex(x => new { x.Eposta, x.SmtpServer });
+            b.HasIndex(x => new { x.Eposta, x.SmtpServer }); // non-unique
         }
     }
 
@@ -259,7 +254,7 @@ namespace TurkSoft.Data.Configuration
             b.ToTable("KeyAccount");
             b.Property(x => x.Kod).IsRequired().HasMaxLength(50);
             b.Property(x => x.Aciklama).HasMaxLength(300);
-            b.HasIndex(x => x.Kod).IsUnique();
+            b.HasIndex(x => x.Kod); // non-unique
 
             b.HasMany(x => x.MaliMusavirs)
              .WithMany()
@@ -344,7 +339,7 @@ namespace TurkSoft.Data.Configuration
             base.Configure(b);
             b.ToTable("Bayi");
             b.Property(x => x.Kod).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.Kod).IsUnique();
+            b.HasIndex(x => x.Kod); // non-unique
             b.Property(x => x.Unvan).IsRequired().HasMaxLength(200);
             b.Property(x => x.Telefon).HasMaxLength(20);
             b.Property(x => x.Eposta).HasMaxLength(150);
@@ -424,7 +419,7 @@ namespace TurkSoft.Data.Configuration
             base.Configure(b);
             b.ToTable("Satis");
             b.Property(x => x.SatisNo).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.SatisNo).IsUnique();
+            b.HasIndex(x => x.SatisNo); // non-unique
             b.Property(x => x.ToplamTutar).HasColumnType("decimal(18,2)");
             b.Property(x => x.NetTutar).HasColumnType("decimal(18,2)");
             b.Property(x => x.IskontoTutar).HasColumnType("decimal(18,2)");
@@ -551,7 +546,7 @@ namespace TurkSoft.Data.Configuration
         {
             base.Configure(b);
             b.Property(x => x.LeadNo).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.LeadNo).IsUnique();
+            b.HasIndex(x => x.LeadNo); // non-unique
             b.Property(x => x.Kaynak).HasMaxLength(50);
             b.Property(x => x.Unvan).HasMaxLength(200);
             b.OwnsOne(x => x.Adres, o => OwnedAdres.Configure(o));
@@ -568,7 +563,7 @@ namespace TurkSoft.Data.Configuration
             b.Property(x => x.Kod).IsRequired().HasMaxLength(30);
             b.Property(x => x.Ad).IsRequired().HasMaxLength(100);
             b.Property(x => x.OlasilikYuzde).HasColumnType("decimal(5,2)");
-            b.HasIndex(x => x.Kod).IsUnique();
+            b.HasIndex(x => x.Kod); // non-unique
         }
     }
 
@@ -578,7 +573,7 @@ namespace TurkSoft.Data.Configuration
         {
             base.Configure(b);
             b.Property(x => x.FirsatNo).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.FirsatNo).IsUnique();
+            b.HasIndex(x => x.FirsatNo); // non-unique
             b.Property(x => x.TahminiTutar).HasColumnType("decimal(18,2)");
             b.Property(x => x.Durum).HasConversion<int>();
             b.HasOne(x => x.Bayi).WithMany(p => p.Firsatlar).HasForeignKey(x => x.BayiId).OnDelete(DeleteBehavior.Restrict);
@@ -607,7 +602,7 @@ namespace TurkSoft.Data.Configuration
         {
             base.Configure(b);
             b.Property(x => x.TeklifNo).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.TeklifNo).IsUnique();
+            b.HasIndex(x => x.TeklifNo); // non-unique
             b.HasOne(x => x.Opportunity).WithMany(p => p.Teklifler).HasForeignKey(x => x.OpportunityId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.Paket).WithMany(p => p.Teklifler).HasForeignKey(x => x.PaketId).OnDelete(DeleteBehavior.Restrict);
             b.Property(x => x.Toplam).HasColumnType("decimal(18,2)");
@@ -679,7 +674,7 @@ namespace TurkSoft.Data.Configuration
         {
             base.Configure(b);
             b.Property(x => x.FaturaNo).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.FaturaNo).IsUnique();
+            b.HasIndex(x => x.FaturaNo); // non-unique
             b.Property(x => x.Tip).HasConversion<int>();
             b.Property(x => x.Durum).HasConversion<int>();
             b.HasOne(x => x.Satis).WithMany(p => p.Faturalar).HasForeignKey(x => x.SatisId).OnDelete(DeleteBehavior.Restrict);
@@ -713,7 +708,7 @@ namespace TurkSoft.Data.Configuration
             base.Configure(b);
             b.HasOne(x => x.Bayi).WithMany(p => p.BayiCariler).HasForeignKey(x => x.BayiId).OnDelete(DeleteBehavior.Cascade);
             b.Property(x => x.Bakiye).HasColumnType("decimal(18,2)");
-            b.HasIndex(x => x.BayiId).IsUnique();
+            b.HasIndex(x => x.BayiId).IsUnique(); // iş kuralı: her bayi için tek cari
         }
     }
 
@@ -761,7 +756,7 @@ namespace TurkSoft.Data.Configuration
         {
             base.Configure(b);
             b.Property(x => x.Kod).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.Kod).IsUnique();
+            b.HasIndex(x => x.Kod); // non-unique
             b.Property(x => x.Ad).IsRequired().HasMaxLength(100);
             b.HasOne(x => x.Bayi).WithMany(p => p.FiyatListeleri).HasForeignKey(x => x.BayiId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.BayiId, x.Baslangic, x.Bitis });
@@ -787,7 +782,7 @@ namespace TurkSoft.Data.Configuration
             base.Configure(b);
             b.Property(x => x.Kod).IsRequired().HasMaxLength(20);
             b.Property(x => x.Oran).HasColumnType("decimal(5,2)");
-            b.HasIndex(x => x.Kod).IsUnique();
+            b.HasIndex(x => x.Kod); // non-unique
         }
     }
 
@@ -797,7 +792,7 @@ namespace TurkSoft.Data.Configuration
         {
             base.Configure(b);
             b.Property(x => x.Kod).IsRequired().HasMaxLength(30);
-            b.HasIndex(x => x.Kod).IsUnique();
+            b.HasIndex(x => x.Kod); // non-unique
             b.Property(x => x.IndirimYuzde).HasColumnType("decimal(5,2)");
             b.Property(x => x.MaksKullanim).HasDefaultValue(1);
             b.HasOne(x => x.Bayi).WithMany(p => p.Kuponlar).HasForeignKey(x => x.BayiId).OnDelete(DeleteBehavior.Restrict);
@@ -890,4 +885,3 @@ namespace TurkSoft.Data.Configuration
         }
     }
 }
-

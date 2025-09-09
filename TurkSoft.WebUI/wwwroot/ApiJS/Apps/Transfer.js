@@ -282,13 +282,13 @@
       Code: x.Code || x.code || x.HesapKodu || x.hesapKodu || x.accountCode || x.AccountCode || x.Kod || x.kod || '',
       Name: x.Name || x.name || x.HesapAdi || x.hesapAdi || x.accountName || x.AccountName || x.Ad || x.ad || ''
     }));
-
+    const bankaHesapKodu = (document.getElementById('txtBankaHesapKodu')?.value || '').trim();
     const wrapper = {
       Request: {
         Hareketler: ekstreCache.hareketler,
         HesapKodlari: normalizedPlan,
         KeywordMap: keywordMap,
-        BankaHesapKodu: findBankCode(normalizedPlan) || ''
+        BankaHesapKodu: bankaHesapKodu//findBankCode(normalizedPlan) || ''
       }
     };
 
