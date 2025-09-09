@@ -11,70 +11,62 @@ using TurkSoft.Entities.Luca;
 namespace TurkSoft.Business.Managers
 {
     /// <summary>
-    /// Luca otomasyon işlemlerini yöneten sınıftır.
-    /// Playwright ile giriş, CAPTCHA çözme, fiş gönderimi ve hesap planı çekme işlemlerini yapar.
+    /// Luca otomasyon işlemlerini yöneten sınıf.
+    /// Playwright ile giriş, şirket listesi/şirket seçimi, fiş gönderimi ve hesap planı okuma.
     /// </summary>
     public class LucaAutomationManager : ILucaAutomationBussiness
     {
         private const int CaptchaPollDelay = 5000;
         private const int LucaMMPollDelay = 10000;
         private const int LucaLoginPollDelay = 2000;
-        private IBrowser _browser;
-        private IBrowserContext _context;
-        private IPage _popup;
 
-        /// <summary>
-        /// Luca sistemine giriş işlemi gerçekleştirir. CAPTCHA çözümü yapılır.
-        /// Başarılı giriş sonrası açılan MMP sayfası RAM’de saklanır.
-        /// </summary>
+        private IBrowser? _browser;
+        private IBrowserContext? _context;
+        private IPage? _popup;
+
+        #region LOGIN
+
         public async Task<IResult> LoginAsync(LucaLoginRequest user)
         {
             try
             {
                 var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
-                //_browser = await playwright.Chromium.LaunchAsync(new() { Headless = false });
-                //_context = await _browser.NewContextAsync();
 
-                // 1) Chrome kanalını kullan + headless'ta "yeni headless" + otomasyon izlerini gizle
                 _browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
                 {
-                    Channel = "chrome",                 // yüklü Google Chrome
-                    Headless = false,                     // headless ama gerçek Chrome davranışı
+                    Channel = "chrome",
+                    Headless = false,
                     Args = new[]
                     {
-        "--headless=new",                // yeni headless (UA normalleşir)
-        "--disable-blink-features=AutomationControlled",
-        "--disable-features=BlockThirdPartyCookies,SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--window-size=1920,1080"
-    }
+                        "--headless=new",
+                        "--disable-blink-features=AutomationControlled",
+                        "--disable-features=BlockThirdPartyCookies,SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure",
+                        "--no-first-run",
+                        "--no-default-browser-check",
+                        "--window-size=1920,1080"
+                    }
                 });
 
-                // 2) Context: normal Chrome UA + TR yerelleştirme
                 _context = await _browser.NewContextAsync(new BrowserNewContextOptions
                 {
-                    // Headless UA’yı maskele
                     UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
                     Locale = "tr-TR",
                     TimezoneId = "Europe/Istanbul",
-                    ViewportSize = null, // pencere boyutunu argümandaki window-size belirler
+                    ViewportSize = null,
                     BypassCSP = true
                 });
 
-                // 3) webdriver bayrağını gizle
-                await _context.AddInitScriptAsync(
-                    "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });");
+                await _context.AddInitScriptAsync("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });");
                 _context.SetDefaultTimeout(60000);
                 _context.SetDefaultNavigationTimeout(60000);
+
                 var mainPage = await _context.NewPageAsync();
                 await mainPage.GotoAsync("https://luca.com.tr/");
 
-                // "Sistem" butonuna tıklanarak giriş popup'ı açılır
                 await mainPage.ClickAsync("a.dropdown-toggle:has-text('Sistem')");
                 _popup = await mainPage.RunAndWaitForPopupAsync(() => mainPage.ClickAsync("a[onclick*=popup]"));
 
-                // Kullanıcı bilgileri form alanlarına yazılır
+                // Kimlik bilgileri
                 await Task.Delay(LucaLoginPollDelay);
                 await _popup.FillAsync("#musteriNo", user.CustumerNo);
                 await Task.Delay(LucaLoginPollDelay);
@@ -86,68 +78,34 @@ namespace TurkSoft.Business.Managers
                 await Task.Delay(LucaLoginPollDelay);
                 await _popup.WaitForTimeoutAsync(await GetSmartDelayAsync());
 
-                // CAPTCHA kontrol edilir ve çözülürse çözüm akışı başlatılır
+                // CAPTCHA varsa çöz
                 var captchaElement = _popup.Locator("div.captcha img");
                 if (await captchaElement.IsVisibleAsync())
                     await HandleCaptchaAsync(user, captchaElement);
-                //await Task.Delay(LucaMMPollDelay);
-                // Giriş sonrası yönlendirme yapılır
-                //await Task.Delay(LucaMMPollDelay);
-                // 1) Aynı tıklamadan hem yeni popup'ı hem de aynı sekmede navigasyonu bekle
-                // 1) Aynı tıklamadan hem yeni popup'ı hem de aynı sekmede navigasyonu bekle
+
+                // SSO → MMP’ye geçiş
                 var popupRace = _popup.WaitForPopupAsync();
-                var navRace = _popup.WaitForNavigationAsync(new PageWaitForNavigationOptions
-                {
-                    // DOMContentLoaded beklemek yerine commit seviyesi daha güvenli
-                    WaitUntil = WaitUntilState.Commit
-                });
+                var navRace = _popup.WaitForNavigationAsync(new PageWaitForNavigationOptions { WaitUntil = WaitUntilState.Commit });
 
                 await _popup.ClickAsync(".lucaMmpLogo");
                 await Task.Delay(LucaMMPollDelay);
-                // 2) Hangi senaryo olduysa onu al
-                IPage mmpPage = null;
-                try { mmpPage = await popupRace; } catch { /* popup açılmadıysa burası düşer */ }
+
+                IPage? mmpPage = null;
+                try { mmpPage = await popupRace; } catch { /* aynı sekmede açılabilir */ }
                 if (mmpPage == null)
                 {
-                    try { await navRace; } catch { /* bazı durumlarda URL değişmeyebilir */ }
-                    mmpPage = _popup; // aynı pencerede açılmış
+                    try { await navRace; } catch { }
+                    mmpPage = _popup; // aynı pencerede
                 }
 
-                // 3) SSO sayfasından çıkışı URL ile gözle
-                var ok = await SpinWaitUrlNotContainsAsync(mmpPage, "ssoGiris.do", timeoutMs: 90000);
+                var ok = await SpinWaitUrlNotContainsAsync(mmpPage!, "ssoGiris.do", timeoutMs: 90000);
                 if (!ok)
                     throw new TimeoutException("SSO yönlendirmesi tamamlanamadı (ssoGiris.do üzerinde kaldı).");
 
-                // 4) MMP geldiğini teyit için sağlam bir işaret bekle
-                await mmpPage.Locator("#SirketCombo, frame[name='frm4']").First
-                             .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+                await mmpPage!.Locator("#SirketCombo, frame[name='frm4']").First
+                              .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
 
-                // 5) Oturumu at
                 LucaSession.MmpPage = mmpPage;
-                //await _popup.ClickAsync(".lucaMmpLogo");
-                //await Task.Delay(LucaMMPollDelay);
-                //await _popup.WaitForLoadStateAsync(LoadState.NetworkIdle);
-                //await Task.Delay(LucaMMPollDelay);
-                //// SSO yönlendirme kontrolü (örnek: ssoGiris.do)
-                //var currentUrl = _popup.Url;
-                //// Eğer yönlendirme ssoGiris.do ise yeni popup beklenir (örneğin login sonrası otomatik başka pencere açılır)
-                //if (currentUrl.Contains("ssoGiris.do"))
-                //{
-                //    // Giriş sonrası otomatik yeni popup penceresi geliyor olabilir
-                //    var redirectedPopup = await _popup.WaitForPopupAsync(new PageWaitForPopupOptions
-                //    {
-                //        Timeout = 10000
-                //    });
-
-                //    await redirectedPopup.WaitForLoadStateAsync(LoadState.NetworkIdle);
-                //    LucaSession.MmpPage = redirectedPopup;
-                //}
-                //else
-                //{
-                //    // Doğrudan popup üzerinden işlem yapılacaksa mevcut popup tutulur
-                //    LucaSession.MmpPage = _popup;
-                //}
-
                 return new SuccessResult("Luca sistemine başarıyla giriş yapıldı.");
             }
             catch (Exception ex)
@@ -156,77 +114,144 @@ namespace TurkSoft.Business.Managers
             }
         }
 
-        /// <summary>
-        /// Luca içerisinden hesap planı verileri çekilir.
-        /// Veri RAM’e alınır ve sonraki işlemlerde tekrar kullanım sağlanır.
-        /// </summary>
+        #endregion
+
+        #region COMPANY (List/Select)
+
+        public async Task<IDataResult<List<CompanyCode>>> GetCompanyAsync()
+        {
+            try
+            {
+                var mmp = LucaSession.MmpPage ?? throw new InvalidOperationException("Aktif oturum bulunamadı. Önce login olun.");
+
+                var combo = await FindVisibleAsync(mmp, "#SirketCombo", timeoutMs: 6000);
+                if (combo is null)
+                    return new DataResult<List<CompanyCode>>(null, false, "#SirketCombo bulunamadı.");
+
+                var options = combo.Locator("option");
+                int count = await options.CountAsync();
+
+                var list = new List<CompanyCode>(Math.Max(0, count - 1));
+                for (int i = 0; i < count; i++)
+                {
+                    var opt = options.Nth(i);
+                    var val = (await opt.GetAttributeAsync("value"))?.Trim() ?? "";
+                    var txt = (await opt.InnerTextAsync())?.Trim() ?? "";
+                    if (string.IsNullOrWhiteSpace(val)) continue;
+                    list.Add(new CompanyCode { Values = val, Name = txt });
+                }
+
+                return new DataResult<List<CompanyCode>>(list, true, "Şirket listesi alındı.");
+            }
+            catch (Exception ex)
+            {
+                return new DataResult<List<CompanyCode>>(null, false, $"Şirket listesi hatası: {ex.Message}");
+            }
+        }
+
+        public async Task<IResult> SelectCompanyAsync(string companyCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(companyCode))
+                    return new ErrorResult("Şirket kodu zorunludur.");
+
+                var mmp = LucaSession.MmpPage ?? throw new InvalidOperationException("Aktif oturum bulunamadı. Önce login olun.");
+
+                var combo = await FindVisibleAsync(mmp, "#SirketCombo", timeoutMs: 6000);
+                if (combo is null)
+                    return new ErrorResult("#SirketCombo bulunamadı.");
+
+                await combo.SelectOptionAsync(new[] { companyCode });
+
+                // Alt barda SirName → 'Tamam' varsa tıkla
+                await ClickSirNameTamamIfActiveAsync(mmp, timeoutMs: 10000);
+
+                // Doğrula
+                string selected = string.Empty;
+                try { selected = await combo.InputValueAsync(); }
+                catch
+                {
+                    combo = await FindVisibleAsync(mmp, "#SirketCombo", timeoutMs: 4000);
+                    if (combo != null) selected = await combo.InputValueAsync();
+                }
+
+                if (!string.Equals(selected, companyCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    await Task.Delay(600);
+                    if (combo is null) combo = await FindVisibleAsync(mmp, "#SirketCombo", timeoutMs: 4000);
+                    if (combo != null) selected = await combo.InputValueAsync();
+                }
+
+                if (!string.Equals(selected, companyCode, StringComparison.OrdinalIgnoreCase))
+                    return new ErrorResult("Şirket seçimi doğrulanamadı.");
+
+                // Firma değişti; eski cache/frame kullanılmasın
+                LucaSession.CachedHesapPlani = null;
+                LucaSession.Frame = null;
+
+                return new SuccessResult("Şirket seçildi ve onaylandı.");
+            }
+            catch (Exception ex)
+            {
+                return new ErrorResult($"Şirket seçimi hatası: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region ACCOUNTING PLAN
 
         public async Task<IDataResult<List<AccountingCode>>> GetAccountingPlanAsync()
         {
             try
             {
-                // 🔐 Aktif oturumdan MMP sayfasını al
-                var mmp = LucaSession.MmpPage;
+                var mmp = LucaSession.MmpPage ?? throw new InvalidOperationException("Aktif oturum bulunamadı.");
 
-                // 🔁 Açık tüm çerçeveleri al
-                var frames = mmp.Context.Pages.Last().Frames;
+                // SirName/Tamam barı açıksa kapat
+                await ClickSirNameTamamIfActiveAsync(mmp, 4000);
 
-                // 📌 Menü ve müşteri bilgileri frame'lerini bul
-                var menuFrame = frames.FirstOrDefault(f => f.Url.Contains("menu.do") || f.Name == "frm2");
-                var musteriFrame = frames.FirstOrDefault(f => f.Url.Contains("musteriBilgileri.do") || f.Name == "frm3");
+                // Fiş ekranını her çağrıda taze aç
+                var fisFrame = await OpenFisScreenAsync(mmp);
+                if (fisFrame is null)
+                    return new DataResult<List<AccountingCode>>(null, false, "Fiş ekranı açılamadı.");
 
-                var list = new List<AccountingCode>();
+                // Hesap planı listesi görünür değilse F9 ile getir
+                await EnsureHesapPlaniListVisibleAsync(fisFrame);
 
-                // ✅ Menü varsa ilerle
-                if (menuFrame != null && musteriFrame != null)
-                {
-                    // 👆 Üst menüde "Muhasebe" üzerine gel
-                    await menuFrame.HoverAsync("font:has-text('Muhasebe')");
+                // DOM’dan tüm satırları tek seferde JSON string olarak al
+                var json = await fisFrame.EvaluateAsync<string>(
+                @"() => {
+                    const out = [];
+                    const tbody = document.querySelector('table#hsptable tbody#hstbody');
+                    if (!tbody) return '[]';
+                    const rows = tbody.querySelectorAll('tr');
+                    rows.forEach(tr => {
+                      const tds = tr.querySelectorAll('td');
+                      const code = (tds[0]?.textContent || '').trim();
+                      const name = (tds[1]?.textContent || '').trim();
+                      if (code && name) out.push({ code, name });
+                    });
+                    return JSON.stringify(out);
+                }");
 
-                    // 👇 Alt menüde "Fiş İşlemleri" üzerine gel ve tıkla
-                    await musteriFrame.HoverAsync("font:has-text('Fiş İşlemleri')");
-                    await musteriFrame.ClickAsync("font:has-text('Fiş Girişi')");
+                var tmp = JsonSerializer.Deserialize<List<_JsAcc>>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                    ?? new List<_JsAcc>();
 
-                    // ⏱️ Fiş ekranının yüklenmesini bekle
-                    await musteriFrame.WaitForTimeoutAsync(await GetSmartDelayAsync());
+                var list = tmp
+                    .Where(x => !string.IsNullOrWhiteSpace(x.code) && !string.IsNullOrWhiteSpace(x.name))
+                    .Select(x => new AccountingCode { Code = x.code!.Trim(), Name = x.name!.Trim() })
+                    .ToList();
 
-                    // 📄 Fiş ekranını temsil eden frame'i bul
-                    frames = mmp.Context.Pages.Last().Frames; // (isteğe bağlı: yeniden al)
-                    var fisFrame = frames.FirstOrDefault(f => f.Url.Contains("addFis.do"));
-                    if (fisFrame != null)
-                    {
-                        // 📤 İlk sayfa açıldığında boş fişi kaydet tuşuna basılır
-                        await fisFrame.ClickAsync("button#kaydetHref");
-
-                        // 🔄 NetworkIdle yerine tablo satırının görünmesini bekle (frame içinde güvenilir)
-                        await fisFrame.Locator("table#hsptable tbody#hstbody tr").First
-                                       .WaitForAsync(new LocatorWaitForOptions
-                                       {
-                                           State = WaitForSelectorState.Visible,
-                                           Timeout = 60000
-                                       });
-
-                        // 🔍 Hesap planı satırlarını bul
-                        var rows = fisFrame.Locator("table#hsptable tbody#hstbody tr");
-                        int count = await rows.CountAsync();
-
-                        for (int i = 0; i < count; i++)
-                        {
-                            var row = rows.Nth(i);
-                            var code = (await row.Locator("td:nth-child(1)").InnerTextAsync())?.Trim();
-                            var name = (await row.Locator("td:nth-child(2)").InnerTextAsync())?.Trim();
-
-                            if (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(name))
-                                list.Add(new AccountingCode { Code = code, Name = name });
-                        }
-                        LucaSession.Frame = fisFrame;
-                    }
-                }
-
-                // 🧠 RAM'e al
+                LucaSession.Frame = fisFrame;
                 LucaSession.CachedHesapPlani = list;
 
-                return new DataResult<List<AccountingCode>>(list, true, "Hesap planı başarıyla alındı.");
+                return new DataResult<List<AccountingCode>>(list, true, $"Hesap planı başarıyla alındı. (satır: {list.Count})");
+            }
+            catch (TimeoutException tex)
+            {
+                return new DataResult<List<AccountingCode>>(null, false, $"Plan çekme hatası (timeout): {tex.Message}");
             }
             catch (Exception ex)
             {
@@ -234,94 +259,30 @@ namespace TurkSoft.Business.Managers
             }
         }
 
+        private sealed class _JsAcc
+        {
+            public string? code { get; set; }
+            public string? name { get; set; }
+        }
 
-        //public async Task<IDataResult<List<AccountingCode>>> GetAccountingPlanAsync()
-        //{
-        //    try
-        //    {
-        //        // 🔐 Aktif oturumdan MMP sayfasını al
-        //        var mmp = LucaSession.MmpPage;
+        #endregion
 
-        //        // 🔁 Açık tüm çerçeveleri al
-        //        var frames = mmp.Context.Pages.Last().Frames;
-
-        //        // 📌 Menü ve müşteri bilgileri frame'lerini bul
-        //        var menuFrame = frames.FirstOrDefault(f => f.Url.Contains("menu.do") || f.Name == "frm2");
-        //        var musteriFrame = frames.FirstOrDefault(f => f.Url.Contains("musteriBilgileri.do") || f.Name == "frm3");
-
-        //        var list = new List<AccountingCode>();
-
-        //        // ✅ Menü varsa ilerle
-        //        if (menuFrame != null && musteriFrame != null)
-        //        {
-        //            // 👆 Üst menüde "Muhasebe" üzerine gel
-        //            await menuFrame.HoverAsync("font:has-text('Muhasebe')");
-
-        //            // 👇 Alt menüde "Fiş İşlemleri" üzerine gel ve tıkla
-        //            await musteriFrame.HoverAsync("font:has-text('Fiş İşlemleri')");
-        //            await musteriFrame.ClickAsync("font:has-text('Fiş Girişi')");
-
-        //            // ⏱️ Fiş ekranının yüklenmesini bekle
-        //            await musteriFrame.WaitForTimeoutAsync(await GetSmartDelayAsync());
-
-        //            // 📄 Fiş ekranını temsil eden frame'i bul
-        //            var fisFrame = frames.FirstOrDefault(f => f.Url.Contains("addFis.do"));
-        //            if (fisFrame != null)
-        //            {
-        //                // 📤 İlk sayfa açıldığında boş fişi kaydet tuşuna basılır
-        //                await fisFrame.ClickAsync("button#kaydetHref");
-
-        //                // 🔄 Sayfa yüklenmesini bekle
-        //                await fisFrame.WaitForLoadStateAsync(LoadState.NetworkIdle);
-
-        //                // 🔍 Hesap planı satırlarını bul
-        //                await fisFrame.WaitForSelectorAsync("table#hsptable tbody#hstbody tr");
-        //                var rows = fisFrame.Locator("table#hsptable tbody#hstbody tr");
-        //                int count = await rows.CountAsync();
-
-        //                for (int i = 0; i < count; i++)
-        //                {
-        //                    var row = rows.Nth(i);
-        //                    var code = (await row.Locator("td:nth-child(1)").InnerTextAsync())?.Trim();
-        //                    var name = (await row.Locator("td:nth-child(2)").InnerTextAsync())?.Trim();
-
-        //                    if (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(name))
-        //                        list.Add(new AccountingCode { Code = code, Name = name });
-        //                }
-        //                LucaSession.Frame = fisFrame;
-        //            }
-        //        }
-
-        //        // 🧠 RAM'e al
-        //        LucaSession.CachedHesapPlani = list;
-
-        //        return new DataResult<List<AccountingCode>>(list, true, "Hesap planı başarıyla alındı.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return new DataResult<List<AccountingCode>>(null, false, $"Plan çekme hatası: {ex.Message}");
-        //    }
-        //}
-
-        /// <summary>
-        /// Luca'ya fiş satırlarını gönderir. 600 satırdan sonra yeni fiş oluşturur.
-        /// </summary>
+        #region SEND FIS
 
         public async Task<IResult> SendFisRowsAsync(List<LucaFisRow> rows)
         {
             try
             {
-                var fisFrame = LucaSession.Frame;
+                var fisFrame = LucaSession.Frame ?? throw new InvalidOperationException("Fiş ekranı bulunamadı. Önce hesap planı akışını çalıştırın.");
                 const string tableSelector = "table#TBL";
                 bool newFisStart = true;
 
                 const int BATCH_SIZE = 400;
                 int rowsInCurrentFis = 0;
 
-                // Kaydet sonrası "iş bitti" sinyali için NetworkIdle yerine sağlam bekleyici
                 static async Task WaitForAfterSaveAsync(IFrame frame, string tblSel)
                 {
-                    // 1) Varsa SweetAlert kapanmasını bekle (başarı/uyarı popup'ı)
+                    // SweetAlert kapat
                     var alert = frame.Locator("div.swal2-container");
                     if (await alert.IsVisibleAsync(new() { Timeout = 1000 }))
                     {
@@ -331,23 +292,22 @@ namespace TurkSoft.Business.Managers
                         await alert.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 10000 });
                     }
 
-                    // 2) Son satırdaki HESAP_KODU input'unun tekrar görünüp etkin olmasını bekle
+                    // Son satır input tekrar etkin olsun
                     var hesap = frame.Locator($"{tblSel} tr:last-child input[name='HESAP_KODU']");
                     await hesap.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60000 });
 
-                    // etkin (disabled/readOnly değil) hale gelsin
                     await frame.WaitForFunctionAsync(
                         @"sel => { 
-                    const el = document.querySelector(sel); 
-                    return !!el && !el.disabled && !el.readOnly; 
-                }",
+                            const el = document.querySelector(sel); 
+                            return !!el && !el.disabled && !el.readOnly; 
+                          }",
                         $"{tblSel} tr:last-child input[name='HESAP_KODU']",
                         new() { Timeout = 60000 });
                 }
 
                 for (int i = 0; i < rows.Count; i++)
                 {
-                    // --- SATIR EKLEME ---
+                    // Yeni satır ekle
                     if (!newFisStart)
                     {
                         await fisFrame.ClickAsync($"{tableSelector} tr:last-child td.add_delete.btn-td input[value='+']");
@@ -358,42 +318,33 @@ namespace TurkSoft.Business.Managers
                     var currentRowSelector = $"{tableSelector} tr:last-child";
                     var r = rows[i];
 
-                    // -----------------------------
-                    // HESAP KODU – SAĞLAM DOLDURMA
-                    // -----------------------------
                     if (string.IsNullOrWhiteSpace(r.HesapKodu))
                         throw new InvalidOperationException($"[{i + 1}. satır] Hesap Kodu boş olamaz.");
 
                     var hesapInput = fisFrame.Locator($"{currentRowSelector} input[name='HESAP_KODU']");
-                    await hesapInput.ClickAsync();                  // odağı bu hücreye getir
-                    await hesapInput.FillAsync(r.HesapKodu.Trim()); // doğrudan yaz
-                    await hesapInput.PressAsync("Tab");             // blur/validate
+                    await hesapInput.ClickAsync();
+                    await hesapInput.FillAsync(r.HesapKodu.Trim());
+                    await hesapInput.PressAsync("Tab");
 
-                    // küçük bir bekleme ve doğrulama
                     await fisFrame.WaitForTimeoutAsync(120);
                     var typed = (await hesapInput.InputValueAsync())?.Trim();
 
                     if (string.IsNullOrEmpty(typed))
                     {
-                        // Yedek yol: F9 ile hesap seçimi aç, metne göre bul ve çift tıkla
+                        // F9 fallback
                         await hesapInput.ClickAsync();
                         await hesapInput.PressAsync("F9");
 
-                        // liste açılana kadar bekle
                         await fisFrame.WaitForSelectorAsync("table#hsptable");
                         var rowInList = fisFrame.Locator("table#hsptable tr").Filter(new() { HasText = r.HesapKodu.Trim() });
                         await rowInList.First.DblClickAsync();
 
-                        // tekrar doğrula
                         await fisFrame.WaitForTimeoutAsync(120);
                         typed = (await hesapInput.InputValueAsync())?.Trim();
                         if (string.IsNullOrEmpty(typed))
                             throw new Exception($"[{i + 1}. satır] Hesap Kodu '{r.HesapKodu}' alanına yazılamadı.");
                     }
 
-                    // -----------------------------
-                    // Diğer alanlar
-                    // -----------------------------
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='EVRAK_NO']", r.EvrakNo);
                     await fisFrame.FillAsync($"{currentRowSelector} input[name='EVRAK_TARIHI']",
                         r.Tarih.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("tr-TR")));
@@ -405,10 +356,8 @@ namespace TurkSoft.Business.Managers
 
                     rowsInCurrentFis++;
 
-                    // --- 400'de bir kaydet + yeni fiş ---
                     if (rowsInCurrentFis >= BATCH_SIZE)
                     {
-                        // ⛔ NetworkIdle yerine: butona tıkla + sağlam bekleyici
                         await fisFrame.ClickAsync("button#kaydetHref");
                         await WaitForAfterSaveAsync(fisFrame, tableSelector);
 
@@ -418,7 +367,7 @@ namespace TurkSoft.Business.Managers
                         IFrame? newFrame = null;
                         while (sw.ElapsedMilliseconds < 15000)
                         {
-                            var frames = LucaSession.MmpPage.Context.Pages.Last().Frames;
+                            var frames = LucaSession.MmpPage!.Context.Pages.Last().Frames;
                             newFrame = frames.FirstOrDefault(f => f.Url.Contains("addFis.do"));
                             if (newFrame != null)
                             {
@@ -432,22 +381,20 @@ namespace TurkSoft.Business.Managers
                             throw new TimeoutException("Yeni fiş ekranı yüklenemedi.");
 
                         fisFrame = newFrame;
+                        LucaSession.Frame = fisFrame;
+
                         newFisStart = true;
                         rowsInCurrentFis = 0;
 
-                        // yeni fişi de bir kez kaydet (sistem ilk kayıtla bazı alanları initialize ediyorsa)
                         await fisFrame.ClickAsync("button#kaydetHref");
                         await WaitForAfterSaveAsync(fisFrame, tableSelector);
                     }
                 }
 
-                // Son kayıt ve kapat
                 await fisFrame.ClickAsync("button#kaydetHref");
                 await WaitForAfterSaveAsync(fisFrame, tableSelector);
 
-                await LucaSession.MmpPage.Context.CloseAsync();
-                //await _browser.CloseAsync();
-
+                await LucaSession.MmpPage!.Context.CloseAsync();
                 return new SuccessResult("Fiş satırları başarıyla gönderildi.");
             }
             catch (Exception ex)
@@ -456,133 +403,10 @@ namespace TurkSoft.Business.Managers
             }
         }
 
+        #endregion
 
-        //public async Task<IResult> SendFisRowsAsync(List<LucaFisRow> rows)
-        //{
-        //    try
-        //    {
-        //        var fisFrame = LucaSession.Frame;
-        //        const string tableSelector = "table#TBL";
-        //        bool newFisStart = true;
+        #region HELPERS (Captcha / Waits / UI / Navigation)
 
-        //        const int BATCH_SIZE = 400;
-        //        int rowsInCurrentFis = 0;
-
-        //        for (int i = 0; i < rows.Count; i++)
-        //        {
-        //            // --- SATIR EKLEME ---
-        //            if (!newFisStart)
-        //            {
-        //                await fisFrame.ClickAsync($"{tableSelector} tr:last-child td.add_delete.btn-td input[value='+']");
-        //                await fisFrame.WaitForSelectorAsync($"{tableSelector} tr:last-child input[name='HESAP_KODU']");
-        //            }
-        //            newFisStart = false;
-
-        //            var currentRowSelector = $"{tableSelector} tr:last-child";
-        //            var r = rows[i];
-
-        //            // -----------------------------
-        //            // HESAP KODU – SAĞLAM DOLDURMA
-        //            // -----------------------------
-        //            if (string.IsNullOrWhiteSpace(r.HesapKodu))
-        //                throw new InvalidOperationException($"[{i + 1}. satır] Hesap Kodu boş olamaz.");
-
-        //            var hesapInput = fisFrame.Locator($"{currentRowSelector} input[name='HESAP_KODU']");
-        //            await hesapInput.ClickAsync();                  // odayı bu hücreye getir
-        //            await hesapInput.FillAsync(r.HesapKodu.Trim()); // doğrudan yaz
-        //            await hesapInput.PressAsync("Tab");             // blur/validate
-
-        //            // küçük bir bekleme ve doğrulama
-        //            await fisFrame.WaitForTimeoutAsync(120);
-        //            var typed = (await hesapInput.InputValueAsync())?.Trim();
-
-        //            if (string.IsNullOrEmpty(typed))
-        //            {
-        //                // Yedek yol: F9 ile hesap seçimi aç, metne göre bul ve çift tıkla
-        //                await hesapInput.ClickAsync();
-        //                await hesapInput.PressAsync("F9");
-
-        //                // liste açılana kadar bekle
-        //                await fisFrame.WaitForSelectorAsync("table#hsptable");
-        //                var rowInList = fisFrame.Locator("table#hsptable tr").Filter(new() { HasText = r.HesapKodu.Trim() });
-        //                await rowInList.First.DblClickAsync();
-
-        //                // tekrar doğrula
-        //                await fisFrame.WaitForTimeoutAsync(120);
-        //                typed = (await hesapInput.InputValueAsync())?.Trim();
-        //                if (string.IsNullOrEmpty(typed))
-        //                    throw new Exception($"[{i + 1}. satır] Hesap Kodu '{r.HesapKodu}' alanına yazılamadı.");
-        //            }
-
-        //            // -----------------------------
-        //            // Diğer alanlar
-        //            // -----------------------------
-        //            await fisFrame.FillAsync($"{currentRowSelector} input[name='EVRAK_NO']", r.EvrakNo);
-        //            await fisFrame.FillAsync($"{currentRowSelector} input[name='EVRAK_TARIHI']",
-        //                r.Tarih.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("tr-TR")));
-        //            await fisFrame.FillAsync($"{currentRowSelector} input[name='BELGE_TUR_KOD']", "MK");
-        //            await fisFrame.FillAsync($"{currentRowSelector} input[name='ACIKLAMA']", r.Aciklama);
-        //            await fisFrame.FillAsync($"{currentRowSelector} input[name='BORC']", ToMoney(r.Borc));
-        //            await fisFrame.FillAsync($"{currentRowSelector} input[name='ALACAK']", ToMoney(r.Alacak));
-        //            await fisFrame.FillAsync($"{currentRowSelector} input[name='MIKTAR']", "0,00000");
-
-        //            rowsInCurrentFis++;
-
-        //            // --- 400'de bir kaydet + yeni fiş ---
-        //            if (rowsInCurrentFis >= BATCH_SIZE)
-        //            {
-        //                await Task.WhenAll(
-        //                    fisFrame.ClickAsync("button#kaydetHref"),
-        //                    fisFrame.WaitForLoadStateAsync(LoadState.NetworkIdle)
-        //                );
-
-        //                await fisFrame.ClickAsync("button#yeniHref");
-
-        //                var sw = Stopwatch.StartNew();
-        //                IFrame? newFrame = null;
-        //                while (sw.ElapsedMilliseconds < 15000)
-        //                {
-        //                    var frames = LucaSession.MmpPage.Context.Pages.Last().Frames;
-        //                    newFrame = frames.FirstOrDefault(f => f.Url.Contains("addFis.do"));
-        //                    if (newFrame != null)
-        //                    {
-        //                        var ok = await newFrame.Locator("table#TBL tr:last-child input[name='HESAP_KODU']")
-        //                                               .IsVisibleAsync(new() { Timeout = 2000 });
-        //                        if (ok) break;
-        //                    }
-        //                    await Task.Delay(300);
-        //                }
-        //                if (newFrame == null)
-        //                    throw new TimeoutException("Yeni fiş ekranı yüklenemedi.");
-
-        //                fisFrame = newFrame;
-        //                newFisStart = true;
-        //                rowsInCurrentFis = 0;
-
-        //                await fisFrame.ClickAsync("button#kaydetHref");
-        //                await fisFrame.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        //            }
-        //        }
-
-
-
-        //        // Fişi kaydet ve bağlantıyı kapat
-        //        await fisFrame.ClickAsync("button#kaydetHref");
-        //        await LucaSession.MmpPage.Context.CloseAsync();
-        //        //await _browser.CloseAsync();
-
-        //        return new SuccessResult("Fiş satırları başarıyla gönderildi.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return new ErrorResult($"Fiş gönderme hatası: {ex.Message}");
-        //    }
-        //}
-
-
-        /// <summary>
-        /// CAPTCHA çözme işlemi - 2Captcha ile entegre.
-        /// </summary>
         private async Task HandleCaptchaAsync(LucaLoginRequest user, ILocator captchaElement)
         {
             bool solved = false;
@@ -592,7 +416,7 @@ namespace TurkSoft.Business.Managers
                 await captchaElement.ScreenshotAsync(new LocatorScreenshotOptions { Path = path });
                 var text = await SolveCaptchaAsync(path, user.ApiKey);
 
-                await _popup.FillAsync("#captcha-input", text);
+                await _popup!.FillAsync("#captcha-input", text);
                 await _popup.ClickAsync("input[value='Tamam']");
                 await _popup.WaitForTimeoutAsync(await GetSmartDelayAsync());
 
@@ -610,9 +434,6 @@ namespace TurkSoft.Business.Managers
             }
         }
 
-        /// <summary>
-        /// CAPTCHA çözümünü 2Captcha üzerinden yapar.
-        /// </summary>
         private async Task<string> SolveCaptchaAsync(string imagePath, string apiKey)
         {
             var bytes = await File.ReadAllBytesAsync(imagePath);
@@ -629,38 +450,22 @@ namespace TurkSoft.Business.Managers
 
             var response = await client.PostAsync("http://2captcha.com/in.php", content);
             var json = await response.Content.ReadAsStringAsync();
-            var obj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-            string id = obj["request"].GetString();
+            var obj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!;
+            string id = obj["request"].GetString()!;
 
             while (true)
             {
                 await Task.Delay(CaptchaPollDelay);
                 var check = await client.GetStringAsync($"http://2captcha.com/res.php?key={apiKey}&action=get&id={id}&json=1");
-                var res = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(check);
+                var res = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(check)!;
                 if (res["status"].GetInt32() == 1)
-                    return res["request"].GetString();
+                    return res["request"].GetString()!;
             }
         }
 
-        /// <summary>
-        /// Hesap kodlarında nokta ve rakam kaçış karakteri ekler.
-        /// </summary>
-        private static string EscapeCssId(string code)
-        {
-            if (char.IsDigit(code[0]))
-                return $"\\3{code[0]} {code.Substring(1).Replace(".", "\\.")}";
-            return code.Replace(".", "\\.");
-        }
-
-        /// <summary>
-        /// Parayı string olarak formatlar (TR kültürüne uygun).
-        /// </summary>
         private static string ToMoney(decimal v)
             => v.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"));
 
-        /// <summary>
-        /// Kullanıcının internet hızına göre bekleme süresi belirler.
-        /// </summary>
         private static async Task<int> GetSmartDelayAsync()
         {
             try
@@ -669,7 +474,6 @@ namespace TurkSoft.Business.Managers
                 var sw = Stopwatch.StartNew();
                 await http.GetAsync("https://www.luca.com.tr/favicon.ico");
                 sw.Stop();
-
                 return (int)Math.Clamp(sw.Elapsed.TotalMilliseconds * 1.2, 300, 3000);
             }
             catch
@@ -678,12 +482,7 @@ namespace TurkSoft.Business.Managers
             }
         }
 
-        public Task<IDataResult<List<CompanyCode>>> GetCompanyAsync()
-        {
-            throw new NotImplementedException();
-        }
-        private static async Task<bool> SpinWaitUrlNotContainsAsync(
-    IPage page, string token, int timeoutMs, int intervalMs = 400)
+        private static async Task<bool> SpinWaitUrlNotContainsAsync(IPage page, string token, int timeoutMs, int intervalMs = 400)
         {
             var sw = Stopwatch.StartNew();
 
@@ -691,7 +490,6 @@ namespace TurkSoft.Business.Managers
             {
                 try
                 {
-                    // bazen yeni bir sayfa devralınır; en sondakini takip et
                     var last = page.Context.Pages.LastOrDefault();
                     if (last != null && !ReferenceEquals(last, page))
                         page = last;
@@ -701,14 +499,163 @@ namespace TurkSoft.Business.Managers
                         url != "about:blank" && url.Length > 0)
                         return true;
                 }
-                catch { /* sayfa kısa süreli kapandı/açılamadıysa */ }
+                catch { }
 
-                // arada sayfayı hafif dürt
-                try { await page.EvaluateAsync("() => 0"); } catch { /* yoksa sorun değil */ }
-
+                try { await page.EvaluateAsync("() => 0"); } catch { }
                 await Task.Delay(intervalMs);
             }
             return false;
         }
+
+        private static async Task<ILocator?> FindVisibleAsync(IPage page, string selector, int timeoutMs = 3000)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                foreach (var f in page.Frames)
+                {
+                    var loc = f.Locator(selector);
+                    try
+                    {
+                        if (await loc.IsVisibleAsync(new() { Timeout = 500 }))
+                            return loc;
+                    }
+                    catch { }
+                }
+                await Task.Delay(150);
+            }
+            return null;
+        }
+
+        /// <summary> Şirket seçiminden sonra sayfanın altındaki SirName alanında "Tamam" butonu görünürse tıklar. </summary>
+        private static async Task ClickSirNameTamamIfActiveAsync(IPage page, int timeoutMs = 10000)
+        {
+            string[] candidates =
+            {
+                "#SirName button.green:has-text('Tamam')",
+                "#SirName button:has-text('Tamam')",
+                "button.no-bold.green:has-text('Tamam')",
+                "button[onclick*='formSubmit']:has-text('Tamam')"
+            };
+
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                foreach (var f in page.Frames)
+                {
+                    foreach (var sel in candidates)
+                    {
+                        var btn = f.Locator(sel);
+                        try
+                        {
+                            if (await btn.IsVisibleAsync(new() { Timeout = 200 }))
+                            {
+                                await btn.ClickAsync();
+
+                                try
+                                {
+                                    await f.Locator("#SirName").WaitForAsync(new()
+                                    {
+                                        State = WaitForSelectorState.Detached,
+                                        Timeout = 5000
+                                    });
+                                }
+                                catch { /* bazı temalarda #SirName DOM'da kalabilir */ }
+
+                                return;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                await Task.Delay(200);
+            }
+            // Görünmezse sorun değil
+        }
+
+        /// <summary>
+        /// Menü akışını takip ederek Fiş Girişi ekranını (addFis.do) açar ve tabloyu init eder.
+        /// </summary>
+        private static async Task<IFrame?> OpenFisScreenAsync(IPage mmp)
+        {
+            // Menü ve müşteri frame’leri
+            var frames = mmp.Context.Pages.Last().Frames;
+            var menuFrame = frames.FirstOrDefault(f => f.Url.Contains("menu.do") || f.Name == "frm2");
+            var musteriFrame = frames.FirstOrDefault(f => f.Url.Contains("musteriBilgileri.do") || f.Name == "frm3");
+
+            if (menuFrame == null || musteriFrame == null)
+            {
+                // Kısa bir deneme daha
+                await Task.Delay(800);
+                frames = mmp.Context.Pages.Last().Frames;
+                menuFrame = frames.FirstOrDefault(f => f.Url.Contains("menu.do") || f.Name == "frm2");
+                musteriFrame = frames.FirstOrDefault(f => f.Url.Contains("musteriBilgileri.do") || f.Name == "frm3");
+                if (menuFrame == null || musteriFrame == null) return null;
+            }
+
+            await menuFrame.HoverAsync("font:has-text('Muhasebe')");
+            await musteriFrame.HoverAsync("font:has-text('Fiş İşlemleri')");
+            await musteriFrame.ClickAsync("font:has-text('Fiş Girişi')");
+            await musteriFrame.WaitForTimeoutAsync(await GetSmartDelayAsync());
+
+            // addFis.do frame’ini bul
+            IFrame? fisFrame = null;
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < 20000)
+            {
+                frames = mmp.Context.Pages.Last().Frames;
+                fisFrame = frames.FirstOrDefault(f => f.Url.Contains("addFis.do"));
+                if (fisFrame != null) break;
+                await Task.Delay(250);
+            }
+            if (fisFrame == null) return null;
+
+            // İlk açılışta "Kaydet" → tablo initialize olsun
+            try
+            {
+                await fisFrame.ClickAsync("button#kaydetHref");
+            }
+            catch { /* buton devre dışı olabilir; sorun değil */ }
+
+            // TBL son satır Hesap Kodu inputu görünür hale gelsin
+            await fisFrame.Locator("table#TBL tr:last-child input[name='HESAP_KODU']")
+                          .WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 60000 });
+
+            return fisFrame;
+        }
+
+        /// <summary>
+        /// Hesap planı listesi (hsptable) görünür değilse F9 ile açar.
+        /// </summary>
+        private static async Task EnsureHesapPlaniListVisibleAsync(IFrame fisFrame)
+        {
+            try
+            {
+                var firstRow = fisFrame.Locator("table#hsptable tbody#hstbody tr").First;
+                if (await firstRow.IsVisibleAsync(new() { Timeout = 1200 }))
+                    return;
+            }
+            catch { /* görünür değil */ }
+
+            // F9 ile aç
+            var hesapInput = fisFrame.Locator("table#TBL tr:last-child input[name='HESAP_KODU']");
+            await hesapInput.ClickAsync();
+            await hesapInput.PressAsync("F9");
+
+            await fisFrame.WaitForSelectorAsync("table#hsptable tbody#hstbody tr",
+                new() { State = WaitForSelectorState.Attached, Timeout = 60000 });
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Oturum ve cache tutucu (sade).
+    /// </summary>
+    public static class LucaSession
+    {
+        public static IPage? MmpPage { get; set; }
+        public static IFrame? Frame { get; set; }
+        public static List<AccountingCode>? CachedHesapPlani { get; set; }
     }
 }

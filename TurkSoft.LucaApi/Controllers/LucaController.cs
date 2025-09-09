@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using TurkSoft.Entities.Luca;
 using TurkSoft.Service.Interface;
 
@@ -11,17 +10,12 @@ namespace TurkSoft.LucaApi.Controllers
     {
         private readonly ILucaAutomationService _lucaService;
 
-        /// <summary>
-        /// Service katmanından bağımlılık alınır
-        /// </summary>
         public LucaController(ILucaAutomationService lucaService)
         {
             _lucaService = lucaService;
         }
 
-        /// <summary>
-        /// Luca sistemine giriş işlemi
-        /// </summary>
+        /// <summary> Luca sistemine giriş işlemi </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LucaLoginRequest request)
         {
@@ -29,9 +23,7 @@ namespace TurkSoft.LucaApi.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
-        /// <summary>
-        /// Luca’dan Cari Listesini getirir
-        /// </summary>
+        /// <summary> Luca’dan Cari/Şirket Listesini getirir (alias: companies) </summary>
         [HttpGet("cari-list")]
         public async Task<IActionResult> GetCompany()
         {
@@ -39,9 +31,23 @@ namespace TurkSoft.LucaApi.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
-        /// <summary>
-        /// Luca’dan hesap planını getirir
-        /// </summary>
+        [HttpGet("companies")]
+        public Task<IActionResult> Companies() => GetCompany();
+
+        /// <summary> Şirketi aktif eder (seçer) – Seçim sonrası SirName/Tamam otomatik tıklanır </summary>
+        public record SelectCompanyDto(string Code);
+
+        [HttpPost("select-company")]
+        public async Task<IActionResult> SelectCompany([FromBody] SelectCompanyDto dto)
+        {
+            if (dto is null || string.IsNullOrWhiteSpace(dto.Code))
+                return BadRequest(new { message = "Şirket kodu zorunludur." });
+
+            var result = await _lucaService.SelectCompanyAsync(dto.Code);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary> Luca’dan hesap planını getirir </summary>
         [HttpGet("hesap-plani")]
         public async Task<IActionResult> GetAccountingPlan()
         {
@@ -49,9 +55,7 @@ namespace TurkSoft.LucaApi.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
-        /// <summary>
-        /// Luca’ya fiş satırlarını gönderir
-        /// </summary>
+        /// <summary> Luca’ya fiş satırlarını gönderir </summary>
         [HttpPost("fis-gonder")]
         public async Task<IActionResult> SendFis([FromBody] List<LucaFisRow> rows)
         {

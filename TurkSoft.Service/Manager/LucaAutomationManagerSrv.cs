@@ -31,6 +31,9 @@ namespace TurkSoft.Service.Manager
         {
             return await _lucaBusiness.GetCompanyAsync();
         }
+        //Firma Seçimi yap
+        public Task<IResult> SelectCompanyAsync(string companyCode)
+            => _lucaBusiness.SelectCompanyAsync(companyCode);
 
         // Hesap planını getirir
         public async Task<IDataResult<List<AccountingCode>>> GetAccountingPlanAsync()
