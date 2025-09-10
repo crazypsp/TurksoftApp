@@ -35,7 +35,7 @@ namespace TurkSoft.Business.Managers
                 _browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
                 {
                     Channel = "chrome",
-                    Headless = false,
+                    Headless = true,
                     Args = new[]
                     {
                         "--headless=new",
@@ -273,7 +273,27 @@ namespace TurkSoft.Business.Managers
         {
             try
             {
-                var fisFrame = LucaSession.Frame ?? throw new InvalidOperationException("Fiş ekranı bulunamadı. Önce hesap planı akışını çalıştırın.");
+                // 0) Fiş ekranı (frame) açık ve sağlıklı mı? Değilse aç.
+                //    (Senin verdiğin snippet’i birebir kullandım.)
+                var fisFrame = LucaSession.Frame;
+                static async Task<bool> IsVisibleSafe(IFrame frame, string sel, int timeout = 800)
+                {
+                    try { return await frame.Locator(sel).IsVisibleAsync(new() { Timeout = timeout }); }
+                    catch { return false; }
+                }
+
+                if (fisFrame == null || !await IsVisibleSafe(fisFrame, "table#TBL tr:last-child input[name='HESAP_KODU']"))
+                {
+                    var mmp = LucaSession.MmpPage ?? throw new InvalidOperationException("Aktif oturum bulunamadı. Önce hesap planı akışını çalıştırın.");
+
+                    // Fiş ekranını her çağrıda taze aç
+                    fisFrame = await OpenFisScreenAsync(mmp);
+                    if (fisFrame is null)
+                        return new ErrorResult("Fiş ekranı açılamadı.");
+
+                    LucaSession.Frame = fisFrame;
+                }
+
                 const string tableSelector = "table#TBL";
                 bool newFisStart = true;
 
@@ -298,9 +318,9 @@ namespace TurkSoft.Business.Managers
 
                     await frame.WaitForFunctionAsync(
                         @"sel => { 
-                            const el = document.querySelector(sel); 
-                            return !!el && !el.disabled && !el.readOnly; 
-                          }",
+                    const el = document.querySelector(sel); 
+                    return !!el && !el.disabled && !el.readOnly; 
+                  }",
                         $"{tblSel} tr:last-child input[name='HESAP_KODU']",
                         new() { Timeout = 60000 });
                 }
@@ -394,7 +414,9 @@ namespace TurkSoft.Business.Managers
                 await fisFrame.ClickAsync("button#kaydetHref");
                 await WaitForAfterSaveAsync(fisFrame, tableSelector);
 
-                await LucaSession.MmpPage!.Context.CloseAsync();
+                // ÖNEMLİ: Tarayıcı/context KAPATILMIYOR (ikinci gönderim için açık kalmalı).
+                // await LucaSession.MmpPage!.Context.CloseAsync();
+
                 return new SuccessResult("Fiş satırları başarıyla gönderildi.");
             }
             catch (Exception ex)
@@ -402,6 +424,7 @@ namespace TurkSoft.Business.Managers
                 return new ErrorResult($"Fiş gönderme hatası: {ex.Message}");
             }
         }
+
 
         #endregion
 
