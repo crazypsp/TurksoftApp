@@ -1,3 +1,9 @@
+// =========================
+//  ES Module imports
+// =========================
+import { LucaApi, KeyAccountApi, KullaniciMaliMusavirApi } from '../entities/index.js';
+import { getSession } from '../Service/LoginService.js';
+
 (function () {
   'use strict';
 
@@ -5,16 +11,16 @@
    *  Sabitler (API / Ayarlar)
    * ========================= */
   const BANKA_EKSTRE_API = 'https://localhost:7285/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
-  const LUCA_API = 'https://localhost:7032/api/luca';         // login/companies/select-company/hesap-plani/fis-gonder
-  const MATCHING_API = 'https://localhost:7018/api/bankaekstre';  // eslestir
+  const LUCA_API = 'https://localhost:7032/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
+  const MATCHING_API = 'https://localhost:7018/api/bankaekstre';      // eslestir
 
   const USE_SWEETALERT = true;
   const DEFAULT_API_KEY = '1cd8c11693648aa213509c3a12738708'; // PROD’da frontendte tutmayın!
 
   /* =========================
-   *  Keyword Map (örnek)
+   *  Keyword Map (default + MM’e özel eklenecek)
    * ========================= */
-  const keywordMap = {
+  const DEFAULT_KEYWORD_MAP = {
     "maaş": "770.20.001", "kira": "770.20.001", "kredi": "770.20.001", "elektrik": "770.20.001", "su": "770.20.001", "internet": "770.20.001", "telefon": "770.20.001",
     "yakıt": "770.20.001", "yemek": "770.20.001", "seyahat": "770.20.001", "konaklama": "770.20.001", "reklam": "770.20.001", "bakım": "770.20.001", "onarım": "770.20.001",
     "danışmanlık": "770.20.001", "temsil": "770.20.001", "nakliye": "770.20.001", "kargo": "770.20.001", "posta": "770.20.001", "sigorta": "770.20.001", "amortisman": "770.20.001",
@@ -23,11 +29,48 @@
     "yedek": "770.20.001", "bsmv": "770.20.001", "eft ücret": "770.20.001", "ücret": "770.20.001", "fatura": "770.20.001", "yazarkasa": "770.20.001", "eft masraf": "770.20.001",
     "masraf": "770.20.001", "para iade": "770.20.001", "40355": "770.20.001"
   };
+  let keywordMap = { ...DEFAULT_KEYWORD_MAP };
+
+  /* ============ SESSION / MM ============ */
+  let session = {};
+  let userId = '';
+  let myMaliMusavirId = '';
+
+  async function resolveSession() {
+    try {
+      const maybe = getSession?.() ?? {};
+      return (maybe && typeof maybe.then === 'function') ? (await maybe || {}) : (maybe || {});
+    } catch { return {}; }
+  }
+  function applySession(s) {
+    session = s || {};
+    userId = String(
+      session.userId || session.UserId || session.Id || session.id || session.KullaniciId || ''
+    );
+  }
+  async function resolveMyMaliMusavirId(uid) {
+    myMaliMusavirId = '';
+    if (!uid) return;
+
+    let rows = [];
+    try {
+      rows = await KullaniciMaliMusavirApi.list({ kullaniciId: String(uid) });
+    } catch {
+      rows = await KullaniciMaliMusavirApi.list();
+    }
+
+    const mine = (Array.isArray(rows) ? rows : [])
+      .filter(r => String(r.KullaniciId ?? r.kullaniciId ?? '') === String(uid));
+
+    if (!mine.length) return;
+    const primary = mine.find(r => r.IsPrimary === true) || mine[0];
+    myMaliMusavirId = String(primary.MaliMusavirId ?? primary.maliMusavirId ?? '');
+  }
 
   /* ============ STATE ============ */
-  let lucaToken = null;                // login sonrası (opsiyonel)
-  let lucaCompanies = [];              // şirket listesi
-  let selectedCompanyCode = '';        // seçilen şirket (gerçek kod = CompanyCode.Values)
+  let lucaToken = null;
+  let lucaCompanies = [];
+  let selectedCompanyCode = '';
 
   // Hesap planı
   let accountPlanData = [];
@@ -53,13 +96,25 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  function init() {
-    bindUserSelect();              // #firmaSelect → login + şirket listesini doldur
-    installCompanySelectWatcher(); // #mukellefSelect → şirket seçimi ile akışı başlat
+  async function init() {
+    // 1) Oturum & MMId hazırla
+    applySession(await resolveSession());
+    await resolveMyMaliMusavirId(userId);
 
+    // 2) Kullanıcı selectini MMId’ye göre doldur (Select2 aramalı)
+    await loadFirmaSelectFromLuca();
+    resetCompanySelect('Önce kullanıcı seçiniz');
+
+    // 3) KeyAccount -> keywordMap yükle + tablo
+    await loadKeywordMapFromKeyAccount();
     keyListData = Object.entries(keywordMap).map(([aciklama, kod]) => ({ aciklama, kod }));
     renderKeyTablePage();
 
+    // 4) Event binding
+    bindUserSelect();              // #firmaSelect → login + şirket listesini doldur
+    installCompanySelectWatcher(); // #mukellefSelect → şirket seçimi ile akışı başlat
+
+    // 5) Ekstre eşleşmesi/transfer akışı
     window.addEventListener('ekstre:eslesti', (e) => {
       transferData = Array.isArray(e.detail?.fisRows) ? e.detail.fisRows : [];
       transferPage = 1;
@@ -70,15 +125,149 @@
     initDropzoneUpload();
 
     const btnMatch = document.getElementById('btnMatch');
-    if (btnMatch) btnMatch.addEventListener('click', onMatchClick);
+    if (btnMatch && !btnMatch._bound) {
+      btnMatch.addEventListener('click', onMatchClick);
+      btnMatch._bound = true;
+    }
 
     const btnTransfer = document.getElementById('btnTransfer');
-    if (btnTransfer) btnTransfer.addEventListener('click', onTransferClick);
+    if (btnTransfer && !btnTransfer._bound) {
+      btnTransfer.addEventListener('click', onTransferClick);
+      btnTransfer._bound = true;
+    }
 
     bindTransferTableActions();
-
     updateButtonStates();
   }
+
+  /* =========================
+   *  MMId → Luca list → firmaSelect doldur
+   * ========================= */
+  function buildFirmaOptionsHtml(onlyMine) {
+    return ['<option value="">Kullanıcı seçiniz</option>'].concat(
+      onlyMine.map(r => {
+        const val = `${r.UyeNo || ''}-${r.Parola || ''}`;
+        const txt = String(r.KullaniciAdi || r.UyeNo || 'KULLANICI');
+        return `<option value="${escapeHtml(val)}"
+                        data-uyeno="${escapeHtml(r.UyeNo || '')}"
+                        data-user="${escapeHtml(r.KullaniciAdi || '')}">${escapeHtml(txt)}</option>`;
+      })
+    ).join('');
+  }
+
+  async function loadFirmaSelectFromLuca() {
+    const selUser = document.getElementById('firmaSelect');
+    if (!selUser) return;
+
+    // 1) Luca list
+    let list = [];
+    try { list = await LucaApi.list(); } catch { list = []; }
+
+    // 2) Sadece benim MMId’me ait kayıtlar
+    const onlyMine = (Array.isArray(list) ? list : []).filter(x =>
+      myMaliMusavirId && String(x.MaliMusavirId ?? x.maliMusavirId ?? '') === String(myMaliMusavirId)
+    );
+
+    // 3) Doldur + Select2 arama
+    const html = buildFirmaOptionsHtml(onlyMine);
+
+    try {
+      if (window.$ && $(selUser).length) {
+        $(selUser).prop('disabled', false).html(html);
+        initSelect2Search('firmaSelect', 'Kullanıcı ara...');
+        $(selUser).val('').trigger('change.select2');
+      } else {
+        selUser.innerHTML = html;
+        selUser.disabled = false;
+        selUser.value = '';
+        initSelect2Search('firmaSelect', 'Kullanıcı ara...');
+      }
+    } catch {
+      selUser.innerHTML = html;
+      selUser.disabled = false;
+      selUser.value = '';
+      initSelect2Search('firmaSelect', 'Kullanıcı ara...');
+    }
+  }
+
+  /* =========================
+   *  KeyAccount → keywordMap (MMId filtreli)
+   * ========================= */
+  async function loadKeywordMapFromKeyAccount() {
+    let list = [];
+    try { list = await KeyAccountApi.list(); } catch { list = []; }
+
+    const onlyMine = (Array.isArray(list) ? list : []).filter(x =>
+      myMaliMusavirId && String(x.MaliMusavirId ?? x.maliMusavirId ?? '') === String(myMaliMusavirId)
+    );
+
+    const map = {};
+    for (const r of onlyMine) {
+      const code = String(r.Kod || '').trim();
+      if (!code) continue;
+
+      const keys = String(r.Aciklama || '')
+        .toLowerCase()
+        .split(/[,;|\r\n]+/g)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (!keys.length && r.Aciklama) keys.push(String(r.Aciklama).toLowerCase().trim());
+      for (const k of keys) map[k] = code;
+    }
+
+    // DEFAULT + MM özel (MM tarafı baskın)
+    keywordMap = { ...DEFAULT_KEYWORD_MAP, ...map };
+  }
+
+  /* =========================
+   *  Select2 (tek sefer; Türkçe uyumlu matcher)
+   * ========================= */
+  function initSelect2Search(id, placeholder) {
+    const jq = window.jQuery || window.$;
+    const el = document.getElementById(id);
+    if (!jq || !jq.fn || !jq.fn.select2 || !el) return;  // jQuery/Select2 yoksa sessiz geç
+
+    const $el = jq(el);
+
+    // TR uyumlu normalize
+    const norm = (s) => String(s || '')
+      .toLocaleLowerCase('tr-TR')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/[ıiİI]/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u');
+
+    const matcher = (params, data) => {
+      if (jq.trim(params.term) === '') return data;
+      const term = norm(params.term);
+      const $opt = jq(data.element || []);
+      const hay = [
+        data.text,
+        $opt.attr('value'),
+        $opt.data('code'),
+        $opt.data('name'),
+        $opt.data('uyeno'),
+        $opt.data('user')
+      ].map(norm).join(' ');
+      return hay.indexOf(term) > -1 ? data : null;
+    };
+
+    const hasBs5Theme = !!document.querySelector('link[href*="select2-bootstrap-5"]');
+    const opts = {
+      width: '100%',
+      allowClear: true,
+      minimumResultsForSearch: 0,
+      placeholder: placeholder || '',
+      matcher,
+      theme: hasBs5Theme ? 'bootstrap-5' : 'bootstrap4'
+    };
+
+    const $parentModal = $el.closest('.modal');
+    if ($parentModal.length) opts.dropdownParent = $parentModal;
+
+    if ($el.data('select2')) { $el.select2('destroy'); }
+    $el.select2(opts);
+  }
+
 
   /* =========================
    *  Kullanıcı Seçimi → Login
@@ -97,7 +286,7 @@
         return;
       }
 
-      // value: "MusteriNo-Password", text: UserName
+      // value: "UyeNo-Password", text: KullaniciAdi
       const parts = String(selUser.value).split('-');
       if (parts.length < 2) { updateButtonStates(); return; }
       const CustumerNo = parts[0];
@@ -112,10 +301,10 @@
 
         TSLoader?.show?.('Luca', 'Şirket listesi alınıyor…');
         setBusy(true, 'Şirket listesi alınıyor…');
-        lucaCompanies = await getCompanies(lucaToken); // 400/404 → fallback içerir
+        lucaCompanies = await getCompanies(lucaToken);
         setBusy(false);
 
-        populateCompanySelect(lucaCompanies); // #mukellefSelect doldur
+        populateCompanySelect(lucaCompanies); // içinde Select2 arama kuruluyor
         selectedCompanyCode = '';
         clearPlanUI();
         notifyOk('Giriş başarılı. Lütfen şirket seçiniz.');
@@ -129,18 +318,20 @@
       }
     }
 
-    selUser.addEventListener('change', onUserChange);
-    try { if (typeof $ !== 'undefined' && $(selUser).data('select2')) $(selUser).on('change', onUserChange); } catch { }
+    if (!selUser._bound) {
+      selUser.addEventListener('change', onUserChange);
+      selUser._bound = true;
+    }
     if (selCompany) resetCompanySelect('Önce kullanıcı seçiniz');
   }
 
   /* ===========================================================
-   *  Şirket Select: native + jQuery(select2) + observer + poll
+   *  Şirket Select: sadece native change (tek bağlama)
    * =========================================================== */
   function installCompanySelectWatcher() {
     const ID = 'mukellefSelect';
 
-    async function onCompanyPicked(evt) {
+    async function onCompanyPicked() {
       const el = document.getElementById(ID);
       if (!el) return;
 
@@ -158,7 +349,7 @@
       try {
         TSLoader?.show?.('Luca', 'Şirket etkinleştiriliyor…');
         setBusy(true, 'Şirket etkinleştiriliyor…');
-        try { await selectCompany(lucaToken, code); } catch (e) { /* endpoint yoksa sorun değil */ }
+        try { await selectCompany(lucaToken, code); } catch { /* opsiyonel uç */ }
         selectedCompanyCode = code;
         setBusy(false);
 
@@ -180,35 +371,8 @@
       }
     }
 
-    // Native change
     const el0 = document.getElementById(ID);
-    if (el0 && !el0._nativeBound) { el0.addEventListener('change', onCompanyPicked); el0._nativeBound = true; }
-
-    // jQuery delegated (select2)
-    try {
-      if (typeof $ !== 'undefined') {
-        $(document).off('.muksel');
-        $(document)
-          .on('change.muksel', `#${ID}`, onCompanyPicked)
-          .on('select2:select.muksel', `#${ID}`, onCompanyPicked);
-      }
-    } catch { }
-
-    // DOM’da yeniden yaratılırsa tekrar bağla
-    const mo = new MutationObserver(() => {
-      const el = document.getElementById(ID);
-      if (el && !el._nativeBound) { el.addEventListener('change', onCompanyPicked); el._nativeBound = true; }
-    });
-    mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
-
-    // Değer değişimini kaçırmamak için hafif poll
-    let lastVal = '';
-    setInterval(() => {
-      const el = document.getElementById(ID);
-      if (!el) return;
-      const v = el.value || '';
-      if (v && v !== lastVal) { lastVal = v; onCompanyPicked({ type: 'poll' }); } else { lastVal = v; }
-    }, 500);
+    if (el0 && !el0._bound) { el0.addEventListener('change', onCompanyPicked); el0._bound = true; }
   }
 
   /* ===========================
@@ -232,7 +396,7 @@
       return '';
     };
 
-    // [{CompanyCode:{Values,Name}}] / [{Code,Name}] / [{Values,Name}] hepsini normalize et
+    // normalize
     const normalized = (Array.isArray(companiesRaw) ? companiesRaw : []).map(item => {
       const c = item?.CompanyCode || item?.companyCode || item;
       let name = firstNonEmpty(c, ['Name', 'name', 'Unvan', 'unvan', 'CompanyName', 'companyName', 'Text', 'text']);
@@ -243,17 +407,18 @@
     }).filter(x => x.name || x.code);
 
     try {
-      if (window.$ && $(sel).data('select2')) {
+      if (window.$ && $(sel).length) {
         const $s = $(sel);
         $s.prop('disabled', false).empty();
         $s.append(new Option('Şirket seçiniz...', '', true, false));
         normalized.forEach(({ name, code }) => {
           const text = (name && code && code !== name) ? `${name} (${code})` : (name || code);
-          const opt = new Option(text, name, false, false); // value = ad
-          opt.dataset.code = code;                          // gerçek kod
+          const opt = new Option(text, name, false, false);
+          opt.dataset.code = code;
           opt.dataset.name = name;
           $s.append(opt);
         });
+        initSelect2Search('mukellefSelect', 'Şirket ara...');
         $s.val('').trigger('change.select2');
         return;
       }
@@ -267,6 +432,7 @@
     ).join('');
     sel.innerHTML = html;
     sel.disabled = false;
+    initSelect2Search('mukellefSelect', 'Şirket ara...');
   }
 
   /* ==================
@@ -288,7 +454,7 @@
         Hareketler: ekstreCache.hareketler,
         HesapKodlari: normalizedPlan,
         KeywordMap: keywordMap,
-        BankaHesapKodu: bankaHesapKodu//findBankCode(normalizedPlan) || ''
+        BankaHesapKodu: bankaHesapKodu
       }
     };
 
@@ -391,9 +557,7 @@
   async function getCompanies(token) {
     const headers = {}; if (token) headers['Authorization'] = 'Bearer ' + token;
 
-    // ana uç
     let res = await fetch(join(LUCA_API, 'companies'), { method: 'GET', headers, mode: 'cors' });
-    // 400/404 → eski uç
     if (!res.ok && (res.status === 400 || res.status === 404)) {
       res = await fetch(join(LUCA_API, 'cari-list'), { method: 'GET', headers, mode: 'cors' });
     }
@@ -667,11 +831,20 @@
   }
 
   /* =========================
-   *  Dropzone: Ekstre Yükleme
+   *  Dropzone: Ekstre Yükleme (+ dosya adı yazdırma)
    * ========================= */
   function initDropzoneUpload() {
     const formEl = document.getElementById('dropzone-basic');
     if (!formEl || !window.Dropzone) return;
+
+    // Dosya adını göstermek için alan
+    let nameEl = formEl.querySelector('.dz-selected-name');
+    if (!nameEl) {
+      nameEl = document.createElement('div');
+      nameEl.className = 'dz-selected-name mt-2';
+      nameEl.style.cssText = 'font-weight:700;text-transform:uppercase;word-break:break-all;';
+      formEl.appendChild(nameEl);
+    }
 
     let dz = null;
     try { dz = Dropzone.forElement(formEl); } catch { dz = null; }
@@ -696,6 +869,9 @@
     dz._ekstreBound = true;
 
     dz.on('addedfile', async (file) => {
+      // Dosya adını KALIN+BÜYÜK yaz
+      try { nameEl.textContent = file?.name ? file.name.toUpperCase() : ''; } catch { }
+
       if (dz.files.length > 1) dz.removeFile(dz.files[0]);
 
       const endpoint = pickEkstreEndpoint(file?.name || '');
@@ -910,11 +1086,11 @@
     const sel = document.getElementById('mukellefSelect');
     if (!sel) return;
     try {
-      if (window.$ && $(sel).data('select2')) {
+      if (window.$ && $(sel).length) {
         const $s = $(sel);
         $s.prop('disabled', true).empty();
         $s.append(new Option(placeholderText || 'Önce kullanıcı seçiniz', '', true, true));
-        $s.val('').trigger('change.select2');
+        if ($s.data('select2')) $s.val('').trigger('change.select2'); else $s.val('');
         return;
       }
     } catch { }
