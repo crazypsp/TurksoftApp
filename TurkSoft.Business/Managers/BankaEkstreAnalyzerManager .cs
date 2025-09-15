@@ -78,13 +78,52 @@ public class BankaEkstreAnalyzerManager : IBankaEkstreAnalyzerBusiness
             var kw = kwNorm.FirstOrDefault(k => aciklamaNorm.Contains(k.KeyNorm));
             string? keywordTargetCode = kw?.Code;
 
-            string? karsiKod = PickBestByName(planNorm, preferPrefixes, aciklamaNorm, nameTokens);
+            // Anahtar kelimeleri içeren bir kod var mı? (öncelikli eşleştirme)
+            string? karsiKod = null;
+            var matchedKeyword = kwNorm.FirstOrDefault(k => aciklamaNorm.Contains(k.KeyNorm));
+            if (matchedKeyword != null)
+            {
+                // Açıklama içinde keyword varsa, doğrudan eşleştirilen kodu ata
+                karsiKod = matchedKeyword.Code;
+            }
+
+            // Anahtar kelime eşleşmesi yoksa, isim benzerliği ile devam et
+            if (string.IsNullOrEmpty(karsiKod))
+                karsiKod = PickBestByName(planNorm, preferPrefixes, aciklamaNorm, nameTokens);
             if (string.IsNullOrEmpty(karsiKod))
                 karsiKod = PickBestByName(planNorm, Array.Empty<string>(), aciklamaNorm, nameTokens);
-            if (string.IsNullOrEmpty(karsiKod) && !string.IsNullOrEmpty(keywordTargetCode))
-                karsiKod = keywordTargetCode;
+
+            // Fallback eşleşme adayı (düşük skorları kontrol edeceğiz)
+            string? fallbackKod = null;
+            bool fallbackIsHighEnough = false;
             if (string.IsNullOrEmpty(karsiKod))
-                karsiKod = FallbackBestName(planNorm, aciklamaNorm, nameTokens);
+            {
+                fallbackKod = FallbackBestName(planNorm, aciklamaNorm, nameTokens);
+                if (!string.IsNullOrEmpty(fallbackKod))
+                {
+                    var bestMatch = planNorm.FirstOrDefault(p => p.Code == fallbackKod);
+                    if (bestMatch != null)
+                    {
+                        double nameSim = Similarity(aciklamaNorm, bestMatch.NameNorm);
+                        double tokenSim = TokenOverlap(nameTokens, bestMatch.Tokens);
+                        double subsetBonus = (ContainsAsWholePhrase(aciklamaNorm, bestMatch.NameNorm) ||
+                                              ContainsAsWholePhrase(bestMatch.NameNorm, aciklamaNorm))
+                                              ? SubstringBonus : 0.0;
+                        double score = Clamp01(0.65 * nameSim + 0.35 * tokenSim + subsetBonus);
+                        fallbackIsHighEnough = score >= WeakPickThreshold;
+                    }
+                }
+            }
+
+            // Eğer hâlâ uygun bir kod yoksa veya fallback skoru düşükse → otomatik atama
+            if (string.IsNullOrEmpty(karsiKod))
+            {
+                if (fallbackIsHighEnough)
+                    karsiKod = fallbackKod;
+                else
+                    karsiKod = tutar > 0 ? "120.01.999" : "320.01.999";
+            }
+
 
             // Bu işlem için banka kodunu satır içi kopyala
             var bankaKod = bankaHesapKodu;
