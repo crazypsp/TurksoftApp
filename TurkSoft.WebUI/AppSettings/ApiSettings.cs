@@ -6,7 +6,7 @@
 
 namespace TurkSoft.WebUI.AppSettings
 {
-  /// <summary>ERP API kök adresi (örn: https://localhost:7109/api/v1)</summary>
+  /// <summary>ERP API kök adresi (örn: https://erpapi.noxmusavir.com/api/v1)</summary>
   public sealed class ApiSettings
   {
     public string BaseUrl { get; set; } =string.Empty; //Boş gelirse build-time’da fark edelim

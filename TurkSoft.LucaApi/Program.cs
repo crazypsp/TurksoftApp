@@ -1,4 +1,4 @@
-using TurkSoft.Business.Interface;
+ï»¿using TurkSoft.Business.Interface;
 using TurkSoft.Business.Managers;
 using TurkSoft.Service.Interface;
 using TurkSoft.Service.Manager;
@@ -16,11 +16,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // -------------------------
-// CORS
+// CORS AYARI
 // -------------------------
 const string WebUiCorsPolicy = "AllowWebUI";
-// UI origin'in tam adresi (proto + host + port)
-var uiOrigin = "https://localhost:7228";
+
+// Web uygulamasÄ±nÄ±n eriÅŸtiÄŸi domaini buraya yaz (tam adres: https + domain)
+var uiOrigin = "https://noxmusavir.com";
 
 builder.Services.AddCors(options =>
 {
@@ -29,9 +30,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(uiOrigin)
               .AllowAnyHeader()
               .AllowAnyMethod()
-              // Cookie/Session veya Authorization header ile çalýþýyorsan açýk kalsýn:
-              .AllowCredentials();
-        // NOT: AllowCredentials() ile '*' kullanýlamaz, tek tek origin yazýlmalý.
+              .AllowCredentials(); // Cookie / token taÅŸÄ±yorsan bu ÅŸart
     });
 });
 
@@ -40,17 +39,22 @@ var app = builder.Build();
 // -------------------------
 // Middleware Pipeline
 // -------------------------
+
+// Swagger dev modunda aktif
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// âœ… HTTPS yÃ¶nlendirmesi sonrasÄ± CORS'u UYGULA!
 app.UseHttpsRedirection();
 
-// CORS, Authorization'dan ve MapControllers'tan ÖNCE olmalý
+// âœ… CORS MIDDLEWARE - En kritik satÄ±r bu
 app.UseCors(WebUiCorsPolicy);
 
+// EÄŸer authentication varsa Ã¶nce onu Ã§alÄ±ÅŸtÄ±rman gerekir
+// app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

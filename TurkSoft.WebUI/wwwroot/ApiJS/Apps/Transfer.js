@@ -10,9 +10,9 @@ import { getSession } from '../Service/LoginService.js';
   /* =========================
    *  Sabitler (API / Ayarlar)
    * ========================= */
-  const BANKA_EKSTRE_API = 'https://localhost:7285/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
-  const LUCA_API = 'https://localhost:7032/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
-  const MATCHING_API = 'https://localhost:7018/api/bankaekstre';      // eslestir
+  const BANKA_EKSTRE_API = 'https://documentapi.noxmusavir.com/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
+  const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
+  const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/bankaekstre';      // eslestir
 
   const USE_SWEETALERT = true;
   const DEFAULT_API_KEY = '1cd8c11693648aa213509c3a12738708'; // PROD’da frontendte tutmayın!

@@ -34,7 +34,8 @@ namespace TurkSoft.Business.Managers
 
                 _browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
                 {
-                    Channel = "chrome",
+                    //Channel = "chrome", Sunucu için devre dışı bırakıldı
+                    ExecutablePath = @"C:\Program Files\Google\Chrome\Application\chrome.exe",
                     Headless = true,
                     Args = new[]
                     {

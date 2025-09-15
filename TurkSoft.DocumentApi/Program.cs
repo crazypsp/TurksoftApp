@@ -5,63 +5,51 @@ using TurkSoft.Service.Manager;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------------------------------------------------
-// ✅ Service ve Business Katmanı Bağlantısı (Dependency Injection ile tanımlama)
-// ---------------------------------------------------
+// -------------------------
+// DI: Service & Business
+// -------------------------
 builder.Services.AddScoped<IBankaEkstreService, BankaEkstreManagerSrv>();
 builder.Services.AddScoped<IBankaEkstreBusiness, BankaEkstreManager>();
 
-// ---------------------------------------------------
-// ✅ Controller servisini DI ile ekle
-// ---------------------------------------------------
 builder.Services.AddControllers();
-
-// ---------------------------------------------------
-// ✅ Swagger/OpenAPI servislerini tanımla
-// ---------------------------------------------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-// (İsteğe bağlı Swagger yapılandırması buraya eklenebilir)
 
-// ---------------------------------------------------
-// ✅ CORS politikası tanımlama (AllowAll adında bir politika)
-// Bu satırı builder.Build() ÇAĞRILMADAN ÖNCE ekleyin
-// ---------------------------------------------------
+// -------------------------
+// CORS (UI'den gelen istekler için izin ver)
+// -------------------------
+// Not: AllowCredentials() kullanıyorsan kesinlikle WithOrigins ile tek tek belirtmen gerekir.
+const string CorsPolicyName = "AllowWebUI";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policyBuilder =>
-        policyBuilder.AllowAnyOrigin()
-                     .AllowAnyMethod()
-                     .AllowAnyHeader());
+    options.AddPolicy(CorsPolicyName, policyBuilder =>
+    {
+        policyBuilder
+            .WithOrigins("https://noxmusavir.com") // UI domain (http varyantı gerekiyorsa ekle)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); // Tarayıcıdan session/cookie/token geliyorsa bu şart
+    });
 });
 
-// ---------------------------------------------------
-// ✅ Uygulama oluşturuluyor
-// ---------------------------------------------------
 var app = builder.Build();
 
-// ---------------------------------------------------
-// ✅ Geliştirme ortamında Swagger UI etkinleştir
-// ---------------------------------------------------
+// -------------------------
+// Swagger (dev ortamı için aktif)
+// -------------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// ---------------------------------------------------
-// ✅ HTTP istek işleme ardışık düzeni (middleware pipeline)
-// ---------------------------------------------------
 app.UseHttpsRedirection();
 
-// CORS politikasını uygulama (AllowAll politikasını kullan)
-// Bunu Authorization'dan ÖNCE çağırmak gerekir:
-app.UseCors("AllowAll");
+// ✅ CORS middleware'ini Authorization'dan ÖNCE çağır
+app.UseCors(CorsPolicyName);
 
 app.UseAuthorization();
+
 app.MapControllers();
 
-// ---------------------------------------------------
-// ✅ Uygulamayı çalıştır
-// ---------------------------------------------------
 app.Run();

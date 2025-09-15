@@ -1,10 +1,12 @@
-using TurkSoft.Business.Interface;
+ï»¿using TurkSoft.Business.Interface;
 using TurkSoft.Service.Interface;
 using TurkSoft.Service.Manager;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Service & Business
+// -------------------------
+// DI
+// -------------------------
 builder.Services.AddScoped<IBankaEkstreAnalyzerService, BankaEkstreAnalyzerManagerSrv>();
 builder.Services.AddScoped<IBankaEkstreAnalyzerBusiness, BankaEkstreAnalyzerManager>();
 
@@ -12,27 +14,32 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// ******** CORS ********
-// WebUI origin’in: https://localhost:7228 (gerekirse http varyantını da ekleyebilirsin)
+// -------------------------
+// CORS
+// -------------------------
+// Web UI domaini (tam adres ile)
+// Ã–rn: "https://noxmusavir.com"
 const string CorsPolicyName = "AllowWebUI";
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
     {
-        policy
-            .WithOrigins(
-                "https://localhost:7228"  // WebUI
-                                          // ,"http://localhost:7228" // UI http kullanıyorsa aç
-            )
-            .AllowAnyMethod()     // POST/GET/OPTIONS vs.
-            .AllowAnyHeader()     // Content-Type, Authorization vs.
-                                  // .AllowCredentials() // Cookie/tabanlı auth gerekiyorsa aç; açarsan WithOrigins zorunlu (AllowAnyOrigin ile birlikte kullanılamaz)
-            .SetPreflightMaxAge(TimeSpan.FromHours(1)); // opsiyonel: preflight cache
+        policy.WithOrigins("https://noxmusavir.com")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials() // â— TarayÄ±cÄ±dan cookie/token ile istek varsa bu ÅART
+              .SetPreflightMaxAge(TimeSpan.FromHours(1));
     });
 });
 
 var app = builder.Build();
 
+// -------------------------
+// Middleware Pipeline
+// -------------------------
+
+// Swagger sadece development ortamÄ±nda
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -41,9 +48,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// !!! CORS middleware'ini Authorization'dan ÖNCE çağır
+// âœ… CORS middleware'ini mutlaka Authorization'dan Ã–NCE Ã§aÄŸÄ±r
 app.UseCors(CorsPolicyName);
 
+// EÄŸer auth kullanÄ±yorsan Ã¶nce authentication sonra authorization
+// app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
