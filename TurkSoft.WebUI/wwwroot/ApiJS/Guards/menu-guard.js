@@ -7,7 +7,8 @@ const ALL_IDS = [
   'menuKullanici',
   'menuTransfers',
   'menuLuca',
-  'menuKeyAccount'
+  'menuKeyAccount',
+  'menuBayi'
 ];
 
 const MAP = {

@@ -12,7 +12,7 @@ import { getSession } from '../Service/LoginService.js';
    * ========================= */
   const BANKA_EKSTRE_API = 'https://documentapi.noxmusavir.com/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
   const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
-  const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/bankaekstre';      // eslestir
+  const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/BankaEkstre';      // eslestir
 
   const USE_SWEETALERT = true;
   const DEFAULT_API_KEY = '1cd8c11693648aa213509c3a12738708'; // PROD’da frontendte tutmayın!
@@ -21,13 +21,13 @@ import { getSession } from '../Service/LoginService.js';
    *  Keyword Map (default + MM’e özel eklenecek)
    * ========================= */
   const DEFAULT_KEYWORD_MAP = {
-    "maaş": "770.01.008", "kira": "770.01.008", "kredi": "770.01.008", "elektrik": "770.01.008", "su": "770.01.008", "internet": "770.01.008", "telefon": "770.01.008",
-    "yakıt": "770.01.008", "yemek": "770.01.008", "seyahat": "770.01.008", "konaklama": "770.01.008", "reklam": "770.01.008", "bakım": "770.01.008", "onarım": "770.01.008",
-    "danışmanlık": "770.01.008", "temsil": "770.01.008", "nakliye": "770.01.008", "kargo": "770.01.008", "posta": "770.01.008", "sigorta": "770.01.008", "amortisman": "770.01.008",
-    "faiz": "770.01.008", "komisyon": "770.01.008", "vergi": "770.01.008", "stopaj": "770.01.008", "prim": "770.01.008", "personel": "770.01.008", "malzeme": "770.01.008",
-    "donanım": "770.01.008", "yazılım": "770.01.008", "ekipman": "770.01.008", "ofis": "770.01.008", "abonman": "770.01.008", "eğitim": "770.01.008", "tedarik": "770.01.008",
-    "yedek": "770.01.008", "bsmv": "770.01.008", "eft ücret": "770.01.008", "ücret": "770.01.008", "fatura": "770.01.008", "yazarkasa": "770.01.008", "eft masraf": "770.01.008",
-    "masraf": "770.01.008", "para iade": "770.01.008", "40355": "770.01.008"
+    //"maaş": "770.01.008", "kira": "770.01.008", "kredi": "770.01.008", "elektrik": "770.01.008", "su": "770.01.008", "internet": "770.01.008", "telefon": "770.01.008",
+    //"yakıt": "770.01.008", "yemek": "770.01.008", "seyahat": "770.01.008", "konaklama": "770.01.008", "reklam": "770.01.008", "bakım": "770.01.008", "onarım": "770.01.008",
+    //"danışmanlık": "770.01.008", "temsil": "770.01.008", "nakliye": "770.01.008", "kargo": "770.01.008", "posta": "770.01.008", "sigorta": "770.01.008", "amortisman": "770.01.008",
+    //"faiz": "770.01.008", "komisyon": "770.01.008", "vergi": "770.01.008", "stopaj": "770.01.008", "prim": "770.01.008", "personel": "770.01.008", "malzeme": "770.01.008",
+    //"donanım": "770.01.008", "yazılım": "770.01.008", "ekipman": "770.01.008", "ofis": "770.01.008", "abonman": "770.01.008", "eğitim": "770.01.008", "tedarik": "770.01.008",
+    //"yedek": "770.01.008", "bsmv": "770.01.008", "eft ücret": "770.01.008", "ücret": "770.01.008", "fatura": "770.01.008", "yazarkasa": "770.01.008", "eft masraf": "770.01.008",
+    //"masraf": "770.01.008", "para iade": "770.01.008", "40355": "770.01.008"
   };
   let keywordMap = { ...DEFAULT_KEYWORD_MAP };
 

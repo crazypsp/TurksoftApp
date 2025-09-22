@@ -137,11 +137,11 @@ public class BankaEkstreAnalyzerManager : IBankaEkstreAnalyzerBusiness
             {
                 karsiKod = "771.01";
             }
-            if (bankaKod=="255.03")
+            if (bankaKod == "255.03")
             {
                 bankaKod = "771.01";
             }
-            if (karsiKod=="255.03")
+            if (karsiKod == "255.03")
             {
                 karsiKod = "771.01";
             }

@@ -1,6 +1,4 @@
-﻿// Program.cs (.NET 8, Asp.Versioning 8.1 uyumlu)
-
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json.Serialization;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
@@ -16,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // -------------------- SERVICES --------------------
 
+// 1) DbContext
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -33,6 +32,7 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
 
+// 4) API Versioning
 builder.Services
     .AddApiVersioning(o =>
     {
@@ -46,6 +46,7 @@ builder.Services
         o.SubstituteApiVersionInUrl = true;
     });
 
+// 5) Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<IConfigureOptions<Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions>,
@@ -54,22 +55,30 @@ builder.Services.AddTransient<IConfigureOptions<Swashbuckle.AspNetCore.SwaggerGe
 builder.Services.AddHealthChecks()
     .AddCheck<TurkSoft.ErpApi.HealthChecks.DbContextHealthCheck>("sql");
 
-// CORS (✅ Bu alan kritik!)
+// 7) CORS
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("WebUICors", p =>
     {
-        p.WithOrigins("https://noxmusavir.com")  // ❗ allowedOrigins yerine direkt sabit yazıldı
+        p.WithOrigins(allowedOrigins)
          .AllowAnyHeader()
          .AllowAnyMethod()
-         .AllowCredentials(); // Cookie/Session çalışacaksa şart
+         .AllowCredentials();
     });
 });
 
 builder.Services.AddProblemDetails();
 
-builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = long.MaxValue);
+// 9) Upload limiti (çok büyük dosyalar için)
+builder.Services.Configure<FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = long.MaxValue;
+});
 
+// 10) HTTPS için Proxy ayarı (Plesk/Nginx/IIS vs.)
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -79,6 +88,7 @@ var app = builder.Build();
 
 // -------------------- PIPELINE --------------------
 
+// Hata sayfası geliştirme ortamında
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -87,13 +97,16 @@ if (app.Environment.IsDevelopment())
 app.UseForwardedHeaders();
 
 if (app.Environment.IsProduction())
-    app.UseHsts();
+{
+    app.UseHsts(); // prod ortamı için zorunlu değil ama önerilir
+}
 
 app.UseHttpsRedirection();
 
-// ✅ CORS middleware burada çalışmalı (HEMEN REDIRECT ARKASINDAN)
+// CORS middleware (politikayı belirt)
 app.UseCors("WebUICors");
 
+// Exception middleware (Swagger ve Health dışı yollar için)
 app.UseWhen(ctx =>
     !ctx.Request.Path.StartsWithSegments("/swagger") &&
     !ctx.Request.Path.StartsWithSegments("/health"),
@@ -102,8 +115,8 @@ app.UseWhen(ctx =>
         branch.UseMiddleware<TurkSoft.ErpApi.Middleware.GlobalExceptionMiddleware>();
     });
 
+// Swagger
 app.UseSwagger();
-
 var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 app.UseSwaggerUI(c =>
 {
@@ -112,18 +125,17 @@ app.UseSwaggerUI(c =>
         c.SwaggerEndpoint($"/swagger/{desc.GroupName}/swagger.json",
             $"TurkSoft ERP API {desc.GroupName.ToUpperInvariant()}");
     }
-
     c.RoutePrefix = builder.Configuration["Swagger:RoutePrefix"] ?? "swagger";
     c.DisplayRequestDuration();
 });
 
-// 🔐 Eğer auth varsa burayı aç
-// app.UseAuthentication();
-app.UseAuthorization();
+// app.UseAuthentication(); // Eğer kimlik doğrulama eklenirse
+// app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
 
+// Root URL => Swagger'a yönlendir
 app.MapGet("/", () =>
     Results.Redirect("/" + (builder.Configuration["Swagger:RoutePrefix"] ?? "swagger"))
 );
@@ -132,6 +144,7 @@ app.Run();
 
 // -------------------- Swagger Options --------------------
 
+// -------------------- Swagger Options (Multi-Version Support) --------------------
 public sealed class ConfigureSwaggerOptions
     : IConfigureOptions<Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions>
 {
@@ -152,6 +165,7 @@ public sealed class ConfigureSwaggerOptions
 
         options.DocInclusionPredicate((docName, apiDesc) =>
             apiDesc.GroupName == docName && apiDesc.HttpMethod != null);
+
         options.ResolveConflictingActions(apiDescs => apiDescs.First());
         options.CustomSchemaIds(t => t.FullName!.Replace('+', '.'));
         options.SupportNonNullableReferenceTypes();
