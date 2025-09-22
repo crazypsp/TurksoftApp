@@ -1,4 +1,5 @@
-﻿using TurkSoft.Business.Interface;
+﻿using Microsoft.Extensions.Logging;
+using TurkSoft.Business.Interface;
 using TurkSoft.Business.Managers;
 using TurkSoft.Service.Interface;
 using TurkSoft.Service.Manager;
@@ -6,7 +7,15 @@ using TurkSoft.Service.Manager;
 var builder = WebApplication.CreateBuilder(args);
 
 // ---------------------------------------------------
-// ✅ Service ve Business Katmanı Bağlantısı (Dependency Injection ile tanımlama)
+// ✅ Logging Ayarları (Konsol + Dosya Loglama)
+// ---------------------------------------------------
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(); // Terminal veya Output penceresine log
+builder.Logging.AddDebug();   // Visual Studio output için
+builder.Logging.AddFile("Logs/log-{Date}.txt"); // Her güne özel dosya loglama (Serilog.Extensions.Logging.File paketi gerekir)
+
+// ---------------------------------------------------
+// ✅ Service ve Business Katmanı Bağlantısı
 // ---------------------------------------------------
 builder.Services.AddScoped<IBankaEkstreService, BankaEkstreManagerSrv>();
 builder.Services.AddScoped<IBankaEkstreBusiness, BankaEkstreManager>();
@@ -17,51 +26,71 @@ builder.Services.AddScoped<IBankaEkstreBusiness, BankaEkstreManager>();
 builder.Services.AddControllers();
 
 // ---------------------------------------------------
-// ✅ Swagger/OpenAPI servislerini tanımla
+// ✅ Swagger/OpenAPI servisleri
 // ---------------------------------------------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-// (İsteğe bağlı Swagger yapılandırması buraya eklenebilir)
 
 // ---------------------------------------------------
-// ✅ CORS politikası tanımlama (AllowAll adında bir politika)
-// Bu satırı builder.Build() ÇAĞRILMADAN ÖNCE ekleyin
+// ✅ CORS Politikası Tanımı (Yayın ortamındaki domainler dahil)
 // ---------------------------------------------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policyBuilder =>
-        policyBuilder.AllowAnyOrigin()
-                     .AllowAnyMethod()
-                     .AllowAnyHeader());
+        policyBuilder
+            .WithOrigins(
+                "https://documentapi.noxmusavir.com",
+                "https://noxmusavir.com",
+                "https://www.noxmusavir.com",
+                "http://documentapi.noxmusavir.com",
+                "http://noxmusavir.com",
+                "http://www.noxmusavir.com",
+                "https://localhost:7228",
+                "http://localhost:7228"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+    );
 });
 
 // ---------------------------------------------------
-// ✅ Uygulama oluşturuluyor
+// ✅ Uygulama Yapılandırma
 // ---------------------------------------------------
 var app = builder.Build();
 
 // ---------------------------------------------------
-// ✅ Geliştirme ortamında Swagger UI etkinleştir
+// ✅ Swagger – Yayın ortamında da aktif olabilir (opsiyonel)
 // ---------------------------------------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    // Opsiyonel: Yayın ortamında da Swagger açılsın istiyorsan burayı aç
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Document API v1");
+        c.RoutePrefix = ""; // Direkt domain yazınca swagger çalışsın
+    });
+}
 
 // ---------------------------------------------------
-// ✅ HTTP istek işleme ardışık düzeni (middleware pipeline)
+// ✅ HTTP Middleware Pipeline
 // ---------------------------------------------------
 app.UseHttpsRedirection();
 
-// CORS politikasını uygulama (AllowAll politikasını kullan)
-// Bunu Authorization'dan ÖNCE çağırmak gerekir:
+// ✅ CORS: Authorization'dan önce
 app.UseCors("AllowAll");
 
 app.UseAuthorization();
+
+// ✅ Controller yönlendirme
 app.MapControllers();
 
 // ---------------------------------------------------
-// ✅ Uygulamayı çalıştır
+// ✅ Uygulamayı Başlat
 // ---------------------------------------------------
 app.Run();

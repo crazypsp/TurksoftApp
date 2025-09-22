@@ -1,51 +1,65 @@
+ï»¿using Microsoft.OpenApi.Models;
+using Serilog;
 using TurkSoft.Business.Interface;
+using TurkSoft.Business.Managers;
 using TurkSoft.Service.Interface;
 using TurkSoft.Service.Manager;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Service & Business
+// Serilog (opsiyonel)
+builder.Host.UseSerilog((context, config) =>
+{
+    config.ReadFrom.Configuration(context.Configuration);
+});
+
+// Controller & DI servisleri
+builder.Services.AddControllers();
+builder.Services.AddAuthorization();
+// âœ… SERVICE / BUSINESS INJECTION(EN Ã–NEMLÄ°SÄ° BU!)
 builder.Services.AddScoped<IBankaEkstreAnalyzerService, BankaEkstreAnalyzerManagerSrv>();
 builder.Services.AddScoped<IBankaEkstreAnalyzerBusiness, BankaEkstreAnalyzerManager>();
 
-builder.Services.AddControllers();
+// âœ… Swagger tanÄ±mÄ± (OpenAPI 3.0)
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "TurkSoft Matching API",
+        Version = "3.0.0", // âœ… En Ã¶nemli satÄ±r. "v1" yazarsan hata alÄ±rsÄ±n
+        Description = "TurkSoft banka mutabakat API servisleri"
+    });
+});
 
-// ******** CORS ********
-// WebUI origin’in: https://localhost:7228 (gerekirse http varyantýný da ekleyebilirsin)
-const string CorsPolicyName = "AllowWebUI";
+// CORS
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "https://localhost:7228" };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(CorsPolicyName, policy =>
+    options.AddPolicy("WebUICors", policy =>
     {
-        policy
-            .WithOrigins(
-                "https://localhost:7228"  // WebUI
-                                          // ,"http://localhost:7228" // UI http kullanýyorsa aç
-            )
-            .AllowAnyMethod()     // POST/GET/OPTIONS vs.
-            .AllowAnyHeader()     // Content-Type, Authorization vs.
-                                  // .AllowCredentials() // Cookie/tabanlý auth gerekiyorsa aç; açarsan WithOrigins zorunlu (AllowAnyOrigin ile birlikte kullanýlamaz)
-            .SetPreflightMaxAge(TimeSpan.FromHours(1)); // opsiyonel: preflight cache
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// Middleware
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TurkSoft Matching API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseHttpsRedirection();
-
-// !!! CORS middleware'ini Authorization'dan ÖNCE çaðýr
-app.UseCors(CorsPolicyName);
-
+app.UseCors("WebUICors");
 app.UseAuthorization();
-
 app.MapControllers();
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
