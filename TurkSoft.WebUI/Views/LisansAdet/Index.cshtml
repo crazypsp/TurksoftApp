@@ -1,5 +1,29 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
 @{
+    ViewData["Title"] = "Bayi - Apps";
 }
+
+@section VendorStyles {
+    <link rel="stylesheet" href="~/vendor/libs/datatables-bs5/datatables.bootstrap5.css">
+    <link rel="stylesheet" href="~/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css">
+    <link rel="stylesheet" href="~/vendor/libs/&#64;form-validation/form-validation.css" />
+}
+
+@section VendorScripts {
+    <script src="~/vendor/libs/datatables-bs5/datatables-bootstrap5.js"></script>
+    <script src="~/vendor/libs/&#64;form-validation/popular.js"></script>
+    <script src="~/vendor/libs/&#64;form-validation/bootstrap5.js"></script>
+    <script src="~/vendor/libs/&#64;form-validation/auto-focus.js"></script>
+}
+
+@section PageScripts {
+    <script type="module" src="~/ApiJS/Apps/Bayi.js"></script>
+}
+<h4 class="mb-1">Bayi</h4>
+<p class="mb-6">Bayileri görüntüleyin; ekleyin, düzenleyin, silin.</p>
+
+<div class="row g-6">
+    @await Html.PartialAsync("../_Partials/Apps/Bayi/Filters")
+    <div class="col-12">@await Html.PartialAsync("../_Partials/Apps/Bayi/Tables")</div>
+</div>
+
+@await Html.PartialAsync("../_Partials/Apps/Bayi/Modals")
