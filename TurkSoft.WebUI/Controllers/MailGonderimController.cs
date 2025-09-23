@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace TurkSoft.WebUI.Controllers
 {
-  public class TransfersController : Controller
+  public class MailGonderimController : Controller
   {
     public IActionResult Index() => View();
   }
