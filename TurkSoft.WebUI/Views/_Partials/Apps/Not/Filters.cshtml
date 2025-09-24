@@ -1,8 +1,22 @@
 <div class="row g-2">
-    <div class="col">
-        <input id="fltSearch1" type="text" class="form-control" placeholder="BayiCariHareket filtre 1" />
+    <div class="col-md-3">
+        <input id="fltBaslik" type="text" class="form-control" placeholder="Başlık" />
     </div>
-    <div class="col">
-        <input id="fltSearch2" type="text" class="form-control" placeholder="BayiCariHareket filtre 2" />
+    <div class="col-md-3">
+        <select id="fltTip" class="form-select">
+            <option value="">Tip</option>
+            <option value="0">Genel</option>
+            <option value="1">Satış</option>
+            <option value="2">Fırsat</option>
+            <option value="3">Firma</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input id="fltIlgiliTip" type="text" class="form-control" placeholder="İlgili Tip" />
+    </div>
+    <div class="col-md-3">
+        <select id="fltOlusturanUserId" class="form-select">
+            <option value="">Oluşturan Kullanıcı</option>
+        </select>
     </div>
 </div>

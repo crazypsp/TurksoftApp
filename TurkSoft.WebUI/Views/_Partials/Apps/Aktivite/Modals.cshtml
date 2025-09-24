@@ -1,27 +1,70 @@
 <div class="modal fade" id="mdlAktivite" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Aktivite Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmAktivite">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Aktivite Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmAktivite">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Bayi</label>
+                            <select id="frmBayiId" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Konu</label>
+                            <input type="text" id="frmKonu" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tür</label>
+                            <select id="frmTur" class="form-select">
+                                <option value="0">Görev</option>
+                                <option value="1">Arama</option>
+                                <option value="2">Toplantı</option>
+                                <option value="3">E-posta</option>
+                                <option value="4">Sms</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Durum</label>
+                            <select id="frmDurum" class="form-select">
+                                <option value="0">Planlandı</option>
+                                <option value="1">Tamamlandı</option>
+                                <option value="2">İptal</option>
+                                <option value="3">Gecikti</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Planlanan Tarih</label>
+                            <input type="datetime-local" id="frmPlanlananTarih" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Gerçekleşen Tarih</label>
+                            <input type="datetime-local" id="frmGerceklesenTarih" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">İlgili Tip</label>
+                            <input type="text" id="frmIlgiliTip" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">İlgili Kullanıcı</label>
+                            <select id="frmIlgiliKullaniciId" class="form-select"></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Açıklama</label>
+                            <textarea id="frmAciklama" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

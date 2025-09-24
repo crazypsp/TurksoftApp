@@ -1,27 +1,40 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlOutboxMesaj" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Outbox Mesaj Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmOutboxMesaj">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Tip</label>
+                        <input type="text" id="frmTip" class="form-control" placeholder="Event Tipi" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">İçerik (JSON)</label>
+                        <textarea id="frmIcerikJson" class="form-control" rows="5" placeholder="JSON içerik" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">İşlenmiş mi?</label>
+                        <select id="frmIslenmis" class="form-select">
+                            <option value="true">Evet</option>
+                            <option value="false">Hayır</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">İşlenme Tarihi</label>
+                        <input type="datetime-local" id="frmIslenmeTarihi" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

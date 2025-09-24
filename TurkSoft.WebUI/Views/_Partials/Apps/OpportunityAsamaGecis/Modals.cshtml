@@ -1,27 +1,37 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlOpportunityAsamaGecis" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Opportunity Aşama Geçiş Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmOpportunityAsamaGecis">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Opportunity</label>
+                        <select id="frmOpportunityId" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">From Aşama</label>
+                        <select id="frmFromAsamaId" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">To Aşama</label>
+                        <select id="frmToAsamaId" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Geçiş Tarihi</label>
+                        <input type="date" id="frmGecisTarihi" class="form-control" required />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

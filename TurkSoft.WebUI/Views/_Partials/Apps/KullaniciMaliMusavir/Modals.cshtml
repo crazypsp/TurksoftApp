@@ -1,27 +1,50 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlKullaniciMaliMusavir" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kullanıcı - Mali Müşavir İlişkisi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmKullaniciMaliMusavir">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Kullanıcı</label>
+                            <select id="frmKullaniciId" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mali Müşavir</label>
+                            <select id="frmMaliMusavirId" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Birincil Mi?</label>
+                            <select id="frmIsPrimary" class="form-select">
+                                <option value="true">Evet</option>
+                                <option value="false">Hayır</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Atanan Rol</label>
+                            <input type="text" id="frmAtananRol" class="form-control" placeholder="MMAdmin, Stajyer, Personel..." />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Başlangıç Tarihi</label>
+                            <input type="date" id="frmBaslangicTarihi" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bitiş Tarihi</label>
+                            <input type="date" id="frmBitisTarihi" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

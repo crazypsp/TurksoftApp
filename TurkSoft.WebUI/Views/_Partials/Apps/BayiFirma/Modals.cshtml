@@ -1,27 +1,37 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlBayiFirma" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bayi Firma Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmBayiFirma">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Bayi</label>
+                        <select id="frmBayiId" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Vergi No</label>
+                        <input type="text" id="frmVergiNo" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">IBAN</label>
+                        <input type="text" id="frmIban" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Adres</label>
+                        <textarea id="frmAdres" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

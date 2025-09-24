@@ -1,27 +1,80 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlLead" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Lead Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmLead">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Lead No</label>
+                            <input type="text" id="frmLeadNo" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bayi</label>
+                            <select id="frmBayiId" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Unvan</label>
+                            <input type="text" id="frmUnvan" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Kaynak</label>
+                            <input type="text" id="frmKaynak" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Sorumlu Kullanıcı</label>
+                            <select id="frmSorumluKullaniciId" class="form-select"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Oluşturma Tarihi</label>
+                            <input type="date" id="frmOlusturmaTarihi" class="form-control" required />
+                        </div>
+                    </div>
+
+                    <!-- Adres -->
+                    <div class="mt-4">
+                        <h6>Adres Bilgileri</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Ülke</label>
+                                <input type="text" id="frmUlke" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Şehir</label>
+                                <input type="text" id="frmSehir" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">İlçe</label>
+                                <input type="text" id="frmIlce" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Posta Kodu</label>
+                                <input type="text" id="frmPostaKodu" class="form-control" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Açık Adres</label>
+                                <textarea id="frmAcikAdres" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notlar -->
+                    <div class="mt-4">
+                        <label class="form-label">Notlar</label>
+                        <textarea id="frmNotlar" class="form-control" rows="3"></textarea>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

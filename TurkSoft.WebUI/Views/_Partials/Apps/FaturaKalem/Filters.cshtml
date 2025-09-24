@@ -1,8 +1,21 @@
 <div class="row g-2">
-    <div class="col">
-        <input id="fltSearch1" type="text" class="form-control" placeholder="BayiCariHareket filtre 1" />
+    <div class="col-md-3">
+        <select id="fltFaturaId" class="form-select">
+            <option value="">Fatura</option>
+        </select>
     </div>
-    <div class="col">
-        <input id="fltSearch2" type="text" class="form-control" placeholder="BayiCariHareket filtre 2" />
+    <div class="col-md-3">
+        <select id="fltPaketId" class="form-select">
+            <option value="">Paket</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input id="fltMiktar" type="number" class="form-control" placeholder="Miktar" />
+    </div>
+    <div class="col-md-2">
+        <input id="fltBirimFiyat" type="number" step="0.01" class="form-control" placeholder="Birim Fiyat" />
+    </div>
+    <div class="col-md-2">
+        <input id="fltTutar" type="number" step="0.01" class="form-control" placeholder="Tutar" />
     </div>
 </div>

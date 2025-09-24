@@ -1,27 +1,39 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlEtiketIliski" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Etiket İlişki Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmEtiketIliski">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Etiket</label>
+                        <select id="frmEtiketId" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">İlgili Tip</label>
+                        <select id="frmIlgiliTip" class="form-select" required>
+                            <option value="0">Lead</option>
+                            <option value="1">Opportunity</option>
+                            <option value="2">Satış</option>
+                            <option value="3">Firma</option>
+                            <option value="4">Mali Müşavir</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">İlgili Id</label>
+                        <input type="text" id="frmIlgiliId" class="form-control" required />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

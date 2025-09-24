@@ -1,8 +1,23 @@
 <div class="row g-2">
-    <div class="col">
-        <input id="fltSearch1" type="text" class="form-control" placeholder="BayiCariHareket filtre 1" />
+    <div class="col-md-3">
+        <input id="fltLisansAnahtari" type="text" class="form-control" placeholder="Lisans Anahtarı" />
     </div>
-    <div class="col">
-        <input id="fltSearch2" type="text" class="form-control" placeholder="BayiCariHareket filtre 2" />
+    <div class="col-md-2">
+        <input id="fltBaslangicTarihi" type="date" class="form-control" placeholder="Başlangıç" />
+    </div>
+    <div class="col-md-2">
+        <input id="fltBitisTarihi" type="date" class="form-control" placeholder="Bitiş" />
+    </div>
+    <div class="col-md-2">
+        <select id="fltYenilendiMi" class="form-select">
+            <option value="">Yenilendi Mi?</option>
+            <option value="true">Evet</option>
+            <option value="false">Hayır</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select id="fltSatisId" class="form-select">
+            <option value="">Satış</option>
+        </select>
     </div>
 </div>

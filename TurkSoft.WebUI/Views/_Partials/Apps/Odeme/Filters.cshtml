@@ -1,8 +1,36 @@
 <div class="row g-2">
-    <div class="col">
-        <input id="fltSearch1" type="text" class="form-control" placeholder="BayiCariHareket filtre 1" />
+    <div class="col-md-2">
+        <select id="fltSatisId" class="form-select">
+            <option value="">Satış</option>
+        </select>
     </div>
-    <div class="col">
-        <input id="fltSearch2" type="text" class="form-control" placeholder="BayiCariHareket filtre 2" />
+    <div class="col-md-2">
+        <input id="fltOdemeTarihi" type="date" class="form-control" placeholder="Ödeme Tarihi" />
+    </div>
+    <div class="col-md-2">
+        <select id="fltOdemeYontemi" class="form-select">
+            <option value="">Ödeme Yöntemi</option>
+            <option value="0">Havale/EFT</option>
+            <option value="1">Kredi Kartı</option>
+            <option value="2">PayTR</option>
+            <option value="3">Sanal Kart</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select id="fltOdemeDurumu" class="form-select">
+            <option value="">Durum</option>
+            <option value="0">Beklemede</option>
+            <option value="1">Başarılı</option>
+            <option value="2">Başarısız</option>
+            <option value="3">İade</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input id="fltTutar" type="number" step="0.01" class="form-control" placeholder="Tutar" />
+    </div>
+    <div class="col-md-2">
+        <select id="fltSanalPosId" class="form-select">
+            <option value="">Sanal POS</option>
+        </select>
     </div>
 </div>

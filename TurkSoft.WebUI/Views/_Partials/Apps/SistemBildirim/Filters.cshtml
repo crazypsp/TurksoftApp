@@ -1,8 +1,30 @@
 <div class="row g-2">
-    <div class="col">
-        <input id="fltSearch1" type="text" class="form-control" placeholder="BayiCariHareket filtre 1" />
+    <div class="col-md-2">
+        <select id="fltKanal" class="form-select">
+            <option value="">Kanal</option>
+            <option value="0">Email</option>
+            <option value="1">Sms</option>
+            <option value="2">Push</option>
+            <option value="3">Web</option>
+        </select>
     </div>
-    <div class="col">
-        <input id="fltSearch2" type="text" class="form-control" placeholder="BayiCariHareket filtre 2" />
+    <div class="col-md-2">
+        <select id="fltDurum" class="form-select">
+            <option value="">Durum</option>
+            <option value="0">Oluşacak</option>
+            <option value="1">Gönderildi</option>
+            <option value="2">Hata</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input id="fltBaslik" type="text" class="form-control" placeholder="Başlık" />
+    </div>
+    <div class="col-md-3">
+        <select id="fltHedefKullaniciId" class="form-select">
+            <option value="">Hedef Kullanıcı</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input id="fltPlanlananTarih" type="date" class="form-control" placeholder="Planlanan Tarih" />
     </div>
 </div>

@@ -1,27 +1,71 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlEntegrasyonHesabi" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Entegrasyon Hesabı Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmEntegrasyonHesabi">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Sistem Tipi</label>
+                            <select id="frmSistemTipi" class="form-select" required>
+                                <option value="0">Luca</option>
+                                <option value="1">Logo</option>
+                                <option value="2">Mikro</option>
+                                <option value="3">Netsis</option>
+                                <option value="4">ETA</option>
+                                <option value="5">Zirve</option>
+                                <option value="99">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Host</label>
+                            <input type="text" id="frmHost" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Veritabanı Adı</label>
+                            <input type="text" id="frmVeritabaniAdi" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Kullanıcı Adı</label>
+                            <input type="text" id="frmKullaniciAdi" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Parola</label>
+                            <input type="password" id="frmParola" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">API URL</label>
+                            <input type="url" id="frmApiUrl" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">API Key</label>
+                            <input type="text" id="frmApiKey" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mali Müşavir</label>
+                            <select id="frmMaliMusavirId" class="form-select"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Firma</label>
+                            <select id="frmFirmaId" class="form-select"></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Açıklama</label>
+                            <textarea id="frmAciklama" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

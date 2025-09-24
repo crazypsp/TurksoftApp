@@ -1,27 +1,59 @@
-<div class="modal fade" id="mdlBayiCariHareket" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BayiCariHareket Formu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="frmBayiCariHareket">
-        <div class="modal-body">
-          <input type="hidden" id="frmId" />
-          <div class="mb-3">
-            <label class="form-label">Alan 1</label>
-            <input type="text" id="frmField1" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Alan 2</label>
-            <input type="text" id="frmField2" class="form-control" />
-          </div>
+<div class="modal fade" id="mdlFiyatListesi" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Fiyat Listesi Formu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmFiyatListesi">
+                <div class="modal-body">
+                    <input type="hidden" id="frmId" />
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Kod</label>
+                            <input type="text" id="frmKod" class="form-control" required />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Ad</label>
+                            <input type="text" id="frmAd" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Bayi</label>
+                            <select id="frmBayiId" class="form-select"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Başlangıç</label>
+                            <input type="date" id="frmBaslangic" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Bitiş</label>
+                            <input type="date" id="frmBitis" class="form-control" />
+                        </div>
+                    </div>
+
+                    <!-- Kalemler tablosu -->
+                    <div class="mt-4">
+                        <h6>Fiyat Listesi Kalemleri</h6>
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Paket</th>
+                                    <th>Fiyat</th>
+                                    <th class="text-end">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-fiyatlistesikalem-body"></tbody>
+                        </table>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddKalem">+ Kalem Ekle</button>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>

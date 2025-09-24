@@ -1,8 +1,30 @@
 <div class="row g-2">
-    <div class="col">
-        <input id="fltSearch1" type="text" class="form-control" placeholder="Aktivite filtre 1" />
+    <div class="col-md-3">
+        <input id="fltKonu" type="text" class="form-control" placeholder="Konu" />
     </div>
-    <div class="col">
-        <input id="fltSearch2" type="text" class="form-control" placeholder="Aktivite filtre 2" />
+    <div class="col-md-2">
+        <select id="fltTur" class="form-select">
+            <option value="">Tür</option>
+            <option value="0">Görev</option>
+            <option value="1">Arama</option>
+            <option value="2">Toplantı</option>
+            <option value="3">E-posta</option>
+            <option value="4">Sms</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select id="fltDurum" class="form-select">
+            <option value="">Durum</option>
+            <option value="0">Planlandı</option>
+            <option value="1">Tamamlandı</option>
+            <option value="2">İptal</option>
+            <option value="3">Gecikti</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input id="fltPlanlananTarih" type="date" class="form-control" placeholder="Planlanan Tarih" />
+    </div>
+    <div class="col-md-2">
+        <input id="fltSehir" type="text" class="form-control" placeholder="İlgili Tip" />
     </div>
 </div>
