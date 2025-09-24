@@ -8,8 +8,15 @@ import { getSession } from '../Service/LoginService.js';
   'use strict';
 
   /* =========================
-   *  Sabitler (API / Ayarlar)
+   *  Sabitler (API / Ayarlar) Canlı
    * ========================= */
+  const BANKA_EKSTRE_API = 'https://documentapi.noxmusavir.com/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
+  const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
+  const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/BankaEkstre';      // eslestir
+
+  /* =========================
+ *  Sabitler (API / Ayarlar) Local
+ * ========================= */
   const BANKA_EKSTRE_API = 'https://documentapi.noxmusavir.com/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
   const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
   const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/BankaEkstre';      // eslestir
