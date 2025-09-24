@@ -425,8 +425,6 @@ namespace TurkSoft.Business.Managers
                 return new ErrorResult($"Fiş gönderme hatası: {ex.Message}");
             }
         }
-
-
         #endregion
 
         #region HELPERS (Captcha / Waits / UI / Navigation)
