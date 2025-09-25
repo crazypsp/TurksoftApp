@@ -7,19 +7,17 @@ import { getSession } from '../Service/LoginService.js';
 (function () {
   'use strict';
 
-  /* =========================
-   *  Sabitler (API / Ayarlar) Canlı
-   * ========================= */
-  const BANKA_EKSTRE_API = 'https://documentapi.noxmusavir.com/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
-  const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
-  const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/BankaEkstre';      // eslestir
+  ///* =========================
+  // *  Sabitler (API / Ayarlar) Canlı
+  // * ========================= */
+  //const BANKA_EKSTRE_API = 'https://documentapi.noxmusavir.com/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
+  //const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
+  //const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/BankaEkstre';      // eslestir
 
- // /* =========================
- //*  Sabitler (API / Ayarlar) Local
- //* ========================= */
- // const BANKA_EKSTRE_API = 'https://documentapi.noxmusavir.com/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
- // const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
- // const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/BankaEkstre';      // eslestir
+  // ========= API Bazları =========
+  const BANKA_EKSTRE_API = 'https://localhost:7285/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
+  const LUCA_API = 'https://localhost:7032/api/luca';                 // login/hesap-plani/fis-gonder
+  const MATCHING_API = 'https://localhost:7018/api/bankaekstre';      // eslestir (Swagger değil, gerçek base!)
 
   const USE_SWEETALERT = true;
   const DEFAULT_API_KEY = '1cd8c11693648aa213509c3a12738708'; // PROD’da frontendte tutmayın!
@@ -28,13 +26,13 @@ import { getSession } from '../Service/LoginService.js';
    *  Keyword Map (default + MM’e özel eklenecek)
    * ========================= */
   const DEFAULT_KEYWORD_MAP = {
-    //"maaş": "770.01.008", "kira": "770.01.008", "kredi": "770.01.008", "elektrik": "770.01.008", "su": "770.01.008", "internet": "770.01.008", "telefon": "770.01.008",
-    //"yakıt": "770.01.008", "yemek": "770.01.008", "seyahat": "770.01.008", "konaklama": "770.01.008", "reklam": "770.01.008", "bakım": "770.01.008", "onarım": "770.01.008",
-    //"danışmanlık": "770.01.008", "temsil": "770.01.008", "nakliye": "770.01.008", "kargo": "770.01.008", "posta": "770.01.008", "sigorta": "770.01.008", "amortisman": "770.01.008",
-    //"faiz": "770.01.008", "komisyon": "770.01.008", "vergi": "770.01.008", "stopaj": "770.01.008", "prim": "770.01.008", "personel": "770.01.008", "malzeme": "770.01.008",
-    //"donanım": "770.01.008", "yazılım": "770.01.008", "ekipman": "770.01.008", "ofis": "770.01.008", "abonman": "770.01.008", "eğitim": "770.01.008", "tedarik": "770.01.008",
-    //"yedek": "770.01.008", "bsmv": "770.01.008", "eft ücret": "770.01.008", "ücret": "770.01.008", "fatura": "770.01.008", "yazarkasa": "770.01.008", "eft masraf": "770.01.008",
-    //"masraf": "770.01.008", "para iade": "770.01.008", "40355": "770.01.008"
+    "maaş": "771.01", "kira": "771.01", "kredi": "771.01", "elektrik": "771.01", "su": "771.01", "internet": "771.01", "telefon": "771.01",
+    "yakıt": "771.01", "yemek": "771.01", "seyahat": "771.01", "konaklama": "771.01", "reklam": "771.01", "bakım": "771.01", "onarım": "771.01",
+    "danışmanlık": "771.01", "temsil": "771.01", "nakliye": "771.01", "kargo": "771.01", "posta": "771.01", "sigorta": "771.01", "amortisman": "771.01",
+    "faiz": "771.01", "komisyon": "771.01", "vergi": "771.01", "stopaj": "771.01", "prim": "771.01", "personel": "771.01", "malzeme": "771.01",
+    "donanım": "771.01", "yazılım": "771.01", "ekipman": "771.01", "ofis": "771.01", "abonman": "771.01", "eğitim": "771.01", "tedarik": "771.01",
+    "yedek": "771.01", "bsmv": "771.01", "eft ücret": "771.01", "ücret": "771.01", "fatura": "771.01", "yazarkasa": "771.01", "eft masraf": "771.01",
+    "masraf": "771.01", "para iade": "771.01", "40355": "771.01"
   };
   let keywordMap = { ...DEFAULT_KEYWORD_MAP };
 
