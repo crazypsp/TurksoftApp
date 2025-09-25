@@ -13,7 +13,8 @@
 using Microsoft.AspNetCore.Mvc;                                   // Controller öznitelikleri için
 using TurkSoft.ErpApi.Controllers.Common;                         // CrudController<> base sınıfı
 using TurkSoft.Entities.EntityDB;                                 // Entity sınıfları (T tipi)
-using TurkSoft.Service.Interface;                                 // I{Entity}Service arayüzleri
+using TurkSoft.Service.Interface;
+using Asp.Versioning;                                 // I{Entity}Service arayüzleri
 
 namespace TurkSoft.ErpApi.Controllers
 {
