@@ -34,8 +34,7 @@ namespace TurkSoft.Business.Managers
 
                 _browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
                 {
-                    //Channel = "chrome", Sunucu için devre dışı bırakıldı
-                    ExecutablePath = @"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                    Channel = "chrome",
                     Headless = true,
                     Args = new[]
                     {
@@ -425,6 +424,8 @@ namespace TurkSoft.Business.Managers
                 return new ErrorResult($"Fiş gönderme hatası: {ex.Message}");
             }
         }
+
+
         #endregion
 
         #region HELPERS (Captcha / Waits / UI / Navigation)
