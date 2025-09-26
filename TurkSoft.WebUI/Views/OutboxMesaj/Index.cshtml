@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Bayi - Apps";
+    ViewData["Title"] = "Outbox Mesaj - Apps";
 }
 
 @section VendorStyles {
@@ -16,14 +16,14 @@
 }
 
 @section PageScripts {
-    <script type="module" src="~/ApiJS/Apps/Bayi.js"></script>
+    <script type="module" src="~/ApiJS/Apps/OutboxMesaj.js"></script>
 }
-<h4 class="mb-1">Bayi</h4>
-<p class="mb-6">Bayileri görüntüleyin; ekleyin, düzenleyin, silin.</p>
+<h4 class="mb-1">Outbox Mesaj</h4>
+<p class="mb-6">Outbox Mesajları görüntüleyin; ekleyin, düzenleyin, silin.</p>
 
 <div class="row g-6">
-    @await Html.PartialAsync("../_Partials/Apps/Bayi/Filters")
-    <div class="col-12">@await Html.PartialAsync("../_Partials/Apps/Bayi/Tables")</div>
+    @await Html.PartialAsync("../_Partials/Apps/OutboxMesaj/Filters")
+    <div class="col-12">@await Html.PartialAsync("../_Partials/Apps/OutboxMesaj/Tables")</div>
 </div>
 
-@await Html.PartialAsync("../_Partials/Apps/Bayi/Modals")
+@await Html.PartialAsync("../_Partials/Apps/OutboxMesaj/Modals")
