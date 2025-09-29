@@ -1,5 +1,5 @@
-import { BayiFirmaService } from '../entities/BayiFirmaService.js';
-
+import { BayiFirmaApi } from '../entities/index.js';
+import { getSession } from '../Service/LoginService.js';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const val = el => (el?.value ?? '').trim();
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const fmId = $('#frmId');
   
   async function loadTable() {
-    const list = await BayiFirmaService.list();
+    const list = await BayiFirmaApi.list();
     tbody.innerHTML = (Array.isArray(list) ? list : []).map(r => `
       <tr>
         <td>${r.Id}</td>
@@ -30,14 +30,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   function bindRowActions() {
     $$('.act-edit').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
-      const r = await BayiFirmaService.get(id);
+      const r = await BayiFirmaApi.get(id);
       fmId.value = r.Id;
       modal?.show();
     }));
     $$('.act-del').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
       if (!confirm('Silinsin mi?')) return;
-      await BayiFirmaService.remove(id); 
+      await BayiFirmaApi.remove(id); 
       await loadTable();
     }));
   }
@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   formEl?.addEventListener('submit', async e => {
     e.preventDefault();
     const dto = { Id: fmId.value || undefined };
-    if (dto.Id) await BayiFirmaService.update(dto.Id, dto);
-    else await BayiFirmaService.create(dto);
+    if (dto.Id) await BayiFirmaApi.update(dto.Id, dto);
+    else await BayiFirmaApi.create(dto);
     modal?.hide(); 
     await loadTable();
   });
