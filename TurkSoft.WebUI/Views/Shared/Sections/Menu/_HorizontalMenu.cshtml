@@ -12,8 +12,67 @@
     bool isTr = currentPage!.StartsWith("/Transfers");
     bool isBayi = currentPage!.StartsWith("/Bayi");
     bool isKul = currentPage!.StartsWith("/Kullanici");
-    bool isMuhasebeGrp = isMM || isLuca || isKA || isTr || isKul;
+    bool isAdres = currentPage!.StartsWith("/KeyAdres");
+    bool isAktivite = currentPage!.StartsWith("/Aktivite");
+    bool isAktiviteAtama = currentPage!.StartsWith("/AktiviteAtama");
+    bool isBayiCari = currentPage!.StartsWith("/BayiCari");
+    bool isBayiCariHareket = currentPage!.StartsWith("/BayiCariHareket");
+    bool isBayiFirma = currentPage!.StartsWith("/BayiFirma");
+    bool isBayiKomisyonTarife = currentPage!.StartsWith("/BayiKomisyonTarife");
+    bool isEntegrasyonHesabi = currentPage!.StartsWith("/EntegrasyonHesabi");
+    bool isEtiket = currentPage!.StartsWith("/Etiket");
+    bool isEtiketIliski = currentPage!.StartsWith("/EtiketIliski");
+    bool isFatura = currentPage!.StartsWith("/Fatura");
+    bool isFaturaKalem = currentPage!.StartsWith("/FaturaKalem");
+    bool isFiyatListesi = currentPage!.StartsWith("/FiyatListesi");
+    bool isFiyatListesiKalem = currentPage!.StartsWith("/FiyatListesiKalem");
+    bool isKomisyonOdemePlani = currentPage!.StartsWith("/KomisyonOdemePlani");
+    bool isKullaniciBayi = currentPage!.StartsWith("/KullaniciBayi");
+    bool isKullaniciFirma = currentPage!.StartsWith("/KullaniciFirma");
+    bool isKullaniciMaliMusavir = currentPage!.StartsWith("/KullaniciMaliMusavir");
+    bool isKupon = currentPage!.StartsWith("/Kupon");
+    bool isLead = currentPage!.StartsWith("/Lead");
+    bool isLisans = currentPage!.StartsWith("/Lisans");
+    bool isLisansAdet = currentPage!.StartsWith("/LisansAdet");
+    bool isLoges = currentPage!.StartsWith("/Loges");
+    bool isMailAyar = currentPage!.StartsWith("/MailAyar");
+    bool isMailGonderim = currentPage!.StartsWith("/MailGonderim");
+    bool isNot = currentPage!.StartsWith("/Not");
+    bool isOdeme = currentPage!.StartsWith("/Odeme");
+    bool isOpportunity = currentPage!.StartsWith("/Opportunity");
+    bool isOpportunityAsama = currentPage!.StartsWith("/OpportunityAsama");
+    bool isOutboxMesaj = currentPage!.StartsWith("/OutboxMesaj");
+    bool isPaket = currentPage!.StartsWith("/Paket");
+    bool isPaketIskonto = currentPage!.StartsWith("/PaketIskonto");
+    bool isSanalPos = currentPage!.StartsWith("/SanalPos");
+    bool isSatis = currentPage!.StartsWith("/Satis");
+    bool isSatisKalem = currentPage!.StartsWith("/SatisKalem");
+    bool isSistemBildirim = currentPage!.StartsWith("/SistemBildirim");
+    bool isSmsAyar = currentPage!.StartsWith("/SmsAyar");
+    bool isSmsGonderim = currentPage!.StartsWith("/SmsGonderim");
+    bool isTeklif = currentPage!.StartsWith("/Teklif");
+    bool isTeklifKalem = currentPage!.StartsWith("/TeklifKalem");
+    bool isUrunFiyat = currentPage!.StartsWith("/UrunFiyat");
+    bool isUrunTipi = currentPage!.StartsWith("/UrunTipi");
+    bool isVergiOrani = currentPage!.StartsWith("/VergiOrani");
+    bool isWebhookAbonelik = currentPage!.StartsWith("/WebhookAbonelik");
+    bool isWhatsappAyar = currentPage!.StartsWith("/WhatsappAyar");
+    bool isWhatsappGonderim = currentPage!.StartsWith("/WhatsappGonderim");
+
+    // 🔑 Muhasebe grubu aç/kapat → tüm controller'ları kapsıyor
+    bool isMuhasebeGrp =
+        isMM || isLuca || isKA || isTr || isBayi || isKul ||
+        isAdres || isAktivite || isAktiviteAtama || isBayiCari || isBayiCariHareket ||
+        isBayiFirma || isBayiKomisyonTarife || isEntegrasyonHesabi || isEtiket || isEtiketIliski ||
+        isFatura || isFaturaKalem || isFiyatListesi || isFiyatListesiKalem || isKomisyonOdemePlani ||
+        isKullaniciBayi || isKullaniciFirma || isKullaniciMaliMusavir || isKupon || isLead ||
+        isLisans || isLisansAdet || isLoges || isMailAyar || isMailGonderim || isNot ||
+        isOdeme || isOpportunity || isOpportunityAsama || isOutboxMesaj || isPaket || isPaketIskonto ||
+        isSanalPos || isSatis || isSatisKalem || isSistemBildirim || isSmsAyar || isSmsGonderim ||
+        isTeklif || isTeklifKalem || isUrunFiyat || isUrunTipi || isVergiOrani ||
+        isWebhookAbonelik || isWhatsappAyar || isWhatsappGonderim;
 }
+
 
 
 <!-- Menu -->
@@ -45,7 +104,145 @@
                         <a asp-controller="Luca" asp-action="Index" class="menu-link"><div>Luca</div></a>
                     </li>
                     <li class="menu-item" id="menuKeyAccount">
-                        <a asp-controller="KeyAccount" asp-action="Index" class="menu-link"><div>Key Account</div></a>
+                        <a asp-controller="KeyAccount" asp-action="Index" class="menu-link"><div>Anahtar Kelimeler</div></a>
+                    </li>
+                    <li class="menu-item" id="menuAdres">
+                        <a asp-controller="KeyAdres" asp-action="Index" class="menu-link"><div>Adres</div></a>
+                    </li>
+                    <li class="menu-item" id="menuAktivite">
+                        <a asp-controller="Aktivite" asp-action="Index" class="menu-link"><div>Aktivite</div></a>
+                    </li>
+                    <li class="menu-item" id="menuAktiviteAtama">
+                        <a asp-controller="AktiviteAtama" asp-action="Index" class="menu-link"><div>Aktivite Atama</div></a>
+                    </li>
+                    <li class="menu-item" id="menuBayiCari">
+                        <a asp-controller="BayiCari" asp-action="Index" class="menu-link"><div>Bayi Cari</div></a>
+                    </li>
+                    <li class="menu-item" id="menuBayiCariHareket">
+                        <a asp-controller="BayiCariHareket" asp-action="Index" class="menu-link"><div>Bayi Cari Hareket</div></a>
+                    </li>
+                    <li class="menu-item" id="menuBayiFirma">
+                        <a asp-controller="BayiFirma" asp-action="Index" class="menu-link"><div>Bayi Firma</div></a>
+                    </li>
+                    <li class="menu-item" id="menuBayiKomisyonTarife">
+                        <a asp-controller="BayiKomisyonTarife" asp-action="Index" class="menu-link"><div>Bayi Komisyon Tarife</div></a>
+                    </li>
+                    <li class="menu-item" id="menuEntegrasyonHesabi">
+                        <a asp-controller="EntegrasyonHesabi" asp-action="Index" class="menu-link"><div>Entegrasyon Hesabı</div></a>
+                    </li>
+                    <li class="menu-item" id="menuEtiket">
+                        <a asp-controller="Etiket" asp-action="Index" class="menu-link"><div>Etiket</div></a>
+                    </li>
+                    <li class="menu-item" id="menuEtiketIliski">
+                        <a asp-controller="EtiketIliski" asp-action="Index" class="menu-link"><div>Etiket İlişkisi</div></a>
+                    </li>
+                    <li class="menu-item" id="menuFatura">
+                        <a asp-controller="Fatura" asp-action="Index" class="menu-link"><div>Fatura</div></a>
+                    </li>
+                    <li class="menu-item" id="menuFaturaKalem">
+                        <a asp-controller="FaturaKalem" asp-action="Index" class="menu-link"><div>Fatura Kalem</div></a>
+                    </li>
+                    <li class="menu-item" id="menuFiyatListesi">
+                        <a asp-controller="FiyatListesi" asp-action="Index" class="menu-link"><div>Fiyat Listesi</div></a>
+                    </li>
+                    <li class="menu-item" id="menuFiyatListesiKalem">
+                        <a asp-controller="FiyatListesiKalem" asp-action="Index" class="menu-link"><div>Fiyat Listesi Kalem</div></a>
+                    </li>
+                    <li class="menu-item" id="menuKomisyonOdemePlani">
+                        <a asp-controller="KomisyonOdemePlani" asp-action="Index" class="menu-link"><div>Komisyon Ödeme Planı</div></a>
+                    </li>
+                    <li class="menu-item" id="menuKullaniciBayi">
+                        <a asp-controller="KullaniciBayi" asp-action="Index" class="menu-link"><div>Kullanıcı Bayi</div></a>
+                    </li>
+                    <li class="menu-item" id="menuKullaniciFirma">
+                        <a asp-controller="KullaniciFirma" asp-action="Index" class="menu-link"><div>Kullanıcı Firma</div></a>
+                    </li>
+                    <li class="menu-item" id="menuKullaniciMaliMusavir">
+                        <a asp-controller="KullaniciMaliMusavir" asp-action="Index" class="menu-link"><div>Kullanıcı Mali Muşavir</div></a>
+                    </li>
+                    <li class="menu-item" id="menuKupon">
+                        <a asp-controller="Kupon" asp-action="Index" class="menu-link"><div>Kupon</div></a>
+                    </li>
+                    <li class="menu-item" id="menuLead">
+                        <a asp-controller="Lead" asp-action="Index" class="menu-link"><div>Lead</div></a>
+                    </li>
+                    <li class="menu-item" id="menuLisans">
+                        <a asp-controller="Lisans" asp-action="Index" class="menu-link"><div>Lisans</div></a>
+                    </li>
+                    <li class="menu-item" id="menuLisansAdet">
+                        <a asp-controller="LisansAdet" asp-action="Index" class="menu-link"><div>Lisans Adet</div></a>
+                    </li>
+                    <li class="menu-item" id="menuLoges">
+                        <a asp-controller="Loges" asp-action="Index" class="menu-link"><div>Log</div></a>
+                    </li>
+                    <li class="menu-item" id="menuMailAyar">
+                        <a asp-controller="MailAyar" asp-action="Index" class="menu-link"><div>Mail Ayarları</div></a>
+                    </li>
+                    <li class="menu-item" id="menuMailGonderim">
+                        <a asp-controller="MailGonderim" asp-action="Index" class="menu-link"><div>Mail Gönderimi</div></a>
+                    </li>
+                    <li class="menu-item" id="menuNot">
+                        <a asp-controller="Not" asp-action="Index" class="menu-link"><div>Not</div></a>
+                    </li>
+                    <li class="menu-item" id="menuOdeme">
+                        <a asp-controller="Odeme" asp-action="Index" class="menu-link"><div>Ödeme</div></a>
+                    </li>
+                    <li class="menu-item" id="menuOpportunity">
+                        <a asp-controller="Opportunity" asp-action="Index" class="menu-link"><div>Opportunity</div></a>
+                    </li>
+                    <li class="menu-item" id="menuOpportunityAsama">
+                        <a asp-controller="OpportunityAsama" asp-action="Index" class="menu-link"><div>Opportunity Aşama</div></a>
+                    </li>
+                    <li class="menu-item" id="menuOutboxMesaj">
+                        <a asp-controller="OutboxMesaj" asp-action="Index" class="menu-link"><div>Outbox Mesaj</div></a>
+                    </li>
+                    <li class="menu-item" id="menuPaket">
+                        <a asp-controller="Paket" asp-action="Index" class="menu-link"><div>Paket</div></a>
+                    </li>
+                    <li class="menu-item" id="menuPaketIskonto">
+                        <a asp-controller="PaketIskonto" asp-action="Index" class="menu-link"><div>Paket İskonto</div></a>
+                    </li>
+                    <li class="menu-item" id="menuSanalPos">
+                        <a asp-controller="SanalPos" asp-action="Index" class="menu-link"><div>Sanal Pos</div></a>
+                    </li>
+                    <li class="menu-item" id="menuSatis">
+                        <a asp-controller="Satis" asp-action="Index" class="menu-link"><div>Satiş</div></a>
+                    </li>
+                    <li class="menu-item" id="menuSatisKalem">
+                        <a asp-controller="SatisKalem" asp-action="Index" class="menu-link"><div>Satış Kalem</div></a>
+                    </li>
+                    <li class="menu-item" id="menuSistemBildirim">
+                        <a asp-controller="SistemBildirim" asp-action="Index" class="menu-link"><div>Sistem Bildirim</div></a>
+                    </li>
+                    <li class="menu-item" id="menuSmsAyar">
+                        <a asp-controller="SmsAyar" asp-action="Index" class="menu-link"><div>Sms Ayarları</div></a>
+                    </li>
+                    <li class="menu-item" id="menuSmsGonderim">
+                        <a asp-controller="SmsGonderim" asp-action="Index" class="menu-link"><div>Sms Gönderimleri</div></a>
+                    </li>
+                    <li class="menu-item" id="menuTeklif">
+                        <a asp-controller="Teklif" asp-action="Index" class="menu-link"><div>Teklif</div></a>
+                    </li>
+                    <li class="menu-item" id="menuTeklifKalem">
+                        <a asp-controller="TeklifKalem" asp-action="Index" class="menu-link"><div>Teklif Kalemleri</div></a>
+                    </li>
+                    <li class="menu-item" id="menuUrunFiyat">
+                        <a asp-controller="UrunFiyat" asp-action="Index" class="menu-link"><div>Ürün Fiyatları</div></a>
+                    </li>
+                    <li class="menu-item" id="menuUrunTipi">
+                        <a asp-controller="UrunTipi" asp-action="Index" class="menu-link"><div>Ürün Tipleri</div></a>
+                    </li>
+                    <li class="menu-item" id="menuVergiOrani">
+                        <a asp-controller="VergiOrani" asp-action="Index" class="menu-link"><div>Vergi Oranı</div></a>
+                    </li>
+                    <li class="menu-item" id="menuWebhookAbonelik">
+                        <a asp-controller="WebhookAbonelik" asp-action="Index" class="menu-link"><div>Webhook Abonelik</div></a>
+                    </li>
+                    <li class="menu-item" id="menuWhatsappAyar">
+                        <a asp-controller="WhatsappAyar" asp-action="Index" class="menu-link"><div>Whatsapp Ayar</div></a>
+                    </li>
+                    <li class="menu-item" id="menuWhatsappGonderim">
+                        <a asp-controller="WhatsappGonderim" asp-action="Index" class="menu-link"><div>Whatsapp Gönderimleri</div></a>
                     </li>
                 </ul>
             </li>

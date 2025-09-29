@@ -1,4 +1,4 @@
-import { BayiCariService } from '../entities/BayiCariService.js';
+import { BayiCariApi,BayiApi } from '../entities/index.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const fmId = $('#frmId');
   
   async function loadTable() {
-    const list = await BayiCariService.list();
+    const list = await BayiCariApi.list();
     tbody.innerHTML = (Array.isArray(list) ? list : []).map(r => `
       <tr>
         <td>${r.Id}</td>
@@ -30,14 +30,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   function bindRowActions() {
     $$('.act-edit').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
-      const r = await BayiCariService.get(id);
+      const r = await BayiCariApi.get(id);
       fmId.value = r.Id;
       modal?.show();
     }));
     $$('.act-del').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
       if (!confirm('Silinsin mi?')) return;
-      await BayiCariService.remove(id); 
+      await BayiCariApi.remove(id); 
       await loadTable();
     }));
   }
@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   formEl?.addEventListener('submit', async e => {
     e.preventDefault();
     const dto = { Id: fmId.value || undefined };
-    if (dto.Id) await BayiCariService.update(dto.Id, dto);
-    else await BayiCariService.create(dto);
+    if (dto.Id) await BayiCariApi.update(dto.Id, dto);
+    else await BayiCariApi.create(dto);
     modal?.hide(); 
     await loadTable();
   });
