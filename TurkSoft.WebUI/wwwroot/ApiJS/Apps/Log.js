@@ -1,5 +1,5 @@
-import { LogService } from '../entities/LogService.js';
-
+import { LogApi } from '../entities/index.js';
+import { getSession } from '../Service/LoginService.js';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const val = el => (el?.value ?? '').trim();
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const fmId = $('#frmId');
   
   async function loadTable() {
-    const list = await LogService.list();
+    const list = await LogApi.list();
     tbody.innerHTML = (Array.isArray(list) ? list : []).map(r => `
       <tr>
         <td>${r.Id}</td>
@@ -30,14 +30,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   function bindRowActions() {
     $$('.act-edit').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
-      const r = await LogService.get(id);
+      const r = await LogApi.get(id);
       fmId.value = r.Id;
       modal?.show();
     }));
     $$('.act-del').forEach(b => b.addEventListener('click', async e => {
       const id = e.currentTarget.getAttribute('data-id');
       if (!confirm('Silinsin mi?')) return;
-      await LogService.remove(id); 
+      await LogApi.remove(id); 
       await loadTable();
     }));
   }
@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   formEl?.addEventListener('submit', async e => {
     e.preventDefault();
     const dto = { Id: fmId.value || undefined };
-    if (dto.Id) await LogService.update(dto.Id, dto);
-    else await LogService.create(dto);
+    if (dto.Id) await LogApi.update(dto.Id, dto);
+    else await LogApi.create(dto);
     modal?.hide(); 
     await loadTable();
   });

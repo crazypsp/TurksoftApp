@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Bayi - Apps";
+    ViewData["Title"] = "Fiyat Listesi Kalem - Apps";
 }
 
 @section VendorStyles {
@@ -16,14 +16,14 @@
 }
 
 @section PageScripts {
-    <script type="module" src="~/ApiJS/Apps/Bayi.js"></script>
+    <script type="module" src="~/ApiJS/Apps/FiyatListesiKalem.js"></script>
 }
-<h4 class="mb-1">Bayi</h4>
-<p class="mb-6">Bayileri görüntüleyin; ekleyin, düzenleyin, silin.</p>
+<h4 class="mb-1">Fiyat Listesi Kalem</h4>
+<p class="mb-6">Fiyat Listesi Kalemleri görüntüleyin; ekleyin, düzenleyin, silin.</p>
 
 <div class="row g-6">
-    @await Html.PartialAsync("../_Partials/Apps/Bayi/Filters")
-    <div class="col-12">@await Html.PartialAsync("../_Partials/Apps/Bayi/Tables")</div>
+    @await Html.PartialAsync("../_Partials/Apps/FiyatListesiKalem/Filters")
+    <div class="col-12">@await Html.PartialAsync("../_Partials/Apps/FiyatListesiKalem/Tables")</div>
 </div>
 
-@await Html.PartialAsync("../_Partials/Apps/Bayi/Modals")
+@await Html.PartialAsync("../_Partials/Apps/FiyatListesiKalem/Modals")

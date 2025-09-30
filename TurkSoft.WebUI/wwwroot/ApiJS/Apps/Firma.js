@@ -1,7 +1,7 @@
 // Firma sayfası davranışı (liste + filtre + form modal)
 // ======================================================================
 import { FirmaApi, BayiApi, MaliMusavirApi } from '../entities/index.js';
-
+import { getSession } from '../Service/LoginService.js';
 // Basit yardımcılar
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
