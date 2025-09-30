@@ -2,13 +2,15 @@
 import { getSession } from '../Service/LoginService.js';
 
 const ALL_IDS = [
-  'menuGrpMuhasebe',
-  'menuMM',
-  'menuKullanici',
-  'menuTransfers',
-  'menuLuca',
-  'menuKeyAccount',
-  'menuBayi'
+  'menuGrpMuhasebe', 'menuMM', 'menuKullanici', 'menuTransfers', 'menuLuca', 'menuKeyAccount', 'menuBayi',
+  'menuAdres', 'menuAktivite', 'menuAktiviteAtama', 'menuBayiCari', 'menuBayiCariHareket', 'menuBayiFirma',
+  'menuBayiKomisyonTarife', 'menuEntegrasyonHesabi', 'menuEtiket', 'menuEtiketIliski', 'menuFatura', 'menuFaturaKalem',
+  'menuFiyatListesi', 'menuFiyatListesiKalem', 'menuKomisyonOdemePlani', 'menuKullaniciBayi', 'menuKullaniciFirma',
+  'menuKullaniciMaliMusavir', 'menuKupon', 'menuLead', 'menuLisans', 'menuLisansAdet', 'menuLoges', 'menuMailAyar',
+  'menuMailGonderim', 'menuNot', 'menuOdeme', 'menuOpportunity', 'menuOpportunityAsama', 'menuOutboxMesaj', 'menuPaket',
+  'menuPaketIskonto', 'menuSanalPos', 'menuSatis', 'menuSatisKalem', 'menuSistemBildirim', 'menuSmsAyar', 'menuSmsGonderim',
+  'menuTeklif', 'menuTeklifKalem', 'menuUrunFiyat', 'menuUrunTipi', 'menuVergiOrani', 'menuWebhookAbonelik', 'menuWhatsappAyar',
+  'menuWhatsappGonderim'
 ];
 
 const MAP = {
@@ -37,7 +39,7 @@ function showIds(ids = []) {
     if (el) el.classList.remove('d-none');
   });
 
-  // grupta görünür çocuk yoksa grubu kapat
+  
   const grp = document.getElementById('menuGrpMuhasebe');
   if (grp) {
     const childIds = ['menuMM', 'menuKullanici', 'menuTransfers', 'menuLuca', 'menuKeyAccount'];
