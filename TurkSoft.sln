@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.MatchingApi", "Tur
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.LucaApi", "TurkSoft.LucaApi\TurkSoft.LucaApi.csproj", "{6129578F-ABFA-42F1-B888-6A98C8C92A8D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.GibPortalApi", "TurkSoft.GibPortalApi\TurkSoft.GibPortalApi.csproj", "{0FD760DB-A1DA-408C-BF69-9C7CFBFA3F5C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -81,6 +83,10 @@ Global
 		{6129578F-ABFA-42F1-B888-6A98C8C92A8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6129578F-ABFA-42F1-B888-6A98C8C92A8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6129578F-ABFA-42F1-B888-6A98C8C92A8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0FD760DB-A1DA-408C-BF69-9C7CFBFA3F5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FD760DB-A1DA-408C-BF69-9C7CFBFA3F5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FD760DB-A1DA-408C-BF69-9C7CFBFA3F5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FD760DB-A1DA-408C-BF69-9C7CFBFA3F5C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
