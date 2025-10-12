@@ -18,5 +18,8 @@ namespace TurkSoft.Entities.GIBEntityDB
 
         // Navigation
         public ICollection<UserRole> UserRoles { get; set; }
+
+        // 🔹 İlişki: 1 kullanıcı birden fazla duyuruyu okumuş olabilir
+        public ICollection<UserAnnouncementRead>? UserAnnouncementReads { get; set; }
     }
 }

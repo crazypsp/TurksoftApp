@@ -1,5 +1,4 @@
-﻿// TurkSoft.Data.Context/GibAppDbContext.cs
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading;
@@ -10,15 +9,16 @@ using TurkSoft.Data.Configuration;
 namespace TurkSoft.Data.Context
 {
     /// <summary>
-    /// GIB veritabanı için bağımsız DbContext.
-    /// - Fluent API config'leri otomatik yükler
-    /// - CreatedAt/UpdatedAt alanlarını otomatik set eder (varsa)
+    /// GIB veritabanı DbContext'i.
+    /// - CreatedAt / UpdatedAt alanlarını otomatik set eder.
+    /// - Cascade delete (multiple path) hatalarına karşı tüm ilişkiler Restrict yapılmıştır.
+    /// - UserAnnouncementRead ilişkisi özel olarak NoAction olarak ayarlanmıştır.
     /// </summary>
     public class GibAppDbContext : DbContext
     {
         public GibAppDbContext(DbContextOptions<GibAppDbContext> options) : base(options) { }
 
-        // === DbSet'ler (ZIP içerisindeki GERÇEK sınıflara göre) ===
+        // === DbSet Tanımları ===
         public DbSet<Address> Address { get; set; } = default!;
         public DbSet<Announcement> Announcement { get; set; } = default!;
         public DbSet<Bank> Bank { get; set; } = default!;
@@ -53,7 +53,7 @@ namespace TurkSoft.Data.Context
         public DbSet<Payment> Payment { get; set; } = default!;
         public DbSet<PaymentAccount> PaymentAccount { get; set; } = default!;
         public DbSet<PaymentType> PaymentType { get; set; } = default!;
-        public DbSet<Permission> Permission { get; set; } = default!;    
+        public DbSet<Permission> Permission { get; set; } = default!;
         public DbSet<ProcesingReport> ProcesingReport { get; set; } = default!;
         public DbSet<Purchase> Purchase { get; set; } = default!;
         public DbSet<PurchaseItem> PurchaseItem { get; set; } = default!;
@@ -75,12 +75,28 @@ namespace TurkSoft.Data.Context
         public DbSet<UserRole> UserRole { get; set; } = default!;
         public DbSet<Users> Users { get; set; } = default!;
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
+        public DbSet<ApiRefreshToken> ApiRefreshToken { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            // Tüm configuration sınıflarını otomatik uygula
+
+            // Tüm entity konfigürasyonlarını uygula
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(GibAppDbContext).Assembly);
+
+            // --- Cascade Delete hatalarını engelle ---
+            foreach (var fk in modelBuilder.Model.GetEntityTypes()
+                         .SelectMany(e => e.GetForeignKeys()))
+            {
+                fk.DeleteBehavior = DeleteBehavior.Restrict;
+            }
+
+            // --- Özel: UserAnnouncementRead -> User ilişkisi ---
+            modelBuilder.Entity<UserAnnouncementRead>()
+                .HasOne(x => x.User)
+                .WithMany(x => x.UserAnnouncementReads)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
 
         public override int SaveChanges()
@@ -103,19 +119,19 @@ namespace TurkSoft.Data.Context
             {
                 if (entry.State == EntityState.Added)
                 {
-                    var ca = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "CreatedAt");
-                    if (ca != null && (ca.CurrentValue == null || (DateTime)ca.CurrentValue == default))
-                        ca.CurrentValue = utcNow;
+                    var created = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "CreatedAt");
+                    if (created != null && (created.CurrentValue == null || (DateTime)created.CurrentValue == default))
+                        created.CurrentValue = utcNow;
 
-                    var ua = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
-                    if (ua != null)
-                        ua.CurrentValue = utcNow;
+                    var updated = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
+                    if (updated != null)
+                        updated.CurrentValue = utcNow;
                 }
                 else if (entry.State == EntityState.Modified)
                 {
-                    var ua = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
-                    if (ua != null)
-                        ua.CurrentValue = utcNow;
+                    var updated = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
+                    if (updated != null)
+                        updated.CurrentValue = utcNow;
                 }
             }
         }

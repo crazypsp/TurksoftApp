@@ -14,7 +14,7 @@ namespace TurkSoft.Entities.GIBEntityDB
         public int AnnouncementId { get; set; }
 
         // Navigation
-        public User User { get; set; }
+        public User User { get; set; } = default!;
         public Announcement Announcement { get; set; }
     }
 }
