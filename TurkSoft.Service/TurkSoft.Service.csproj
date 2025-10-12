@@ -18,6 +18,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Generated.tt</DependentUpon>
     </None>
+    <None Include="CodeGen\Generated.Gib.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Generated.Gib.tt</DependentUpon>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +31,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="CodeGen\Generated.Gib.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Generated.Gib.cs</LastGenOutput>
+    </None>
     <None Update="CodeGen\Generated.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Generated.cs</LastGenOutput>
@@ -41,6 +50,11 @@
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Generated.tt</DependentUpon>
+    </Compile>
+    <Compile Update="CodeGen\Generated.Gib.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Generated.Gib.tt</DependentUpon>
     </Compile>
   </ItemGroup>
 
