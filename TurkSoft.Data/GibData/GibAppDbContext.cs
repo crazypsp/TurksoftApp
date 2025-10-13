@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 using TurkSoft.Entities.GIBEntityDB;
 using TurkSoft.Data.Configuration;
 
-namespace TurkSoft.Data.Context
+namespace TurkSoft.Data.GibData
 {
     /// <summary>
     /// GIB veritabanı DbContext'i.
     /// - CreatedAt / UpdatedAt alanlarını otomatik set eder.
     /// - Cascade delete (multiple path) hatalarına karşı tüm ilişkiler Restrict yapılmıştır.
     /// - UserAnnouncementRead ilişkisi özel olarak NoAction olarak ayarlanmıştır.
+    /// - İlk migration sırasında Role ve User tabloları seed edilir.
     /// </summary>
     public class GibAppDbContext : DbContext
     {
@@ -80,24 +81,70 @@ namespace TurkSoft.Data.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            // Tüm entity konfigürasyonlarını uygula
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(GibAppDbContext).Assembly);
 
-            // --- Cascade Delete hatalarını engelle ---
-            foreach (var fk in modelBuilder.Model.GetEntityTypes()
-                         .SelectMany(e => e.GetForeignKeys()))
-            {
+            // === Cascade Delete hatalarını engelle ===
+            foreach (var fk in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
                 fk.DeleteBehavior = DeleteBehavior.Restrict;
-            }
 
-            // --- Özel: UserAnnouncementRead -> User ilişkisi ---
+            // === Özel: UserAnnouncementRead -> User ===
             modelBuilder.Entity<UserAnnouncementRead>()
                 .HasOne(x => x.User)
                 .WithMany(x => x.UserAnnouncementReads)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            // === UserRole Mapping ===
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId);
+
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(ur => ur.RoleId);
+
+            // === SEED DATA ===
+            SeedRoles(modelBuilder);
+            SeedUsers(modelBuilder);
+            SeedUserRoles(modelBuilder);
         }
+
+        private void SeedRoles(ModelBuilder modelBuilder)
+        {
+            var seedDate = new DateTime(2025, 1, 1);
+
+            modelBuilder.Entity<Role>().HasData(
+                new Role { Id = 1, Name = "Admin", Desc = "Sistem yöneticisi", CreatedAt = seedDate },
+                new Role { Id = 2, Name = "Bayi", Desc = "Bayi kullanıcısı", CreatedAt = seedDate },
+                new Role { Id = 3, Name = "MaliMüşavir", Desc = "Mali müşavir kullanıcısı", CreatedAt = seedDate },
+                new Role { Id = 4, Name = "Firma", Desc = "Firma kullanıcısı", CreatedAt = seedDate }
+            );
+        }
+
+        private void SeedUsers(ModelBuilder modelBuilder)
+        {
+            var seedDate = new DateTime(2025, 1, 1);
+
+            modelBuilder.Entity<User>().HasData(
+                new User { Id = 1, Username = "Admin", Email = "admin@gib.com", PasswordHash = "123456", CreatedAt = seedDate },
+                new User { Id = 2, Username = "Bayi Kullanıcısı", Email = "bayi@gib.com", PasswordHash = "123456", CreatedAt = seedDate },
+                new User { Id = 3, Username = "Mali Müşavir", Email = "mm@gib.com", PasswordHash = "123456", CreatedAt = seedDate },
+                new User { Id = 4, Username = "Firma Kullanıcısı", Email = "firma@gib.com", PasswordHash = "123456", CreatedAt = seedDate }
+            );
+        }
+
+        private void SeedUserRoles(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<UserRole>().HasData(
+                new UserRole { Id = 1, UserId = 1, RoleId = 1 }, // Admin
+                new UserRole { Id = 2, UserId = 2, RoleId = 2 }, // Bayi
+                new UserRole { Id = 3, UserId = 3, RoleId = 3 }, // Mali Müşavir
+                new UserRole { Id = 4, UserId = 4, RoleId = 4 }  // Firma
+            );
+        }
+
 
         public override int SaveChanges()
         {

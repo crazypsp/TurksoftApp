@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using TurkSoft.Data.Context;
+using TurkSoft.Data.GibData;
 using TurkSoft.GIBErpApi.Infrastructure.Auth;
 
 namespace TurkSoft.GibErpApi.Controllers

@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TurkSoft.Entities.GIBEntityDB;
 
-namespace TurkSoft.Data.Configuration.Gib
+namespace TurkSoft.Data.GibData
 {
     /// <summary>
     /// Tüm GIB Entity configuration’ları için temel sınıf.

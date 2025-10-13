@@ -12,7 +12,7 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
-using TurkSoft.Data.Context;
+using TurkSoft.Data.GibData;
 using TurkSoft.GIBErpApi.Infrastructure.Auth;
 using TurkSoft.Service;
 
@@ -22,7 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 // SERVICES
 // =====================================================
 
-// ---- DbContext (GIB)
+// ---- GIB DbContext (Sadece GIB tablolarý için)
 builder.Services.AddDbContext<GibAppDbContext>(opt =>
     opt.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -30,10 +30,10 @@ builder.Services.AddDbContext<GibAppDbContext>(opt =>
     )
 );
 
-// ---- Ýþ Katmaný Servis Kayýtlarý
+// ---- Ýþ Katmaný Servisleri (Sadece GIB)
 builder.Services.AddGibEntityServices();
 
-// ---- API Versioning (URL segment)
+// ---- API Versioning
 builder.Services.AddApiVersioning(opt =>
 {
     opt.DefaultApiVersion = new ApiVersion(1, 0);
@@ -42,7 +42,7 @@ builder.Services.AddApiVersioning(opt =>
     opt.ApiVersionReader = new UrlSegmentApiVersionReader();
 });
 
-// ---- Versioned API Explorer (Swagger için)
+// ---- Versioned API Explorer (Swagger için gerekli)
 builder.Services.AddVersionedApiExplorer(opt =>
 {
     opt.GroupNameFormat = "'v'VVV";
@@ -70,7 +70,7 @@ builder.Services.AddCors(opt =>
     });
 });
 
-// ---- Swagger (versiyonlu)
+// ---- Swagger (Versiyonlu)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -81,6 +81,7 @@ builder.Services.AddSwaggerGen(options =>
         Description = "GIB veritabaný için ERP API (JWT + Refresh + Cookie destekli)"
     });
 
+    // XML yorumlarýný Swagger’a dahil et
     var xml = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xml);
     if (File.Exists(xmlPath))
@@ -88,7 +89,7 @@ builder.Services.AddSwaggerGen(options =>
 
     options.CustomSchemaIds(t => t.FullName!.Replace('+', '.'));
 
-    // Swagger'da Bearer þemasý
+    // Swagger’da JWT Auth (Bearer)
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -128,12 +129,12 @@ builder.Services.Configure<FormOptions>(o =>
 // AUTHENTICATION + AUTHORIZATION
 // =====================================================
 
-// JWT Ayarlarý
+// JWT Ayarlarýný oku
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 var jwtOpt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()!;
 var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOpt.SigningKey));
 
-// PolicyScheme -> Bearer varsa JWT, yoksa Cookie
+// Dinamik kimlik doðrulama: Cookie veya Bearer
 builder.Services
     .AddAuthentication(options =>
     {
@@ -189,11 +190,12 @@ builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddHttpContextAccessor();
 
 // =====================================================
-// APP PIPELINE
+// PIPELINE
 // =====================================================
 
 var app = builder.Build();
 
+// ---- Swagger Aktifse
 if (app.Configuration.GetSection("Swagger:Enabled").Get<bool>())
 {
     app.UseSwagger();
@@ -201,8 +203,9 @@ if (app.Configuration.GetSection("Swagger:Enabled").Get<bool>())
     {
         var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
         foreach (var desc in provider.ApiVersionDescriptions)
+        {
             options.SwaggerEndpoint($"/swagger/{desc.GroupName}/swagger.json", $"GIB API {desc.GroupName}");
-
+        }
         options.RoutePrefix = app.Configuration["Swagger:RoutePrefix"] ?? "swagger";
     });
 }

@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using TurkSoft.Data.Context;
+using TurkSoft.Data.GibData;
 using TurkSoft.Entities.GIBEntityDB;
 
 namespace TurkSoft.GIBErpApi.Infrastructure.Auth
