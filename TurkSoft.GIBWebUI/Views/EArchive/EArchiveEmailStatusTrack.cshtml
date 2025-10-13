@@ -1,5 +1,95 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "E-mail Durum Takibi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <div class="panel panel-sky">
+        <div class="panel-body" style="overflow: scroll;">
+            <div class="box box-default">
+                <div class="box-body" id="btnAramaYapEnter">
+                    <div class="row">
+                        <!-- Tarih aralıkları -->
+                        <div class="col-md-3">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Email Tarihi (Başlangıç)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="IssueDateStart" type="text" class="form-control datepicker">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Email Tarihi (Bitiş)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="IssueDateStartEnd" type="text" class="form-control datepicker">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Butonlar -->
+                        <div class="col-md-6 d-flex align-items-center">
+                            <button id="btnOk" type="button" class="btn btn-success me-2">
+                                <i class="fa fa-check"></i> Tamam
+                            </button>
+                            <button id="btnClear" type="button" class="btn btn-danger me-2">
+                                <i class="fa fa-xing"></i> Temizle
+                            </button>
+                            <button id="btnRequeue" type="button" class="btn btn-primary me-2">
+                                <i class="fa fa-arrow-right"></i> Seçilenleri Mail Kuyruğuna Tekrar Ekle
+                            </button>
+                            <button id="btnExport" type="button" class="btn btn-info">
+                                <i class="fa fa-file-excel-o"></i> Excel'e Aktar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DataTable -->
+            <div class="body-inner">
+                <div class="table-vertical">
+                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox"></th>
+                                <th>EMail Service Id</th>
+                                <th>Fatura Tür</th>
+                                <th>UUID</th>
+                                <th>Fatura No</th>
+                                <th>Alıcı Adı</th>
+                                <th>Alıcı EMail</th>
+                                <th>İptal Fatura</th>
+                                <th>Durum</th>
+                                <th>Okundu</th>
+                                <th>Okunma Tarihi</th>
+                                <th>Okuyan Ip</th>
+                                <th>Gönderim Zamanı</th>
+                                <th>Kayıt Tarihi</th>
+                                <th>Hata Mesaj</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="15" class="text-center">Tabloda herhangi bir veri mevcut değil</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="/hizlicss/jsv643136158/earchiveemailstatustrack.js"></script>
 }

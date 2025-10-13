@@ -1,1 +1,93 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Gönderilmiş Raporlar";
+    ViewData["Subtitle"] = "Rapor";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        Rapor
+        <small>Gönderilmiş Raporlar</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> Rapor</li>
+        <li class="active">Gönderilmiş Raporlar</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Gönderilmiş Raporlar</h3>
+        </div>
+
+        <div class="box-body">
+            <div class="row">
+                <div class="col-md-4 pull-right">
+                    <div class="form-horizontal">
+                        <label class="control-label col-sm-4">Yıl</label>
+                        <div class="col-sm-8">
+                            <select id="IntegrationYear" class="form-control" onchange="gridSearch()">
+                                <option value="2025" selected>2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
+                                <option value="2021">2021</option>
+                                <option value="2020">2020</option>
+                                <option value="2019">2019</option>
+                                <option value="2018">2018</option>
+                                <option value="2017">2017</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="sentReportsTable" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Rapor Numarası</th>
+                        <th>Dönem Numarası</th>
+                        <th>Bölüm Numarası</th>
+                        <th>Bölüm Başlangıç Tarihi</th>
+                        <th>Bölüm Bitiş Tarihi</th>
+                        <th>GİB Rapor Durumu</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="7" class="text-center">Tabloda herhangi bir veri mevcut değil</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#sentReportsTable').DataTable({
+                "pageLength": 25,
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json"
+                }
+            });
+        });
+
+        function gridSearch() {
+            var year = $('#IntegrationYear').val();
+            Swal.fire({
+                title: 'Bilgi',
+                text: year + ' yılına ait raporlar getirilecek.',
+                icon: 'info',
+                confirmButtonText: 'Tamam'
+            });
+        }
+    </script>
+}

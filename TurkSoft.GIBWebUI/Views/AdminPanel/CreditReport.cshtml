@@ -1,1 +1,126 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Kontör Raporu";
+    ViewData["Subtitle"] = "Raporlar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Kontör Raporu</h3>
+        </div>
+        <div class="box-body">
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>İşlem Tarihi (Başlangıç)</label>
+                        <input id="DateStart" type="text" class="form-control datepicker" value="02.09.2025" />
+                    </div>
+                    <div class="form-group">
+                        <label>Kontör Türü</label>
+                        <select id="creditType" class="form-control">
+                            <option value="">Tümü</option>
+                            <option value="1">Fatura Adedi</option>
+                            <option value="2">Alan Boyutu</option>
+                            <option value="3">Arşiv Kasa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>İşlem Tarihi (Bitiş)</label>
+                        <input id="DateEnd" type="text" class="form-control datepicker" value="02.10.2025" />
+                    </div>
+                    <div class="form-group">
+                        <label>İşlem Türü</label>
+                        <select id="actionType" class="form-control">
+                            <option value="">Tümü</option>
+                            <option value="1">Satınalma</option>
+                            <option value="2">Hediye</option>
+                            <option value="3">Transfer</option>
+                            <option value="4">Devir</option>
+                            <option value="5">İade</option>
+                            <option value="6">Miad Düşüm</option>
+                            <option value="7">Önceki Sistemden Harcanan</option>
+                            <option value="8">Düzenleme Giriş</option>
+                            <option value="9">Düzenleme Çıkış</option>
+                            <option value="10">Bayi kanalıyla satış</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>VKN / TCKN</label>
+                        <input id="VknTckn" type="text" class="form-control" />
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="box-footer">
+            <button id="exceleAktar" class="btn btn-success">Excel Çıktı</button>
+            <button onclick="gridSearch()" class="btn btn-success pull-right">Sorgula</button>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="grid_kontor" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>VKN/TCKN</th>
+                        <th>Ad</th>
+                        <th>Bayi</th>
+                        <th>Kontör</th>
+                        <th>Kontör Türü</th>
+                        <th>İşlem Türü</th>
+                        <th>İşlem Tarihi</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>0200016544</td><td>AKÇURA PETROL ÜRÜNLERİ TURİZM SANAYİ VE TİCARET LİMİTED ŞİRKETİ</td><td>NOX YAZILIM HİZMETLERİ  LTD. ŞTİ</td><td>5,00</td><td>Fatura</td><td>Düzenleme Çıkış</td><td>2.10.2025 00:00:00</td><td>Aktif</td></tr>
+                    <tr><td>61444170018</td><td>DOĞAN ACAR</td><td>NOX YAZILIM HİZMETLERİ  LTD. ŞTİ</td><td>1,00</td><td>Fatura</td><td>Düzenleme Çıkış</td><td>2.10.2025 00:00:00</td><td>Aktif</td></tr>
+                    <tr><td>36451239508</td><td>MEHMET GÖKALP</td><td>NOX YAZILIM HİZMETLERİ  LTD. ŞTİ</td><td>2,00</td><td>Fatura</td><td>Düzenleme Çıkış</td><td>2.10.2025 00:00:00</td><td>Aktif</td></tr>
+                    <!-- tüm satırlar txt’den buraya eklendi -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Excel Modal -->
+    <div class="modal fade" id="modal-exceleaktar" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h4 class="modal-title">Excel Düzenle ve Aktar</h4></div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label>İşlem Başlangıç Tarihi</label>
+                            <input type="text" class="form-control datepicker" />
+                        </div>
+                        <div class="form-group">
+                            <label>İşlem Bitiş Tarihi</label>
+                            <input type="text" class="form-control datepicker" />
+                        </div>
+                        <button type="button" class="btn btn-success">Onayla</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_kontor').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
+}

@@ -1,5 +1,234 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Erp'den e-Arşiv Oluştur";
+    ViewData["Subtitle"] = "e-Arşiv Fatura";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Arşiv Fatura
+        <small>Erp'den e-Arşiv Fatura Oluştur</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Arşiv Fatura</li>
+        <li class="active">Erp'den e-Arşiv Oluştur</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Erp e-Arşiv Seçenekleri</h3>
+        </div>
+        <div class="box-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Başlangıç Fatura Tarihi</label>
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStart" type="text" class="form-control datepicker" value="07.10.2025" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Bitiş Fatura Tarihi</label>
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateEnd" type="text" class="form-control datepicker" value="07.10.2025" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Şube</label>
+                        <div class="col-sm-6">
+                            <select id="erp_sube" class="form-control select2" onchange="setPrefixErpList()" data-placeholder="Şube Seçiniz">
+                                <option value="0" selected>Seçiniz</option>
+                                <option value="1">HIZLI BİLİŞİM TEST MERKEZ</option>
+                                <option value="465">HBT MERSİN</option>
+                                <option value="466">antalyasube</option>
+                                <option value="467">EntegreTürk</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Gönderim Durumu</label>
+                        <div class="col-sm-6">
+                            <select id="Sent" class="form-control">
+                                <option value="">Tümü</option>
+                                <option value="false" selected>Gönderim Bekliyor</option>
+                                <option value="true">Gönderildi</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Belge Tipi</label>
+                        <div class="col-sm-6">
+                            <select id="AppType" class="form-control">
+                                <option value="0">Tümü</option>
+                                <option value="2">e-Fatura</option>
+                                <option value="3" selected>e-Arşiv Fatura</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">e-Fatura Ön Ek</label>
+                        <div class="col-sm-6">
+                            <select id="erp_onek" class="form-control"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">e-Arşiv Ön Ek</label>
+                        <div class="col-sm-6">
+                            <select id="erp_onek_earsiv" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">e-Arşiv İnternet Satış Ön Ek</label>
+                        <div class="col-sm-6">
+                            <select id="erp_onek_earsiv_internet" class="form-control"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer clearfix">
+            <div class="pull-left">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" onclick="sendAll()"><i class="fa fa-send"></i> Seçilileri Gönder</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pull-left" style="margin-left: 10px;">
+                <label class="control-label col-sm-4">Gönderici Etiket</label>
+                <div class="col-sm-8">
+                    <select id="erp_gbetiket" class="form-control">
+                        <option value="urn:mail:defaultgb@hizlibilisimteknolojileri.net" selected>
+                            urn:mail:defaultgb@hizlibilisimteknolojileri.net
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pull-right">
+                <button type="button" class="btn btn-success" onclick="myFaturaList()">
+                    Arama Yap <i class="glyphicon glyphicon-search"></i>
+                </button>
+                <button type="button" class="btn btn-danger" onclick="clearSearchInputs()">
+                    Temizle <i class="glyphicon glyphicon-remove-circle"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="grid_erpdenolustur" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>Erp Fatura No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi Kimlik No</th>
+                        <th>Etiket</th>
+                        <th>Fatura Tip</th>
+                        <th>Senaryo</th>
+                        <th>Fatura Tarihi</th>
+                        <th>Toplam Tutar</th>
+                        <th>XSLT Adı</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="12" class="text-center">Tabloda herhangi bir veri mevcut değil</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Erp Birim Eşleme Modal -->
+    <div class="modal fade" id="modal-erpBirimEsleme" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>×</span></button>
+                    <h4 class="modal-title">Erp Birim Eşleme</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Erp'den Gelen Birim</label>
+                            <div class="col-sm-6"><input id="erpBirim" type="text" class="form-control" disabled /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Evrensel Kod Karşılığı</label>
+                            <div class="col-sm-6">
+                                <select id="birimList" class="form-control select2">
+                                    <option value="">Seçiniz</option>
+                                    <option value="C62">C62 - ADET</option>
+                                    <option value="MON">MON - AY</option>
+                                    <option value="KGM">KGM - KİLOGRAM</option>
+                                    <option value="LTR">LTR - LİTRE</option>
+                                    <option value="MTR">MTR - METRE</option>
+                                    <option value="SET">SET - TAKIM</option>
+                                    <option value="TON">TON - TON</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-success" onclick="birimEslemeKayit()">Kaydet Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_erpdenolustur').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+
+        function birimEslemeKayit() {
+            alert('Birim eşleme kaydedildi.');
+        }
+
+        function myFaturaList() {
+            alert('ERP den e-Arşiv listesi getirilecek.');
+        }
+
+        function clearSearchInputs() {
+            $('input').val('');
+            $('select').val('0');
+        }
+
+        function sendAll() {
+            alert('Seçilen faturalar gönderilecek.');
+        }
+    </script>
 }

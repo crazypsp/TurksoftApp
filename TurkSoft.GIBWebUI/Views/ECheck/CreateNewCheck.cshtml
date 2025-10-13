@@ -1,1 +1,186 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Yeni Adisyon Oluştur";
+    ViewData["Subtitle"] = "e-Adisyon";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Adisyon
+        <small>Yeni Adisyon Oluştur</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Adisyon</li>
+        <li class="active">Yeni Adisyon Oluştur</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Yeni Adisyon Bilgileri</h3>
+        </div>
+        <div class="box-body form-horizontal">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Adisyon No</label>
+                        <div class="col-sm-8">
+                            <input id="adisyonNo" type="text" class="form-control" placeholder="Adisyon numarası giriniz" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Müşteri Adı</label>
+                        <div class="col-sm-8">
+                            <input id="musteriAdi" type="text" class="form-control" placeholder="Müşteri adı giriniz" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Masa No</label>
+                        <div class="col-sm-8">
+                            <select id="masaNo" class="form-control">
+                                <option value="">Seçiniz</option>
+                                <option value="1">Masa 1</option>
+                                <option value="2">Masa 2</option>
+                                <option value="3">Masa 3</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Garson Adı</label>
+                        <div class="col-sm-8">
+                            <input id="garsonAdi" type="text" class="form-control" placeholder="Garson adı giriniz" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Adisyon Tarihi</label>
+                        <div class="col-sm-8">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="adisyonTarih" type="text" class="form-control datepicker" value="@DateTime.Now.ToString("dd.MM.yyyy")" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Saat</label>
+                        <div class="col-sm-8">
+                            <input id="adisyonSaat" type="time" class="form-control" value="@DateTime.Now.ToString("HH:mm")" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer">
+            <button type="button" class="btn btn-success pull-right" onclick="adisyonKaydet()">Adisyonu Kaydet <i class="glyphicon glyphicon-floppy-disk"></i></button>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Ürün Ekle</h3>
+        </div>
+        <div class="box-body form-horizontal">
+            <div class="row">
+                <div class="col-md-3">
+                    <input id="urunAdi" type="text" class="form-control" placeholder="Ürün adı" />
+                </div>
+                <div class="col-md-2">
+                    <input id="urunAdet" type="number" class="form-control" placeholder="Adet" />
+                </div>
+                <div class="col-md-2">
+                    <input id="urunFiyat" type="number" class="form-control" placeholder="Birim Fiyat" />
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-primary" onclick="urunEkle()">Ekle <i class="fa fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-success">
+        <div class="box-header with-border">
+            <h3 class="box-title">Adisyon Ürün Listesi</h3>
+        </div>
+        <div class="box-body table-responsive">
+            <table id="adisyonTable" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Ürün Adı</th>
+                        <th>Adet</th>
+                        <th>Birim Fiyat</th>
+                        <th>Toplam</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5" class="text-center">Henüz ürün eklenmedi</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-right"><b>Toplam Tutar:</b></td>
+                        <td colspan="2"><span id="toplamTutar">0,00 ₺</span></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#adisyonTable').DataTable({
+                "paging": false,
+                "info": false,
+                "searching": false,
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json"
+                }
+            });
+        });
+
+        let toplam = 0;
+
+        function urunEkle() {
+            const ad = $('#urunAdi').val();
+            const adet = parseInt($('#urunAdet').val()) || 0;
+            const fiyat = parseFloat($('#urunFiyat').val()) || 0;
+            const tutar = adet * fiyat;
+
+            if (!ad || adet <= 0 || fiyat <= 0) {
+                alert('Lütfen ürün bilgilerini eksiksiz giriniz!');
+                return;
+            }
+
+            const yeniSatir = `<tr>
+                <td>${ad}</td>
+                <td>${adet}</td>
+                <td>${fiyat.toFixed(2)} ₺</td>
+                <td>${tutar.toFixed(2)} ₺</td>
+                <td><button class="btn btn-danger btn-sm" onclick="satirSil(this)">Sil</button></td>
+            </tr>`;
+
+            $('#adisyonTable tbody').append(yeniSatir);
+            toplam += tutar;
+            $('#toplamTutar').text(toplam.toFixed(2) + " ₺");
+
+            $('#urunAdi, #urunAdet, #urunFiyat').val('');
+        }
+
+        function satirSil(btn) {
+            const satir = $(btn).closest('tr');
+            const tutar = parseFloat(satir.find('td:nth-child(4)').text().replace('₺', '').trim());
+            toplam -= tutar;
+            satir.remove();
+            $('#toplamTutar').text(toplam.toFixed(2) + " ₺");
+        }
+
+        function adisyonKaydet() {
+            alert('Adisyon kaydedildi.');
+        }
+    </script>
+}

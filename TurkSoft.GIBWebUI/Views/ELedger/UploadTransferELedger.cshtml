@@ -1,5 +1,115 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-Defter Transfer Yükle";
+    ViewData["Subtitle"] = "e-Defter";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Defter
+        <small>Transfer e-Defter Yükle</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Defter</li>
+        <li class="active">Transfer e-Defter Yükle</li>
+    </ol>
+</section>
+
+<section class="content">
+    <h2>Transfer e-Defter Yükle</h2>
+
+    <div class="box box-default">
+        <div class="box-body">
+            <table id="gridELedgerUpload" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Seçiniz</th>
+                        <th>Şube No</th>
+                        <th>Hesap Dönemi Başlangıç Tarihi</th>
+                        <th>Hesap Dönemi Bitiş Tarihi</th>
+                        <th>Yevmiye Madde Numarası Başlangıcı</th>
+                        <th>Yevmiye Satırının Numara Başlangıcı</th>
+                        <th>Müteselsil Numara Başlangıcı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="radio" name="radioBatchId" value="1" /></td>
+                        <td>1</td>
+                        <td>01.01.2021</td>
+                        <td>31.01.2021</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td><input type="radio" name="radioBatchId" value="449" /></td>
+                        <td>449</td>
+                        <td>01.01.2021</td>
+                        <td>31.01.2021</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>1</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="box-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <form id="defterCsvFileForm" enctype="multipart/form-data">
+                        <div class="form-group files color">
+                            <label>Başka Yazılımdan Transfer e-Defter’in ZIP dosyasını buraya yükleyiniz</label>
+                            <input type="file" id="defterCsvFile" name="defterCsvFile"
+                                   class="form-control" accept=".zip"
+                                   onchange="csvFileUpload(true)" />
+                        </div>
+                    </form>
+                </div>
+
+                <div class="col-md-6">
+                    <h3>Durum</h3>
+                    <div class="progress">
+                        <div id="uploadProgress" class="progress-bar progress-bar-success progress-bar-striped active"
+                             style="width:0%">
+                            0%
+                        </div>
+                    </div>
+                    <label id="DurumIzlemeStatus"></label><br />
+                    <label id="DurumIzlemeMessage"></label><br />
+                    <button id="processDelete" type="button" class="btn btn-danger" style="display:none;"
+                            onclick="processDelete()">
+                        İptal Et
+                    </button>
+
+                    <div id="gridErrorDiv" hidden>
+                        <table id="gridErrorList" class="table table-bordered table-hover" style="color:red;">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#gridELedgerUpload').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+
+        function csvFileUpload(start) {
+            if (start)
+                Swal.fire('Bilgi', 'Dosya yükleme işlemi başlatıldı.', 'info');
+        }
+
+        function processDelete() {
+            Swal.fire('Uyarı', 'İşlem iptal edildi.', 'warning');
+        }
+    </script>
 }

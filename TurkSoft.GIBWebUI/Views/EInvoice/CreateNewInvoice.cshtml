@@ -1,5 +1,453 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-Fatura";
+    ViewData["Subtitle"] = "Yeni Fatura Oluştur";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+<section class="content">
+
+    <!-- Fatura Bilgileri -->
+    <div class="box box-default">
+        <div class="box-header with-border"><h3 class="box-title">Fatura Bilgileri</h3></div>
+        <div class="box-body">
+            <div class="row">
+
+                <!-- Sol kolon -->
+                <div class="col-md-4">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Şube</label>
+                            <div class="col-sm-8"><input class="form-control" value="NOX YAZILIM HİZMETLERİ LİMİTED ŞİRKETİ" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Gönderici Etiketi</label>
+                            <div class="col-sm-8"><input class="form-control" value="urn:mail:defaultgb@hotmail.com" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">ETTN</label>
+                            <div class="col-sm-8"><input class="form-control" value="74A32A37-1A14-4DEC-AC44-722DC4EB32A5" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Fatura Ön Eki</label>
+                            <div class="col-sm-8"><input class="form-control" value="NYZ" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Senaryo</label>
+                            <div class="col-sm-8">
+                                <select class="form-control">
+                                    <option selected>TİCARİ FATURA</option>
+                                    <option>İHRACAT</option>
+                                    <option>YOLCUBERABER</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orta kolon -->
+                <div class="col-md-4">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Fatura Tipi</label>
+                            <div class="col-sm-8">
+                                <select id="ddlFaturaTipi" class="form-control">
+                                    <option selected>SATIŞ</option>
+                                    <option>İADE</option>
+                                    <option>TEVKİFAT</option>
+                                    <option>İSTİSNA</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Fatura Tarihi</label>
+                            <div class="col-sm-8"><input id="dtFaturaTarihi" class="form-control datepicker" value="1.10.2025" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Fatura Saati</label>
+                            <div class="col-sm-8"><input id="tmFaturaSaati" class="form-control timepicker" value="13:13" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Para Birimi</label>
+                            <div class="col-sm-8">
+                                <select id="ddlParaBirimi" class="form-control">
+                                    <option selected>Türk Lirası</option>
+                                    <option>USD</option>
+                                    <option>EUR</option>
+                                    <option>GBP</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sağ kolon -->
+                <div class="col-md-4">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Sipariş No</label>
+                            <div class="col-sm-8"><input class="form-control" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Sipariş Tarihi</label>
+                            <div class="col-sm-8"><input class="form-control datepicker" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Görüntü Dosyası</label>
+                            <div class="col-sm-8">
+                                <select class="form-control">
+                                    <option selected>general</option>
+                                    <option>irsaliye</option>
+                                    <option>iade</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Döviz→TL Kur</label>
+                            <div class="col-sm-8"><input id="txtKur" class="form-control" value="1" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">TCMB Kur</label>
+                            <div class="col-sm-5">
+                                <select class="form-control">
+                                    <option>Satış Kur</option>
+                                    <option>Alış Kur</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <button class="btn btn-default btn-block">Getir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /row -->
+        </div>
+    </div>
+
+    <!-- Sekmeler -->
+    <div class="box box-default">
+        <div class="box-body">
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="active"><a href="#tab-alici" role="tab" data-toggle="tab">Alıcı Bilgileri</a></li>
+                <li><a href="#tab-irsaliye" role="tab" data-toggle="tab">İrsaliye Bilgileri</a></li>
+                <li><a href="#tab-sgk" role="tab" data-toggle="tab">SGK Ek-Alanlar</a></li>
+                <li><a href="#tab-odeme" role="tab" data-toggle="tab">Ödeme</a></li>
+                <li><a href="#tab-eka" role="tab" data-toggle="tab">Ek Alanlar / Ek Dosya / Şube Kodları</a></li>
+            </ul>
+
+            <div class="tab-content" style="padding-top:15px;">
+                <!-- Alıcı Bilgileri -->
+                <div role="tabpanel" class="tab-pane active" id="tab-alici">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Ara</label>
+                                    <div class="col-sm-8"><input class="form-control" placeholder="VKN / Ünvan" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">VKN/TCKN *</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Alıcı Etiketi</label>
+                                    <div class="col-sm-8">
+                                        <select class="form-control">
+                                            <option>defaultpk@default</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Firma Adı *</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Adı *</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Soyadı *</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Vergi Dairesi</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Ülke *</label>
+                                    <div class="col-sm-8"><input class="form-control" value="TR" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">İl *</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">İlçe *</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Adres</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">E-Mail</label>
+                                    <div class="col-sm-8"><input type="email" class="form-control" /></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right" style="margin-top:5px;">
+                        <button class="btn btn-default">TÜRMOB Müşteri Sorgula</button>
+                        <span class="text-red">TÜRMOB sorgusu başına 1 kontör düşülür!</span>
+                    </div>
+                </div>
+
+                <!-- İrsaliye Bilgileri -->
+                <div role="tabpanel" class="tab-pane" id="tab-irsaliye">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">İrsaliye No</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">İrsaliye Tarihi</label>
+                                    <div class="col-sm-8"><input class="form-control datepicker" /></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Sevk Yeri</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Teslim Yeri</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SGK Ek-Alanlar -->
+                <div role="tabpanel" class="tab-pane" id="tab-sgk">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Provizyon No</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Takip No</label>
+                                    <div class="col-sm-8"><input class="form-control" /></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ödeme -->
+                <div role="tabpanel" class="tab-pane" id="tab-odeme">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Ödeme Türü</label>
+                                    <div class="col-sm-8">
+                                        <select class="form-control">
+                                            <option selected>NAKİT</option>
+                                            <option>HAVALE/EFT</option>
+                                            <option>KREDİ KARTI</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Vade Tarihi</label>
+                                    <div class="col-sm-8"><input class="form-control datepicker" /></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ek Alanlar / Ek Dosya / Şube Kodları -->
+                <div role="tabpanel" class="tab-pane" id="tab-eka">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <textarea class="form-control" rows="6" placeholder="Ek alanlar..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="well well-sm">Ek dosya yükleme alanı (UI)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fatura Kalemleri -->
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Fatura Kalemleri</h3>
+            <div class="pull-right">
+                <select class="form-control input-sm" style="display:inline-block; width:auto; margin-right:8px;">
+                    <option selected>KDV Hariç</option>
+                    <option>KDV Dahil</option>
+                </select>
+                <a class="btn btn-default btn-sm"><i class="fa fa-file-excel-o"></i> Excel</a>
+                <a class="btn btn-default btn-sm">Medula’dan Aktar</a>
+                <a class="btn btn-default btn-sm">Cezaevi Aktar</a>
+                <a class="btn btn-default btn-sm">Toplu İndirim/Artırım</a>
+                <a class="btn btn-default btn-sm">Toplu Vergi</a>
+                <a class="btn btn-primary btn-sm" id="btnAddRow"><i class="fa fa-plus"></i> Yeni Satır Ekle</a>
+            </div>
+        </div>
+        <div class="box-body table-responsive">
+            <table id="tblLines" class="table table-bordered table-condensed">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">Sıra No</th>
+                        <th>Mal/Hizmet Adı *</th>
+                        <th style="width:90px;">Miktar</th>
+                        <th style="width:130px;">Birim *</th>
+                        <th style="width:120px;">Birim Fiyat</th>
+                        <th style="width:110px;">İskonto %</th>
+                        <th style="width:130px;">İskonto Tutarı</th>
+                        <th style="width:130px;">Mal/Hizmet Tutarı</th>
+                        <th style="width:90px;">KDV %</th>
+                        <th style="width:120px;">KDV Tutarı</th>
+                        <th style="width:90px;">İstisna</th>
+                        <th style="width:90px;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Açıklama / Notlar + Toplam Bilgileri -->
+    <div class="row">
+        <div class="col-md-7">
+            <div class="box box-default">
+                <div class="box-header with-border"><h3 class="box-title">Açıklama / Notlar</h3></div>
+                <div class="box-body"><textarea id="txtNot" class="form-control" rows="8" placeholder="Açıklama..."></textarea></div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="box box-default">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Toplam Bilgileri</h3>
+                    <div class="pull-right">
+                        <select class="form-control input-sm" style="width:auto; display:inline-block;">
+                            <option selected>Otomatik</option>
+                            <option>Manuel</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <table class="table table-striped">
+                        <tbody>
+                            <tr><td>Mal/Hizmet Toplam Tutarı</td><td class="text-right" id="tAra">0,00 TL</td></tr>
+                            <tr><td>Toplam İskonto Tutarı</td><td class="text-right" id="tIsk">0,00 TL</td></tr>
+                            <tr><td>Hesaplanan KDV Matrah (20)</td><td class="text-right" id="tMatrah20">0,00 TL</td></tr>
+                            <tr><td>Hesaplanan KDV (20)</td><td class="text-right" id="tKdv20">0,00 TL</td></tr>
+                            <tr><th>GENEL TOPLAM</th><th class="text-right" id="tGenel">0,00 TL</th></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- Önizleme Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-onizleme" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">Önizleme</h4>
+            </div>
+            <div class="modal-body"><iframe id="onizle-iframe" style="border:0; width:100%; height:500px;"></iframe></div>
+            <div class="modal-footer"><button class="btn btn-default" data-dismiss="modal">Kapat</button></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function(){
+            function dec(v){ v=(""+(v||"")).replace(/\./g,"").replace(",","."); var n=parseFloat(v); return isNaN(n)?0:n; }
+            function fmt(n){ n=(Math.round(n*100)/100).toFixed(2); var p=n.split("."); p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,"."); return p.join(","); }
+
+            // Date/Time
+            if ($.fn.datepicker) $('.datepicker').datepicker({language:'tr',autoclose:true,todayHighlight:true});
+            if ($.fn.timepicker)  $('.timepicker').timepicker({showMeridian:false, minuteStep:1, defaultTime:false});
+
+            // Satır ekle / sil / hesap
+            $('#btnAddRow').on('click', function(){
+                var idx = $('#tblLines tbody tr').length + 1;
+                var tr = $('<tr/>');
+                tr.append('<td class="text-center">'+idx+'</td>');
+                tr.append('<td><input class="form-control ln-ad" placeholder="Mal/Hizmet"/></td>');
+                tr.append('<td><input type="number" min="0" step="0.0001" class="form-control ln-qty" value="1"/></td>');
+                tr.append('<td><select class="form-control"><option>ADET - C62</option><option>SAAT</option><option>KG</option></select></td>');
+                tr.append('<td><input class="form-control ln-price" value="1"/></td>');
+                tr.append('<td><input type="number" class="form-control ln-discp" value="0"/></td>');
+                tr.append('<td><input class="form-control ln-isk" readonly value="0,00"/></td>');
+                tr.append('<td><input class="form-control ln-net" readonly value="1,00"/></td>');
+                tr.append('<td><input type="number" class="form-control ln-kdv" value="20"/></td>');
+                tr.append('<td><input class="form-control ln-kdvt" readonly value="0,20"/></td>');
+                tr.append('<td><input class="form-control" placeholder="İstisna"/></td>');
+                tr.append('<td class="text-center"><button class="btn btn-xs btn-danger btnDel"><i class="fa fa-trash"></i></button></td>');
+                $('#tblLines tbody').append(tr); recalc();
+            });
+            $(document).on('click','.btnDel',function(){ $(this).closest('tr').remove(); renumber(); recalc(); });
+            $(document).on('input change','.ln-qty,.ln-price,.ln-discp,.ln-kdv',recalc);
+
+            function renumber(){ $('#tblLines tbody tr').each(function(i){ $(this).find('td:first').text(i+1); }); }
+            function recalc(){
+                var ara=0, isk=0, kdv=0, genel=0;
+                $('#tblLines tbody tr').each(function(){
+                    var $r=$(this);
+                    var qty=dec($r.find('.ln-qty').val());
+                    var price=dec($r.find('.ln-price').val());
+                    var discp=dec($r.find('.ln-discp').val());
+                    var kdvR=dec($r.find('.ln-kdv').val());
+                    var tutar=qty*price, iskT=tutar*(discp/100), net=tutar-iskT, kdvt=net*(kdvR/100), gross=net+kdvt;
+                    $r.find('.ln-isk').val(fmt(iskT));
+                    $r.find('.ln-net').val(fmt(net));
+                    $r.find('.ln-kdvt').val(fmt(kdvt));
+                    ara+=tutar; isk+=iskT; kdv+=kdvt; genel+=gross;
+                });
+                $('#tAra').text(fmt(ara)+' TL'); $('#tIsk').text(fmt(isk)+' TL');
+                $('#tMatrah20').text(fmt(ara-isk)+' TL'); $('#tKdv20').text(fmt(kdv)+' TL');
+                $('#tGenel').text(fmt(genel)+' TL');
+            }
+            // başlangıç satırı
+            $('#btnAddRow').click();
+
+            // Önizleme içeriği
+            $('#modal-onizleme').on('show.bs.modal', function(){
+                var html='<html><head><meta charset="utf-8"><title>Önizleme</title></head><body>';
+                html+='<h3>e-Fatura Önizleme</h3>';
+                html+=document.getElementById('tblLines').outerHTML;
+                html+='<p><b>Genel Toplam:</b> '+$('#tGenel').text()+'</p>';
+                html+='</body></html>';
+                var url=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+                $('#onizle-iframe').attr('src',url);
+            });
+        })();
+    </script>
 }

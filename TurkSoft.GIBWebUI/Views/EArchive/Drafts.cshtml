@@ -1,5 +1,189 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Taslak e-Arşiv Faturalar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <div class="panel panel-sky">
+        <div class="panel-body">
+
+            <!-- 🔍 Arama Seçenekleri -->
+            <div class="box box-default">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Taslak e-Arşiv Fatura Arama Seçenekleri</h3>
+                </div>
+                <div class="box-body" id="btnAramaYapEnter">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Fatura Tarihi (Başlangıç)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="IssueDateStart" type="text" class="form-control datepicker">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">İşlem Tarihi (Başlangıç)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="CreatedDateStart" type="text" class="form-control datepicker">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Fatura Tarihi (Bitiş)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="IssueDateStartEnd" type="text" class="form-control datepicker">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">İşlem Tarihi (Bitiş)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="CreatedDateEnd" type="text" class="form-control datepicker">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Alıcı VKN/TCKN</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <input id="TargetIdentifier" type="text" maxlength="11" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Alıcı Ünvan</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <input id="TargetTitle" type="text" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Butonlar -->
+                <div class="box-footer">
+                    <div class="input-group input-group-md pull-left">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" onclick="createNewDraftArsiv()"><i class="fa fa-plus-circle"></i> Yeni Oluştur</a></li>
+                            <li><a href="#" onclick="sendAllDraft()"><i class="fa fa-send"></i> Seçilileri Gönder</a></li>
+                            <li><a href="#" onclick="deleteAllDraft()"><i class="fa fa-remove"></i> Seçilileri Sil</a></li>
+                            <li><a href="#" onclick="excelDraftModalOpen()"><i class="fa fa-file-excel-o"></i> Excel'den Taslağa Kaydet</a></li>
+                        </ul>
+                    </div>
+                    <div class="input-group input-group-md pull-left">
+                        <select id="subeler" class="form-control select2" multiple data-placeholder="Şube Seçiniz" style="width:100%;">
+                            <option selected value="1">NOX YAZILIM HİZMETLERİ LİMİTED ŞİRKETİ</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                        <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+                    </div>
+                    <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                        <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📋 DataTable -->
+            <div class="body-inner">
+                <div class="table-vertical">
+                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" /></th>
+                                <th>Fatura No</th>
+                                <th>Firma Adı</th>
+                                <th>Vergi Kimlik No</th>
+                                <th>Fatura Tip/Senaryo</th>
+                                <th>Fatura Tarihi</th>
+                                <th>Ödenecek Tutar</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="9" class="text-center">Tabloda herhangi bir veri mevcut değil</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📑 Excel'den Taslak Kaydet Modal -->
+    <div class="modal fade" id="excelDraftModal" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Excel'den Taslağa Kaydet</h3>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Şube</label>
+                            <div class="col-sm-5">
+                                <select id="excel_sube" class="form-control">
+                                    <option selected value="1">NOX YAZILIM HİZMETLERİ LİMİTED ŞİRKETİ</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Gönderici Etiket</label>
+                            <div class="col-sm-5">
+                                <select id="excel_gbetiket" class="form-control">
+                                    <option selected value="urn:mail:defaultgb@hotmail.com">urn:mail:defaultgb@hotmail.com</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group"><label class="col-sm-3 control-label">e-Fatura Ön Ek</label><div class="col-sm-5"><select id="excel_onek" class="form-control"></select></div></div>
+                        <div class="form-group"><label class="col-sm-3 control-label">e-Arşiv Ön Ek</label><div class="col-sm-5"><select id="excel_onek_earsiv" class="form-control"></select></div></div>
+                        <div class="form-group"><label class="col-sm-3 control-label">e-Arşiv İnternet Satış Ön Ek</label><div class="col-sm-5"><select id="excel_onek_earsiv_internet" class="form-control"></select></div></div>
+                        <div class="form-group"><label class="col-sm-3 control-label">e-Fatura Görüntü Dosya (Xslt)</label><div class="col-sm-5"><select id="excel_efatura_xslt" class="form-control"></select></div></div>
+                        <div class="form-group"><label class="col-sm-3 control-label">e-Arşiv Görüntü Dosya (Xslt)</label><div class="col-sm-5"><select id="excel_earsiv_xslt" class="form-control"></select></div></div>
+                        <div class="form-group"><label class="col-sm-3 control-label">Excel Dosyası</label><div class="col-sm-5"><input type="file" id="FileExcel" class="form-control" accept=".xlsx" /></div></div>
+                    </form>
+                    <table id="gridExcelDraft" class="table table-bordered table-hover">
+                        <thead><tr><th>ETTN</th><th>Unvan</th><th>TCKN</th><th>Ödenecek Tutar</th><th>Senaryo</th><th>Status</th></tr></thead>
+                        <tbody><tr><td></td><td></td><td></td><td>0</td><td></td><td></td></tr></tbody>
+                    </table>
+                    <button type="button" class="btn btn-success pull-right" onclick="excelFileUpload(false)">Taslak Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🖋️ İmzalama Modal -->
+    <div class="modal fade" id="signDraftModal" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h3 class="modal-title">Belgeyi İmzalama</h3></div>
+                <div class="modal-body">
+                    <div class="alert alert-info">Akıllı kartınızı takınız ve uygulamayı indirip imzalayınız.</div>
+                    <div class="form-group"><label>Akıllı kart markası</label><select id="karttip" class="form-control"><option value="akis">Akis</option><option value="gemsafe">GemSafe</option></select></div>
+                    <div class="form-group"><label>Sertifikalar</label><select id="sertifikaList" class="form-control"></select></div>
+                    <div class="form-group"><label>Pin</label><input type="password" id="kartPin" class="form-control" /></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-success">İmzala</button><button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="/hizlicss/jsv643136158/Invoice/invoiceDraft.js"></script>
 }

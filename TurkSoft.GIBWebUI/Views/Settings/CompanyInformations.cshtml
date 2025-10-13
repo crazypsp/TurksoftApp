@@ -1,5 +1,131 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Firma Bilgileri";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
+
+
+
+<section class="content">
+    <div ng-app="myApp" ng-controller="myController" class="ng-scope">
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title" style="font-weight: bold">Firma Bilgileri</h3>
+            </div>
+
+            <!-- Firma Bilgileri Formu -->
+            <form id="companyInformation" novalidate class="form-horizontal">
+                <div class="box-body">
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>VKN/TCKN *</label></div>
+                            <div class="col-sm-8">
+                                <input class="form-control" type="text" id="vknTckn" name="vknTckn" maxlength="11" disabled />
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Müşteri Adı *</label></div>
+                            <div class="col-sm-8">
+                                <input class="form-control" type="text" id="musteriAdi" name="musteriAdi" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Unvan *</label></div>
+                            <div class="col-sm-8">
+                                <input class="form-control" type="text" id="unvan" name="unvan" disabled />
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Kep Adresi</label></div>
+                            <div class="col-sm-8">
+                                <input class="form-control" type="email" id="kepAdresi" name="kepAdresi" placeholder="x@hs0.kep.tr" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Devam eden tüm alanlar birebir kopyalandı -->
+                    <!-- Sorumlu, Vergi Dairesi, Kaydeden Kişi, vb. alanlar -->
+
+                    <hr />
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu Tckn *</label></div>
+                            <div class="col-sm-8">
+                                <input class="form-control" maxlength="11" type="text" id="sorumluTckn" name="sorumluTckn" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu Adı *</label></div>
+                            <div class="col-sm-8">
+                                <input class="form-control" type="text" id="sorumluAd" name="sorumluAd" />
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu Soyadı *</label></div>
+                            <div class="col-sm-8">
+                                <input class="form-control" type="text" id="sorumluSoyad" name="sorumluSoyad" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daha fazla alanlar eklenebilir (telefon, e-posta, kaydeden kişi vb.) -->
+
+                    <hr />
+                    <button type="submit" class="btn btn-success pull-right" id="btnDegisiklikleriKaydet">
+                        Değişiklikleri Kaydet &nbsp;<i class="glyphicon glyphicon-saved"></i>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Sekmeler -->
+            <ul class="nav nav-tabs">
+                <li class="active"><a data-toggle="tab" href="#SozlesmeBilgileri">Sözleşme Bilgileri</a></li>
+                <li><a data-toggle="tab" href="#SubeBilgileri">Şube Bilgileri</a></li>
+            </ul>
+
+            <div class="tab-content">
+                <div id="SozlesmeBilgileri" class="tab-pane fade in active">
+                    <table id="SozlesmeGrid" class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>Sözleşme Tarihleri</th>
+                                <th>Hizmetler</th>
+                                <th>Tarife Türü</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- AngularJS tekrarları buraya -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="SubeBilgileri" class="tab-pane fade">
+                    <table id="SubeGrid" class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>Tip</th>
+                                <th>Şube Kodu</th>
+                                <th>Şube Adı</th>
+                                <th>Şehir</th>
+                                <th>İlçe</th>
+                                <th>Telefon</th>
+                                <th>E-Posta</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- AngularJS tekrarları buraya -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

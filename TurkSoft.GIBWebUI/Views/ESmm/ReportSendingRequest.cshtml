@@ -1,5 +1,104 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Rapor Gönderme Talebi";
+    ViewData["Subtitle"] = "e-SMM";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-SMM <small>Rapor Gönderme Talebi</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-SMM</li>
+        <li class="active">Rapor Gönderme Talebi</li>
+    </ol>
+</section>
+
+<section class="content">
+
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Rapor Gönderme Talebi</h3>
+        </div>
+
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-left" style="padding: 3px 6px;">
+                <button type="button" id="generateNewArchiveReport" class="btn btn-info">
+                    Yeni Oluştur <i class="glyphicon glyphicon-plus-sign"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="reportDatatable" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Rapor Oluşturma İsteği Tarihi</th>
+                        <th>Dönem</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>13.03.2025</td>
+                        <td>202503</td>
+                        <td>cvc-complex-type.2.4.b: The content of element 'earsiv:serbestMeslekMakbuz' is not complete. One of '{"http://earsiv.efatura.gov.tr":imzaZamani}' is expected.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Yeni Rapor Talebi Modal -->
+    <div class="modal fade" id="newReportModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="box-body form-horizontal">
+                    <div class="col-md-12">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <h3 class="modal-title">Yeni Rapor Talebi</h3>
+                        </div>
+                        <div class="modal-body">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="form-group">
+                                        Yeni Rapor Talebi Oluşturmak istiyor musunuz?
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal">İptal</button>
+                            <button type="button" class="btn btn-success pull-right" id="ReportConfirm">Oluştur</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#reportDatatable').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 10
+            });
+
+            $('#generateNewArchiveReport').on('click', function () {
+                $('#newReportModal').modal('show');
+            });
+
+            $('#ReportConfirm').on('click', function () {
+                Swal.fire('Başarılı', 'Yeni rapor talebi oluşturuldu.', 'success');
+                $('#newReportModal').modal('hide');
+            });
+        });
+    </script>
 }

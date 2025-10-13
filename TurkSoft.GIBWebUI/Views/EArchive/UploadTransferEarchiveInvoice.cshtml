@@ -1,5 +1,59 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Transfer e-Arşiv Fatura Yükle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
+<section class="content">
+    <form action="/EInvoice/Upload" method="post" enctype="multipart/form-data">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Arşiv XML Aktarma</h3>
+                    </div>
+                    <div class="box-body form-horizontal">
+                        <div class="col-sm-5">
+                            <label>Entegrator</label>
+                            <select class="form-control" id="entegrator" name="entegrator" style="width:150px">
+                                <option value="1">Medyasoft</option>
+                                <option value="2">İsis Bilişim</option>
+                                <option value="3">Fit Solutions</option>
+                                <option value="4">Hizli Teknoloji</option>
+                                <option value="5">Zirve Donusum</option>
+                                <option value="6">Kolaysoft Teknoloji</option>
+                                <option value="7">Smart Dönüşüm</option>
+                                <option value="8">İng Bank</option>
+                                <option value="9">Finans Bank</option>
+                                <option value="10">Uni-dox</option>
+                                <option value="11">TürkKep</option>
+                                <option value="12">Logo Yazılım</option>
+                                <option value="13">Edm Bilişim</option>
+                                <option value="14">4C Teknoloji</option>
+                                <option value="15">Digital Planet</option>
+                                <option value="16">Uyumsoft</option>
+                                <option value="17">İzibiz</option>
+                                <option value="18">Mikro</option>
+                                <option value="19">Gib Portal</option>
+                                <option value="20">Hizli Teknoloji 20</option>
+                                <option value="21">Edoksis.Net</option>
+                            </select>
+                            <br />
+                            <label>Fatura Tipi:</label>
+                            <select class="form-control" style="width:150px" id="tip" name="tip">
+                                <option value="3" selected>Giden Arşiv</option>
+                            </select>
+                        </div>
+                        <div class="form-group files color col-sm-7">
+                            <label>Arşiv XML Zip Dosyası:</label>
+                            <input type="file" class="btn btn-default" autocomplete="off" name="files[0]" id="files_0">
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" name="Upload" id="Upload" class="btn btn-success pull-right">
+                    YÜKLE <span class="btn-label"><i class="glyphicon glyphicon-upload"></i></span>
+                </button>
+            </div>
+        </div>
+        <br /><br />
+        <strong><span id="lbl_bilgi" style="font-size:16px;"></span></strong>
+    </form>
+</section>

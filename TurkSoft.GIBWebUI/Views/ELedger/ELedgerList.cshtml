@@ -1,5 +1,175 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-Defter Listesi";
+    ViewData["Subtitle"] = "e-Defter";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Defter
+        <small>e-Defter Listesi</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Defter</li>
+        <li class="active">e-Defter Listesi</li>
+    </ol>
+</section>
+
+<section class="content">
+    <h2>e-Defter Listesi</h2>
+
+    <div class="box box-default">
+        <div class="box-body">
+
+            <div class="row">
+                <div class="col-sm-6">
+                    <label>Yıllık Hesap Dönemi Seçiniz</label>
+                    <select id="readFiscalYear" onchange="readFiscalYearSelect()" class="form-control select2">
+                        <option value="2024-01-01,2024-12-31">01.01.2024 - 31.12.2024</option>
+                        <option value="2023-01-01,2023-12-31">01.01.2023 - 31.12.2023</option>
+                        <option value="2022-01-01,2022-12-31">01.01.2022 - 31.12.2022</option>
+                        <option value="2021-01-01,2021-12-31">01.01.2021 - 31.12.2021</option>
+                    </select>
+                </div>
+                <div class="col-sm-2" style="margin-top: 25px;">
+                    <button type="button" class="btn btn-warning btn-sm" onclick="allDownload()">
+                        <i class="fa fa-cloud-download"></i> Toplu XML
+                    </button>
+                </div>
+            </div>
+
+            <table id="gridELedgerList" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Detay</th>
+                        <th>Şube Kodu</th>
+                        <th>Şube Adı</th>
+                        <th>Aylık Hesap Dönem Başlangıç</th>
+                        <th>Aylık Hesap Dönem Bitiş</th>
+                        <th>Yevmiye No Başlangıç</th>
+                        <th>Yevmiye No Bitiş</th>
+                        <th>Satır No Başlangıç</th>
+                        <th>Satır No Bitiş</th>
+                        <th>Toplam Borç</th>
+                        <th>Toplam Alacak</th>
+                        <th>Durum</th>
+                        <th>GİB İkincil Kopya Durumu</th>
+                        <th>Toplu İndir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="details-control"></td>
+                        <td>0</td>
+                        <td></td>
+                        <td>01.02.2024</td>
+                        <td>29.02.2024</td>
+                        <td>502</td>
+                        <td>5608</td>
+                        <td>1165</td>
+                        <td>12857</td>
+                        <td>243981723.53</td>
+                        <td>243981723.53</td>
+                        <td><span class="label label-success">Gönderildi</span></td>
+                        <td></td>
+                        <td>
+                            <button type="button" class="btn btn-warning btn-sm" onclick="myProcessDownload('2024_8')">
+                                <i class="fa fa-cloud-download"></i> Xml
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="processDeleteGonderimSonra('2024_8')">
+                                Sil
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="14">
+                            <table class="table table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Dosya Adı</th>
+                                        <th>Aylık Hesap Dönem Başlangıç</th>
+                                        <th>Aylık Hesap Dönem Bitiş</th>
+                                        <th>Yevmiye No Başlangıç</th>
+                                        <th>Yevmiye No Bitiş</th>
+                                        <th>Satır No Başlangıç</th>
+                                        <th>Satır No Bitiş</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>4620553774-202402-Y-000001.xml</td>
+                                        <td>2024-02-01</td>
+                                        <td>2024-02-16</td>
+                                        <td>502</td>
+                                        <td>3416</td>
+                                        <td>1165</td>
+                                        <td>7846</td>
+                                        <td>
+                                            <button class="btn btn-info btn-sm"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                                            <button class="btn btn-success btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                            <button class="btn btn-danger btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                            <button class="btn btn-warning btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>4620553774-202402-K-000001.xml</td>
+                                        <td>2024-02-01</td>
+                                        <td>2024-02-16</td>
+                                        <td>502</td>
+                                        <td>3416</td>
+                                        <td>1165</td>
+                                        <td>7846</td>
+                                        <td>
+                                            <button class="btn btn-info btn-sm"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                                            <button class="btn btn-success btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                            <button class="btn btn-danger btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                            <button class="btn btn-warning btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>GIB-4620553774-202402-YB-000001.xml</td>
+                                        <td>2024-02-01</td>
+                                        <td>2024-02-16</td>
+                                        <td>502</td>
+                                        <td>3416</td>
+                                        <td>1165</td>
+                                        <td>7846</td>
+                                        <td>
+                                            <button class="btn btn-info btn-sm"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                                            <button class="btn btn-success btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                            <button class="btn btn-danger btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                            <button class="btn btn-warning btn-sm"><i class="fa fa-cloud-download"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#gridELedgerList').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+
+        function allDownload() {
+            Swal.fire('Bilgi', 'Toplu XML indirme işlemi başlatıldı.', 'info');
+        }
+
+        function myProcessDownload(id) {
+            Swal.fire('Bilgi', 'Toplu dosya indirme işlemi başlatıldı: ' + id, 'success');
+        }
+
+        function processDeleteGonderimSonra(id) {
+            Swal.fire('Uyarı', 'Silme işlemi başlatıldı: ' + id, 'warning');
+        }
+    </script>
 }

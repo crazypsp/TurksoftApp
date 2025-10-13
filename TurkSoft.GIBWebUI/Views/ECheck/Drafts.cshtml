@@ -1,1 +1,227 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Taslak e-Adisyon";
+    ViewData["Subtitle"] = "e-Adisyon";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Adisyon
+        <small>Taslak Adisyonlar</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Adisyon</li>
+        <li class="active">Taslak Adisyonlar</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Arama Seçenekleri</h3>
+        </div>
+        <div class="box-body" id="btnAramaYapEnter">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı VKN/TCKN</label>
+                        <div class="col-sm-6">
+                            <input id="TargetIdentifier" type="text" maxlength="11" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı Unvan</label>
+                        <div class="col-sm-6">
+                            <input id="TargetTitle" type="text" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Adisyon Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStart" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Adisyon Tarihi (Bitiş)</label>
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStartEnd" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="CreatedDateStart" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Bitiş)</label>
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="CreatedDateEnd" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Ödenecek Tutar</label>
+                        <div class="col-sm-6">
+                            <input id="PayableAmount" type="number" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer">
+            <div class="pull-left">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" onclick="createNewDraft()"><i class="fa fa-plus-circle"></i> Yeni Oluştur</a></li>
+                        <li><a href="#" onclick="sendAllDraft()"><i class="fa fa-send"></i> Seçilileri Gönder</a></li>
+                        <li><a href="#" onclick="deleteAllDraft()"><i class="fa fa-remove"></i> Seçilileri Sil</a></li>
+                    </ul>
+                </div>
+
+                <div class="input-group" style="margin-left:10px;">
+                    <select id="subeler" class="form-control select2" multiple data-placeholder="Şube Seçiniz">
+                        <option value="1">HIZLI BİLİŞİM TEST MERKEZ</option>
+                        <option value="465">HBT MERSİN</option>
+                        <option value="466">antalyasube</option>
+                        <option value="467">EntegreTürk</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pull-right">
+                <button onclick="gridSearch()" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+                <button onclick="clearSearchInputs()" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>Adisyon No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi Kimlik No</th>
+                        <th>Senaryo</th>
+                        <th>Adisyon Tarihi</th>
+                        <th>Ödenecek Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="9" class="text-center">Tabloda herhangi bir veri mevcut değil</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Excel'den Taslağa Kaydet Modal -->
+    <div class="modal fade" id="excelDraftModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h3 class="modal-title">Excel'den Taslağa Kaydet</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Şube</label>
+                            <div class="col-md-4">
+                                <select id="excel_sube" class="form-control select2" onchange="setPrefixExcelList()">
+                                    <option value="0" selected>Seçiniz</option>
+                                    <option value="1">HIZLI BİLİŞİM TEST MERKEZ</option>
+                                    <option value="465">HBT MERSİN</option>
+                                    <option value="466">antalyasube</option>
+                                    <option value="467">EntegreTürk</option>
+                                </select>
+                            </div>
+                            <label class="control-label col-md-2">Makbuz Öneki</label>
+                            <div class="col-md-4">
+                                <select id="excel_onek" class="form-control"></select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Excel Dosyası</label>
+                            <div class="col-md-6">
+                                <input type="file" id="FileExcel" name="FileExcel" class="form-control" onchange="excelFileUpload(true)" accept=".xlsx" />
+                            </div>
+                            <div class="col-md-4">
+                                <a class="btn btn-success" href="/EMustahsil/DownloadExcelPattern">Desen İndir</a>
+                            </div>
+                        </div>
+
+                        <table id="gridExcelDraft" class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Makbuz No</th>
+                                    <th>Tarih/Saat</th>
+                                    <th>Unvan</th>
+                                    <th>TCKN</th>
+                                    <th>Ödenecek Tutar</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td></td><td></td><td></td><td></td><td>0</td><td></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                    <button id="excelSave" type="button" class="btn btn-success" onclick="excelFileUpload(false)">Taslak Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#myDataTable').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+
+        function gridSearch() { alert("Arama işlemi yapılacak."); }
+        function clearSearchInputs() { $('input').val(''); $('select').val(''); }
+        function createNewDraft() { alert("Yeni taslak oluşturulacak."); }
+        function sendAllDraft() { alert("Seçilen taslaklar gönderilecek."); }
+        function deleteAllDraft() { alert("Seçilen taslaklar silinecek."); }
+        function excelFileUpload(isChange) {
+            if (isChange) alert("Excel dosyası seçildi.");
+            else alert("Excel'den taslak kaydedildi.");
+        }
+    </script>
+}

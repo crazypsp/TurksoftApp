@@ -1,5 +1,193 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Yeni e-Arşiv Faturası Oluştur";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
+
+
+<section class="content">
+    <!-- ==== e-Arşiv Fatura Formu ==== -->
+    <form id="faturaformu" novalidate="novalidate">
+
+        <!-- Üst Bilgiler -->
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h4 class="mb-0">Fatura Bilgileri</h4>
+                <div class="row mt-2">
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger btn-block">Fatura PDF İndir <i class="fa fa-download"></i></button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger btn-block">Fatura XML İndir <i class="fa fa-download"></i></button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-info btn-block">Fatura Önizle <i class="glyphicon glyphicon-zoom-in"></i></button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary btn-block">Taslak Kaydet <i class="glyphicon glyphicon-tasks"></i></button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-success btn-block">Gib'e Gönder <i class="glyphicon glyphicon-send"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="box-body">
+                <div class="row">
+                    <!-- Sol -->
+                    <div class="col-md-4">
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Şube</label>
+                            <div class="col-sm-9">
+                                <select class="form-control"><option>Seçiniz</option></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">ETTN</label>
+                            <div class="col-sm-9"><input type="text" class="form-control" disabled value="ABC51C4D-4F3E-46A9-B5EB-928343C0B4F7" /></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Fatura Ön Eki</label>
+                            <div class="col-sm-9"><input type="text" class="form-control" value="YZL" /></div>
+                        </div>
+                    </div>
+
+                    <!-- Orta -->
+                    <div class="col-md-4">
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Fatura Tipi</label>
+                            <div class="col-sm-9">
+                                <select class="form-control">
+                                    <option>Satış</option>
+                                    <option>İade</option>
+                                    <option>İstisna</option>
+                                    <option>Tevkifat</option>
+                                    <option>Özel Matrah</option>
+                                    <option>İhraç Kayıtlı</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Fatura Tarihi</label>
+                            <div class="col-sm-9"><input type="date" class="form-control" /></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Fatura Saati</label>
+                            <div class="col-sm-9"><input type="time" class="form-control" /></div>
+                        </div>
+                    </div>
+
+                    <!-- Sağ -->
+                    <div class="col-md-4">
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Sipariş No</label>
+                            <div class="col-sm-9"><input type="text" class="form-control" /></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Sipariş Tarihi</label>
+                            <div class="col-sm-9"><input type="date" class="form-control" /></div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 control-label">Para Birimi</label>
+                            <div class="col-sm-9">
+                                <select class="form-control">
+                                    <option>TRY - Türk Lirası</option>
+                                    <option>USD - Dolar</option>
+                                    <option>EUR - Euro</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tablar -->
+        <div class="box box-default">
+            <ul class="nav nav-tabs">
+                <li class="active"><a data-toggle="tab" href="#alicibilgileri">Alıcı Bilgileri</a></li>
+                <li><a data-toggle="tab" href="#irsaliye">İrsaliye Bilgileri</a></li>
+                <li><a data-toggle="tab" href="#ekalan">E-Arşiv Ek Alanlar</a></li>
+                <li><a data-toggle="tab" href="#odeme">Ödeme</a></li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Alıcı Bilgileri -->
+                <div id="alicibilgileri" class="tab-pane active">
+                    <div class="row" style="margin:15px;">
+                        <div class="col-md-6">
+                            <div class="form-group"><label>VKN/TCKN *</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Alıcı Etiketi</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Firma Adı *</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Ad *</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Soyad *</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>E-mail</label><input type="email" class="form-control" /></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group"><label>Ülke *</label><input type="text" class="form-control" value="Türkiye" /></div>
+                            <div class="form-group"><label>İl *</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>İlçe *</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Vergi Dairesi</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Adres</label><textarea class="form-control"></textarea></div>
+                            <div class="form-group"><label>Telefon</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Posta Kodu</label><input type="text" class="form-control" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- İrsaliye Bilgileri -->
+                <div id="irsaliye" class="tab-pane">
+                    <div class="row" style="margin:15px;">
+                        <div class="col-md-6">
+                            <div class="form-group"><label>İrsaliye No</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>İrsaliye Tarihi</label><input type="date" class="form-control" /></div>
+                            <div class="form-group"><label>Taşıyıcı Ünvan</label><input type="text" class="form-control" /></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group"><label>Taşıyıcı VKN/TCKN</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Sevk Yeri</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Teslimat Tarihi</label><input type="date" class="form-control" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E-Arşiv Ek Alanlar -->
+                <div id="ekalan" class="tab-pane">
+                    <div class="row" style="margin:15px;">
+                        <div class="col-md-6">
+                            <div class="form-group"><label>Şube Kodu</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Ek Bilgi 1</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Ek Bilgi 2</label><input type="text" class="form-control" /></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group"><label>Not</label><textarea class="form-control"></textarea></div>
+                            <div class="form-group"><label>Ek Dosya Yükle</label><input type="file" class="form-control" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ödeme -->
+                <div id="odeme" class="tab-pane">
+                    <div class="row" style="margin:15px;">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Ödeme Yöntemi</label>
+                                <select class="form-control">
+                                    <option>Nakit</option>
+                                    <option>Kredi Kartı</option>
+                                    <option>Havale/EFT</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Vade Tarihi</label><input type="date" class="form-control" /></div>
+                            <div class="form-group"><label>Tutar</label><input type="text" class="form-control" /></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group"><label>Banka Adı</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>IBAN</label><input type="text" class="form-control" /></div>
+                            <div class="form-group"><label>Açıklama</label><textarea class="form-control"></textarea></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

@@ -1,5 +1,172 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Taslak e-Müstahsil";
+    ViewData["Subtitle"] = "e-Müstahsil";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-Müstahsil <small>Taslak Müstahsiller</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Müstahsil</li>
+        <li class="active">Taslak Müstahsiller</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Arama Seçenekleri</h3>
+        </div>
+        <div class="box-body" id="btnAramaYapEnter">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı VKN/TCKN</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetIdentifier" type="text" maxlength="11" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı Unvan</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetTitle" type="text" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Müstahsil Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStart" type="text" class="form-control datepicker" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Müstahsil Tarihi (Bitiş)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStartEnd" type="text" class="form-control datepicker" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="CreatedDateStart" type="text" class="form-control datepicker" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Bitiş)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="CreatedDateEnd" type="text" class="form-control datepicker" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Ödenecek Tutar</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="PayableAmount" type="number" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="box-footer">
+            <div class="pull-left">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" onclick="createNewDraft()"><i class="fa fa-plus-circle"></i> Yeni Oluştur</a></li>
+                        <li><a href="#" onclick="sendAllDraft()"><i class="fa fa-send"></i> Seçilileri Gönder</a></li>
+                        <li><a href="#" onclick="deleteAllDraft()"><i class="fa fa-remove"></i> Seçilileri Sil</a></li>
+                        <li><a href="#" onclick="excelDraftModalOpen()"><i class="fa fa-file-excel-o"></i> Excel'den Taslağa Kaydet</a></li>
+                    </ul>
+                </div>
+                <select id="subeler" class="form-control select2" multiple data-placeholder="Şube Seçiniz" style="width:300px;">
+                    <option value="1">HIZLI BİLİŞİM TEST MERKEZ</option>
+                    <option value="465">HBT MERSİN</option>
+                    <option value="466">antalyasube</option>
+                    <option value="467">EntegreTürk</option>
+                </select>
+            </div>
+            <div class="pull-right">
+                <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+                <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taslak Liste -->
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Taslak Müstahsiller</h3>
+        </div>
+        <div class="box-body table-responsive">
+            <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>Makbuz No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi Kimlik No</th>
+                        <th>Senaryo</th>
+                        <th>Makbuz Tarihi</th>
+                        <th>Ödenecek Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="checkbox" class="dt-checkboxes" /></td>
+                        <td></td>
+                        <td>metin albayrak</td>
+                        <td>45832547132</td>
+                        <td>MUSTAHSILMAKBUZ</td>
+                        <td>2.10.2025 00:00:00</td>
+                        <td>1</td>
+                        <td><span class="label label-success">Taslak</span></td>
+                        <td>
+                            <button type="button" title="Önizleme" onclick="GetMustahsilTaskPrewiew('93ACF895-C53F-4AA4-BEE9-ED6BBCE57A8A','2.10.2025 00:00:00')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button>
+                            <button type="button" title="Taslak Düzenle" onclick="checkEdit('93ACF895-C53F-4AA4-BEE9-ED6BBCE57A8A')" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button>
+                            <button type="button" title="Taslak Sil" onclick="draftDelete('93ACF895-C53F-4AA4-BEE9-ED6BBCE57A8A')" class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button>
+                            <button type="button" title="Taslak Gibe Gönder" onclick="sendSelectedDraft('93ACF895-C53F-4AA4-BEE9-ED6BBCE57A8A')" class="btn btn-success btn-sm"><i class="fa fa-send"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#myDataTable').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+            $('.select2').select2();
+        });
+
+        function createNewDraft() { Swal.fire('Yeni Taslak', 'Yeni taslak oluşturma işlemi başlatıldı.', 'info'); }
+        function sendAllDraft() { Swal.fire('Gönderim', 'Seçili taslaklar GİB’e gönderildi.', 'success'); }
+        function deleteAllDraft() { Swal.fire('Silme', 'Seçili taslaklar silindi.', 'warning'); }
+        function excelDraftModalOpen() { Swal.fire('Bilgi', 'Excel yükleme penceresi açıldı.', 'info'); }
+        function gridSearch() { Swal.fire('Arama', 'Filtre uygulanıyor...', 'info'); }
+        function clearSearchInputs() { $('input').val(''); Swal.fire('Temizlendi', 'Tüm filtre alanları temizlendi.', 'success'); }
+    </script>
 }

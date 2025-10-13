@@ -1,5 +1,52 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Malzeme/Hizmet Listesi";
+    ViewData["Subtitle"] = "Listeler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        Listeler
+        <small>Malzeme/Hizmet Listesi</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
+        <li>Listeler</li>
+        <li class="active">Malzeme/Hizmet Listesi</li>
+    </ol>
+</section>
+
+<section class="content">
+    <h2>Malzeme/Hizmet Listesi</h2>
+    <div class="box box-primary">
+        <div class="box-body">
+            <table id="grid_items" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Kodu</th>
+                        <th>Adı</th>
+                        <th>Birim</th>
+                        <th>KDV Oranı</th>
+                        <th>Fiyat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>001</td><td>E-İMZA</td><td>Adet</td><td>%18</td><td>500,00 TL</td></tr>
+                    <tr><td>002</td><td>KEP HİZMETİ</td><td>Yıl</td><td>%18</td><td>250,00 TL</td></tr>
+                    <tr><td>003</td><td>Mali Mühür</td><td>Adet</td><td>%18</td><td>300,00 TL</td></tr>
+                    <tr><td>004</td><td>İşte SMM</td><td>Paket</td><td>%18</td><td>1.000,00 TL</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_items').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
 }

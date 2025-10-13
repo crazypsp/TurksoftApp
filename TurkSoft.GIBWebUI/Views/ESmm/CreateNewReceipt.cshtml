@@ -1,5 +1,140 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-SMM Oluştur";
+    ViewData["Subtitle"] = "e-SMM";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-SMM <small>Yeni Serbest Meslek Makbuzu</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-SMM</li>
+        <li class="active">Yeni Oluştur</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Serbest Meslek Makbuzu Bilgileri</h3>
+        </div>
+
+        <div class="box-body">
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#tabAlici" data-toggle="tab">Alıcı Bilgileri</a></li>
+                <li><a href="#tabMakbuz" data-toggle="tab">Makbuz Bilgileri</a></li>
+                <li><a href="#tabVergi" data-toggle="tab">Vergi Bilgileri</a></li>
+                <li><a href="#tabNot" data-toggle="tab">Notlar</a></li>
+            </ul>
+
+            <div class="tab-content" style="margin-top:15px;">
+                <!-- Alıcı Bilgileri -->
+                <div id="tabAlici" class="tab-pane fade in active">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">VKN / TCKN</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="AliciVkn" maxlength="11" /></div>
+                            <label class="control-label col-sm-2">Unvan / Ad Soyad</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="AliciUnvan" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">Adres</label>
+                            <div class="col-sm-10"><input type="text" class="form-control" id="AliciAdres" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Makbuz Bilgileri -->
+                <div id="tabMakbuz" class="tab-pane fade">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">Makbuz No</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="MakbuzNo" /></div>
+                            <label class="control-label col-sm-2">Tarih</label>
+                            <div class="col-sm-4"><input type="date" class="form-control" id="MakbuzTarih" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">Para Birimi</label>
+                            <div class="col-sm-4">
+                                <select class="form-control" id="ParaBirimi">
+                                    <option value="TRY" selected>TL</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                            <label class="control-label col-sm-2">Senaryo</label>
+                            <div class="col-sm-4">
+                                <select class="form-control" id="Senaryo">
+                                    <option value="TEMEL">Temel</option>
+                                    <option value="TICARI">Ticari</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vergi Bilgileri -->
+                <div id="tabVergi" class="tab-pane fade">
+                    <table id="grid_vergi" class="table table-bordered table-hover dataTable">
+                        <thead>
+                            <tr>
+                                <th>Vergi Türü</th>
+                                <th>Oran (%)</th>
+                                <th>Tutar</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Gelir Vergisi Stopajı</td><td>20</td><td>1.200,00 ₺</td><td><button class="btn btn-danger btn-xs"><i class="fa fa-trash"></i></button></td></tr>
+                            <tr><td>KDV</td><td>18</td><td>900,00 ₺</td><td><button class="btn btn-danger btn-xs"><i class="fa fa-trash"></i></button></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="text-right">
+                        <button type="button" class="btn btn-info btn-sm"><i class="fa fa-plus"></i> Vergi Ekle</button>
+                    </div>
+                </div>
+
+                <!-- Notlar -->
+                <div id="tabNot" class="tab-pane fade">
+                    <div class="form-group">
+                        <label class="control-label col-sm-2">Makbuz Notu</label>
+                        <div class="col-sm-10">
+                            <textarea class="form-control" rows="3" placeholder="Not giriniz"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer text-center">
+            <button type="button" class="btn btn-primary" onclick="kaydet()"><i class="fa fa-save"></i> Kaydet</button>
+            <button type="button" class="btn btn-success" onclick="gonder()"><i class="fa fa-send"></i> GİB’e Gönder</button>
+            <button type="button" class="btn btn-danger" onclick="temizle()"><i class="fa fa-eraser"></i> Temizle</button>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_vergi').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "paging": false,
+                "searching": false,
+                "info": false
+            });
+        });
+
+        function kaydet() {
+            Swal.fire('Kaydedildi', 'Serbest Meslek Makbuzu başarıyla kaydedildi.', 'success');
+        }
+
+        function gonder() {
+            Swal.fire('Gönderiliyor', 'Makbuz GİB’e gönderiliyor...', 'info');
+        }
+
+        function temizle() {
+            $('input, textarea').val('');
+            Swal.fire('Temizlendi', 'Form alanları sıfırlandı.', 'success');
+        }
+    </script>
 }

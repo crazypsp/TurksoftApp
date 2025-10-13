@@ -1,0 +1,208 @@
+﻿<aside class="main-sidebar">
+    <section class="sidebar">
+        <ul class="sidebar-menu" data-widget="tree">
+
+            <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> <span>Anasayfa</span></a></li>
+            <li><a href="#" id="createInvoice"><i class="fa fa-envelope"></i> <span>Fatura Oluştur</span></a></li>
+            <li><a href="#" id="envelopeCheckModalCol"><i class="fa fa-search"></i> <span>Zarf Sorgula</span></a></li>
+
+            <!-- e-Fatura -->
+            <li class="treeview">
+                <a href="#">
+                    <i class="fa fa-envelope"></i> <span>e-Fatura</span>
+                    <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+                </a>
+                <ul class="treeview-menu">
+                    <li class="treeview">
+                        <a href="#">
+                            <i class="fa fa-plus"></i> Yeni Fatura
+                            <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+                        </a>
+                        <ul class="treeview-menu">
+                            <li><a asp-controller="EInvoice" asp-action="CreateNewInvoice"><i class="fa fa-plus"></i> e-Fatura Oluştur</a></li>
+                            <li><a asp-controller="EInvoice" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-Fatura</a></li>
+                            <li><a asp-controller="EInvoice" asp-action="CreateExportInvoice"><i class="fa fa-plus"></i> e-İhracat Oluştur</a></li>
+                            <li><a asp-controller="EInvoice" asp-action="CreateErpInvoice"><i class="fa fa-plus"></i> Erp'den e-Fatura Oluştur</a></li>
+                            <li><a asp-controller="EInvoice" asp-action="CreateMarketPlaceInvoice"><i class="fa fa-plus"></i> Pazaryerinden Fatura Oluştur</a></li>
+                        </ul>
+                    </li>
+                    <li><a asp-controller="EInvoice" asp-action="InboxInvoice"><i class="fa fa-inbox"></i> Gelen Faturalar</a></li>
+                    <li><a asp-controller="EInvoice" asp-action="OutboxInvoice"><i class="fa fa-inbox"></i> Giden Faturalar</a></li>
+                    <li><a asp-controller="EInvoice" asp-action="UploadTransferInvoice"><i class="fa fa-upload"></i> e-Fatura Transfer Yükle</a></li>
+                    <li><a asp-controller="EInvoice" asp-action="GibPortalCancelledOrObjected"><i class="fa fa-list"></i> Gib Portal İptal/İtiraz</a></li>
+                </ul>
+            </li>
+
+            <!-- e-Arşiv -->
+            <li class="treeview">
+                <a href="#">
+                    <i class="fa fa-inbox"></i> <span>e-Arşiv</span>
+                    <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+                </a>
+                <ul class="treeview-menu">
+                    <li class="treeview">
+                        <a href="#">
+                            <i class="fa fa-plus"></i> Yeni Arşiv Fatura
+                            <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+                        </a>
+                        <ul class="treeview-menu">
+                            <li><a asp-controller="EArchive" asp-action="CreateNewEarchiveInvoice"><i class="fa fa-plus"></i> e-Arşiv Oluştur</a></li>
+                            <li><a asp-controller="EArchive" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-Arşiv</a></li>
+                            <li><a asp-controller="EArchive" asp-action="CreateErpEArchiveInvoice"><i class="fa fa-plus"></i> Erp'den e-Arşiv Oluştur</a></li>
+                        </ul>
+                    </li>
+                    <li><a asp-controller="EArchive" asp-action="UploadTransferEarchiveInvoice"><i class="fa fa-upload"></i> e-Arşiv Transfer Yükle</a></li>
+                    <li><a asp-controller="EArchive" asp-action="OutboxEarchiveInvoice"><i class="fa fa-inbox"></i> Giden e-Arşiv Faturalar</a></li>
+                    <li><a asp-controller="EArchive" asp-action="ReportSendingRequest"><i class="fa fa-files-o"></i> Rapor Gönderme Talebi</a></li>
+                    <li><a asp-controller="EArchive" asp-action="SendingReports"><i class="fa fa-files-o"></i> Gönderilmiş Raporlar</a></li>
+                    <li><a asp-controller="EArchive" asp-action="EArchiveEmailStatusTrack"><i class="fa fa-envelope"></i> E-mail Durum Takibi</a></li>
+                </ul>
+            </li>
+
+            <!-- e-Defter -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-book"></i> <span>e-Defter</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li><a asp-controller="ELedger" asp-action="ELedgerUpload"><i class="fa fa-upload"></i> e-Defter Yükle</a></li>
+                    <li><a asp-controller="ELedger" asp-action="CreateErpELedger"><i class="fa fa-list"></i> Erp'den e-Defter Oluştur</a></li>
+                    <li><a asp-controller="ELedger" asp-action="UploadTransferELedger"><i class="fa fa-upload"></i> e-Defter Transfer Yükle</a></li>
+                    <li><a asp-controller="ELedger" asp-action="ELedgerList"><i class="fa fa-list"></i> e-Defter Listesi</a></li>
+                    <li><a asp-controller="ELedger" asp-action="ELedgerTransfer"><i class="fa fa-exchange"></i> e-Defter Aktarım</a></li>
+                    <li><a asp-controller="ELedger" asp-action="ELedgerSettings"><i class="fa fa-cog"></i> Ayarlar</a></li>
+                </ul>
+            </li>
+
+            <!-- e-Adisyon -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-pencil"></i> <span>e-Adisyon</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li><a asp-controller="ECheck" asp-action="CreateNewCheck"><i class="fa fa-plus"></i> Yeni Adisyon Oluştur</a></li>
+                    <li><a asp-controller="ECheck" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-Adisyon</a></li>
+                    <li><a asp-controller="ECheck" asp-action="OutboxCheck"><i class="fa fa-inbox"></i> Giden e-Adisyon</a></li>
+                    <li><a asp-controller="ECheck" asp-action="ReportSendingRequest"><i class="fa fa-files-o"></i> Rapor Gönderme Talebi</a></li>
+                    <li><a asp-controller="ECheck" asp-action="SendingReports"><i class="fa fa-files-o"></i> Gönderilmiş Raporlar</a></li>
+                </ul>
+            </li>
+
+            <!-- e-İrsaliye -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-inbox"></i> <span>e-İrsaliye</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li class="treeview">
+                        <a href="#"><i class="fa fa-plus"></i> Yeni İrsaliye <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                        <ul class="treeview-menu">
+                            <li><a asp-controller="EIrsaliye" asp-action="CreateNewDespatch"><i class="fa fa-plus"></i> e-İrsaliye Oluştur</a></li>
+                            <li><a asp-controller="EIrsaliye" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak İrsaliye</a></li>
+                            <li><a asp-controller="EIrsaliye" asp-action="CreateErpDespatch"><i class="fa fa-plus"></i> Erp'den e-İrsaliye Oluştur</a></li>
+                        </ul>
+                    </li>
+                    <li><a asp-controller="EIrsaliye" asp-action="InboxDespatch"><i class="fa fa-inbox"></i> Gelen İrsaliye</a></li>
+                    <li><a asp-controller="EIrsaliye" asp-action="OutboxDespatch"><i class="fa fa-inbox"></i> Giden İrsaliye</a></li>
+                    <li><a asp-controller="EIrsaliye" asp-action="UploadTransferDespatch"><i class="fa fa-upload"></i> e-İrsaliye Transfer Yükle</a></li>
+                </ul>
+            </li>
+
+            <!-- e-Müstahsil -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-inbox"></i> <span>e-Müstahsil</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li class="treeview">
+                        <a href="#"><i class="fa fa-plus"></i> Yeni Müstahsil <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                        <ul class="treeview-menu">
+                            <li><a asp-controller="EMustahsil" asp-action="CreateNewCreditNote"><i class="fa fa-plus"></i> e-Müstahsil Oluştur</a></li>
+                            <li><a asp-controller="EMustahsil" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-Müstahsil</a></li>
+                            <li><a asp-controller="EMustahsil" asp-action="CreateErpCreditNote"><i class="fa fa-plus"></i> Erp'den e-Müstahsil Oluştur</a></li>
+                        </ul>
+                    </li>
+                    <li><a asp-controller="EMustahsil" asp-action="OutboxCreditNote"><i class="fa fa-inbox"></i> Giden e-Müstahsil</a></li>
+                    <li><a asp-controller="EMustahsil" asp-action="UploadTransferMustahsil"><i class="fa fa-upload"></i> e-Müstahsil Transfer Yükle</a></li>
+                    <li><a asp-controller="EMustahsil" asp-action="ReportSendingRequest"><i class="fa fa-files-o"></i> Rapor Gönderme Talebi</a></li>
+                    <li><a asp-controller="EMustahsil" asp-action="SendingReports"><i class="fa fa-files-o"></i> Gönderilmiş Raporlar</a></li>
+                </ul>
+            </li>
+
+            <!-- e-SMM -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-inbox"></i> <span>e-SMM</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li class="treeview">
+                        <a href="#"><i class="fa fa-plus"></i> Yeni e-SMM <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                        <ul class="treeview-menu">
+                            <li><a asp-controller="ESmm" asp-action="CreateNewReceipt"><i class="fa fa-plus"></i> e-SMM Oluştur</a></li>
+                            <li><a asp-controller="ESmm" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-SMM</a></li>
+                            <li><a asp-controller="ESmm" asp-action="CreateErpReceipt"><i class="fa fa-list"></i> Erp'den e-SMM Oluştur</a></li>
+                        </ul>
+                    </li>
+                    <li><a asp-controller="ESmm" asp-action="OutboxReceipt"><i class="fa fa-inbox"></i> Giden e-SMM</a></li>
+                    <li><a asp-controller="ESmm" asp-action="UploadTransferSmm"><i class="fa fa-upload"></i> e-SMM Transfer Yükle</a></li>
+                    <li><a asp-controller="ESmm" asp-action="ReportSendingRequest"><i class="fa fa-files-o"></i> Rapor Gönderme Talebi</a></li>
+                    <li><a asp-controller="ESmm" asp-action="SendingReports"><i class="fa fa-files-o"></i> Gönderilmiş Raporlar</a></li>
+                </ul>
+            </li>
+
+            <!-- e-Döviz -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-dollar"></i> <span>e-Döviz / e-Kıymetli Maden</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li><a asp-controller="EDoviz" asp-action="CreateNewDoviz"><i class="fa fa-plus"></i> Döviz/Kıymetli Maden Oluştur</a></li>
+                    <li><a asp-controller="EDoviz" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-Döviz/Kıymetli Maden</a></li>
+                    <li><a asp-controller="EDoviz" asp-action="OutboxDoviz"><i class="fa fa-inbox"></i> Giden e-Döviz/Kıymetli Maden</a></li>
+                    <li><a asp-controller="EDoviz" asp-action="ReportSendingRequest"><i class="fa fa-files-o"></i> Rapor Gönderme Talebi</a></li>
+                    <li><a asp-controller="EDoviz" asp-action="SendingReports"><i class="fa fa-files-o"></i> Gönderilmiş Raporlar</a></li>
+                </ul>
+            </li>
+
+            <!-- Listeler -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-list"></i> <span>Listeler</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li><a asp-controller="Lists" asp-action="MukellefList"><i class="fa fa-users"></i> Mükellef Listesi</a></li>
+                    <li><a asp-controller="Lists" asp-action="MalzemeHizmetList"><i class="fa fa-list"></i> Malzeme/Hizmet Listesi</a></li>
+                    <li><a asp-controller="Lists" asp-action="MusteriCariList"><i class="fa fa-list"></i> Müşteri/Cari Listesi</a></li>
+                    <li><a asp-controller="Lists" asp-action="TaxList"><i class="fa fa-list-ul"></i> Vergi Listesi</a></li>
+                    <li><a asp-controller="Lists" asp-action="ExceptionalCodes"><i class="fa fa-list-ul"></i> İstisna Kodları</a></li>
+                    <li><a asp-controller="Lists" asp-action="TevkifatCodes"><i class="fa fa-list-ul"></i> Tevkifat Kodları</a></li>
+                    <li><a asp-controller="Lists" asp-action="ExportRegisteredCodes"><i class="fa fa-list-ul"></i> İhraç Kayıtlı Kodları</a></li>
+                    <li><a asp-controller="Lists" asp-action="SpecialBaseCodes"><i class="fa fa-list-ul"></i> Özel Matrah Kodları</a></li>
+                    <li><a asp-controller="Lists" asp-action="DurumKod"><i class="fa fa-list-ul"></i> GİB Durum Kodları</a></li>
+                </ul>
+            </li>
+
+            <!-- Ayarlar -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-cog"></i> <span>Ayarlar</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li><a asp-controller="Settings" asp-action="CompanyInformations"><i class="fa fa-building"></i> Firma Bilgileri</a></li>
+                    <li><a asp-controller="Settings" asp-action="UserSettings"><i class="fa fa-user"></i> Kullanıcı Ayarları</a></li>
+                    <li><a asp-controller="Settings" asp-action="Settings"><i class="fa fa-cog"></i> Ayarlar</a></li>
+                    <li><a asp-controller="Settings" asp-action="DocumentStates"><i class="fa fa-list"></i> Belge Durumu</a></li>
+                </ul>
+            </li>
+
+            <!-- Yönetim Paneli -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-cogs"></i> <span>Yönetim Paneli</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li><a asp-controller="AdminPanel" asp-action="UserList"><i class="fa fa-list"></i> Tüm Kullanıcılar</a></li>
+                    <li><a asp-controller="AdminPanel" asp-action="ManagementPanel"><i class="fa fa-cogs"></i> Müşteri İşlemleri</a></li>
+                    <li><a asp-controller="AdminPanel" asp-action="Requests"><i class="fa fa-cogs"></i> İstek/Talep Raporu</a></li>
+                    <li><a asp-controller="AdminPanel" asp-action="CreditReport"><i class="fa fa-files-o"></i> Kontör Raporu</a></li>
+                    <li><a asp-controller="AdminPanel" asp-action="GetTraining"><i class="fa fa-book"></i> Bayi Rehberi</a></li>
+                </ul>
+            </li>
+
+            <!-- Raporlar -->
+            <li class="treeview">
+                <a href="#"><i class="fa fa-files-o"></i> <span>Raporlar</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <ul class="treeview-menu">
+                    <li><a asp-controller="Report" asp-action="ReportCustomize"><i class="fa fa-files-o"></i> Rapor Özelleştir</a></li>
+                    <li><a asp-controller="Report" asp-action="GeneralReport"><i class="fa fa-files-o"></i> Genel Raporlar</a></li>
+                    <li><a asp-controller="Report" asp-action="DeservedReport"><i class="fa fa-files-o"></i> Hakediş Raporu</a></li>
+                </ul>
+            </li>
+
+            <li><a asp-controller="Lists" asp-action="FiyatList" target="_blank"><i class="fa fa-envelope"></i> <span>Fiyat Listesi</span></a></li>
+            <li><a asp-controller="Lists" asp-action="TransferList" target="_blank"><i class="fa fa-envelope"></i> <span>Transfer Belge Yükle</span></a></li>
+        </ul>
+    </section>
+</aside>

@@ -1,5 +1,146 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Genel Raporlar";
+    ViewData["Subtitle"] = "Raporlar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content">
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Genel Rapor</h3>
+        </div>
+        <div class="box-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Rapor Tipi</label>
+                        <div class="col-sm-6 inputPadding">
+                            <select class="form-control" id="ReportType" name="ReportType">
+                                <option value="0">Tümü</option>
+                                <option value="1">e-Fatura Gelen</option>
+                                <option value="2">e-Fatura Giden</option>
+                                <option value="3">e-Arşiv Fatura</option>
+                                <option value="4">Tüm Giden Faturalar</option>
+                                <option value="5">e-Serbest Meslek Makbuz</option>
+                                <option value="6">e-Müstahsil Makbuz</option>
+                                <option value="8">e-İrsaliye Gelen</option>
+                                <option value="9">e-İrsaliye Giden</option>
+                                <option value="11">e-Adisyon</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="input-group input-group-md pull-left" style="padding: 3px 6px;">
+                <button type="button" class="btn btn-info" onclick="newModal()"> Yeni Oluştur <i class="glyphicon glyphicon-plus-sign"></i></button>
+            </div>
+            <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+            </div>
+            <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+
+        <div class="box-body">
+            <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Rapor Adı</th>
+                        <th>Rapor Tipi</th>
+                        <th>Tarih Aralığı</th>
+                        <th>İstek Tarihi</th>
+                        <th>Oluşturulma Tarihi</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Burada backend’den gelen rapor kayıtları listelenecek -->
+                    <tr>
+                        <td>efaturagiden</td>
+                        <td>e-Fatura Giden</td>
+                        <td>01.07.2025 - 15.07.2025</td>
+                        <td>31.07.2025 00:00:00</td>
+                        <td>31.07.2025 00:00:00</td>
+                        <td>Raporunuz hazırlanırken sorun yaşandı.</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm" title="Sil">
+                                <i class="fa fa-remove"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>SmmTasarim</td>
+                        <td>e-Serbest Meslek Makbuz</td>
+                        <td>03.06.2025 - 03.07.2025</td>
+                        <td>31.07.2025 00:00:00</td>
+                        <td>31.07.2025 00:00:00</td>
+                        <td>Raporunuz indirmeye hazırdır.</td>
+                        <td>
+                            <button type="button" class="btn btn-info btn-sm" title="İndir">
+                                <i class="fa fa-download"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" title="Sil">
+                                <i class="fa fa-remove"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- Dosyada bulunan tüm satırlar burada backend tarafında dinamik olarak yüklenecek -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: Rapor Oluştur -->
+    <div class="modal fade" id="modal-RaporEkle">
+        <div class="modal-dialog modal-lg" style="margin-bottom: 0px; height: 500px; text-align: justify;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">×</span></button>
+                    <h4 class="modal-title" id="modtitle">Rapor Oluştur</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="box-body form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Rapor Tasarim*</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="TasarimType" name="TasarimType"></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Fatura Tarihi(Başlangıç):*</label>
+                            <div class="col-sm-9">
+                                <input type="text" id="faturaBaslangic" class="form-control datepicker" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Fatura Tarihi(Bitiş):*</label>
+                            <div class="col-sm-9">
+                                <input type="text" id="faturaBitis" class="form-control datepicker" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                    <button id="userAddBtn" onclick="raporEkleBtn()" class="btn btn-primary">Oluştur</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#myDataTable').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
+    <script src="/hizlicss/jsv643136158/Report/generalReport.js"></script>
 }

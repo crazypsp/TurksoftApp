@@ -1,5 +1,156 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Gelen İrsaliyeler";
+    ViewData["Subtitle"] = "e-İrsaliye";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-İrsaliye <small>Gelen İrsaliyeler</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-İrsaliye</li>
+        <li class="active">Gelen İrsaliyeler</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Filtreleme Seçenekleri</h3>
+        </div>
+        <div class="box-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Başlangıç Tarihi</label>
+                        <input id="IssueDateStart" type="text" class="form-control datepicker" />
+                    </div>
+                    <div class="form-group">
+                        <label>Bitiş Tarihi</label>
+                        <input id="IssueDateEnd" type="text" class="form-control datepicker" />
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Gönderen Ünvan</label>
+                        <input id="SenderTitle" type="text" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Gönderen VKN/TCKN</label>
+                        <input id="SenderVknTckn" type="text" maxlength="11" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Senaryo</label>
+                        <select id="Scenario" class="form-control select2">
+                            <option value="">Tümü</option>
+                            <option value="TEMELIRSALIYE">TEMELIRSALIYE</option>
+                            <option value="TICARIIIRSALIYE">TICARIIIRSALIYE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Durum</label>
+                        <select id="Status" class="form-control select2">
+                            <option value="">Tümü</option>
+                            <option value="KABUL">KABUL</option>
+                            <option value="RED">RED</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                <button type="button" class="btn btn-success" onclick="gridSearch()">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+            </div>
+            <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                <button type="button" class="btn btn-danger" onclick="clearSearchInputs()">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Gelen e-İrsaliyeler</h3>
+        </div>
+        <div class="box-body table-responsive">
+            <table id="grid_inboxDespatch" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>İrsaliye No</th>
+                        <th>Gönderen Ünvan</th>
+                        <th>Gönderen VKN/TCKN</th>
+                        <th>Senaryo</th>
+                        <th>İrsaliye Tarihi</th>
+                        <th>Toplam Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="checkbox" /></td>
+                        <td>IRS2025/00015</td>
+                        <td>ABC LOJİSTİK A.Ş.</td>
+                        <td>1234567890</td>
+                        <td>TEMELIRSALIYE</td>
+                        <td>01.10.2025</td>
+                        <td>4.250,00 ₺</td>
+                        <td><span class="label label-warning">KABUL BEKLENİYOR</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm" title="Önizle"><i class="fa fa-eye"></i></button>
+                            <button class="btn btn-success btn-sm" title="Kabul Et"><i class="fa fa-check"></i></button>
+                            <button class="btn btn-danger btn-sm" title="Reddet"><i class="fa fa-times"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" /></td>
+                        <td>IRS2025/00016</td>
+                        <td>XYZ GIDA SANAYİ LTD. ŞTİ.</td>
+                        <td>9876543210</td>
+                        <td>TICARIIIRSALIYE</td>
+                        <td>02.10.2025</td>
+                        <td>8.760,00 ₺</td>
+                        <td><span class="label label-success">KABUL EDİLDİ</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm" title="Önizle"><i class="fa fa-eye"></i></button>
+                            <button class="btn btn-danger btn-sm" title="Reddet"><i class="fa fa-times"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_inboxDespatch').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 10
+            });
+
+            $('.select2').select2();
+            $('.datepicker').datepicker({
+                format: 'dd.mm.yyyy',
+                autoclose: true,
+                language: 'tr'
+            });
+        });
+
+        function gridSearch() {
+            Swal.fire('Bilgi', 'Arama işlemi başlatıldı.', 'info');
+        }
+
+        function clearSearchInputs() {
+            $('input').val('');
+            $('.select2').val('').trigger('change');
+            Swal.fire('Bilgi', 'Filtreleme alanları temizlendi.', 'success');
+        }
+    </script>
 }

@@ -1,0 +1,265 @@
+﻿@media only screen and (max-width: 417px) {
+    #h3ftbil {
+        font-size: 0px;
+    }
+
+    #btn_taslak {
+        font-size: 9px;
+    }
+
+    #btn_onizle {
+        font-size: 9px;
+    }
+
+    #btn_gonder {
+        font-size: 9px;
+    }
+}
+
+textarea {
+    resize: none;
+}
+
+
+.logbt {
+    width: 49%;
+    float: left;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 3px;
+    margin: 1px;
+    border: 1px solid #005088;
+}
+
+.exportExcel {
+    padding: 5px;
+    border: 1px solid grey;
+    margin: 5px;
+    cursor: pointer;
+}
+
+label.error {
+    color: #c91f37;
+    border-color: #c91f37;
+    font-size: small;
+}
+
+input.error {
+    border: 1px solid #c91f37 !important;
+}
+
+small.required {
+    color: #c91f37;
+}
+
+.files input {
+    outline: 2px dashed #92b0b3;
+    outline-offset: -10px;
+    -webkit-transition: outline-offset .15s ease-in-out, background-color .15s linear;
+    transition: outline-offset .15s ease-in-out, background-color .15s linear;
+    padding: 120px 0px 85px 35%;
+    text-align: center !important;
+    margin: 0;
+    width: 100% !important;
+}
+
+    .files input:focus {
+        outline: 2px dashed #92b0b3;
+        outline-offset: -10px;
+        -webkit-transition: outline-offset .15s ease-in-out, background-color .15s linear;
+        transition: outline-offset .15s ease-in-out, background-color .15s linear;
+        border: 1px solid #92b0b3;
+    }
+
+.files {
+    position: relative
+}
+
+    .files:after {
+        pointer-events: none;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        width: 50px;
+        right: 0;
+        height: 56px;
+        content: "";
+        background-image: url(/hizlicss/Ionicons/png/512/ios7-cloud-upload.png);
+        display: block;
+        margin: 0 auto;
+        background-size: 100%;
+        background-repeat: no-repeat;
+    }
+
+.color input {
+    background-color: #f1f1f1;
+}
+
+.files:before {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    pointer-events: none;
+    width: 100%;
+    right: 0;
+    height: 57px;
+    content: " Dosya seçin veya sürükleyip bırakın. ";
+    display: block;
+    margin: 0 auto;
+    color: #000000;
+    font-weight: 600;
+    text-transform: capitalize;
+    text-align: center;
+}
+
+.greenhoverclass:focus {
+    border: 2px solid #00a65a;
+}
+
+.orangehoverclass:focus {
+    border: 2px solid #f39c12;
+}
+
+.redhoverclass:focus {
+    border: 2px solid #dd4b39;
+}
+
+.readClass {
+    background-color: #bcdbe6;
+}
+
+.reportSuccess {
+    background-color: #E0F7FA;
+}
+
+.reportProcess {
+    background-color: #FFF9C4;
+}
+
+.reportError {
+    background-color: #FFCCBC;
+}
+
+.textShort {
+    width: 180px;
+    overflow: hidden; /* taşanları gizle */
+    white-space: nowrap; /* alt satıra hiç inme */
+    text-overflow: ellipsis; /* eğer uzunsa üç nokta koy */
+}
+
+#button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 30px;
+    background-color: #eee;
+    border: solid #ccc 1px;
+    cursor: pointer;
+}
+
+#overlay {
+    position: fixed;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    height: 100%;
+    display: none;
+    background: rgba(0,0,0,0.6);
+}
+
+#overlayManuel {
+    position: fixed;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    height: 100%;
+    display: none;
+    background: rgba(0,0,0,0.6);
+}
+
+.cv-spinner {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px #ddd solid;
+    border-top: 4px #2e93e6 solid;
+    border-radius: 50%;
+    animation: sp-anime 0.8s infinite linear;
+}
+
+@keyframes sp-anime {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.is-hide {
+    display: none;
+}
+
+.inputPadding {
+    padding: 0.6%;
+}
+
+.dt-head-center {
+    text-align: center;
+}
+
+.table thead,
+.table th {
+    text-align: center;
+}
+
+.pointerEventsNone {
+    pointer-events: none;
+}
+
+.sidebar-mini:not(.sidebar-mini-expand-feature).sidebar-collapse .sidebar-menu > li:hover > a > span:not(.pull-right), .sidebar-mini:not(.sidebar-mini-expand-feature).sidebar-collapse .sidebar-menu > li:hover > .treeview-menu {
+    display: block !important;
+    position: absolute;
+    width: 240px;
+    left: 50px;
+}
+
+.StandardTable thead th {
+    background: lightgray;
+}
+
+    .StandardTable thead th:first-of-type {
+        border-top-left-radius: 10px;
+    }
+
+    .StandardTable thead th:last-of-type {
+        border-top-right-radius: 10px;
+    }
+
+@keyframes blinker {
+    50% {
+        opacity: 0;
+    }
+}
+
+.blink {
+    animation: blinker 1s linear infinite;
+    color: red;
+}
+
+/* Tablonun tamamını kapsayacak şekilde eklenebilir */
+.table-responsive {
+    overflow-x: auto;
+}
+
+#kontorTable {
+    width: 100%;
+    max-width: 100%;
+    table-layout: auto;
+}
+
+.text-center-kontor {
+    text-align: center;
+}

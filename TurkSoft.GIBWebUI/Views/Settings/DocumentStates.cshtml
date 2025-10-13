@@ -1,5 +1,108 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Belge Durumu";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <div ng-app="myApp" ng-controller="myControllerDocumentStatus" class="ng-scope">
+        <div id="documentStatus" class="tab-pane fade in active">
+
+            <!-- Tarih aralık butonları -->
+            <div class="row">
+                <div class="btn-group" role="group" aria-label="Yıllar" style="margin-bottom:10px; margin-left:18px;">
+                    <button type="button" ng-click="documentRangeDate(1)" class="btn btn-primary">Bugün</button>
+                    <button type="button" ng-click="documentRangeDate(2)" class="btn btn-primary">Son 7 Gün</button>
+                    <button type="button" ng-click="documentRangeDate(3)" class="btn btn-primary">Son 30 Gün</button>
+                </div>
+            </div>
+
+            <!-- e-Fatura -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="box box-default">
+                        <div class="box-header with-border">
+                            <h4 class="box-title">e-Fatura</h4>
+                        </div>
+                        <div class="box-body form-horizontal">
+                            <table class="table table-bordered table-hover dataTable dt-head-center" ng-init="getDocumentStatusList(2)">
+                                <thead>
+                                    <tr>
+                                        <th>Kod</th>
+                                        <th>Durumu</th>
+                                        <th>Sayısı</th>
+                                        <th>İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Backend’den gelen e-Fatura verileri burada listelenecek -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- e-Arşiv -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="box box-default">
+                        <div class="box-header with-border">
+                            <h4 class="box-title">e-Arşiv</h4>
+                        </div>
+                        <div class="box-body form-horizontal">
+                            <table class="table table-bordered table-hover dataTable dt-head-center" ng-init="getDocumentStatusList(3)">
+                                <thead>
+                                    <tr>
+                                        <th>Kod</th>
+                                        <th>Durumu</th>
+                                        <th>Sayısı</th>
+                                        <th>İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Backend’den gelen e-Arşiv verileri burada listelenecek -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Müşteri Listesi Modal -->
+            <div class="modal fade" id="modal-errorDocumentCustomer" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="box-body form-horizontal">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                <h4 class="modal-title">Müşteri Listesi</h4>
+                            </div>
+                            <div class="modal-body" style="overflow-y:scroll; height:500px;">
+                                <table class="table table-bordered table-hover dataTable dt-head-center">
+                                    <thead>
+                                        <tr>
+                                            <th>VergiNo / TCKimlikNo</th>
+                                            <th>Unvan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Backend’den gelen müşteri listesi burada listelenecek -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="/hizlicss/jsv643136158/settings.js"></script>
 }

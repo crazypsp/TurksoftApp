@@ -1,5 +1,118 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Rapor Özelleştir";
+    ViewData["Subtitle"] = "Raporlar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Rapor Özelleştirme</h3>
+        </div>
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-left" style="padding:3px 6px;">
+                <button type="button" class="btn btn-info" onclick="newModal()">
+                    Yeni Oluştur <i class="glyphicon glyphicon-plus-sign"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="body-inner">
+        <div class="table-vertical">
+            <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Tasarım Adı</th>
+                        <th>Rapor Tipi</th>
+                        <th>Oluşturulma Tarihi</th>
+                        <th>Güncelleme Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5" class="dataTables_empty">Tabloda herhangi bir veri mevcut değil</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: Tasarım Ekle -->
+    <div class="modal fade" id="modal-TasarimEkle" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" style="height:500px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">Rapor Özelleştirme</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="box-body form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Rapor Tasarım Adı*</label>
+                            <div class="col-sm-9">
+                                <input type="text" id="templateName" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Rapor Türü*</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="ReportType">
+                                    <option value="1">e-Fatura Gelen</option>
+                                    <option value="2">e-Fatura Giden</option>
+                                    <option value="3">e-Arşiv Fatura</option>
+                                    <option value="4">Tüm Giden Faturalar</option>
+                                    <option value="5">e-Serbest Meslek Makbuz</option>
+                                    <option value="6">e-Müstahsil Makbuz</option>
+                                    <option value="8">e-İrsaliye Gelen</option>
+                                    <option value="9">e-İrsaliye Giden</option>
+                                    <option value="11">e-Adisyon</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Rapor Başlıkları*</label>
+                        <div id="mytree" class="jstree"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-primary" onclick="tasarimEkleBtn()">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#myDataTable').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+
+            // jsTree init
+            $('#mytree').jstree({
+                "plugins": ["checkbox"],
+                "core": {
+                    "data": [
+                        { "id": "1", "text": "FATURA NUMARASI", "icon": "fa fa-file" },
+                        { "id": "2", "text": "FATURA TARİHİ", "icon": "fa fa-file" },
+                        { "id": "3", "text": "FATURA ETTN", "icon": "fa fa-file" },
+                        { "id": "4", "text": "FATURA SENARYOSU", "icon": "fa fa-file" },
+                        { "id": "5", "text": "FATURA TÜRÜ", "icon": "fa fa-file" },
+                        { "id": "6", "text": "ALICI UNVANI", "icon": "fa fa-file" },
+                        { "id": "7", "text": "ALICI VKN", "icon": "fa fa-file" },
+                        { "id": "8", "text": "GÖNDERİCİ UNVANI", "icon": "fa fa-file" },
+                        { "id": "9", "text": "GÖNDERİCİ VKN/TCKN", "icon": "fa fa-file" },
+                        { "id": "10", "text": "RED/KABUL", "icon": "fa fa-file" }
+                        // ... diğer başlıklar burada devam edecek
+                    ]
+                }
+            });
+        });
+    </script>
+    <script src="/hizlicss/plugins/jstree/jstree.min.js"></script>
+    <script src="/hizlicss/jsv643136158/Report/reportCustomize.js"></script>
 }

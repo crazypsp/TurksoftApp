@@ -1,5 +1,85 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Fiyat Listesi";
+    ViewData["Subtitle"] = "Listeler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <h2>Kontör Fiyat Listesi</h2>
+    <div class="box box-primary">
+        <div class="box-body">
+            <table id="grid_kontorlist" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Kontör Adedi</th>
+                        <th>Birim Fiyatı</th>
+                        <th>KDV Hariç Tutar</th>
+                        <th>KDV Oran</th>
+                        <th>KDV Dahil Tutar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>100</td><td>8,4₺</td><td>840₺</td><td>20</td><td>1008₺</td></tr>
+                    <tr><td>250</td><td>7₺</td><td>1750₺</td><td>20</td><td>2100₺</td></tr>
+                    <tr><td>500</td><td>5,5₺</td><td>2750₺</td><td>20</td><td>3300₺</td></tr>
+                    <tr><td>1000</td><td>4₺</td><td>4000₺</td><td>20</td><td>4800₺</td></tr>
+                    <tr><td>2500</td><td>3,25₺</td><td>8125₺</td><td>20</td><td>9750₺</td></tr>
+                    <tr><td>5000</td><td>2,7₺</td><td>13500₺</td><td>20</td><td>16200₺</td></tr>
+                    <tr><td>10000</td><td>2,25₺</td><td>22500₺</td><td>20</td><td>27000₺</td></tr>
+                    <tr><td>25000</td><td>1,8₺</td><td>45000₺</td><td>20</td><td>54000₺</td></tr>
+                    <tr><td>50000</td><td>1,45₺</td><td>72500₺</td><td>20</td><td>87000₺</td></tr>
+                    <tr><td>100000</td><td>1,25₺</td><td>125000₺</td><td>20</td><td>150000₺</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2>Paket Fiyat Listesi</h2>
+    <div class="box box-primary">
+        <div class="box-body">
+            <table id="grid_paketlist" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Hizmet Türü</th>
+                        <th>Paket Açıklaması</th>
+                        <th>KDV Dahil Tutar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>E_ADISYON</td><td>e-Adisyon Portal</td><td>1500₺</td></tr>
+                    <tr><td>E_ADISYON</td><td>e-Adisyon Connect</td><td>1500₺</td></tr>
+                    <tr><td>E_ARSIV</td><td>e-Arşiv Portal</td><td>1500₺</td></tr>
+                    <tr><td>E_ARSIV</td><td>e-Arşiv Connect</td><td>1500₺</td></tr>
+                    <tr><td>E_DEFTER</td><td>e-Defter Portal(Gönderim ve Saklama dahil)</td><td>3500₺</td></tr>
+                    <tr><td>E_DEFTER</td><td>e-Defter Connect(Gönderim ve Saklama dahil)</td><td>3500₺</td></tr>
+                    <tr><td>E_DEFTER</td><td>e-Defter Portal(Sadece Başvuru)</td><td>0₺</td></tr>
+                    <tr><td>E_DEFTER_YUKLEME</td><td>e-Defter  Saklama Portal(Transfer e-Defter yükleme)</td><td>2000₺</td></tr>
+                    <tr><td>E_DEFTER_YUKLEME</td><td>e-Defter  Saklama Connect(Transfer e-Defter yükleme)</td><td>2000₺</td></tr>
+                    <tr><td>E_DOVIZ</td><td>e-Döviz Portal</td><td>1500₺</td></tr>
+                    <tr><td>E_DOVIZ</td><td>e-Döviz Connect</td><td>1500₺</td></tr>
+                    <tr><td>E_FATURA</td><td>e-Fatura Portal</td><td>1500₺</td></tr>
+                    <tr><td>E_FATURA</td><td>e-Fatura Connect</td><td>1500₺</td></tr>
+                    <tr><td>E_IRSALIYE</td><td>e-İrsaliye Portal</td><td>1500₺</td></tr>
+                    <tr><td>E_IRSALIYE</td><td>e-İrsaliye Connect</td><td>1500₺</td></tr>
+                    <tr><td>MM</td><td>e-Müstahsil Makbuzu Portal</td><td>1500₺</td></tr>
+                    <tr><td>MM</td><td>e-Müstahsil Makbuzu Connect</td><td>1500₺</td></tr>
+                    <tr><td>SAKLAMA</td><td>e-Belge Saklama Portal</td><td>0₺</td></tr>
+                    <tr><td>SAKLAMA</td><td>e-Belge Saklama Connect</td><td>0₺</td></tr>
+                    <tr><td>SMM</td><td>e-Serbest Meslek Makbuzu Portal</td><td>1500₺</td></tr>
+                    <tr><td>SMM</td><td>e-Serbest Meslek Makbuzu Connect</td><td>1500₺</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_kontorlist, #grid_paketlist').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
 }

@@ -1,1 +1,158 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Yeni Adisyon Oluştur";
+    ViewData["Subtitle"] = "e-Adisyon";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+
+<section class="content-header">
+    <h1><i class="fa fa-files-o"></i> Gönderilmiş Raporlar</h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> Rapor</li>
+        <li class="active">Gönderilmiş Raporlar</li>
+    </ol>
+</section>
+
+<section class="content">
+
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Rapor Filtreleme</h3>
+        </div>
+        <div class="box-body">
+            <div class="row">
+
+                <div class="col-md-3">
+                    <label>Yıl</label>
+                    <select class="form-control select2" ng-model="filter.Yil">
+                        <option value="">Tümü</option>
+                        <option ng-repeat="y in [2025,2024,2023,2022,2021,2020,2019,2018,2017]">{{y}}</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label>Dönem</label>
+                    <input type="text" class="form-control" ng-model="filter.Donem" placeholder="01 / 02 / 03..." />
+                </div>
+
+                <div class="col-md-3">
+                    <label>Durum</label>
+                    <select class="form-control select2" ng-model="filter.Durum">
+                        <option value="">Tümü</option>
+                        <option value="Tamamlandı">Tamamlandı</option>
+                        <option value="Beklemede">Beklemede</option>
+                        <option value="Hata">Hata</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary btn-block" ng-click="filtrele()"><i class="fa fa-search"></i> Filtrele</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-success">
+        <div class="box-header with-border">
+            <h3 class="box-title">Gönderilmiş Raporlar Listesi</h3>
+        </div>
+        <div class="box-body">
+            <table id="sendingReportsTable" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Rapor No</th>
+                        <th>Dönem</th>
+                        <th>Bölüm No</th>
+                        <th>Başlangıç Tarihi</th>
+                        <th>Bitiş Tarihi</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="rapor in raporlar">
+                        <td>{{ rapor.RaporNo }}</td>
+                        <td>{{ rapor.DonemNo }}</td>
+                        <td>{{ rapor.BolumNo }}</td>
+                        <td>{{ rapor.BaslangicTarihi }}</td>
+                        <td>{{ rapor.BitisTarihi }}</td>
+                        <td>
+                            <span class="label"
+                                  ng-class="{
+                                          'label-success': rapor.Durum == 'Tamamlandı',
+                                          'label-warning': rapor.Durum == 'Beklemede',
+                                          'label-danger': rapor.Durum == 'Hata'
+                                      }">{{ rapor.Durum }}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-xs" ng-click="detay(rapor)">
+                                <i class="fa fa-eye"></i> Görüntüle
+                            </button>
+                            <button class="btn btn-danger btn-xs" ng-click="sil(rapor)">
+                                <i class="fa fa-trash"></i> Sil
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+
+@section Scripts {
+    <script>
+        var app = angular.module('SendingReportsApp', []);
+        app.controller('SendingReportsController', function ($scope) {
+
+            $scope.filter = {};
+            $scope.raporlar = [
+                { RaporNo: 'RPT-001', DonemNo: '01', BolumNo: 'A', BaslangicTarihi: '01.01.2025', BitisTarihi: '31.01.2025', Durum: 'Tamamlandı' },
+                { RaporNo: 'RPT-002', DonemNo: '02', BolumNo: 'B', BaslangicTarihi: '01.02.2025', BitisTarihi: '28.02.2025', Durum: 'Beklemede' },
+                { RaporNo: 'RPT-003', DonemNo: '03', BolumNo: 'C', BaslangicTarihi: '01.03.2025', BitisTarihi: '31.03.2025', Durum: 'Hata' }
+            ];
+
+            $scope.filtrele = function () {
+                Swal.fire('Filtreleme tamamlandı', 'Sonuçlar güncellendi', 'info');
+            };
+
+            $scope.detay = function (rapor) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Rapor Detayı',
+                    html: `<b>Rapor No:</b> ${rapor.RaporNo}<br>
+                           <b>Dönem:</b> ${rapor.DonemNo}<br>
+                           <b>Bölüm:</b> ${rapor.BolumNo}<br>
+                           <b>Durum:</b> ${rapor.Durum}`
+                });
+            };
+
+            $scope.sil = function (rapor) {
+                Swal.fire({
+                    title: 'Rapor Silinsin mi?',
+                    text: rapor.RaporNo + ' numaralı rapor silinecek.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Evet, Sil',
+                    cancelButtonText: 'Vazgeç'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const index = $scope.raporlar.indexOf(rapor);
+                        $scope.raporlar.splice(index, 1);
+                        $scope.$apply();
+                        Swal.fire('Silindi!', 'Rapor başarıyla silindi.', 'success');
+                    }
+                });
+            };
+
+            $(function () {
+                $('.select2').select2();
+                $('#sendingReportsTable').DataTable();
+            });
+        });
+    </script>
+}

@@ -1,5 +1,111 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Giden e-Arşiv Faturalar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Giden e-Arşiv Fatura Listesi</h3>
+        </div>
+        <div class="box-body">
+            <div class="table-responsive">
+                <table id="outboxEarchiveTable" class="table table-bordered table-hover dataTable">
+                    <thead>
+                        <tr>
+                            <th>Fatura No</th>
+                            <th>Tarih</th>
+                            <th>Alıcı Ünvan</th>
+                            <th>VKN/TCKN</th>
+                            <th>Tutar</th>
+                            <th>Para Birimi</th>
+                            <th>Durum</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ARŞ20250001</td>
+                            <td>02.10.2025</td>
+                            <td>ABC A.Ş.</td>
+                            <td>1234567890</td>
+                            <td>15.250,00</td>
+                            <td>TRY</td>
+                            <td>Onaylandı</td>
+                            <td>
+                                <button class="btn btn-info btn-sm" onclick="showInvoiceDetail('ARŞ20250001')">
+                                    <i class="fa fa-search"></i> Detay
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>ARŞ20250002</td>
+                            <td>30.09.2025</td>
+                            <td>XYZ Ltd. Şti.</td>
+                            <td>9876543210</td>
+                            <td>7.850,00</td>
+                            <td>TRY</td>
+                            <td>Gönderildi</td>
+                            <td>
+                                <button class="btn btn-info btn-sm" onclick="showInvoiceDetail('ARŞ20250002')">
+                                    <i class="fa fa-search"></i> Detay
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>ARŞ20250003</td>
+                            <td>28.09.2025</td>
+                            <td>Test Kullanıcı</td>
+                            <td>1928374650</td>
+                            <td>1.200,00</td>
+                            <td>TRY</td>
+                            <td>Bekliyor</td>
+                            <td>
+                                <button class="btn btn-info btn-sm" onclick="showInvoiceDetail('ARŞ20250003')">
+                                    <i class="fa fa-search"></i> Detay
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Fatura Detay -->
+    <div class="modal fade" id="invoiceDetailModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">Fatura Detayları</h4>
+                </div>
+                <div class="modal-body">
+                    <iframe id="invoiceDetailIframe" style="width:100%;height:500px;border:none;"></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#outboxEarchiveTable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json"
+                }
+            });
+        });
+
+        function showInvoiceDetail(invoiceNo) {
+            $("#invoiceDetailIframe").attr("src", "/EArchive/Detail/" + invoiceNo);
+            $("#invoiceDetailModal").modal("show");
+        }
+    </script>
 }

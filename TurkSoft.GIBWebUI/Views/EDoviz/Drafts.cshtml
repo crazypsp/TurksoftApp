@@ -1,1 +1,201 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Yeni Adisyon Oluştur";
+    ViewData["Subtitle"] = "e-Adisyon";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+
+
+<section class="content-header">
+    <h1><i class="fa fa-edit"></i> Taslak e-Döviz / e-Kıymetli Maden</h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Döviz</li>
+        <li class="active">Taslak</li>
+    </ol>
+</section>
+
+<section class="content">
+
+    <!-- Filtreleme Alanı -->
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Arama Seçenekleri</h3>
+        </div>
+        <div class="box-body">
+            <div class="row form-section">
+                <div class="col-md-3">
+                    <label>Alıcı VKN/TCKN</label>
+                    <input type="text" class="form-control" ng-model="filter.Vkn" maxlength="11" placeholder="VKN/TCKN">
+                </div>
+                <div class="col-md-3">
+                    <label>Alıcı Unvan</label>
+                    <input type="text" class="form-control" ng-model="filter.Unvan" placeholder="Alıcı unvanı">
+                </div>
+                <div class="col-md-3">
+                    <label>Belge Tarihi (Başlangıç)</label>
+                    <input type="text" class="form-control datepicker" ng-model="filter.StartDate" placeholder="gg.aa.yyyy">
+                </div>
+                <div class="col-md-3">
+                    <label>Belge Tarihi (Bitiş)</label>
+                    <input type="text" class="form-control datepicker" ng-model="filter.EndDate" placeholder="gg.aa.yyyy">
+                </div>
+            </div>
+
+            <div class="row form-section">
+                <div class="col-md-3">
+                    <label>Ödenecek Tutar</label>
+                    <input type="number" class="form-control" ng-model="filter.Tutar" placeholder="Tutar giriniz">
+                </div>
+                <div class="col-md-3">
+                    <label>Şube Seçiniz</label>
+                    <select class="form-control select2" multiple ng-model="filter.Subeler">
+                        <option value="1">HIZLI BİLİŞİM TEST MERKEZ</option>
+                        <option value="465">HBT MERSİN</option>
+                        <option value="466">Antalya Şube</option>
+                        <option value="467">EntegreTürk</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-success btn-block" ng-click="aramaYap()"><i class="fa fa-search"></i> Arama Yap</button>
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-danger btn-block" ng-click="temizle()"><i class="fa fa-remove"></i> Temizle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tablo -->
+    <div class="box box-success">
+        <div class="box-header with-border">
+            <h3 class="box-title">Taslak e-Döviz / Kıymetli Maden Listesi</h3>
+        </div>
+        <div class="box-body">
+            <table id="draftDovizTable" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" ng-model="seciliTum" ng-click="tumunuSec()"></th>
+                        <th>Makbuz No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi No</th>
+                        <th>Senaryo</th>
+                        <th>Makbuz Tarihi</th>
+                        <th>Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="taslak in taslaklar">
+                        <td><input type="checkbox" ng-model="taslak.secili"></td>
+                        <td>{{ taslak.MakbuzNo }}</td>
+                        <td>{{ taslak.FirmaAdi }}</td>
+                        <td>{{ taslak.VergiNo }}</td>
+                        <td>{{ taslak.Senaryo }}</td>
+                        <td>{{ taslak.Tarih }}</td>
+                        <td>{{ taslak.Tutar | currency:'₺' }}</td>
+                        <td><span class="label label-success">Taslak</span></td>
+                        <td>
+                            <button class="btn btn-info btn-xs" ng-click="onizle(taslak)"><i class="fa fa-search"></i></button>
+                            <button class="btn btn-warning btn-xs" ng-click="duzenle(taslak)"><i class="fa fa-edit"></i></button>
+                            <button class="btn btn-danger btn-xs" ng-click="sil(taslak)"><i class="fa fa-trash"></i></button>
+                            <button class="btn btn-success btn-xs" ng-click="gonder(taslak)"><i class="fa fa-send"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="box-footer text-right">
+            <button class="btn btn-primary" ng-click="topluGonder()"><i class="fa fa-upload"></i> Seçilileri Gönder</button>
+            <button class="btn btn-danger" ng-click="topluSil()"><i class="fa fa-trash"></i> Seçilileri Sil</button>
+        </div>
+    </div>
+</section>
+
+
+@section Scripts {
+
+    <script>
+        var app = angular.module('DraftDovizApp', []);
+        app.controller('DraftDovizController', function ($scope) {
+
+            $scope.filter = {};
+            $scope.seciliTum = false;
+
+            $scope.taslaklar = [
+                { MakbuzNo: 'DVZ-001', FirmaAdi: 'Altın Ticaret A.Ş.', VergiNo: '11111111111', Senaryo: 'DOVIZ', Tarih: '18.09.2025', Tutar: 1111 },
+                { MakbuzNo: 'DVZ-002', FirmaAdi: 'Global Metal Ltd.', VergiNo: '9876543210', Senaryo: 'DOVIZ', Tarih: '19.09.2025', Tutar: 400 }
+            ];
+
+            $scope.tumunuSec = function () {
+                $scope.taslaklar.forEach(t => t.secili = $scope.seciliTum);
+            };
+
+            $scope.aramaYap = function () {
+                Swal.fire('Filtreleme tamamlandı', 'Sonuçlar güncellendi', 'info');
+            };
+
+            $scope.temizle = function () {
+                $scope.filter = {};
+                $scope.seciliTum = false;
+                $scope.taslaklar.forEach(t => t.secili = false);
+            };
+
+            $scope.onizle = function (taslak) {
+                Swal.fire('Önizleme', `Makbuz No: ${taslak.MakbuzNo}`, 'info');
+            };
+
+            $scope.duzenle = function (taslak) {
+                Swal.fire('Düzenle', `${taslak.FirmaAdi} adlı kaydı düzenleme moduna geçiliyor.`, 'warning');
+            };
+
+            $scope.sil = function (taslak) {
+                Swal.fire({
+                    title: 'Silmek istiyor musunuz?',
+                    text: taslak.MakbuzNo + " numaralı taslak silinecek.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Evet, Sil',
+                    cancelButtonText: 'Vazgeç'
+                }).then((r) => {
+                    if (r.isConfirmed) {
+                        const i = $scope.taslaklar.indexOf(taslak);
+                        $scope.taslaklar.splice(i, 1);
+                        $scope.$apply();
+                        Swal.fire('Silindi!', 'Taslak başarıyla silindi.', 'success');
+                    }
+                });
+            };
+
+            $scope.gonder = function (taslak) {
+                Swal.fire('Gönderildi', `${taslak.MakbuzNo} numaralı taslak GİB'e gönderildi.`, 'success');
+            };
+
+            $scope.topluGonder = function () {
+                const secili = $scope.taslaklar.filter(t => t.secili);
+                Swal.fire('Gönderildi', `${secili.length} taslak GİB'e gönderildi.`, 'success');
+            };
+
+            $scope.topluSil = function () {
+                const secili = $scope.taslaklar.filter(t => t.secili);
+                if (secili.length === 0) return Swal.fire('Uyarı', 'Lütfen en az bir taslak seçiniz.', 'warning');
+                $scope.taslaklar = $scope.taslaklar.filter(t => !t.secili);
+                Swal.fire('Silindi', `${secili.length} taslak başarıyla silindi.`, 'success');
+            };
+
+            $(function () {
+                $('#draftDovizTable').DataTable();
+                $('.select2').select2();
+                $('.datepicker').datepicker({
+                    format: 'dd.mm.yyyy',
+                    autoclose: true
+                });
+            });
+        });
+    </script>
+}

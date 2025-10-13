@@ -1,1 +1,187 @@
-﻿
+﻿@{
+    ViewData["Title"] = "İstek/Talep Raporu";
+    ViewData["Subtitle"] = "Yönetim Paneli";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <div class="panel panel-sky">
+        <div class="panel-body" style="overflow:scroll;">
+            <!-- Arama Seçenekleri -->
+            <div class="box box-default">
+                <div class="box-header with-border">
+                    <h3 class="box-title">İstek/Talep Arama Seçenekleri</h3>
+                </div>
+                <div class="box-body" id="btnAramaYapEnter">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Müşteri Adı</label>
+                                <div class="col-sm-6">
+                                    <input id="MusteriAdi" type="text" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">VKN/TCKN</label>
+                                <div class="col-sm-6">
+                                    <input id="VknTckn" type="text" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Konu Adı</label>
+                                <div class="col-sm-6">
+                                    <input id="KonuAdi" type="text" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Konu Tipi</label>
+                                <div class="col-sm-6">
+                                    <select id="konutid" class="form-control select2">
+                                        <option value="-1">Tümü</option>
+                                        <option value="0">Diğer</option>
+                                        <option value="1">e-Fatura</option>
+                                        <option value="2">e-Arşiv</option>
+                                        <option value="3">e-Defter</option>
+                                        <option value="4">e-İrsaliye</option>
+                                        <option value="5">e-SMM</option>
+                                        <option value="6">e-Müstahsil Makbuzu</option>
+                                        <option value="7">e-Gider Pusulası</option>
+                                        <option value="8">e-Defter Saklama</option>
+                                        <option value="9">e-Döviz</option>
+                                        <option value="10">e-Adisyon</option>
+                                        <option value="11">e-Dekont</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Talep Durumu</label>
+                                <div class="col-sm-6">
+                                    <select id="statuid" class="form-control select2">
+                                        <option value="-1">Tümü</option>
+                                        <option value="1">Talep Alındı</option>
+                                        <option value="2">Cevap Verildi</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Talep Tarihi (Başlangıç)</label>
+                                <div class="col-sm-6">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="createDateStart" type="text" class="form-control datepicker" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Talep Tarihi (Bitiş)</label>
+                                <div class="col-sm-6">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="createDateEnd" type="text" class="form-control datepicker" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Butonlar -->
+                <div class="box-footer">
+                    <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                        <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+                    </div>
+                    <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                        <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DataTable -->
+            <div class="body-inner">
+                <div class="table-vertical">
+                    <table id="grid" class="table table-bordered table-hover dataTable dt-head-center">
+                        <thead>
+                            <tr>
+                                <th>Vkn/Tckn</th>
+                                <th>Müşteri Adı</th>
+                                <th>Konu Tipi</th>
+                                <th>Konu</th>
+                                <th>Talep Durumu</th>
+                                <th>Talep Tarihi</th>
+                                <th>Cevap Tarihi</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>60262240798</td>
+                                <td>RESUL EREN</td>
+                                <td>e-Fatura</td>
+                                <td>fatura kesemiyorum</td>
+                                <td><span class="label label-success">Cevap Verildi</span></td>
+                                <td>15.07.2025 06:41:15</td>
+                                <td>15.07.2025 16:33:27</td>
+                                <td><button type="button" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></button></td>
+                            </tr>
+                            <tr>
+                                <td>45562906872</td>
+                                <td>VEYSEL GÜMÜŞTAŞ</td>
+                                <td>e-Fatura</td>
+                                <td>ONLİNE ÖN MUHASEBE YE ENTEGRASYONU HK.</td>
+                                <td><span class="label label-success">Cevap Verildi</span></td>
+                                <td>01.11.2024 17:52:50</td>
+                                <td>05.11.2024 17:30:32</td>
+                                <td><button type="button" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></button></td>
+                            </tr>
+                            <!-- diğer satırlar buraya eklendi -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Talep Detay Modal -->
+    <div class="modal fade" id="message-modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">İstek/Talep Bildirimi</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Konu</label>
+                        <input id="konutxt" type="text" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <textarea id="aciklama" class="form-control" rows="5"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Cevap</label>
+                        <textarea id="cevap" class="form-control" rows="5"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-primary" onclick="answerTalep()">Cevap Gönder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
+}

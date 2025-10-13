@@ -1,5 +1,174 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-Defter Aktarım";
+    ViewData["Subtitle"] = "e-Defter";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Defter
+        <small>e-Defter Aktarımları</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Defter</li>
+        <li class="active">e-Defter Aktarımları</li>
+    </ol>
+</section>
+
+<section class="content">
+    <ul class="nav nav-tabs">
+        <li class="active"><a data-toggle="tab" href="#lucaedefter">Luca e-Defter</a></li>
+        <li><a data-toggle="tab" href="#datasoftedefter">Datasoft e-Defter</a></li>
+        <li><a data-toggle="tab" href="#zenomedefter">Zenom e-Defter</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- LUCA e-Defter -->
+        <div id="lucaedefter" class="tab-pane fade in active">
+            <h3>Luca e-Defter</h3>
+            <div class="col-md-6" style="padding:0px;">
+                <label>Sistem Müşteri Unvanı:</label>
+                <input type="text" class="form-control" value="HIZLI BİLİŞİM TEST FİRMA LTD.ŞTİ" disabled />
+            </div>
+            <div class="col-md-6" style="padding: 0px; margin-block: 10px; display: flex; gap: 5px;">
+                <div style="flex: 1;">
+                    <label>Luca Excel Müşteri Unvanı:</label>
+                    <input type="text" class="form-control" id="lucaCustomer" />
+                </div>
+                <div style="align-self: flex-end;">
+                    <button type="button" id="btnSaveLuca" class="btn btn-primary">✓</button>
+                </div>
+            </div>
+
+            <!-- 1. PARÇA -->
+            <div class="col-md-4" style="margin-block:10px;">
+                <label>1.PARÇA</label>
+                <div style="display:flex;gap:5px;">
+                    <label class="custom-file-upload form-control text-center">
+                        <i class="fa fa-file"></i> Luca Yevmiye Defteri
+                        <input type="file" accept=".xls,.xlsx" style="display:none;">
+                    </label>
+                    <label class="custom-file-upload form-control text-center">
+                        <i class="fa fa-file"></i> Luca Defteri Kebir
+                        <input type="file" accept=".xls,.xlsx" style="display:none;">
+                    </label>
+                </div>
+            </div>
+
+            <!-- 2. PARÇA -->
+            <div class="col-md-4" style="margin-block:10px;">
+                <label>2.PARÇA</label>
+                <div style="display:flex;gap:5px;">
+                    <label class="custom-file-upload form-control text-center">
+                        <i class="fa fa-file"></i> Luca Yevmiye Defteri
+                        <input type="file" accept=".xls,.xlsx" style="display:none;">
+                    </label>
+                    <label class="custom-file-upload form-control text-center">
+                        <i class="fa fa-file"></i> Luca Defteri Kebir
+                        <input type="file" accept=".xls,.xlsx" style="display:none;">
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3. PARÇA -->
+            <div class="col-md-4" style="margin-block:10px;">
+                <label>3.PARÇA</label>
+                <div style="display:flex;gap:5px;">
+                    <label class="custom-file-upload form-control text-center">
+                        <i class="fa fa-file"></i> Luca Yevmiye Defteri
+                        <input type="file" accept=".xls,.xlsx" style="display:none;">
+                    </label>
+                    <label class="custom-file-upload form-control text-center">
+                        <i class="fa fa-file"></i> Luca Defteri Kebir
+                        <input type="file" accept=".xls,.xlsx" style="display:none;">
+                    </label>
+                </div>
+            </div>
+
+            <div class="text-center" style="margin-top:20px;">
+                <button id="btnGoLedgerLuca" class="btn btn-success">
+                    <i class="fa fa-upload"></i> e-Defter İşlemlerine Git
+                </button>
+                <div class="text-danger" style="margin-top:10px;">
+                    <p>* Yevmiye Defteri Raporu Alırken <b>Belge Türü Yazdır</b> Seçilmelidir.</p>
+                    <p>* Defteri Kebir Raporu Alırken <b>Evrak No Aynı Göster</b> Seçilmelidir.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATASOFT e-Defter -->
+        <div id="datasoftedefter" class="tab-pane fade">
+            <h3>Datasoft e-Defter</h3>
+            <div class="col-md-6" style="padding:0px;">
+                <label>Sistem Müşteri Unvanı:</label>
+                <input type="text" class="form-control" value="HIZLI BİLİŞİM TEST FİRMA LTD.ŞTİ" disabled />
+            </div>
+            <div class="col-md-6" style="padding:0px;margin-top:10px;">
+                <label>Datasoft Excel Müşteri Unvanı:</label>
+                <input type="text" class="form-control" id="datasoftCustomer" />
+            </div>
+
+            <div class="col-md-4" style="margin-block:10px;">
+                <label>Excel Aktar</label>
+                <label class="custom-file-upload form-control text-center">
+                    <i class="fa fa-file"></i> Datasoft Excel Aktar
+                    <input type="file" accept=".xls,.xlsx" style="display:none;">
+                </label>
+            </div>
+
+            <div class="text-center" style="margin-top:20px;">
+                <button id="btnGoLedgerDatasoft" class="btn btn-success">
+                    <i class="fa fa-upload"></i> e-Defter İşlemlerine Git
+                </button>
+            </div>
+        </div>
+
+        <!-- ZENOM e-Defter -->
+        <div id="zenomedefter" class="tab-pane fade">
+            <h3>Zenom e-Defter</h3>
+            <div class="col-md-6" style="padding:0px;">
+                <label>Sistem Müşteri Unvanı:</label>
+                <input type="text" class="form-control" value="HIZLI BİLİŞİM TEST FİRMA LTD.ŞTİ" disabled />
+            </div>
+
+            <div class="col-md-4" style="margin-block:10px;">
+                <label>Excel Aktar</label>
+                <label class="custom-file-upload form-control text-center">
+                    <i class="fa fa-file"></i> Zenom Excel Aktar
+                    <input type="file" accept=".xls,.xlsx" style="display:none;">
+                </label>
+            </div>
+
+            <div class="col-md-4" style="margin-block:10px;">
+                <label>CSV Aktar</label>
+                <label class="custom-file-upload form-control text-center">
+                    <i class="fa fa-file"></i> Zenom CSV Aktar
+                    <input type="file" accept=".csv" style="display:none;">
+                </label>
+            </div>
+
+            <div class="col-md-4" style="margin-block:10px;">
+                <label>Yevmiye Defteri Rapor</label>
+                <label class="custom-file-upload form-control text-center">
+                    <i class="fa fa-file"></i> Zenom Yevmiye Defteri Rapor
+                    <input type="file" accept=".xls,.xlsx,.csv" style="display:none;">
+                </label>
+            </div>
+
+            <div class="text-center" style="margin-top:20px;">
+                <button id="btnGoLedgerZenom" class="btn btn-success">
+                    <i class="fa fa-upload"></i> e-Defter İşlemlerine Git
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $('#btnSaveLuca').click(() => Swal.fire('Bilgi', 'Luca bilgileri kaydedildi.', 'success'));
+        $('#btnGoLedgerLuca').click(() => Swal.fire('Bilgi', 'Luca e-Defter işlemine yönlendiriliyor...', 'info'));
+        $('#btnGoLedgerDatasoft').click(() => Swal.fire('Bilgi', 'Datasoft e-Defter işlemine yönlendiriliyor...', 'info'));
+        $('#btnGoLedgerZenom').click(() => Swal.fire('Bilgi', 'Zenom e-Defter işlemine yönlendiriliyor...', 'info'));
+    </script>
 }

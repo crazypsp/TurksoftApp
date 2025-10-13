@@ -1,5 +1,176 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Giden e-İrsaliyeler";
+    ViewData["Subtitle"] = "e-İrsaliye";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-İrsaliye <small>Giden e-İrsaliyeler</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-İrsaliye</li>
+        <li class="active">Giden e-İrsaliyeler</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Filtreleme Seçenekleri</h3>
+        </div>
+
+        <div class="box-body" id="btnAramaYapEnter">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İrsaliye Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="IssueDateStart" type="text" class="form-control datepicker" />
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İrsaliye Tarihi (Bitiş)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="IssueDateEnd" type="text" class="form-control datepicker" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı Unvan</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetTitle" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı VKN/TCKN</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetIdentifier" type="text" maxlength="11" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Durum</label>
+                        <div class="col-sm-6 inputPadding">
+                            <select id="Status" class="form-control select2">
+                                <option value="">Tümü</option>
+                                <option value="GONDERILDI">Gönderildi</option>
+                                <option value="KABUL">Kabul Edildi</option>
+                                <option value="RED">Reddedildi</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-left">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" onclick="pdfIndir()"><i class="fa fa-file-pdf-o"></i> PDF İndir</a></li>
+                    <li><a href="#" onclick="xmlIndir()"><i class="fa fa-file-code-o"></i> XML İndir</a></li>
+                </ul>
+            </div>
+
+            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                <button type="button" class="btn btn-success" onclick="gridSearch()">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+            </div>
+            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                <button type="button" class="btn btn-danger" onclick="clearSearchInputs()">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="grid_outboxDespatch" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>İrsaliye No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi Kimlik No</th>
+                        <th>Senaryo</th>
+                        <th>İrsaliye Tarihi</th>
+                        <th>Toplam Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="checkbox" /></td>
+                        <td>IRS2025/00001</td>
+                        <td>HIZLI BİLİŞİM TEKNOLOJİLERİ A.Ş.</td>
+                        <td>12345678901</td>
+                        <td>TEMELIRSALIYE</td>
+                        <td>01.10.2025</td>
+                        <td>2.350,00 ₺</td>
+                        <td><span class="label label-success">GÖNDERİLDİ</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm" title="Önizleme"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                            <button class="btn btn-primary btn-sm" title="PDF İndir"><i class="fa fa-file-pdf-o"></i></button>
+                            <button class="btn btn-warning btn-sm" title="XML İndir"><i class="fa fa-file-code-o"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" /></td>
+                        <td>IRS2025/00002</td>
+                        <td>AYDIN LOJİSTİK A.Ş.</td>
+                        <td>34567890123</td>
+                        <td>TICARIIIRSALIYE</td>
+                        <td>02.10.2025</td>
+                        <td>1.860,00 ₺</td>
+                        <td><span class="label label-warning">KABUL BEKLENİYOR</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm" title="Önizleme"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                            <button class="btn btn-primary btn-sm" title="PDF İndir"><i class="fa fa-file-pdf-o"></i></button>
+                            <button class="btn btn-warning btn-sm" title="XML İndir"><i class="fa fa-file-code-o"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_outboxDespatch').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 10
+            });
+
+            $('.select2').select2();
+            $('.datepicker').datepicker({
+                format: 'dd.mm.yyyy',
+                language: 'tr',
+                autoclose: true
+            });
+        });
+
+        function gridSearch() {
+            Swal.fire('Bilgi', 'Filtreleme işlemi başlatıldı.', 'info');
+        }
+
+        function clearSearchInputs() {
+            $('input').val('');
+            $('.select2').val('').trigger('change');
+            Swal.fire('Temizlendi', 'Filtreleme alanları sıfırlandı.', 'success');
+        }
+
+        function pdfIndir() {
+            Swal.fire('Bilgi', 'PDF indiriliyor...', 'info');
+        }
+
+        function xmlIndir() {
+            Swal.fire('Bilgi', 'XML indiriliyor...', 'info');
+        }
+    </script>
 }

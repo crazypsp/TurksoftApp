@@ -1,5 +1,89 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Gönderilmiş Raporlar";
+    ViewData["Subtitle"] = "e-Müstahsil";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>Rapor <small>Gönderilmiş Raporlar</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> Rapor</li>
+        <li class="active">Gönderilmiş Raporlar</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Gönderilmiş Raporlar</h3>
+        </div>
+
+        <div class="box-body form-horizontal">
+            <div class="form-group col-md-3 pull-right">
+                <label for="IntegrationYear">Yıl</label>
+                <select id="IntegrationYear" class="form-control select2">
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                    <option value="2023">2023</option>
+                    <option value="2022">2022</option>
+                    <option value="2021">2021</option>
+                    <option value="2020">2020</option>
+                    <option value="2019">2019</option>
+                    <option value="2018">2018</option>
+                    <option value="2017">2017</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="box-body table-responsive">
+            <table id="grid_sending_reports" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Rapor Numarası</th>
+                        <th>Dönem Numarası</th>
+                        <th>Bölüm Numarası</th>
+                        <th>Bölüm Başlangıç Tarihi</th>
+                        <th>Bölüm Bitiş Tarihi</th>
+                        <th>GİB Rapor Durumu</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>a7070acd-1f16-453d-a16b-2113bec17d9b</td><td>202509</td><td>6</td><td>26.09.2025</td><td>26.09.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>d7c9bd7b-0630-4378-8955-1a7d0991db4a</td><td>202508</td><td>7</td><td>26.09.2025</td><td>26.09.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>15602483-e0eb-4c61-a0b0-02b11ca4b6e6</td><td>202509</td><td>5</td><td>26.09.2025</td><td>26.09.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>fb62e91a-30f0-4a5e-b6f5-3a28029325dc</td><td>202508</td><td>6</td><td>26.09.2025</td><td>26.09.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>91ecc983-ee26-4860-aa61-9bb58396e3fb</td><td>202508</td><td>5</td><td>26.09.2025</td><td>26.09.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>e4bd72d3-61c2-43eb-a644-7a7d443c2c8c</td><td>202507</td><td>5</td><td>26.09.2025</td><td>26.09.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>b7919774-930b-4986-8386-a0f5d748feb4</td><td>202506</td><td>5</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>fd2166e9-a76b-4d17-994d-e6f8c4c109ec</td><td>202505</td><td>5</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>488e5cbc-9f7f-49ca-ab2c-108e2f3fa887</td><td>202507</td><td>1</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>4817e790-3c94-47ea-ace6-34ce81b6deba</td><td>202506</td><td>4</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>b08b0551-e536-4459-9420-39e5ba8e6e24</td><td>202505</td><td>4</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>87201c6f-e6d5-4643-8fa1-e35e8367dfbb</td><td>202504</td><td>3</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>21ed7759-59e8-4ced-8d3e-5cc68f152107</td><td>202502</td><td>2</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                    <tr><td>456ca06b-80ae-4722-ac8b-6ac5059355b3</td><td>202501</td><td>2</td><td>16.07.2025</td><td>16.07.2025</td><td>Rapor Kuyruğa Eklendi</td><td><button class="btn btn-info btn-sm" title="Rapor XML Görüntüle"><i class="glyphicon glyphicon-zoom-in"></i></button></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_sending_reports').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 10,
+                "ordering": false
+            });
+
+            $('.select2').select2();
+
+            // Görüntüleme işlemi
+            $(document).on('click', '.btn-info', function () {
+                Swal.fire('Bilgi', 'Rapor XML görüntülenecek (örnek eylem).', 'info');
+            });
+        });
+    </script>
 }

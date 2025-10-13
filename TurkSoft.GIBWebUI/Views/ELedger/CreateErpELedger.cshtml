@@ -1,5 +1,208 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Erp'den e-Defter Oluştur";
+    ViewData["Subtitle"] = "e-Defter";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Defter
+        <small>Erp'den e-Defter Oluştur</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Defter</li>
+        <li class="active">Erp'den e-Defter Oluştur</li>
+    </ol>
+</section>
+
+<section class="content">
+    <h2>Muhasebe Programından e-Defter Oluştur</h2>
+
+    <div class="box box-default">
+        <div class="box-body">
+            <table id="gridELedgerUpload" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Seçiniz</th>
+                        <th>Şube No</th>
+                        <th>Dönem Başlangıç Tarihi</th>
+                        <th>Dönem Bitiş Tarihi</th>
+                        <th>Yevmiye Madde Numarası Başlangıcı</th>
+                        <th>Yevmiye Satırının Numara Başlangıcı</th>
+                        <th>Müteselsil Numara Başlangıcı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="radio" name="radioBatchId" value="1" /></td>
+                        <td>1</td>
+                        <td>01.01.2021</td>
+                        <td>31.01.2021</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td><input type="radio" name="radioBatchId" value="449" /></td>
+                        <td>449</td>
+                        <td>01.01.2021</td>
+                        <td>31.01.2021</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>1</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="box-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <button type="button" onclick="erpEDefterOlustur()" class="btn btn-success" style="width:60%;">
+                        Erp'den e-Defter İşlemlerine Başla
+                    </button>
+                </div>
+
+                <div class="col-md-6">
+                    <h3>Durum</h3>
+                    <div class="progress">
+                        <div id="uploadProgress" class="progress-bar progress-bar-success progress-bar-striped active" style="width:0%">
+                            0%
+                        </div>
+                    </div>
+                    <label id="DurumIzlemeStatus"></label><br />
+                    <label id="DurumIzlemeMessage"></label><br />
+                    <button id="processDelete" type="button" class="btn btn-danger" onclick="processDelete()" style="display:none;">İptal Et</button>
+
+                    <div id="gridErrorDiv" hidden>
+                        <table id="gridErrorList" class="table table-bordered table-hover" style="color:red;">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="DefterList" hidden>
+                <h3>Oluşturulan Defter Bilgileri</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><b>Hesap Dönemi Başlangıç:</b> <span id="period_covered_start"></span></p>
+                        <p><b>Hesap Dönemi Bitiş:</b> <span id="period_covered_end"></span></p>
+                        <p><b>Toplam Borç:</b> <span id="total_debit"></span></p>
+                        <p><b>Toplam Alacak:</b> <span id="total_credit"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><b>Yevmiye Madde Başlangıcı:</b> <span id="entry_number_counter_start"></span></p>
+                        <p><b>Yevmiye Madde Bitişi:</b> <span id="entry_number_counter_end"></span></p>
+                        <p><b>Satır Başlangıcı:</b> <span id="line_number_start"></span></p>
+                        <p><b>Satır Bitişi:</b> <span id="line_number_end"></span></p>
+                    </div>
+                </div>
+
+                <table id="gridDefterList" class="table table-bordered table-hover">
+                    <thead>
+                        <tr><th>Dosya Adı</th><th>İşlem</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <button type="button" title="Önizleme" onclick="getPreview()" class="btn btn-info btn-sm">
+                                    <i class="glyphicon glyphicon-zoom-in"></i>
+                                </button>
+                                <button type="button" title="İndir" onclick="getDownload()" class="btn btn-success btn-sm">
+                                    <i class="glyphicon glyphicon-download"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="DefterCounterSignatureList" hidden>
+                <h3>GİB Onaylı Dosyalar</h3>
+                <form id="gridDefterCounterSignatureForm" enctype="multipart/form-data">
+                    <table id="gridDefterCounterSignatureList" class="table table-bordered table-hover">
+                        <thead><tr><th>Dosya Adı</th><th>İşlem</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <input type="file" accept=".zip" />
+                                    <button type="button" title="İndir" class="btn btn-success btn-sm">
+                                        <i class="glyphicon glyphicon-download"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </form>
+                <button type="button" id="btn_Process7111" class="btn btn-success" onclick="Process7111()">GİB Onaylı Dosyaları Yükle</button>
+            </div>
+
+            <div id="defterAkilliKart" hidden>
+                <h3>Akıllı Kart ile İmzalama</h3>
+                <div class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Akıllı Kart Markası</label>
+                        <div class="col-sm-9">
+                            <select id="karttip" class="form-control">
+                                <option value="akis">Akis</option>
+                                <option value="gemsafe">GemSafe</option>
+                                <option value="seimens">Seimens</option>
+                                <option value="starcos">StarCOS</option>
+                                <option value="aladdin">Aladdin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-6">
+                            <button type="button" onclick="sertifikaGetir()" class="btn btn-primary">Sertifikaları Getir</button>
+                        </div>
+                        <div class="col-sm-6">
+                            <button type="button" onclick="ledgersign()" class="btn btn-primary">İmzala</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="sertifikalar" hidden>
+                        <label class="col-sm-3 control-label">Sertifika Listesi</label>
+                        <div class="col-sm-9">
+                            <select id="sertifikaList" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Pin</label>
+                        <div class="col-sm-4">
+                            <input id="kartPin" type="password" maxlength="20" class="form-control" />
+                        </div>
+                        <div class="col-sm-5">
+                            <button type="button" id="btnImzala" class="btn btn-success" disabled>İmzala</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#gridELedgerUpload, #gridDefterList, #gridDefterCounterSignatureList').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+
+        function erpEDefterOlustur() {
+            Swal.fire('Bilgi', 'ERP\'den e-Defter işlemi başlatıldı.', 'info');
+        }
+        function getPreview() { Swal.fire('Bilgi', 'Önizleme açılacak.', 'info'); }
+        function getDownload() { Swal.fire('Bilgi', 'Dosya indirilecek.', 'info'); }
+        function processDelete() { Swal.fire('Uyarı', 'İşlem iptal edildi.', 'warning'); }
+        function Process7111() { Swal.fire('Bilgi', 'GİB onaylı dosyalar yükleniyor.', 'info'); }
+        function sertifikaGetir() { Swal.fire('Bilgi', 'Sertifikalar listelendi.', 'info'); }
+        function ledgersign() { Swal.fire('Bilgi', 'İmzalama işlemi başlatıldı.', 'success'); }
+    </script>
 }

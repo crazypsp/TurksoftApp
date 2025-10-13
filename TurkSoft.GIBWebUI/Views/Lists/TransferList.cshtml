@@ -1,5 +1,101 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Transfer Belge Yükle";
+    ViewData["Subtitle"] = "Listeler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Detaylı Arama</h3>
+            <div class="box-tools pull-right">
+                <button id="btnDetay" type="button" class="btn btn-box-tool" data-widget="collapse">
+                    <i class="fa fa-minus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="box-body">
+            <div class="row">
+                <div class="form-group col-sm-4">
+                    <label>Kullanıcı Adı :</label>
+                    <input id="kadi" name="kadi" type="text" class="form-control" />
+                </div>
+                <div class="form-group col-sm-4">
+                    <label>Şifre :</label>
+                    <input id="sifre" name="sifre" type="password" class="form-control" />
+                </div>
+                <div class="form-group col-sm-4">
+                    <label>ERP Kodu :</label>
+                    <input id="erpKod" name="erpKod" type="text" class="form-control" />
+                </div>
+                <div class="form-group col-sm-4">
+                    <label>Başlangıç Tarihi :</label>
+                    <input type="text" class="form-control" name="baslangicTarihi" id="baslangicTarihi" />
+                </div>
+                <div class="form-group col-sm-4">
+                    <label>Bitiş Tarihi :</label>
+                    <input type="text" class="form-control" name="bitisTarihi" id="bitisTarihi" />
+                </div>
+                <div class="form-group col-sm-4">
+                    <label>Transfer Edilecek Belge Türü :</label>
+                    <select class="form-control" id="tip" name="tip">
+                        <option value="0">Seçiniz</option>
+                        <option value="1">Gelen e-Fatura</option>
+                        <option value="2">Giden e-Fatura</option>
+                        <option value="3">Giden e-Arşiv Fatura</option>
+                        <option value="4">Gelen e-İrsaliye</option>
+                        <option value="5">Giden e-İrsaliye</option>
+                        <option value="6">Giden e-SMM</option>
+                        <option value="7">Giden e-MM</option>
+                    </select>
+                </div>
+                <div class="form-group col-sm-4">
+                    <label>Transfer Edilecek Entegrator :</label>
+                    <select class="form-control" id="ent" name="ent">
+                        <option value="0">Seçiniz</option>
+                        <option value="Finans">Finans</option>
+                    </select>
+                </div>
+                <div class="form-group col-sm-12">
+                    <button id="listeGetirTransfer" class="btn btn-primary" onclick="listeGetirTransfer()">
+                        <i class="glyphicon glyphicon-zoom-in"></i> Belgeleri Listele
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="transferServis" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Belge Numarası</th>
+                        <th>Belge Tarihi</th>
+                        <th>Belge Türü</th>
+                        <th>ETTN</th>
+                        <th>Gönderici VKN/TCKN</th>
+                        <th>Tutar</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="7" class="text-center">Tabloda herhangi bir veri mevcut değil</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#transferServis').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
 }

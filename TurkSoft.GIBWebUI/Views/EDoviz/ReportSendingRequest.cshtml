@@ -1,1 +1,158 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Yeni Adisyon Oluştur";
+    ViewData["Subtitle"] = "e-Adisyon";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+
+
+<section class="content-header">
+    <h1><i class="fa fa-files-o"></i> Rapor Gönderme Talebi</h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> Rapor</li>
+        <li class="active">Rapor Gönderme Talebi</li>
+    </ol>
+</section>
+
+<section class="content">
+
+    <!-- Yeni Talep Butonu -->
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Rapor Gönderme Talebi</h3>
+        </div>
+        <div class="box-body">
+            <button class="btn btn-info" ng-click="yeniTalep()">
+                <i class="glyphicon glyphicon-plus-sign"></i> Yeni Oluştur
+            </button>
+        </div>
+    </div>
+
+    <!-- Rapor Listesi -->
+    <div class="box box-success">
+        <div class="box-header with-border">
+            <h3 class="box-title">Rapor Talep Listesi</h3>
+        </div>
+        <div class="box-body">
+            <table id="reportTable" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Rapor Oluşturma İsteği Tarihi</th>
+                        <th>Dönem</th>
+                        <th>Durum</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="rapor in raporlar">
+                        <td>{{ rapor.Tarih }}</td>
+                        <td>{{ rapor.Donem }}</td>
+                        <td>
+                            <span class="label"
+                                  ng-class="{
+                                          'label-success': rapor.Durum == 'Tamamlandı',
+                                          'label-warning': rapor.Durum == 'Bekliyor',
+                                          'label-danger': rapor.Durum == 'Hata'
+                                      }">{{ rapor.Durum }}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-xs" ng-click="detay(rapor)">
+                                <i class="fa fa-eye"></i> Görüntüle
+                            </button>
+                            <button class="btn btn-danger btn-xs" ng-click="sil(rapor)">
+                                <i class="fa fa-trash"></i> Sil
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+<!-- Yeni Rapor Modal -->
+<div class="modal fade" id="newReportModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <h3 class="modal-title">Yeni Rapor Talebi</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Yeni Rapor Talebi Oluşturmak istiyor musunuz?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default pull-left" data-dismiss="modal">İptal</button>
+                        <button type="button" class="btn btn-success pull-right" ng-click="onayla()">Oluştur</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@section Scripts {
+
+    <script>
+        var app = angular.module('ReportSendApp', []);
+        app.controller('ReportSendController', function ($scope) {
+
+            $scope.raporlar = [
+                { Tarih: '07.10.2025', Donem: '01', Durum: 'Tamamlandı' },
+                { Tarih: '06.10.2025', Donem: '02', Durum: 'Bekliyor' },
+                { Tarih: '05.10.2025', Donem: '03', Durum: 'Hata' }
+            ];
+
+            $scope.yeniTalep = function () {
+                $('#newReportModal').modal('show');
+            };
+
+            $scope.onayla = function () {
+                $('#newReportModal').modal('hide');
+                Swal.fire('Başarılı', 'Yeni rapor gönderme talebi oluşturuldu.', 'success');
+            };
+
+            $scope.detay = function (rapor) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Rapor Detayı',
+                    html: `<b>Tarih:</b> ${rapor.Tarih}<br>
+                           <b>Dönem:</b> ${rapor.Donem}<br>
+                           <b>Durum:</b> ${rapor.Durum}`
+                });
+            };
+
+            $scope.sil = function (rapor) {
+                Swal.fire({
+                    title: 'Silmek istediğinize emin misiniz?',
+                    text: rapor.Donem + " dönemli rapor silinecek.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Evet, sil!',
+                    cancelButtonText: 'Vazgeç'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const index = $scope.raporlar.indexOf(rapor);
+                        $scope.raporlar.splice(index, 1);
+                        $scope.$apply();
+                        Swal.fire('Silindi!', 'Rapor başarıyla silindi.', 'success');
+                    }
+                });
+            };
+
+            $(function () {
+                $('#reportTable').DataTable();
+                $('.select2').select2();
+            });
+        });
+    </script>
+}

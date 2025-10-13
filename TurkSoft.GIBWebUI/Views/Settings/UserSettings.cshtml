@@ -1,5 +1,92 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Kullanıcı Ayarları";
+    ViewData["Subtitle"] = "Ayarlar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<div class="box box-primary">
+    <div class="box-header with-border">
+        <h3 class="box-title">Kullanıcı İşlemleri</h3>
+    </div>
+    <div class="box-body">
+        <div class="row">
+            <div class="col-md-4">
+                <br>
+                <button id="sifreDegistirBtn" class="btn btn-block btn-info" onclick="yeniSifreAktif()">
+                    Şifre değişikliği yapmak istiyorsanız tıklayınız
+                </button>
+                <br>
+
+                <div id="sifreDegistirmeAktif" style="display: none;">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Mevcut Şifre*</label>
+                        <div class="col-sm-9">
+                            <input type="password" name="txteskisifre" id="txteskisifre" class="form-control">
+                        </div>
+                    </div>
+                    <br>
+                    <div class="form-horizontal row">
+                        <label id="lblkullanicisifre" class="control-label col-sm-3">Yeni Şifre*</label>
+                        <div class="col-sm-9">
+                            <input type="password" name="txtyenisifre" id="txtyenisifre" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label id="lblkullanicisifretekrar" class="control-label col-sm-3">Şifre Tekrar*</label>
+                        <div class="col-sm-9">
+                            <input type="password" name="txtyenisifretekrar" id="txtyenisifretekrar" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <br><br>
+
+                <div class="form-horizontal row">
+                    <label class="control-label col-sm-3">E-Mail*</label>
+                    <div class="col-sm-9">
+                        <input type="email" name="txtkullanicimail" id="txtkullanicimail" class="form-control">
+                        <div id="mailDogrulandidiv"><span class="label label-success"> Mail adresi doğrulandı </span></div>
+                        <div id="mailDogrulanmadidiv" style="display: none;"><span class="label label-danger"> Mail adresi doğrulanmadı! </span></div>
+                        <br>
+                        <button class="btn btn-block btn-default" id="mailDogrulamagonder" onclick="changeUserInfos('Mail')" style="display: none;">
+                            Mail için doğrulama kodu gönder
+                        </button>
+                        <br>
+                    </div>
+                </div>
+
+                <div class="form-horizontal row">
+                    <label class="control-label col-sm-3">Cep Telefonu</label>
+                    <div class="col-sm-9">
+                        <input type="tel" name="txtkullanicitelefon" onchange="telefonChange()" id="txtkullanicitelefon" class="form-control">
+                        <div id="telefonDogrulandidiv"><span class="label label-success"> Telefon doğrulandı </span></div>
+                        <div id="telefonDogrulanmadidiv" style="display: none;"><span class="label label-danger"> Telefon doğrulanmadı! </span></div>
+                        <br>
+                        <button class="btn btn-block btn-default" id="telDogrulamagonder" onclick="changeUserInfos('Phone')" style="display: none;">
+                            Telefon için doğrulama kodu gönder
+                        </button>
+                        <br>
+                    </div>
+                </div>
+
+                <div class="form-horizontal row">
+                    <div class="callout callout-warning">
+                        &nbsp;&nbsp;* Mail adresi veya Cep Telefonundan birini doğrulamanız yeterlidir.
+                        <br> &nbsp;&nbsp;* Cep Telefonu zorunlu değildir, mail adresi kullanılamaz ise alternatif bir doğrulama seçeneğiniz olacaktır.
+                        <br> &nbsp;&nbsp;* Her cihaz ve IP adresi için bir defa doğrulamanız yeterli olacaktır.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<button name="btn_guncelle" id="btn_guncelle" class="btn btn-success" onclick="changeUserInfos('')">
+    Güncelle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-edit"></i></span>
+</button>
+
+@section Scripts {
+    <script src="/hizlicss/jsv643136158/usersettings.js"></script>
 }

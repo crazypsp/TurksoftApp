@@ -1,5 +1,164 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-İhracat Faturası";
+    ViewData["Subtitle"] = "Yeni e-İhracat";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content">
+
+    <!-- Fatura Bilgileri -->
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">e-İhracat Fatura Bilgileri</h3>
+        </div>
+        <div class="box-body form-horizontal">
+
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Senaryo</label>
+                <div class="col-sm-4">
+                    <select id="InvoiceScenario" class="form-control">
+                        <option value="IHRACAT">İHRACAT</option>
+                        <option value="YOLCU_BERABERI">Yolcu Beraberi Eşya</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Fatura Tarihi</label>
+                <div class="col-sm-4">
+                    <input type="text" id="InvoiceDate" class="form-control datepicker" />
+                </div>
+
+                <label class="col-sm-2 control-label">Fatura No</label>
+                <div class="col-sm-4">
+                    <input type="text" id="InvoiceNumber" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Alıcı</label>
+                <div class="col-sm-10">
+                    <input type="text" id="Buyer" class="form-control" placeholder="Alıcı Unvan / Firma" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Ülke</label>
+                <div class="col-sm-4">
+                    <select id="Country" class="form-control select2">
+                        <option value="">Seçiniz</option>
+                        <option value="TR">Türkiye</option>
+                        <option value="DE">Almanya</option>
+                        <option value="US">ABD</option>
+                        <option value="GB">İngiltere</option>
+                        <!-- ... diğer ülkeler ... -->
+                    </select>
+                </div>
+                <label class="col-sm-2 control-label">Para Birimi</label>
+                <div class="col-sm-4">
+                    <select id="Currency" class="form-control">
+                        <option value="TRY">TRY</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tablar -->
+    <div class="nav-tabs-custom">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#items" data-toggle="tab">Kalemler</a></li>
+            <li><a href="#shipping" data-toggle="tab">Sevk / Gümrük</a></li>
+            <li><a href="#payment" data-toggle="tab">Ödeme Bilgileri</a></li>
+        </ul>
+        <div class="tab-content">
+            <!-- Kalemler -->
+            <div class="tab-pane active" id="items">
+                <table class="table table-bordered" id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th>Mal/Hizmet</th>
+                            <th>Miktar</th>
+                            <th>Birim</th>
+                            <th>Birim Fiyat</th>
+                            <th>KDV</th>
+                            <th>Toplam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="text" class="form-control" /></td>
+                            <td><input type="number" class="form-control" /></td>
+                            <td><input type="text" class="form-control" /></td>
+                            <td><input type="number" class="form-control" /></td>
+                            <td><input type="number" class="form-control" /></td>
+                            <td><input type="number" class="form-control" readonly /></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-primary" onclick="addRow()">Satır Ekle</button>
+            </div>
+
+            <!-- Sevk -->
+            <div class="tab-pane" id="shipping">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Çıkış Gümrük</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" id="CustomsOffice" />
+                    </div>
+                    <label class="col-sm-2 control-label">Taşıma Türü</label>
+                    <div class="col-sm-4">
+                        <select class="form-control" id="TransportType">
+                            <option value="">Seçiniz</option>
+                            <option value="SEA">Denizyolu</option>
+                            <option value="AIR">Havayolu</option>
+                            <option value="LAND">Karayolu</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ödeme -->
+            <div class="tab-pane" id="payment">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Ödeme Yöntemi</label>
+                    <div class="col-sm-4">
+                        <select class="form-control" id="PaymentMethod">
+                            <option>Kredi Kartı</option>
+                            <option>Banka Transferi</option>
+                            <option>Peşin</option>
+                        </select>
+                    </div>
+                    <label class="col-sm-2 control-label">Vade</label>
+                    <div class="col-sm-4">
+                        <input type="text" id="DueDate" class="form-control datepicker" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kaydet Butonu -->
+    <div class="box-footer">
+        <button type="submit" class="btn btn-success pull-right">Kaydet</button>
+    </div>
+
+</section>
+
+@section Scripts {
+    <script>
+        function addRow() {
+            var row = `<tr>
+                <td><input type="text" class="form-control" /></td>
+                <td><input type="number" class="form-control" /></td>
+                <td><input type="text" class="form-control" /></td>
+                <td><input type="number" class="form-control" /></td>
+                <td><input type="number" class="form-control" /></td>
+                <td><input type="number" class="form-control" readonly /></td>
+            </tr>`;
+            $("#itemsTable tbody").append(row);
+        }
+    </script>
 }

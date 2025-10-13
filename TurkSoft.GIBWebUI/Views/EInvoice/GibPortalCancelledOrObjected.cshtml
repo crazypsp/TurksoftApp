@@ -1,5 +1,111 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Gib Portal İptal/İtiraz";
+    ViewData["Subtitle"] = "e-Fatura";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content">
+
+    <div class="panel panel-sky">
+        <div class="panel-body">
+
+            <div class="box box-default">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Gib Portalı İptal/İtiraz</h3>
+                </div>
+
+                <div class="box-body" id="btnAramaYapEnter">
+                    <div class="row">
+                        <div class="col-md-12">
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-2">Belge UUID</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="col-sm-5">
+                                        <input id="GibPortalCancelUUID" type="text" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-2">Belge Türü</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="col-sm-5">
+                                        <select id="GibCancelAppType" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="1">Gelen E-Fatura</option>
+                                            <option value="2">Giden E-Fatura</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-2"></label>
+                                <div class="col-sm-6 inputPadding">
+                                    <span class="col-sm-12">
+                                        <a target="_blank" href="https://portal.efatura.gov.tr/FaturaIptal/">e-Fatura İptal/İtiraz Portalı</a> üzerinden iptal/itiraz işlemi gerçekleştirildikten sonra bu opsiyon kullanılabilir.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-2"></label>
+                                <div class="col-sm-6 inputPadding">
+                                    <span class="col-sm-12">
+                                        İptal/İtiraz portalı üzerinden yapılmayan işlemlerden şirketimiz sorumlu değildir.
+                                        <b>GİB Portalından İptal/İtiraz Edildi Olarak İşaretle</b> opsiyonu sadece bilgi amacıyla yapılmıştır.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-2"></label>
+                                <div class="col-sm-6 inputPadding">
+                                    <span class="col-sm-3">Uyarıyı Okudum*</span>
+                                    <div class="col-sm-8">
+                                        <input type="checkbox" onclick="uyariyiOkudumClick()" id="uyariyiOkudumGibIptalchk" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-2"></label>
+                                <div class="col-sm-6 inputPadding">
+                                    <button type="button" class="btn btn-secondary pull-left" style="width:100px;">Kapat</button>
+                                    <button type="button" id="iptalEtGibBtn" disabled class="btn btn-success pull-right" onclick="invoiceCancelGibSend(1)">
+                                        Gib Portalından İptal/İtiraz Edildi Olarak İşaretle
+                                    </button>
+                                    <button type="button" id="iptalKaldirGibBtn" disabled class="btn btn-danger pull-right" onclick="invoiceCancelGibSend(0)">
+                                        Gib Portalından İptal/İtiraz Durumunu Kaldır
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="box-footer"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        function uyariyiOkudumClick() {
+            var checked = document.getElementById("uyariyiOkudumGibIptalchk").checked;
+            document.getElementById("iptalEtGibBtn").disabled = !checked;
+            document.getElementById("iptalKaldirGibBtn").disabled = !checked;
+        }
+
+        function invoiceCancelGibSend(val) {
+            if (val === 1) {
+                Swal.fire("Bilgi", "Fatura 'İptal/İtiraz Edildi' olarak işaretlendi.", "success");
+            } else {
+                Swal.fire("Bilgi", "Fatura 'İptal/İtiraz Durumu Kaldırıldı'.", "info");
+            }
+        }
+    </script>
 }

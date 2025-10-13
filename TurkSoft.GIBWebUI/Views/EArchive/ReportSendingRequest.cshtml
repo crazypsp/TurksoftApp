@@ -1,5 +1,89 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Rapor Gönderme Talebi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <div class="panel panel-sky">
+        <div class="panel-body" style="overflow: scroll;">
+            <div class="box box-default">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Rapor Gönderme Talebi</h3>
+                </div>
+                <div class="box-footer">
+                    <div class="input-group input-group-md pull-left" style="padding: 3px 6px;">
+                        <button type="button" id="generateNewArchiveReport" class="btn btn-info">
+                            Yeni Oluştur <i class="glyphicon glyphicon-plus-sign"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DataTable -->
+            <div class="body-inner">
+                <div class="table-vertical">
+                    <table id="reportDatatable" class="table table-bordered table-hover dataTable dt-head-center">
+                        <thead>
+                            <tr>
+                                <th>Rapor Oluşturma İsteği Tarihi</th>
+                                <th>Dönem</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>22.09.2025</td><td>202509</td><td>Başarılı</td></tr>
+                            <tr><td>05.09.2025</td><td>202509</td><td>Başarılı</td></tr>
+                            <tr><td>03.09.2025</td><td>202509</td><td>Başarılı</td></tr>
+                            <tr><td>02.09.2025</td><td>202509</td><td>Başarılı</td></tr>
+                            <tr><td>27.08.2025</td><td>202508</td><td>Başarılı</td></tr>
+                            <tr><td>20.08.2025</td><td>202508</td><td>Başarılı</td></tr>
+                            <tr><td>18.08.2025</td><td>202508</td><td>Başarılı</td></tr>
+                            <tr><td>06.08.2025</td><td>202508</td><td>Başarılı</td></tr>
+                            <tr><td>04.08.2025</td><td>202508</td><td>Başarılı</td></tr>
+                            <tr><td>30.07.2025</td><td>202507</td><td>Başarılı</td></tr>
+                            <tr><td>25.07.2025</td><td>202507</td><td>Başarılı</td></tr>
+                            <tr><td>16.07.2025</td><td>202507</td><td>Başarılı</td></tr>
+                            <tr><td>14.07.2025</td><td>202507</td><td>Başarılı</td></tr>
+                            <tr><td>11.07.2025</td><td>202507</td><td>Başarılı</td></tr>
+                            <tr><td>04.07.2025</td><td>202507</td><td>Başarılı</td></tr>
+                            <tr><td>01.07.2025</td><td>202507</td><td>Başarılı</td></tr>
+                            <tr><td>27.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>26.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>25.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>24.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>23.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>20.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>18.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>16.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                            <tr><td>13.06.2025</td><td>202506</td><td>Başarılı</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Modal: Yeni Rapor Talebi -->
+            <div class="modal fade" id="newReportModal" role="dialog">
+                <div class="modal-dialog modal-md">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                            <h3 class="modal-title">Yeni Rapor Talebi</h3>
+                        </div>
+                        <div class="modal-body">
+                            <p>Yeni Rapor Talebi Oluşturmak istiyor musunuz?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                            <button type="button" class="btn btn-success" onclick="reportSend()" id="ReportConfirm">Oluştur</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="/hizlicss/jsv643136158/Archive/archiveReportSendingRequest.js"></script>
 }

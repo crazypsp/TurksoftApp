@@ -1,5 +1,94 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Rapor Gönderme Talebi";
+    ViewData["Subtitle"] = "e-Müstahsil";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>Rapor <small>Rapor Gönderme Talebi</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> Rapor</li>
+        <li class="active">Rapor Gönderme Talebi</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Rapor Gönderme Talebi</h3>
+        </div>
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-left" style="padding:3px 6px;">
+                <button type="button" id="generateNewArchiveReport" class="btn btn-info">
+                    Yeni Oluştur <i class="glyphicon glyphicon-plus-sign"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="grid_report_request" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Rapor Oluşturma İsteği Tarihi</th>
+                        <th>Dönem</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>26.09.2025</td>
+                        <td>202509</td>
+                        <td><span class="label label-success">Başarılı</span></td>
+                    </tr>
+                    <tr>
+                        <td>16.07.2025</td>
+                        <td>202507</td>
+                        <td><span class="label label-success">Başarılı</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Yeni Rapor Talebi Modal -->
+    <div class="modal fade" id="newReportModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header bg-blue">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Yeni Rapor Talebi</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Yeni Rapor Talebi Oluşturmak istiyor musunuz?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-success pull-right" id="ReportConfirm">Oluştur</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_report_request').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 10,
+                "order": [[0, 'desc']]
+            });
+
+            $('#generateNewArchiveReport').on('click', function () {
+                $('#newReportModal').modal('show');
+            });
+
+            $('#ReportConfirm').on('click', function () {
+                $('#newReportModal').modal('hide');
+                Swal.fire('Başarılı', 'Yeni rapor talebiniz oluşturuldu.', 'success');
+            });
+        });
+    </script>
 }

@@ -1,5 +1,61 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "İhraç Kayıtlı Kodları";
+    ViewData["Subtitle"] = "Listeler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        Listeler
+        <small>İhraç Kayıtlı Kod Listesi</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
+        <li>Listeler</li>
+        <li class="active">İhraç Kayıtlı Kod Listesi</li>
+    </ol>
+</section>
+
+<section class="content">
+    <h2>İhraç Kayıtlı Kod Listesi</h2>
+    <div class="box box-primary">
+        <div class="box-body">
+            <table id="grid_Export" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>İhraç Kayıtlı Kodu</th>
+                        <th>İhraç Kayıtlı Adı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>701</td>
+                        <td>3065 s. KDV Kanununun 11/1-c md. Kapsamındaki İhraç Kayıtlı Satış</td>
+                    </tr>
+                    <tr>
+                        <td>704</td>
+                        <td>3065 sayılı KDV Kanununun (11/1-c) maddesi ve 4760 s. Ötv Kanununun 8/2. Md. Kapsamındaki İhraç Kayıtlı Satış</td>
+                    </tr>
+                    <tr>
+                        <td>703</td>
+                        <td>4760 s. ÖTV Kanununun 8/2 Md. Kapsamındaki İhraç Kayıtlı Satış</td>
+                    </tr>
+                    <tr>
+                        <td>702</td>
+                        <td>DİİB ve Geçici Kabul Rejimi Kapsamındaki Satışlar</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_Export').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
 }

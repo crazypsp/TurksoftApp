@@ -1,5 +1,91 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Gönderilmiş Raporlar";
+    ViewData["Subtitle"] = "e-SMM";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-SMM <small>Gönderilmiş Raporlar</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-SMM</li>
+        <li class="active">Gönderilmiş Raporlar</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="panel panel-sky">
+        <div class="panel-body" style="overflow: scroll;">
+
+            <div class="box box-default">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Gönderilmiş Raporlar</h3>
+                </div>
+                <div class="box-body" id="btnAramaYapEnter"></div>
+            </div>
+
+            <div class="input-group input-group-md pull-right">
+                <div class="col-sm-12">
+                    <label class="control-label col-sm-3">Yıl</label>
+                    <div class="col-sm-9">
+                        <select id="IntegrationYear" class="form-control" onchange="gridSearch()">
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                            <option value="2021">2021</option>
+                            <option value="2020">2020</option>
+                            <option value="2019">2019</option>
+                            <option value="2018">2018</option>
+                            <option value="2017">2017</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="body-inner">
+                <div class="table-vertical">
+                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                        <thead>
+                            <tr>
+                                <th>Rapor Numarası</th>
+                                <th>Dönem Numarası</th>
+                                <th>Bölüm Numarası</th>
+                                <th>Bölüm Başlangıç Tarihi</th>
+                                <th>Bölüm Bitiş Tarihi</th>
+                                <th>GİB Rapor Durumu</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="text-center">Tabloda herhangi bir veri mevcut değil</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#myDataTable').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 25,
+                "ordering": false,
+                "info": true
+            });
+
+            $('#IntegrationYear').select2({
+                minimumResultsForSearch: Infinity
+            });
+        });
+
+        function gridSearch() {
+            Swal.fire('Bilgi', 'Seçilen yıla göre gönderilmiş raporlar listeleniyor...', 'info');
+        }
+    </script>
 }

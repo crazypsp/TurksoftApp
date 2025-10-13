@@ -1,5 +1,179 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-Defter Ayarları";
+    ViewData["Subtitle"] = "Ayarlar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Defter
+        <small>Ayarlar</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Defter</li>
+        <li class="active">Ayarlar</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">e-Defter Sertifika ve Dizini Ayarları</h3>
+        </div>
+
+        <div class="box-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">Mükellef Ünvanı</label>
+                            <div class="col-sm-8">
+                                <input type="text" id="mukellefUnvan" class="form-control" placeholder="Firma Ünvanı" value="Hızlı Bilişim Test Merkez LTD. ŞTİ" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">Vergi Kimlik No</label>
+                            <div class="col-sm-8">
+                                <input type="text" id="vkn" class="form-control" maxlength="10" value="4620553774" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">Defter Dizini</label>
+                            <div class="col-sm-8">
+                                <input type="text" id="defterPath" class="form-control" value="C:\eDefter\2024\" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">Mali Mühür Sertifika Yolu</label>
+                            <div class="col-sm-8">
+                                <input type="text" id="certPath" class="form-control" value="C:\Sertifika\mali_muhur.pfx" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">Mali Mühür Şifresi</label>
+                            <div class="col-sm-8">
+                                <input type="password" id="certPass" class="form-control" value="******" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">Zamanlama (Otomatik Gönderim)</label>
+                            <div class="col-sm-8">
+                                <select id="autoSchedule" class="form-control">
+                                    <option value="off">Kapalı</option>
+                                    <option value="daily">Günlük</option>
+                                    <option value="weekly">Haftalık</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">e-Defter Versiyonu</label>
+                            <div class="col-sm-8">
+                                <select id="edefterVersion" class="form-control">
+                                    <option value="1.0">1.0</option>
+                                    <option value="1.2" selected>1.2</option>
+                                    <option value="1.3">1.3</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">GİB Servis Adresi</label>
+                            <div class="col-sm-8">
+                                <input type="text" id="gibUrl" class="form-control" value="https://efatura.gov.tr/services/edefter" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">GİB Onaylı Defter Klasörü</label>
+                            <div class="col-sm-8">
+                                <input type="text" id="gibApprovedDir" class="form-control" value="C:\eDefter\GIBOnayli\" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label col-sm-4">Otomatik Yedekleme</label>
+                            <div class="col-sm-8">
+                                <input type="checkbox" id="autoBackup" checked /> Etkin
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr />
+            <div class="text-center">
+                <button class="btn btn-success" id="btnSaveSettings">
+                    <i class="fa fa-save"></i> Ayarları Kaydet
+                </button>
+                <button class="btn btn-warning" id="btnTestConnection">
+                    <i class="fa fa-plug"></i> Bağlantıyı Test Et
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Kayıtlı Sertifikalar</h3>
+        </div>
+        <div class="box-body table-responsive">
+            <table id="gridCertificates" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th>Sertifika Adı</th>
+                        <th>Geçerlilik Başlangıcı</th>
+                        <th>Geçerlilik Bitişi</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>MaliMuhur_HBT_2024</td>
+                        <td>01.01.2024</td>
+                        <td>31.12.2026</td>
+                        <td><span class="label label-success">Aktif</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                            <button class="btn btn-danger btn-sm"><i class="glyphicon glyphicon-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>MaliMuhur_HBT_2021</td>
+                        <td>01.01.2021</td>
+                        <td>31.12.2023</td>
+                        <td><span class="label label-default">Pasif</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                            <button class="btn btn-danger btn-sm"><i class="glyphicon glyphicon-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#gridCertificates').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+
+        $('#btnSaveSettings').click(() => {
+            Swal.fire('Başarılı', 'Ayarlar kaydedildi.', 'success');
+        });
+
+        $('#btnTestConnection').click(() => {
+            Swal.fire('Bağlantı Testi', 'GİB servisi ile bağlantı başarılı.', 'info');
+        });
+    </script>
 }

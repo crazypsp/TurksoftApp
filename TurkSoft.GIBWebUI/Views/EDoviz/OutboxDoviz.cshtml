@@ -1,1 +1,159 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Yeni Adisyon Oluştur";
+    ViewData["Subtitle"] = "e-Adisyon";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+
+<section class="content-header">
+    <h1><i class="fa fa-inbox"></i> Giden e-Döviz / Kıymetli Maden Belgeleri</h1>
+</section>
+
+<section class="content">
+
+    <!-- Filtre Alanı -->
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Filtreleme</h3>
+        </div>
+        <div class="box-body">
+            <div class="row filter-section">
+                <div class="col-md-3">
+                    <label>Başlangıç Tarihi</label>
+                    <input type="text" class="form-control datepicker" ng-model="filter.StartDate" placeholder="gg.aa.yyyy" />
+                </div>
+                <div class="col-md-3">
+                    <label>Bitiş Tarihi</label>
+                    <input type="text" class="form-control datepicker" ng-model="filter.EndDate" placeholder="gg.aa.yyyy" />
+                </div>
+                <div class="col-md-3">
+                    <label>Belge Durumu</label>
+                    <select class="form-control select2" ng-model="filter.Status">
+                        <option value="">Tümü</option>
+                        <option value="Onaylandı">Onaylandı</option>
+                        <option value="Gönderildi">Gönderildi</option>
+                        <option value="Hata">Hata</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary btn-block" ng-click="filtrele()"><i class="fa fa-search"></i> Filtrele</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tablo Alanı -->
+    <div class="box box-success">
+        <div class="box-header with-border">
+            <h3 class="box-title">Giden e-Döviz / Kıymetli Maden Listesi</h3>
+        </div>
+        <div class="box-body">
+            <table id="outboxDovizTable" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Belge No</th>
+                        <th>Tarih</th>
+                        <th>Alıcı Ünvanı</th>
+                        <th>Vergi No / TCKN</th>
+                        <th>Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="belge in belgeler | filter:arama">
+                        <td>{{ belge.BelgeNo }}</td>
+                        <td>{{ belge.Tarih }}</td>
+                        <td>{{ belge.AliciUnvani }}</td>
+                        <td>{{ belge.VergiNo }}</td>
+                        <td>{{ belge.Tutar | currency:'₺' }}</td>
+                        <td>
+                            <span class="label"
+                                  ng-class="{
+                                          'label-success': belge.Durum == 'Gönderildi',
+                                          'label-warning': belge.Durum == 'Bekliyor',
+                                          'label-danger': belge.Durum == 'Hata'
+                                      }">{{ belge.Durum }}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-xs" ng-click="detayGoster(belge)">
+                                <i class="fa fa-eye"></i> Görüntüle
+                            </button>
+                            <button class="btn btn-danger btn-xs" ng-click="sil(belge)">
+                                <i class="fa fa-trash"></i> Sil
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+
+@section Scripts {
+
+    <script>
+        var app = angular.module('OutboxDovizApp', []);
+        app.controller('OutboxDovizController', function ($scope) {
+
+            $scope.belgeler = [
+                { BelgeNo: 'DVZ2025-001', Tarih: '07.10.2025', AliciUnvani: 'Altın Ticaret A.Ş.', VergiNo: '1234567890', Tutar: 250000, Durum: 'Gönderildi' },
+                { BelgeNo: 'DVZ2025-002', Tarih: '06.10.2025', AliciUnvani: 'Global Metal Ltd.', VergiNo: '9876543210', Tutar: 125000, Durum: 'Bekliyor' },
+                { BelgeNo: 'DVZ2025-003', Tarih: '03.10.2025', AliciUnvani: 'Kıymetli Madenler A.Ş.', VergiNo: '4561237890', Tutar: 350000, Durum: 'Hata' }
+            ];
+
+            $scope.filtrele = function () {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Filtreleme Başarılı',
+                    text: 'Filtre kriterlerine göre sonuçlar güncellendi.'
+                });
+            };
+
+            $scope.detayGoster = function (belge) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Belge Detayı',
+                    html: `<b>Belge No:</b> ${belge.BelgeNo}<br>
+                           <b>Alıcı:</b> ${belge.AliciUnvani}<br>
+                           <b>Tutar:</b> ${belge.Tutar.toLocaleString()} ₺<br>
+                           <b>Durum:</b> ${belge.Durum}`
+                });
+            };
+
+            $scope.sil = function (belge) {
+                Swal.fire({
+                    title: 'Silmek istediğinize emin misiniz?',
+                    text: belge.BelgeNo + " numaralı belge silinecek.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Evet, sil!',
+                    cancelButtonText: 'Vazgeç'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const index = $scope.belgeler.indexOf(belge);
+                        $scope.belgeler.splice(index, 1);
+                        $scope.$apply();
+                        Swal.fire('Silindi!', 'Belge başarıyla silindi.', 'success');
+                    }
+                });
+            };
+
+            $(function () {
+                $('.datepicker').datepicker({
+                    format: 'dd.mm.yyyy',
+                    autoclose: true
+                });
+                $('.select2').select2();
+                $('#outboxDovizTable').DataTable();
+            });
+        });
+    </script>
+}

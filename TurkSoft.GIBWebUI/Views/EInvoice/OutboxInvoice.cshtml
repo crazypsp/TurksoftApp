@@ -1,5 +1,115 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Giden Faturalar";
+    ViewData["Subtitle"] = "e-Fatura Giden";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content">
+    <!-- Giden Faturalar içeriği -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="box box-danger">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Giden e-Faturalar</h3>
+                </div>
+                <div class="box-body">
+                    <!-- DataTable veya tablo kısmı -->
+                    <table id="outboxInvoiceTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Fatura No</th>
+                                <th>Tarih</th>
+                                <th>Alıcı</th>
+                                <th>Tutar</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>INV-2025-001</td>
+                                <td>01.10.2025</td>
+                                <td>ABC LTD. ŞTİ.</td>
+                                <td>12.500,00 ₺</td>
+                                <td><span class="label label-success">Gönderildi</span></td>
+                                <td>
+                                    <button class="btn btn-xs btn-info" onclick="showInvoiceDetail(1)">
+                                        <i class="fa fa-eye"></i> Görüntüle
+                                    </button>
+                                    <button class="btn btn-xs btn-warning">
+                                        <i class="fa fa-download"></i> İndir
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>INV-2025-002</td>
+                                <td>29.09.2025</td>
+                                <td>XYZ ANONİM ŞTİ.</td>
+                                <td>8.750,00 ₺</td>
+                                <td><span class="label label-danger">Hata</span></td>
+                                <td>
+                                    <button class="btn btn-xs btn-info" onclick="showInvoiceDetail(2)">
+                                        <i class="fa fa-eye"></i> Görüntüle
+                                    </button>
+                                    <button class="btn btn-xs btn-warning">
+                                        <i class="fa fa-download"></i> İndir
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>INV-2025-003</td>
+                                <td>28.09.2025</td>
+                                <td>TEST MÜŞTERİ</td>
+                                <td>1.500,00 ₺</td>
+                                <td><span class="label label-warning">Bekliyor</span></td>
+                                <td>
+                                    <button class="btn btn-xs btn-info" onclick="showInvoiceDetail(3)">
+                                        <i class="fa fa-eye"></i> Görüntüle
+                                    </button>
+                                    <button class="btn btn-xs btn-warning">
+                                        <i class="fa fa-download"></i> İndir
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pencereler -->
+    <div class="modal fade" id="invoiceDetailModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">Fatura Detayları</h4>
+                </div>
+                <div class="modal-body">
+                    <iframe id="invoiceDetailIframe" style="width:100%;height:500px;border:none;"></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#outboxInvoiceTable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json"
+                }
+            });
+        });
+
+        function showInvoiceDetail(id) {
+            $("#invoiceDetailIframe").attr("src", "/EInvoice/Detail/" + id);
+            $("#invoiceDetailModal").modal("show");
+        }
+    </script>
 }

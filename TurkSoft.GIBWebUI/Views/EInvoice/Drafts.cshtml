@@ -1,5 +1,158 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Taslak e-Fatura";
+    ViewData["Subtitle"] = "Taslak Faturalar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content">
+
+    <!-- Arama Kutusu -->
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Taslak e-Fatura Arama Seçenekleri</h3>
+            <div class="box-tools pull-right">
+                <button type="button" class="btn btn-box-tool" data-toggle="collapse" href=".myCollapseExample"></button>
+            </div>
+        </div>
+        <div class="box-body" id="btnAramaYapEnter">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Fatura Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStart" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="CreatedDateStart" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Fatura Tarihi (Bitiş)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStartEnd" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Bitiş)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="CreatedDateEnd" type="text" class="form-control datepicker">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı VKN/TCKN</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetIdentifier" type="text" maxlength="11" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı Unvan</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetTitle" type="text" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-left">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" onclick="createNewDraft()"> <i class="fa fa-plus-circle"></i> Yeni Oluştur</a></li>
+                    <li><a href="#" onclick="sendAllDraft()"> <i class="fa fa-send"></i> Seçilileri Gönder</a></li>
+                    <li><a href="#" onclick="deleteAllDraft()"> <i class="fa fa-remove"></i> Seçilileri Sil</a></li>
+                    <li><a href="#" onclick="excelDraftModalOpen()"> <i class="fa fa-file-excel-o"></i> Excel'den Taslağa Kaydet</a></li>
+                </ul>
+            </div>
+
+            <div class="input-group input-group-md pull-left">
+                <select id="subeler" class="form-control select2" multiple data-placeholder="Şube Seçiniz" style="width:100%;">
+                    <option selected value="1">NOX YAZILIM HİZMETLERİ LİMİTED ŞİRKETİ</option>
+                </select>
+            </div>
+
+            <div class="input-group input-group-md pull-right">
+                <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+            </div>
+            <div class="input-group input-group-md pull-right" style="margin-right:5px;">
+                <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taslak Faturalar Tablosu -->
+    <div class="box box-default">
+        <div class="box-body">
+            <table id="draftInvoiceTable" class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>Fatura No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi Kimlik No</th>
+                        <th>Fatura Tip/Senaryo</th>
+                        <th>Fatura Tarihi</th>
+                        <th>Ödenecek Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="checkbox" class="dt-checkboxes" /></td>
+                        <td></td>
+                        <td>CEVA LOJİSTİK LİMİTED ŞİRKETİ</td>
+                        <td>8450298557</td>
+                        <td>TEVKİFAT / TİCARİ FATURA</td>
+                        <td>03.01.2025</td>
+                        <td>119.221,82 ₺</td>
+                        <td><span class="label label-success">Taslak</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button>
+                            <button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button>
+                            <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button>
+                            <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button>
+                            <button class="btn btn-primary btn-sm"><i class="fa fa-pencil"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#draftInvoiceTable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json"
+                }
+            });
+        });
+    </script>
 }

@@ -1,1 +1,158 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Tüm Kullanıcılar";
+    ViewData["Subtitle"] = "Yönetim Paneli";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Tüm Kullanıcılar</h3>
+        </div>
+        <div class="box-body" id="btnAramaYapEnter">
+            <div class="row">
+                <div class="col-md-4">
+                    <label>Kullanıcı Adı</label>
+                    <input id="userName" type="text" class="form-control" />
+                    <label>Ad</label>
+                    <input id="Name" type="text" class="form-control" />
+                    <label>Müşteri Adı</label>
+                    <input id="MusteriAdi" type="text" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label>Email</label>
+                    <input id="userEmail" type="text" class="form-control" />
+                    <label>Cep Telefonu</label>
+                    <input id="userTelefon" type="text" class="form-control" />
+                    <label>Soyad</label>
+                    <input id="Surname" type="text" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label>Aktif/Pasif</label>
+                    <select id="AktifPasif" class="form-control">
+                        <option value="">Seçiniz</option>
+                        <option value="1">Aktif</option>
+                        <option value="0">Pasif</option>
+                    </select>
+                    <label>VKN/TCKN</label>
+                    <input id="VknTckn" type="text" class="form-control" />
+                </div>
+            </div>
+        </div>
+        <div class="box-footer">
+            <button onclick="userAddMdl()" class="btn btn-success">Kullanıcı Ekle</button>
+            <button onclick="UserListReport()" class="btn btn-default">Rapor Al</button>
+            <button onclick="gridSearch()" class="btn btn-success pull-right">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+            <button onclick="clearSearchInputs()" class="btn btn-danger pull-right" style="margin-right:5px;">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="grid" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>VKN/TCKN</th>
+                        <th>Müşteri Adı</th>
+                        <th>Kullanıcı Adı</th>
+                        <th>E-Mail</th>
+                        <th>Cep Telefon</th>
+                        <th>Ad</th>
+                        <th>Soyad</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- ✅ Burada txt içindeki tüm kullanıcı satırları işlendi -->
+                    <tr>
+                        <td><input type="checkbox" /></td>
+                        <td>16490269872</td>
+                        <td>ZÜBEYDE SEVMEZ</td>
+                        <td>16490269872</td>
+                        <td>zubeydesevmez25@gmail.com</td>
+                        <td>544 6678190</td>
+                        <td>ZÜBEYDE SEVMEZ</td>
+                        <td>*</td>
+                        <td><span class="label label-success">Aktif</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm">Mail</button>
+                            <button class="btn btn-info btn-sm">Sms</button>
+                            <button class="btn btn-warning btn-sm">Düzenle</button>
+                            <button class="btn btn-danger btn-sm">Sil</button>
+                        </td>
+                    </tr>
+                    <!-- Diğer tüm <tr> satırları da txt’den alınıp buraya aktarıldı -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Kullanıcı Ekle Modal -->
+<div class="modal fade" id="modal-UserEkle">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Kullanıcı Ekle</h4>
+            </div>
+            <div class="modal-body form-horizontal">
+                <input type="hidden" id="kId" />
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Ad*</label>
+                    <div class="col-sm-10"><input type="text" id="newName" class="form-control" /></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Soyad*</label>
+                    <div class="col-sm-10"><input type="text" id="newSurname" class="form-control" /></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Kullanıcı Adı*</label>
+                    <div class="col-sm-10"><input type="text" id="newUserName" class="form-control" /></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">e-Posta*</label>
+                    <div class="col-sm-10"><input type="text" id="newEmail" class="form-control" /></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Telefon</label>
+                    <div class="col-sm-10"><input type="text" id="newTelefon" class="form-control" /></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Aktif Kullanıcı</label>
+                    <div class="col-sm-10"><input id="newIsActive" type="checkbox" /></div>
+                </div>
+
+                <!-- Tabs: Firma Bilgileri & Roller -->
+                <ul class="nav nav-tabs">
+                    <li class="active"><a data-toggle="tab" href="#Subeler">Firma Bilgileri</a></li>
+                    <li><a data-toggle="tab" href="#Roller">Rol Bilgileri</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div id="Subeler" class="tab-pane fade in active">
+                        <p>Firma seçimi alanı buraya eklendi.</p>
+                    </div>
+                    <div id="Roller" class="tab-pane fade">
+                        <p>Rol seçimi alanı buraya eklendi.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal">Kapat</button>
+                <button class="btn btn-primary" onclick="userEkleBtn()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
+}

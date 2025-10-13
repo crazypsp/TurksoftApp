@@ -1,5 +1,161 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Erp'den e-SMM Oluştur";
+    ViewData["Subtitle"] = "e-SMM";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-SMM <small>Erp'den e-SMM Oluştur</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-SMM</li>
+        <li class="active">Erp'den e-SMM Oluştur</li>
+    </ol>
+</section>
+
+<section class="content">
+
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">ERP e-SMM Seçenekleri</h3>
+        </div>
+
+        <div class="box-body" id="btnAramaYapEnter">
+            <div class="row">
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Başlangıç SMM Tarihi</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateStart" type="text" class="form-control datepicker" value="27.09.2025" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Bitiş SMM Tarihi</label>
+                        <div class="col-sm-6 inputPadding">
+                            <div class="input-group">
+                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                <input id="IssueDateEnd" type="text" class="form-control datepicker" value="07.10.2025" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Şube</label>
+                        <div class="col-sm-6 inputPadding">
+                            <select id="erp_sube" class="form-control select2" onchange="setPrefixErpList()" data-placeholder="Şube Seçiniz">
+                                <option value="0" selected>Seçiniz</option>
+                                <option value="1">HIZLI BİLİŞİM TEST MERKEZ</option>
+                                <option value="465">HBT MERSİN</option>
+                                <option value="466">antalyasube</option>
+                                <option value="467">EntegreTürk</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">e-SMM Ön Ek</label>
+                        <div class="col-sm-6 inputPadding">
+                            <select id="erp_onek" class="form-control"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Gönderim Durumu</label>
+                        <div class="col-sm-6 inputPadding">
+                            <select id="Sent" class="form-control">
+                                <option value="">Tümü</option>
+                                <option value="false" selected>Gönderim Bekliyor</option>
+                                <option value="true">Gönderildi</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-left">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" onclick="sendAll()"><i class="fa fa-send"></i> Seçilileri Gönder</a></li>
+                </ul>
+            </div>
+
+            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                <button type="button" class="btn btn-success" onclick="mySmmList()">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+            </div>
+            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                <button type="button" class="btn btn-danger" onclick="clearSearchInputs()">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="grid_erpdenolustur" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>ERP SMM No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi Kimlik No</th>
+                        <th>SMM Tarihi</th>
+                        <th>Toplam Tutar</th>
+                        <th>XSLT Adı</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="9" class="text-center">Tabloda herhangi bir veri mevcut değil</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_erpdenolustur').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 10
+            });
+
+            $('.select2').select2();
+            $('.datepicker').datepicker({
+                format: 'dd.mm.yyyy',
+                language: 'tr',
+                autoclose: true
+            });
+        });
+
+        function mySmmList() {
+            Swal.fire('Bilgi', 'ERP verileri sorgulanıyor...', 'info');
+        }
+
+        function sendAll() {
+            Swal.fire('Başarılı', 'Seçili e-SMM kayıtları gönderildi.', 'success');
+        }
+
+        function clearSearchInputs() {
+            $('input').val('');
+            $('.select2').val('').trigger('change');
+            Swal.fire('Temizlendi', 'Arama alanları sıfırlandı.', 'success');
+        }
+    </script>
 }

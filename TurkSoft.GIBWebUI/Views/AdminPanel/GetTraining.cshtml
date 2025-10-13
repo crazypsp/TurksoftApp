@@ -1,1 +1,32 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Bayi Rehberi";
+    ViewData["Subtitle"] = "Hızlı Teknoloji Eğitim PDF'i";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        Hızlı Teknoloji Eğitim PDF'i
+        <small>Hızlı Teknoloji Eğitim PDF'i</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li>
+            <a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a>
+            Hızlı Teknoloji Eğitim PDF'i
+        </li>
+        <li class="active">Bayi Rehberi</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="ratio ratio-16x9">
+                <iframe src="/Gerekliler/HBT_Bayi_Egitim.pdf"
+                        style="width:100%; height:700px;"
+                        frameborder="0">
+                </iframe>
+            </div>
+        </div>
+    </div>
+</section>

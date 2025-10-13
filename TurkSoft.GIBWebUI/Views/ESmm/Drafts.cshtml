@@ -1,5 +1,191 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Taslak e-SMM";
+    ViewData["Subtitle"] = "e-SMM";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-SMM <small>Taslak Serbest Meslek Makbuzları</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-SMM</li>
+        <li class="active">Taslak e-SMM</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Arama Seçenekleri</h3>
+        </div>
+
+        <div class="box-body" id="btnAramaYapEnter">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı VKN/TCKN</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetIdentifier" type="text" maxlength="11" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Alıcı Unvan</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="TargetTitle" type="text" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">SMM Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="IssueDateStart" type="text" class="form-control datepicker" />
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">SMM Tarihi (Bitiş)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="IssueDateEnd" type="text" class="form-control datepicker" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Başlangıç)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="CreatedDateStart" type="text" class="form-control datepicker" />
+                        </div>
+                    </div>
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">İşlem Tarihi (Bitiş)</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="CreatedDateEnd" type="text" class="form-control datepicker" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-6">Ödenecek Tutar</label>
+                        <div class="col-sm-6 inputPadding">
+                            <input id="PayableAmount" type="number" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer">
+            <div class="input-group input-group-md pull-left">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" onclick="createNewDraft()"><i class="fa fa-plus-circle"></i> Yeni Oluştur</a></li>
+                    <li><a href="#" onclick="sendAllDraft()"><i class="fa fa-send"></i> Seçilileri Gönder</a></li>
+                    <li><a href="#" onclick="deleteAllDraft()"><i class="fa fa-remove"></i> Seçilileri Sil</a></li>
+                    <li><a href="#" onclick="excelDraftModalOpen()"><i class="fa fa-file-excel-o"></i> Excel'den Taslağa Kaydet</a></li>
+                </ul>
+            </div>
+
+            <div class="input-group input-group-md pull-left">
+                <select id="subeler" class="form-control select2" multiple data-placeholder="Şube Seçiniz">
+                    <option value="1">HIZLI BİLİŞİM TEST MERKEZ</option>
+                    <option value="465">HBT MERSİN</option>
+                    <option value="466">antalyasube</option>
+                    <option value="467">EntegreTürk</option>
+                </select>
+            </div>
+
+            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                <button type="button" class="btn btn-success" onclick="gridSearch()">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+            </div>
+            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                <button type="button" class="btn btn-danger" onclick="clearSearchInputs()">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary">
+        <div class="box-body table-responsive">
+            <table id="grid_smm_drafts" class="table table-bordered table-hover dataTable dt-head-center">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" /></th>
+                        <th>Makbuz No</th>
+                        <th>Firma Adı</th>
+                        <th>Vergi Kimlik No</th>
+                        <th>Senaryo</th>
+                        <th>Makbuz Tarihi</th>
+                        <th>Ödenecek Tutar</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="checkbox" /></td>
+                        <td></td>
+                        <td>Ali Baba</td>
+                        <td>12121212121</td>
+                        <td>SERBESTMESLEKMAKBUZ</td>
+                        <td>14.02.2022 00:00:00</td>
+                        <td>166,40 ₺</td>
+                        <td><span class="label label-success">Taslak</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm" title="Önizleme"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                            <button class="btn btn-warning btn-sm" title="Düzenle"><i class="fa fa-edit"></i></button>
+                            <button class="btn btn-danger btn-sm" title="Sil"><i class="fa fa-remove"></i></button>
+                            <button class="btn btn-success btn-sm" title="GİB’e Gönder"><i class="fa fa-send"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" /></td>
+                        <td></td>
+                        <td>Veli Dede</td>
+                        <td>12121212121</td>
+                        <td>SERBESTMESLEKMAKBUZ</td>
+                        <td>14.02.2022 00:00:00</td>
+                        <td>83,20 ₺</td>
+                        <td><span class="label label-success">Taslak</span></td>
+                        <td>
+                            <button class="btn btn-info btn-sm" title="Önizleme"><i class="glyphicon glyphicon-zoom-in"></i></button>
+                            <button class="btn btn-warning btn-sm" title="Düzenle"><i class="fa fa-edit"></i></button>
+                            <button class="btn btn-danger btn-sm" title="Sil"><i class="fa fa-remove"></i></button>
+                            <button class="btn btn-success btn-sm" title="GİB’e Gönder"><i class="fa fa-send"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_smm_drafts').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" },
+                "pageLength": 25
+            });
+
+            $('.select2').select2();
+            $('.datepicker').datepicker({
+                format: 'dd.mm.yyyy',
+                language: 'tr',
+                autoclose: true
+            });
+        });
+
+        function gridSearch() {
+            Swal.fire('Bilgi', 'Filtreleme işlemi başlatıldı.', 'info');
+        }
+
+        function clearSearchInputs() {
+            $('input').val('');
+            $('.select2').val('').trigger('change');
+            Swal.fire('Temizlendi', 'Arama alanları sıfırlandı.', 'success');
+        }
+    </script>
 }

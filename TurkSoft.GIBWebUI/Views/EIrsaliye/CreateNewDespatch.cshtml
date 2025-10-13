@@ -1,5 +1,143 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-İrsaliye Oluştur";
+    ViewData["Subtitle"] = "e-İrsaliye";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>e-İrsaliye <small>Yeni e-İrsaliye Oluştur</small></h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-İrsaliye</li>
+        <li class="active">Yeni e-İrsaliye</li>
+    </ol>
+</section>
+
+<section class="content">
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">e-İrsaliye Bilgileri</h3>
+        </div>
+        <div class="box-body">
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#tabAlici" data-toggle="tab">Alıcı Bilgileri</a></li>
+                <li><a href="#tabIrsaliye" data-toggle="tab">İrsaliye Bilgileri</a></li>
+                <li><a href="#tabEk" data-toggle="tab">Eklentiler</a></li>
+                <li><a href="#tabNot" data-toggle="tab">Notlar</a></li>
+            </ul>
+
+            <div class="tab-content" style="padding-top:10px;">
+                <!-- Alıcı Bilgileri -->
+                <div id="tabAlici" class="tab-pane fade in active">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">VKN / TCKN</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="AliciVkn" maxlength="11" /></div>
+                            <label class="control-label col-sm-2">Unvan / Ad Soyad</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="AliciUnvan" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">Vergi Dairesi</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="AliciVergiDairesi" /></div>
+                            <label class="control-label col-sm-2">Adres</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="AliciAdres" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- İrsaliye Bilgileri -->
+                <div id="tabIrsaliye" class="tab-pane fade">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">İrsaliye No</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="IrsaliyeNo" /></div>
+                            <label class="control-label col-sm-2">Düzenleme Tarihi</label>
+                            <div class="col-sm-4"><input type="date" class="form-control" id="IrsaliyeTarih" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-2">Taşıyıcı Ünvanı</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="TasitciUnvan" /></div>
+                            <label class="control-label col-sm-2">Taşıyıcı VKN</label>
+                            <div class="col-sm-4"><input type="text" class="form-control" id="TasitciVkn" maxlength="11" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Eklentiler -->
+                <div id="tabEk" class="tab-pane fade">
+                    <div class="form-group">
+                        <label class="control-label col-sm-3">Ek Belge Adı</label>
+                        <div class="col-sm-5"><input type="text" class="form-control" /></div>
+                        <div class="col-sm-4"><input type="file" class="btn btn-default" /></div>
+                    </div>
+                </div>
+
+                <!-- Notlar -->
+                <div id="tabNot" class="tab-pane fade">
+                    <div class="form-group">
+                        <label class="control-label col-sm-2">Not</label>
+                        <div class="col-sm-10">
+                            <textarea class="form-control" rows="3" placeholder="İrsaliye notu giriniz"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer text-center">
+            <button type="button" class="btn btn-primary" onclick="kaydet()"><i class="fa fa-save"></i> Kaydet</button>
+            <button type="button" class="btn btn-success" onclick="gonder()"><i class="fa fa-send"></i> GİB’e Gönder</button>
+            <button type="button" class="btn btn-danger" onclick="temizle()"><i class="fa fa-eraser"></i> Temizle</button>
+        </div>
+    </div>
+
+    <!-- Kalemler Tablosu -->
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">İrsaliye Kalemleri</h3>
+        </div>
+        <div class="box-body table-responsive">
+            <table id="grid_irsaliyeKalemler" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Kalem No</th>
+                        <th>Mal / Hizmet Adı</th>
+                        <th>Miktar</th>
+                        <th>Birim</th>
+                        <th>Birim Fiyat</th>
+                        <th>Tutar</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td>Ahşap Palet</td><td>20</td><td>Adet</td><td>120,00</td><td>2.400,00</td><td><button class="btn btn-danger btn-xs"><i class="fa fa-trash"></i></button></td></tr>
+                    <tr><td>2</td><td>Plastik Sandık</td><td>10</td><td>Adet</td><td>75,00</td><td>750,00</td><td><button class="btn btn-danger btn-xs"><i class="fa fa-trash"></i></button></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="box-footer text-center">
+            <button class="btn btn-info"><i class="fa fa-plus"></i> Kalem Ekle</button>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_irsaliyeKalemler').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+            $('.select2').select2();
+        });
+
+        function kaydet() {
+            Swal.fire('Başarılı', 'İrsaliye kaydedildi.', 'success');
+        }
+        function gonder() {
+            Swal.fire('Bilgi', 'İrsaliye GİB’e gönderiliyor...', 'info');
+        }
+        function temizle() {
+            $('input, textarea').val('');
+            Swal.fire('Temizlendi', 'Form alanları sıfırlandı.', 'success');
+        }
+    </script>
 }

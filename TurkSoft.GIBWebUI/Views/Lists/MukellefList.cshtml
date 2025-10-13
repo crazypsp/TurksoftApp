@@ -1,5 +1,137 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Mükellef Listesi";
+    ViewData["Subtitle"] = "Listeler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <h2>e-Fatura/e-İrsaliye Mükellef Listesi</h2>
+
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Detaylı Arama</h3>
+            <div class="box-tools pull-right">
+                <button id="btnDetay" type="button" class="btn btn-box-tool" data-widget="collapse">
+                    <i class="fa fa-minus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="box-body">
+            <div id="btnAramaYapEnter" class="row">
+                <div class="form-group col-md-2">
+                    <label>Vergi Kimlik No/TC Kimlik No</label>
+                    <input id="txtVknTckn" type="text" class="form-control" />
+                </div>
+                <div class="form-group col-md-3">
+                    <label>Ünvanı</label>
+                    <input id="txtUnvan" type="text" class="form-control" />
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Tip</label>
+                    <select id="Type" class="form-control">
+                        <option selected value="PK">Alıcı Birim Etiket Listesi</option>
+                        <option value="GB">Gönderici Birim Etiket Listesi</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Belge Tip</label>
+                    <select id="DocType" class="form-control">
+                        <option selected value="">Tümü</option>
+                        <option value="Invoice">e-Fatura</option>
+                        <option value="DespatchAdvice">e-İrsaliye</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <br />
+                    <button id="btnAramaYap" class="btn btn-primary" onclick="gridMukellefSearch()">
+                        <i class="glyphicon glyphicon-zoom-in"></i> Arama Yap
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box box-primary" style="margin-top:15px;">
+        <div class="box-body">
+            <table id="grid_mukellef" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Vergi Kimlik No</th>
+                        <th>Firma Adı</th>
+                        <th>Kayıt Türü</th>
+                        <th>Tip</th>
+                        <th>İlk Kayıt Zamanı</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>7300382563</td><td>PİRANLAR OTOMOTİV İNŞ.SAN. VE TİC.LTD.ŞTİ.</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2020-01-02 13:52:21</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('7300382563')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>42098048342</td><td>HARUN YAŞAR</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2023-07-11 17:12:10</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('42098048342')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>0011172209</td><td>ABELLA TEKSTİL İNŞ. OTOM. SAN. VE TİC. LTD. ŞTİ.</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2019-10-23 12:59:15</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('0011172209')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>69400046100</td><td>ALKAN ALTUN</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2022-06-28 00:03:57</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('69400046100')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>15707868068</td><td>HÜSEYİN ASAN</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2025-01-02 14:16:01</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('15707868068')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>19556138648</td><td>NURCAN FIRAT</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2023-07-03 18:07:47</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('19556138648')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>29966336138</td><td>YUSUF BEŞTAŞ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2019-03-28 14:04:20</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('29966336138')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>3320429131</td><td>ELİTE YAPI İNŞAAT SANAYİ VE TİCARET LİMİTED ŞİRKETİ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2022-07-01 02:02:51</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('3320429131')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>4070726636</td><td>MARDİN ÖMERLİ İLKOKUL GÖLLÜ</td><td>OZELENTEGRASYON</td><td>KAMU</td><td>2021-04-21 10:00:00</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('4070726636')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>35929906676</td><td>ALAATTİN LAFÇI</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2023-04-27 14:39:23</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('35929906676')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>10592166954</td><td>EKİN KARATAŞ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2021-07-09 14:36:47</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('10592166954')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>41902207432</td><td>EMRE ÜNLÜ EVA TİCARET</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2022-10-21 15:35:59</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('41902207432')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>34195218070</td><td>Mustafa Muhammed Güven</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2023-03-16 10:41:52</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('34195218070')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>0070643438</td><td>ADA KAR ET VE ET ÜRÜNLERİ ENTEGRE SATIŞ PAZARLAMA SANAYİ TİCARET LİMİTED ŞİRKETİ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2024-10-17 17:13:30</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('0070643438')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>16793074906</td><td>HASAN KALKAN</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2024-07-09 18:00:40</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('16793074906')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>6232142773</td><td>MOUNTECH TEKNOLOJİ MÜHENDİSLİK TİCARET LİMİTED ŞİRKETİ</td><td>GIBPORTAL</td><td>OZEL</td><td>2024-03-20 14:13:45</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('6232142773')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>0860535137</td><td>ASEL PETROL SANAYİ VE TICARET LTD.ŞTI.</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2024-02-22 11:45:26</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('0860535137')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>15220907534</td><td>MURAT HÖKELEK</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2024-07-01 19:16:08</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('15220907534')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>6920758605</td><td>ÖZGR GIDA DAĞITIM SAN. VE TİC LTD ŞTİ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2024-12-30 12:25:11</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('6920758605')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>3961208727</td><td>GİRBEL YATIRIM İNŞ. TAAH. TURZ. SAN. VE TİC . A. Ş.</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2022-01-01 00:32:57</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('3961208727')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>18088019432</td><td>MEMET GONCA</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2020-02-28 17:04:03</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('18088019432')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>4931225759</td><td>KALKAN MOTOR SANAYİ VE TİCARET LİMİTED ŞİRKETİ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2022-01-06 14:54:06</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('4931225759')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>44641435494</td><td>İSMAİL KAHVECİ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2022-07-01 02:12:58</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('44641435494')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>0701176008</td><td>ANTİACHEİA VONA TARIM ÜRÜNLERİ TEKSTİL GIDA EĞİTİM İTHALAT İHRACAT TİCARET LİMİTED ŞİRKETİ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2025-02-15 21:31:59</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('0701176008')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                    <tr><td>40975626010</td><td>CEMAL YILDIZ</td><td>OZELENTEGRASYON</td><td>OZEL</td><td>2023-08-29 12:44:27</td><td><button type="button" title="Önizleme" onclick="GetUserDetail('40975626010')" class="btn btn-info btn-sm"><span class="glyphicon glyphicon-zoom-in"></span></button></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: Mükellef Detay -->
+    <div class="modal fade in bs-example-modal-lg" id="modal-mukellefDetail" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                    <h4 id="txtTitle" class="modal-title">Gib Etiketleri</h4>
+                </div>
+                <div class="modal-body">
+                    <table id="mukellefDetail" class="table table-bordered table-hover dataTable">
+                        <thead>
+                            <tr>
+                                <th>Etiket</th>
+                                <th>Tip</th>
+                                <th>Etiket Kayıt Tarihi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td valign="top" colspan="3">Tabloda herhangi bir veri mevcut değil</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_mukellef').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
 }

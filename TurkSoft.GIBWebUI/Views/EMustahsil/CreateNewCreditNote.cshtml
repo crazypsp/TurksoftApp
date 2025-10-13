@@ -1,5 +1,217 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "e-Müstahsil Oluştur";
+    ViewData["Subtitle"] = "e-Müstahsil";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="content-header">
+    <h1>
+        e-Müstahsil
+        <small>Yeni e-Müstahsil Makbuzu Oluştur</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i></a> e-Müstahsil</li>
+        <li class="active">Yeni e-Müstahsil Makbuzu</li>
+    </ol>
+</section>
+
+<section class="content" ng-app="mustahsilApp" ng-controller="MustahsilCtrl">
+
+    <!-- Müstahsil Form -->
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <h3 class="box-title">Müstahsil Makbuz Bilgileri</h3>
+        </div>
+
+        <div class="box-body form-horizontal">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Makbuz No:</label>
+                        <div class="col-sm-8">
+                            <input type="text" ng-model="MakbuzNo" id="MakbuzNo" class="form-control" placeholder="Makbuz No" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Düzenleme Tarihi:</label>
+                        <div class="col-sm-8">
+                            <input type="date" ng-model="DuzenlemeTarihi" id="DuzenlemeTarihi" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">VKN / TCKN:</label>
+                        <div class="col-sm-8">
+                            <input type="text" ng-model="VknTckn" id="VknTckn" maxlength="11" class="form-control" placeholder="Vergi Kimlik Numarası veya TCKN" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Ünvan / Ad Soyad:</label>
+                        <div class="col-sm-8">
+                            <input type="text" ng-model="Unvan" id="Unvan" class="form-control" placeholder="Ünvan veya Ad Soyad" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Adres:</label>
+                        <div class="col-sm-8">
+                            <textarea ng-model="Adres" id="Adres" class="form-control" rows="3" placeholder="Adres bilgisi"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Vergi Dairesi:</label>
+                        <div class="col-sm-8">
+                            <input type="text" ng-model="VergiDairesi" id="VergiDairesi" class="form-control" placeholder="Vergi Dairesi" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Brüt Tutar:</label>
+                        <div class="col-sm-8">
+                            <input type="number" ng-model="BrutTutar" id="BrutTutar" class="form-control text-right" step="0.01" placeholder="0,00" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">% Stopaj:</label>
+                        <div class="col-sm-8">
+                            <input type="number" ng-model="StopajOrani" id="StopajOrani" class="form-control text-right" step="0.01" placeholder="2" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Stopaj Tutarı:</label>
+                        <div class="col-sm-8">
+                            <input type="text" ng-model="StopajTutar" id="StopajTutar" class="form-control text-right" readonly />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Net Tutar:</label>
+                        <div class="col-sm-8">
+                            <input type="text" ng-model="NetTutar" id="NetTutar" class="form-control text-right" readonly />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-4">Açıklama:</label>
+                        <div class="col-sm-8">
+                            <textarea ng-model="Aciklama" id="Aciklama" class="form-control" rows="3" placeholder="Açıklama"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-footer text-center">
+            <button type="button" class="btn btn-primary" ng-click="MakbuzKaydet()">
+                <i class="fa fa-save"></i> Kaydet
+            </button>
+            <button type="button" class="btn btn-success" ng-click="MakbuzGonder()">
+                <i class="fa fa-envelope"></i> GİB’e Gönder
+            </button>
+            <button type="button" class="btn btn-danger" ng-click="MakbuzTemizle()">
+                <i class="fa fa-eraser"></i> Temizle
+            </button>
+        </div>
+    </div>
+
+    <!-- Eklenen Kalemler -->
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Makbuz Kalemleri</h3>
+        </div>
+        <div class="box-body table-responsive">
+            <table id="gridMustahsilKalemler" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Kalem No</th>
+                        <th>Mal/Hizmet Adı</th>
+                        <th>Miktar</th>
+                        <th>Birim</th>
+                        <th>Birim Fiyat</th>
+                        <th>Tutar</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="k in Kalemler">
+                        <td>{{$index + 1}}</td>
+                        <td>{{k.MalzemeAdi}}</td>
+                        <td class="text-right">{{k.Miktar}}</td>
+                        <td>{{k.Birim}}</td>
+                        <td class="text-right">{{k.BirimFiyat | number:2}}</td>
+                        <td class="text-right">{{k.Tutar | number:2}}</td>
+                        <td class="text-center">
+                            <button class="btn btn-danger btn-xs" ng-click="KalemSil($index)">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="box-footer text-center">
+            <button class="btn btn-info" ng-click="KalemEkle()"><i class="fa fa-plus"></i> Yeni Kalem Ekle</button>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        var app = angular.module('mustahsilApp', []);
+        app.controller('MustahsilCtrl', function ($scope) {
+            $scope.Kalemler = [];
+
+            $scope.KalemEkle = function () {
+                $scope.Kalemler.push({
+                    MalzemeAdi: '',
+                    Miktar: 1,
+                    Birim: 'Adet',
+                    BirimFiyat: 0,
+                    Tutar: 0
+                });
+            };
+
+            $scope.KalemSil = function (index) {
+                $scope.Kalemler.splice(index, 1);
+            };
+
+            $scope.MakbuzKaydet = function () {
+                Swal.fire('Başarılı', 'Müstahsil makbuzu kaydedildi.', 'success');
+            };
+
+            $scope.MakbuzGonder = function () {
+                Swal.fire('Bilgi', 'GİB’e gönderim işlemi başlatıldı.', 'info');
+            };
+
+            $scope.MakbuzTemizle = function () {
+                $scope.MakbuzNo = '';
+                $scope.DuzenlemeTarihi = '';
+                $scope.VknTckn = '';
+                $scope.Unvan = '';
+                $scope.Adres = '';
+                $scope.VergiDairesi = '';
+                $scope.BrutTutar = '';
+                $scope.StopajOrani = '';
+                $scope.StopajTutar = '';
+                $scope.NetTutar = '';
+                $scope.Aciklama = '';
+                $scope.Kalemler = [];
+            };
+
+            $scope.$watchGroup(['BrutTutar', 'StopajOrani'], function () {
+                var brut = parseFloat($scope.BrutTutar) || 0;
+                var stopajOrani = parseFloat($scope.StopajOrani) || 0;
+                $scope.StopajTutar = (brut * stopajOrani / 100).toFixed(2);
+                $scope.NetTutar = (brut - $scope.StopajTutar).toFixed(2);
+            });
+        });
+    </script>
 }

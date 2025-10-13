@@ -1,5 +1,72 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "GİB Durum Kodları";
+    ViewData["Subtitle"] = "Listeler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<section class="content">
+    <h2>GİB Durum Kodları</h2>
+    <div class="box box-primary">
+        <div class="box-body">
+            <table id="grid_DurumKod" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Durum Kodu</th>
+                        <th>Sebep</th>
+                        <th>Çözüm</th>
+                        <th>Yapılması Gereken</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>1120 ZARF ARŞİVDEN KOPYALANAMADI</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1143 GEÇERSİZ VERSİYON</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1161 İMZA SAHİBİ TCKN VKN ALINAMADI</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1162 İMZA KAYDEDİLEMEDİ</td><td>-</td><td>Hatasız gönderim için gönderimden önce imza doğrulama kontrolü yapılmalıdır.</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1163</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmemeli</td></tr>
+                    <tr><td>1170 YETKİ KONTROL EDİLEMEDİ</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1176 İMZA SAHİBİ YETKİSİZ</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1180 ADRES KONTROL EDİLEMEDİ</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1182 KULLANICI EKLENEMEDİ</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1183 KULLANICI SİLİNEMEDİ</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1190 SİSTEM YANITI HAZIRLANAMADI</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1195 SİSTEM HATASI</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1200 ZARF BAŞARIYLA İŞLENDİ</td><td>-</td><td>-</td><td>-</td></tr>
+                    <tr><td>1210 DOKUMAN BULUNAN ADRESE GÖNDERİLEMEDİ</td><td>-</td><td>GİB'in tekrar gönderim denemesi başarılı olur ise, 1300 BAŞARIYLA TAMAMLANDI kodu alınır. Aksi halde 1215 durum kodu alınır.</td><td>1210 durumunun 1215, 1220, 1230 ya da 1300 durumuna dönmesi beklenmelidir.</td></tr>
+                    <tr><td>1220 HEDEFTEN SİSTEM YANITI GELMEDİ</td><td>-</td><td>Yanıt dönmeyen mükelleflere uyarı maili atılır. Alıcı ile iletişime geçilerek yanıt dönmesi sağlanabilir.</td><td>1220 durumunun 1230 veya 1300’e dönmesi beklenmelidir. Gecikirse alıcı ile görüşülebilir.</td></tr>
+                    <tr><td>1230 HEDEFTEN SİSTEM YANITI BAŞARISIZ GELDİ</td><td>-</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1300 BAŞARIYLA TAMAMLANDI</td><td>-</td><td>-</td><td>-</td></tr>
+                    <tr><td>1215 DOKÜMAN GÖNDERİMİ BAŞARISIZ</td><td>1220 durumunda alıcı zarfı aldığını bildirmiş ama işleyip işlemediğine dair yanıt dönmemiştir.</td><td>-</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1132 XML DOSYASI DEĞİL</td><td>Dosyalar XML formatında değilse hata alınır.</td><td>Dosyalar XML formatında olmalıdır.</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1181 ADRES BULUNAMADI</td><td>Etiket bilgisi ve VKN eşleşmesi yapılamıyor.</td><td>Gönderici ve alıcı VKN/TCKN güncel olmalıdır.</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1150 SCHEMATRON KONTROL SONUCU HATALI</td><td>Bilgiler GİB standartlarına uymuyor.</td><td>Bilgiler GİB standartlarına uygun hale getirilmeli.</td><td>Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)</td></tr>
+                    <tr><td>1160 XML SEMA KONTROLÜNDEN GEÇEMEDİ</td><td>GİB şema kontrollerinden geçemedi.</td><td>-</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1000 ZARF KUYRUĞA EKLENDİ</td><td>GİB’te yoğunluk</td><td>-</td><td>Durum kodunun güncellenmesi beklenmelidir.</td></tr>
+                    <tr><td>1100 ZARF İŞLENİYOR</td><td>GİB’te yoğunluk</td><td>-</td><td>Durum kodunun güncellenmesi beklenmelidir.</td></tr>
+                    <tr><td>1171 GÖNDERİCİ BİRİM YETKİSİ YOK</td><td>GB yerine PK tanımlanmış olabilir.</td><td>Gönderici birim etiketinde GB olmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1175 İMZA YETKİSİ KONTROL EDİLEMEDİ</td><td>İmza yetkisi kontrol edilemedi.</td><td>-</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1177 GEÇERSİZ İMZA</td><td>İmza doğrulama geçersiz.</td><td>Gönderimden önce imza doğrulama yapılmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1172 POSTA KUTUSU YETKİSİ YOK</td><td>PK yerine GB tanımlı olabilir.</td><td>Posta kutusu etiketinde PK olmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1141 ZARF ID YOK</td><td>Zarf ID boşsa hata alınır.</td><td>Zarf ID boş olmamalıdır.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1142 ZARF ID VE ZIP DOSYASI ADI AYNI OLMALI</td><td>Zarf ID ile ZIP adı farklıysa hata alınır.</td><td>Zarf ID ve ZIP adı aynı olmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1131 ZIP BİR DOSYA İÇERMELİ</td><td>Zarf içinde dosya yoksa hata alınır.</td><td>Zarf içinde Fatura/Uygulama Yanıtı olmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1110 ZIP DOSYASI DEĞİL</td><td>Zarf ZIP formatında değilse hata alınır.</td><td>Gönderilen zarf ZIP formatında olmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1133 ZARF ID VE XML ADI AYNI OLMALI</td><td>Zarf ID ile XML adı aynı değilse hata alınır.</td><td>Zarf ID ile XML adı aynı olmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1111 ZARF ID UZUNLUĞU GEÇERSİZ</td><td>Zarf ID 32 karakter değilse hata alınır.</td><td>Zarf ID 32 karakter olmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1130 ZIP AÇILAMADI</td><td>Zarf okunamadığında hata alınır.</td><td>Dosyada hata olabilir, yeniden zarflanmalı.</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                    <tr><td>1140 DOKUMAN AYRIŞTIRILAMADI</td><td>Zarf içindeki faturalar çıkarılamadı.</td><td>-</td><td>Faturalar yeniden gönderilmeli.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_DurumKod').DataTable({
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+            });
+        });
+    </script>
 }
