@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using TurkSoft.Data.GibData;
 using TurkSoft.Entities.GIBEntityDB;
 using TurkSoft.Service.Interface.Gib;
 using TurkSoft.Service.Manager.Gib;
