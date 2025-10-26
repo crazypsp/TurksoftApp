@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime UpdatedAt { get; set; }
 
         // Navigation
-        public DocumentType DocumentType { get; set; }
+        [ValidateNever] public DocumentType DocumentType { get; set; }
     }
 }

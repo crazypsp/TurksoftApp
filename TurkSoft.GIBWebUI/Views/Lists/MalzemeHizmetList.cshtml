@@ -17,8 +17,15 @@
 </section>
 
 <section class="content">
-    <h2>Malzeme/Hizmet Listesi</h2>
     <div class="box box-primary">
+        <div class="box-header with-border d-flex justify-content-between align-items-center">
+            <div>
+                <input type="text" id="fltCode" class="form-control input-sm" placeholder="Koda göre ara" style="display:inline-block;width:150px;">
+                <input type="text" id="fltName" class="form-control input-sm" placeholder="Ada göre ara" style="display:inline-block;width:200px;">
+                <button id="btnFilter" class="btn btn-sm btn-info"><i class="fa fa-search"></i> Filtrele</button>
+            </div>
+            <button id="btnNewItem" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Yeni Ürün Ekle</button>
+        </div>
         <div class="box-body">
             <table id="grid_items" class="table table-bordered table-hover dataTable">
                 <thead>
@@ -28,25 +35,89 @@
                         <th>Birim</th>
                         <th>KDV Oranı</th>
                         <th>Fiyat</th>
+                        <th style="width:100px;">İşlemler</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr><td>001</td><td>E-İMZA</td><td>Adet</td><td>%18</td><td>500,00 TL</td></tr>
-                    <tr><td>002</td><td>KEP HİZMETİ</td><td>Yıl</td><td>%18</td><td>250,00 TL</td></tr>
-                    <tr><td>003</td><td>Mali Mühür</td><td>Adet</td><td>%18</td><td>300,00 TL</td></tr>
-                    <tr><td>004</td><td>İşte SMM</td><td>Paket</td><td>%18</td><td>1.000,00 TL</td></tr>
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 </section>
 
+<!-- Yeni Ürün Modal -->
+<!-- Yeni Ürün Modal (Bootstrap 3 uyumlu, Item.cs + tabloya göre tam) -->
+<div class="modal fade" id="mdlItem" tabindex="-1" role="dialog" aria-labelledby="mdlItemLabel">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <form id="frmItem">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="mdlItemLabel">Yeni Ürün / Hizmet</h4>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="itmId" />
+
+                    <div class="form-group">
+                        <label for="itmCode">Kodu</label>
+                        <input type="text" class="form-control" id="itmCode" maxlength="50" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itmName">Adı</label>
+                        <input type="text" class="form-control" id="itmName" maxlength="150" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itmBrand">Marka</label>
+                        <input type="text" class="form-control" id="itmBrand" placeholder="Örn: TurkSoft" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itmUnit">Birim</label>
+                        <input type="text" class="form-control" id="itmUnit" placeholder="Örn: Adet, Paket..." />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itmVatRate">KDV Oranı</label>
+                        <select class="form-control" id="itmVatRate">
+                            <option value="0">%0</option>
+                            <option value="1">%1</option>
+                            <option value="8">%8</option>
+                            <option value="10">%10</option>
+                            <option value="18" selected>%18</option>
+                            <option value="20">%20</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itmPrice">Fiyat</label>
+                        <input type="number" class="form-control" id="itmPrice" step="0.01" min="0" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itmCurrency">Para Birimi</label>
+                        <select class="form-control" id="itmCurrency">
+                            <option value="TRY">TRY (TL)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
-    <script>
-        $(function () {
-            $('#grid_items').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
-            });
-        });
-    </script>
+
+    <script type="module" src="~/apps/malzemehizmetlist.js"></script>
 }

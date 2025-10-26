@@ -4,81 +4,86 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<section class="content-header">
+    <h1>Listeler <small>İstisna Kodları</small></h1>
+</section>
 
 <section class="content">
-    <h2>İstisna Kod Listesi</h2>
     <div class="box box-primary">
+        <div class="box-header with-border">
+            <button id="btnNewExceptional" class="btn btn-success btn-sm pull-right">
+                <i class="fa fa-plus"></i> Yeni İstisna Ekle
+            </button>
+        </div>
         <div class="box-body">
             <table id="grid_exceptional" class="table table-bordered table-hover dataTable">
                 <thead>
                     <tr>
                         <th>İstisna Kodu</th>
                         <th>İstisna Adı</th>
+                        <th>Tür</th>
+                        <th>İşlemler</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr><td>302</td><td>11/1-a Hizmet ihracatı</td></tr>
-                    <tr><td>301</td><td>11/1-a Mal ihracatı</td></tr>
-                    <tr><td>303</td><td>11/1-a Roaming hizmetleri</td></tr>
-                    <tr><td>316</td><td>11/1-a Serbest Bölgelerdeki Müşteriler İçin Yapılan Fason Hizmetler</td></tr>
-                    <tr><td>322</td><td>11/1-a Türkiye'de İkamet Etmeyenlere Özel Fatura ile Yapılan Teslimler (Bavul Ticareti)</td></tr>
-                    <tr><td>304</td><td>13/a Deniz hava ve demiryolu taşıma araçlarının teslimi ile inşa, tadil, bakım ve onarımları</td></tr>
-                    <tr><td>305</td><td>13/b Deniz ve hava taşıma araçları için liman ve hava meydanlarında yapılan hizmetler</td></tr>
-                    <tr><td>307</td><td>13/c Kıymetli madenlerin arama, zenginleştirme ve rafinaj faaliyetleri</td></tr>
-                    <tr><td>306</td><td>13/c Petrol aramaları</td></tr>
-                    <tr><td>308</td><td>13/d Teşvikli yatırım mallarının teslimi</td></tr>
-                    <tr><td>309</td><td>13/e Liman ve hava meydanlarının inşası, yenilenmesi ve genişletilmesi</td></tr>
-                    <tr><td>310</td><td>13/f Ulusal güvenlik amaçlı teslim ve hizmetler</td></tr>
-                    <tr><td>319</td><td>13/g Başbakanlık Merkez Teşkilatına Yapılan Araç Teslimleri</td></tr>
-                    <tr><td>324</td><td>13/h Türkiye Kızılay Derneğine Yapılan Teslim ve Hizmetler ile Türkiye Kızılay Derneğinin Teslim ve Hizmetleri</td></tr>
-                    <tr><td>328</td><td>13/i Konut veya İşyeri Teslimleri</td></tr>
-                    <tr><td>344</td><td>13/o Milli Savunma ve İç Güvenlik İhtiyaçlarında Kullanılmak Üzere Taşıt Teslimi</td></tr>
-                    <tr><td>323</td><td>13/ğ 5300 Sayılı Kanuna Göre Düzenlenen Ürün Senetlerinin İhtisas/Ticaret Borsaları Aracılığıyla İlk Teslimi</td></tr>
-                    <tr><td>327</td><td>13/ı Gübre hammaddeleri</td></tr>
-                    <tr><td>326</td><td>13/ı Gübre Teslimleri</td></tr>
-                    <tr><td>325</td><td>13/ı Yem Teslimleri</td></tr>
-                    <tr><td>311</td><td>14/1 Uluslararası taşımacılık</td></tr>
-                    <tr><td>315</td><td>14/3 İhraç konusu eşyayı taşıyan araçlara yapılan motorin teslimleri</td></tr>
-                    <tr><td>312</td><td>15/a Diplomatik organ ve misyonlara yapılan teslim ve hizmetler</td></tr>
-                    <tr><td>313</td><td>15/b Uluslararası kuruluşlara yapılan teslim ve hizmetler</td></tr>
-                    <tr><td>235</td><td>16/1-c Transit ve gümrük antrepo rejimleri</td></tr>
-                    <tr><td>201</td><td>17/1 Kültür ve eğitim amaçlı işlemler</td></tr>
-                    <tr><td>202</td><td>17/2-a Sağlık, çevre ve sosyal yardım amaçlı işlemler</td></tr>
-                    <tr><td>229</td><td>17/2-b Gıda Bankacılığı bağışları</td></tr>
-                    <tr><td>227</td><td>17/2-b Bedelsiz teslim ve hizmetler</td></tr>
-                    <tr><td>228</td><td>17/2-b Kurum ve kuruluşlara bedelsiz teslimler</td></tr>
-                    <tr><td>226</td><td>17/2-b Eğitim hizmetleri (özel okul, üniversite)</td></tr>
-                    <tr><td>204</td><td>17/2-c Diplomatik organ ve hayır kurumlarının bağışları</td></tr>
-                    <tr><td>205</td><td>17/2-d Taşınmaz kültür varlıkları</td></tr>
-                    <tr><td>206</td><td>17/2-e Mesleki kuruluşların işlemleri</td></tr>
-                    <tr><td>207</td><td>17/3 Askeri fabrika</td></tr>
-                    <tr><td>218</td><td>17/4-0 Gümrük antrepoları, geçici depolama yerleri</td></tr>
-                    <tr><td>208</td><td>17/4-c Birleşme, devir, dönüşüm ve bölünme işlemleri</td></tr>
-                    <tr><td>209</td><td>17/4-e Banka ve sigorta muameleleri</td></tr>
-                    <tr><td>232</td><td>17/4-g Döviz, hisse senedi, tahvil</td></tr>
-                    <tr><td>230</td><td>17/4-g Külçe altın, gümüş ve kıymetli taşlar</td></tr>
-                    <tr><td>231</td><td>17/4-g Hurda ve atık teslimleri</td></tr>
-                    <tr><td>211</td><td>17/4-h Zirai içme suyu teslimleri</td></tr>
-                    <tr><td>213</td><td>17/4-j Petrol ve gaz taşımacılığı (boru hattı)</td></tr>
-                    <tr><td>214</td><td>17/4-k Sanayi bölgeleri arsa/işyeri teslimleri</td></tr>
-                    <tr><td>215</td><td>17/4-l Varlık yönetim şirketleri işlemleri</td></tr>
-                    <tr><td>216</td><td>17/4-m Tasarruf mevduatı sigorta fonu işlemleri</td></tr>
-                    <tr><td>217</td><td>17/4-n Basın-Yayın ve Enformasyon Genel Müdürlüğü haber hizmetleri</td></tr>
-                    <tr><td>219</td><td>17/4-p Hazine ve Arsa Ofisi işlemleri</td></tr>
-                    <tr><td>220</td><td>17/4-r İki tam yıl sahip olunan taşınmaz/hisseler satışları</td></tr>
-                    <tr><td>317</td><td>17/4-s Engellilerin eğitim/meslek/günlük yaşam araçları</td></tr>
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 </section>
 
+<!-- İstisna Modal -->
+<div class="modal fade" id="mdlExceptional" tabindex="-1" role="dialog" aria-labelledby="mdlExceptionalLabel">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <form id="frmExceptional">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="mdlExceptionalLabel">İstisna Kod Bilgisi</h4>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="excId" />
+
+                    <div class="form-group">
+                        <label for="excCode">İstisna Kodu</label>
+                        <input type="text" class="form-control" id="excCode" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="excTitle">İstisna Adı</label>
+                        <input type="text" class="form-control" id="excTitle" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="excSolution">Açıklama / Çözüm 1</label>
+                        <textarea class="form-control" id="excSolution" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="excSolution2">Açıklama / Çözüm 2</label>
+                        <textarea class="form-control" id="excSolution2" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="excType">Tür</label>
+                        <select class="form-control" id="excType">
+                            <option value="">Seçiniz</option>
+                            <option value="KDV">KDV</option>
+                            <option value="Muafiyet">Muafiyet</option>
+                            <option value="İstisna">İstisna</option>
+                            <option value="Tevkifat">Tevkifat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @section Scripts {
-    <script>
-        $(function () {
-            $('#grid_exceptional').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
-            });
-        });
-    </script>
+    <script type="module" src="~/apps/exceptionalcodes.js"></script>
 }

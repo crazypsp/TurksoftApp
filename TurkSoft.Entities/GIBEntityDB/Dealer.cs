@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,6 +29,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public short Commission { get; set; }
 
         // Navigation
-        public ICollection<CommissionsMove> CommissionsMoves { get; set; }
+        [ValidateNever] public ICollection<CommissionsMove> CommissionsMoves { get; set; }
     }
 }

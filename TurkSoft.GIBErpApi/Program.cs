@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication;
+ï»¿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -22,15 +22,11 @@ var builder = WebApplication.CreateBuilder(args);
 // SERVICES
 // =====================================================
 
-// ---- GIB DbContext (Sadece GIB tablolarý için)
-builder.Services.AddDbContext<GibAppDbContext>(opt =>
-    opt.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null)
-    )
-);
+// ---- GIB DbContext (Sadece GIB tablolarÄ± iÃ§in)
+builder.Services.AddDbContext<GibAppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ---- Ýþ Katmaný Servisleri (Sadece GIB)
+// ---- Ä°ÅŸ KatmanÄ± Servisleri (Sadece GIB)
 builder.Services.AddGibEntityServices();
 
 // ---- API Versioning
@@ -42,14 +38,13 @@ builder.Services.AddApiVersioning(opt =>
     opt.ApiVersionReader = new UrlSegmentApiVersionReader();
 });
 
-// ---- Versioned API Explorer (Swagger için gerekli)
 builder.Services.AddVersionedApiExplorer(opt =>
 {
     opt.GroupNameFormat = "'v'VVV";
     opt.SubstituteApiVersionInUrl = true;
 });
 
-// ---- Controllers + JSON options
+// ---- Controllers + JSON
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
@@ -57,20 +52,19 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-// ---- CORS
-var allowed = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+// ---- CORS (WebUI eriÅŸimi)
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("Default", p =>
+    opt.AddPolicy("AllowWebUI", p =>
     {
-        p.WithOrigins(allowed)
+        p.WithOrigins("https://localhost:7056") // WebUI portu
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials();
     });
 });
 
-// ---- Swagger (Versiyonlu)
+// ---- Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -78,18 +72,14 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "TurkSoft.GibErpApi",
         Version = "v1",
-        Description = "GIB veritabaný için ERP API (JWT + Refresh + Cookie destekli)"
+        Description = "GIB veritabanÄ± iÃ§in ERP API (JWT + Cookie destekli)"
     });
 
-    // XML yorumlarýný Swagger’a dahil et
     var xml = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xml);
     if (File.Exists(xmlPath))
-        options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+        options.IncludeXmlComments(xmlPath);
 
-    options.CustomSchemaIds(t => t.FullName!.Replace('+', '.'));
-
-    // Swagger’da JWT Auth (Bearer)
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -103,8 +93,7 @@ builder.Services.AddSwaggerGen(options =>
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
             Array.Empty<string>()
         }
@@ -117,7 +106,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(opt =>
     opt.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
-// ---- Form Limitleri
+// ---- Form limitleri
 builder.Services.Configure<FormOptions>(o =>
 {
     o.ValueLengthLimit = int.MaxValue;
@@ -129,12 +118,10 @@ builder.Services.Configure<FormOptions>(o =>
 // AUTHENTICATION + AUTHORIZATION
 // =====================================================
 
-// JWT Ayarlarýný oku
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 var jwtOpt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()!;
 var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOpt.SigningKey));
 
-// Dinamik kimlik doðrulama: Cookie veya Bearer
 builder.Services
     .AddAuthentication(options =>
     {
@@ -174,7 +161,6 @@ builder.Services
         };
     });
 
-// ---- Authorization Policies
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdmin", p => p.RequireRole("Admin"));
@@ -183,7 +169,6 @@ builder.Services.AddAuthorization(options =>
             ctx.User.IsInRole("Admin") || ctx.User.IsInRole("Finance")));
 });
 
-// ---- Infra servisleri (DI)
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 builder.Services.AddScoped<RefreshTokenService>();
@@ -195,25 +180,23 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-// ---- Swagger Aktifse
-if (app.Configuration.GetSection("Swagger:Enabled").Get<bool>())
+app.UseForwardedHeaders();
+app.UseHttpsRedirection();
+
+// âœ… CORS en Ã¼stte olmalÄ± (Swagger'dan Ã¶nce)
+app.UseCors("AllowWebUI");
+
+// Swagger
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    app.UseSwaggerUI(c =>
     {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var desc in provider.ApiVersionDescriptions)
-        {
-            options.SwaggerEndpoint($"/swagger/{desc.GroupName}/swagger.json", $"GIB API {desc.GroupName}");
-        }
-        options.RoutePrefix = app.Configuration["Swagger:RoutePrefix"] ?? "swagger";
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "GIB ERP API v1");
     });
 }
 
-app.UseForwardedHeaders();
-app.UseCors("Default");
-app.UseHttpsRedirection();
-
+// Auth middleware sÄ±rasÄ± Ã¶nemli
 app.UseAuthentication();
 app.UseAuthorization();
 

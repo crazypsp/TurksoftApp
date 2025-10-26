@@ -4,81 +4,82 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<section class="content-header">
+    <h1>Listeler <small>Vergi Listesi</small></h1>
+</section>
 
 <section class="content">
-    <h2>Vergi Listesi</h2>
     <div class="box box-primary">
+        <div class="box-header with-border">
+            <button id="btnNewTax" class="btn btn-success btn-sm pull-right">
+                <i class="fa fa-plus"></i> Yeni Vergi Ekle
+            </button>
+        </div>
         <div class="box-body">
             <table id="grid_taxlist" class="table table-bordered table-hover dataTable">
                 <thead>
                     <tr>
-                        <th>Vergi Kodu</th>
+                        <th>ID</th>
                         <th>Vergi Adı</th>
+                        <th>Açıklama</th>
+                        <th>Oran (%)</th>
+                        <th>Oluşturma</th>
+                        <th>Güncelleme</th>
+                        <th>İşlemler</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr><td>9006</td><td>1475 SAYILI İŞ KANUNUNA BAĞLI PARA CEZASI</td></tr>
-                    <tr><td>9306</td><td>1475 SAYILI İŞ KANUNUNA BAĞLI PARA CEZASI</td></tr>
-                    <tr><td>9339</td><td>1567 SAYILI TÜRK PARASININ KIYMETİNİ KORUMA KANUNU İPC</td></tr>
-                    <tr><td>9089</td><td>2000/266 SAYILI BKK GEREĞİNCE YATIRIMLARI TEŞVİK FONUNA AKTIRILACAK TUTARLAR</td></tr>
-                    <tr><td>9127</td><td>2004/5682 SAYILI BKK İLE HAZİNE ALACĞINA DÖNÜŞEN TOHUMLUK KREDİLERİ</td></tr>
-                    <tr><td>1027</td><td>2004/5682 SAYILI BKK İLE HAZİNE ALACĞINA DÖNÜŞEN TOHUMLUK KREDİLERİNE DÖNÜŞENLER AİT FAİZ</td></tr>
-                    <tr><td>9235</td><td>2015/1 SERİ NOLU KURUMLAR VERGİSİ İÇ GENELGESİNE GÖRE (KIZILAY'DAN) TAHSİL EDİLECEK TUTAR</td></tr>
-                    <tr><td>9112</td><td>2762 SAYILI KANUNA GÖRE ALINAN TAVİZ BEDELİ</td></tr>
-                    <tr><td>9158</td><td>3039 SAYILI ÇELTİK EKİM KANUNU İPC</td></tr>
-                    <tr><td>9007</td><td>3516 SAYILI KANUNA GÖRE ÖLÇÜ AYAR  PARA CEZASI</td></tr>
-                    <tr><td>9307</td><td>3516 SAYILI KANUNA GÖRE ÖLÇÜ AYAR PARA CEZASI</td></tr>
-                    <tr><td>9316</td><td>4054 SAYILI REKABET KANUNUNUN 55. MADDE KAPSAMINDA İPC</td></tr>
-                    <tr><td>9323</td><td>4250 SAYILI İSPİRTO VE İSPİRTOLU İÇKİLER İNHİSAR KANUNUNA GÖRE VERİLEN İDARİ PARA CEZASI</td></tr>
-                    <tr><td>9096</td><td>4369/15 SUÇA İŞTİRAK EDEN KİŞİLER</td></tr>
-                    <tr><td>9128</td><td>4447 SAYILI İŞSİZLİK SİGORTASI KANUNU UYARINCA KESİLEN İ.P.C</td></tr>
-                    <tr><td>4021</td><td>4705 SAYILI KANUNA GÖRE TAHSİL EDİLEN ÖZEL İŞLEM VERGİSİ</td></tr>
-                    <tr><td>9049</td><td>4749 KAMU FINANS BORC YÖN. DÜZEN. HAK. KANUN HAZİNE ALACAKLARI</td></tr>
-                    <tr><td>4811</td><td>4811 VERGİ BARIŞI TECİLLİ TAHSİLAT</td></tr>
-                    <tr><td>4035</td><td>4837 S.K EK MOTORLU TAŞITLAR VERGİSİ</td></tr>
-                    <tr><td>9106</td><td>4857 S.K. 101. MAD. KAP. İDARİ PARA CEZALARI</td></tr>
-                    <tr><td>9108</td><td>4857 SAYILI KANUNA GÖRE GELİR KAYDEDİLECEK PARA CEZALARI</td></tr>
-                    <tr><td>9129</td><td>4904 SAYILI İŞ KURUMU KANUNU UYARINCA KESİLEN İ.P.C.</td></tr>
-                    <tr><td>9148</td><td>4915 ve 5035 SK. GÖRE AVCILIK RUHSATI HARCI</td></tr>
-                    <tr><td>9021</td><td>4961 BANKA SİGORTA MUAMELELERİ VERGİSİ</td></tr>
-                    <tr><td>9079</td><td>4961 S.K. GEÇİCİ 1. MAD. GÖRE PARA CEZASI</td></tr>
-                    <tr><td>9095</td><td>4961 S.K. GEÇİCİ 2. MAD. 1.FIKRAYA GÖRE TAHSİLAT</td></tr>
-                    <tr><td>9044</td><td>4961 S.K. GEÇİCİ 2. MAD. 3.FIKRASINA GÖRE TAHSILAT</td></tr>
-                    <tr><td>4036</td><td>4962 S. TAŞIT VERGİSİ</td></tr>
-                    <tr><td>9121</td><td>5015 SAYILI PETROL PİYASASI KANUNU İPC</td></tr>
-                    <tr><td>4042</td><td>5035 RTÜK EĞİTİME KATKI PAYI</td></tr>
-                    <tr><td>1048</td><td>5035 SAYILI KANUNA GÖRE DAMGA VERGİSİ</td></tr>
-                    <tr><td>4049</td><td>5035 SAYILI KANUNA GÖRE FİNANSAL FAALİYET HARCI</td></tr>
-                    <tr><td>9048</td><td>5035 SAYILI KANUNA GÖRE HARÇ</td></tr>
-                    <tr><td>4081</td><td>5035 SAYILI KANUNA GÖRE ÖZEL İLETİŞİM VERGİSİ</td></tr>
-                    <tr><td>9178</td><td>5070 SK. GÖRE ELEKTRONİK SERTİFİKA SAĞLAYICILARINA  KESİLEN İPC</td></tr>
-                    <tr><td>9177</td><td>5070 SK.13.MADDESİNE GÖRE SİĞORTA ŞİRKETLERİNE KESİLEN İPC</td></tr>
-                    <tr><td>9103</td><td>5188 SK. GÖRE GÜVENLİK RUHSATI HARCI</td></tr>
-                    <tr><td>9126</td><td>5254 SAYILI KANUNA GÖRE MUHTAÇ ÇİFTÇİLERE VERİLEN ÖDÜNÇ TOHUMLUKLARDAN HAZİNE ALACAĞINA DÖNÜŞENLER</td></tr>
-                    <tr><td>1026</td><td>5254 SAYILI KANUNA GÖRE MUHTAÇ ÇİFTÇİLERE VERİLEN ÖDÜNÇ TOHUMLUKLARDAN HAZİNE ALACAĞINA DÖNÜŞENLER AİT FAİZ</td></tr>
-                    <tr><td>9122</td><td>5307 SAYILI SIVILAŞTIRILMIŞ PETROL GAZLARI PİYASASI KANUNU İPC</td></tr>
-                    <tr><td>9109</td><td>5326 S. KABAHATLER KANUNU İDARİ PARA CEZASI</td></tr>
-                    <tr><td>9317</td><td>5326 SAYILI KANUN UYARINCA CUMHURİYET SAVCILIKLARINCA VERİLEN İ.P.C.</td></tr>
-                    <tr><td>9318</td><td>5326 SAYILI KANUN UYARINCA MAHKEMELER TARAFINDAN VERİLEN İ.P.C.</td></tr>
-                    <tr><td>1028</td><td>5335 SAYILI KANUNA GÖRE DESTEKLEME FİYAT İSTİKRAR FONUNA AİT FAİZ</td></tr>
-                    <tr><td>1052</td><td>5335 SAYILI KANUNA GÖRE HAZİNE ALACAĞINA DÖNÜŞEN TOHUMLUK KREDİLERİNE AİT GEÇ ÖDEME ZAMMI</td></tr>
-                    <tr><td>9322</td><td>5378 SAYILI ENGELLİLER HAKKINDA KANUN UYARINCA İPC</td></tr>
-                    <tr><td>9310</td><td>5549 SAYILI SUÇ GELİRLERİNİN AKLANMASININ ÖNLENMESİ İ.P.C</td></tr>
-                    <tr><td>9152</td><td>5602 SAYILI ŞANS OYUNLARI HASILATINDAN ALINAN VERGİ,FON VE PAYLAR</td></tr>
-                    <tr><td>1091</td><td>5736 SAYILI KANUN UYARINCA ALINAN FAİZ</td></tr>
-                    <tr><td>1053</td><td>5736 SAYILI KANUN UYARINCA GEÇ ÖDEME ZAMMI</td></tr>
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 </section>
 
+<!-- Vergi Modal -->
+<div class="modal fade" id="mdlTax" tabindex="-1" role="dialog" aria-labelledby="mdlTaxLabel">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <form id="frmTax">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="mdlTaxLabel">Vergi Bilgisi</h4>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="taxId" />
+
+                    <div class="form-group">
+                        <label for="taxName">Vergi Adı</label>
+                        <input type="text" class="form-control" id="taxName" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taxDesc">Açıklama</label>
+                        <textarea class="form-control" id="taxDesc" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taxRate">Oran (%)</label>
+                        <input type="number" class="form-control" id="taxRate" min="0" max="100" step="0.01" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taxCreatedAt">Oluşturma Tarihi</label>
+                        <input type="date" class="form-control" id="taxCreatedAt" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taxUpdatedAt">Güncelleme Tarihi</label>
+                        <input type="date" class="form-control" id="taxUpdatedAt" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-    <script>
-        $(function () {
-            $('#grid_taxlist').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
-            });
-        });
-    </script>
+    <script type="module" src="~/apps/taxlist.js"></script>
 }

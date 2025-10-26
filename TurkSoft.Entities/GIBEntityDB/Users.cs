@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -29,7 +30,7 @@ namespace TurkSoft.Entities.GIBEntityDB
         public bool MailVerify { get; set; }
 
         // Navigation
-        public ICollection<Request> Requests { get; set; }
-        public ICollection<UserAnnouncementRead> UserAnnouncementReads { get; set; }
+        [ValidateNever] public ICollection<Request> Requests { get; set; }
+        [ValidateNever] public ICollection<UserAnnouncementRead> UserAnnouncementReads { get; set; }
     }
 }

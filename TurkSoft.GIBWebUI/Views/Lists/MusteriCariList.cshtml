@@ -1,88 +1,94 @@
 ﻿@{
-    ViewData["Title"] = "Müşteri Listesi";
+    ViewData["Title"] = "Müşteri / Cari Listesi";
     ViewData["Subtitle"] = "Listeler";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content">
-    <div class="box box-default">
-        <div class="box-header with-border">
-            <h3 class="box-title">Müşteri/Cari Arama</h3>
-            <div class="box-tools pull-right">
-                <button id="btnDetay" type="button" class="btn btn-box-tool" data-widget="collapse">
-                    <i class="fa fa-minus"></i>
-                </button>
-            </div>
-        </div>
-        <div class="box-body">
-            <div class="row">
-                <div class="form-group col-md-1">
-                    <label>Müşteri Kodu</label>
-                    <input id="txtMusteriKodu" type="text" class="form-control" />
-                </div>
-                <div class="form-group col-md-2">
-                    <label>VKN/TCKN</label>
-                    <input id="txtVknTckn" type="text" class="form-control" />
-                </div>
-                <div class="form-group col-md-3">
-                    <label>Unvanı</label>
-                    <input id="txtUnvan" type="text" class="form-control" />
-                </div>
-                <div class="form-group col-md-3">
-                    <label>Adı</label>
-                    <input id="txtAdi" type="text" class="form-control" />
-                </div>
-                <div class="form-group col-md-3">
-                    <label>Soyadı</label>
-                    <input id="txtSoyadi" type="text" class="form-control" />
-                </div>
-            </div>
-        </div>
-        <div class="box-footer">
-            <button class="btn btn-success"><i class="glyphicon glyphicon-plus"></i> Yeni Oluştur</button>
-            <button class="btn btn-default"><i class="glyphicon glyphicon-import"></i> Excel’den Aktar</button>
-            <button class="btn btn-default"><i class="glyphicon glyphicon-export"></i> Excel’e Aktar</button>
-            <button class="btn btn-success pull-right"><i class="glyphicon glyphicon-search"></i> Arama Yap</button>
-            <button class="btn btn-danger pull-right" style="margin-right:10px;"><i class="glyphicon glyphicon-remove-circle"></i> Temizle</button>
-        </div>
-    </div>
+<section class="content-header">
+    <h1>Listeler <small>Müşteri / Cari Listesi</small></h1>
+</section>
 
-    <div class="box box-primary" style="margin-top:15px;">
+<section class="content">
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <button id="btnNewCustomer" class="btn btn-success btn-sm pull-right">
+                <i class="fa fa-plus"></i> Yeni Müşteri Ekle
+            </button>
+        </div>
         <div class="box-body">
             <table id="grid_cari" class="table table-bordered table-hover dataTable">
                 <thead>
                     <tr>
-                        <th>Müşteri Kodu</th>
-                        <th>Vergi No / TC Kimlik No</th>
-                        <th>Firma Adı</th>
+                        <th>ID</th>
+                        <th>VKN / TCKN</th>
+                        <th>Vergi Dairesi</th>
                         <th>Adı</th>
                         <th>Soyadı</th>
+                        <th>Telefon</th>
+                        <th>E-Posta</th>
+                        <th>Oluşturma</th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr><td></td><td>42265047550</td><td></td><td>EYYÜP</td><td>KORKMAZOĞLU</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>28669500792</td><td></td><td>NECLA</td><td>ALTUNTAŞ</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>10634101400</td><td></td><td>NECMETTİN</td><td>DEMİREL</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>46993651430</td><td>ZADEOĞLU GIDA</td><td>İBRAHİM</td><td>ZADEOĞLU</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>26951477326</td><td></td><td>SADİ</td><td>KIR</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>23668272534</td><td></td><td>KAAN</td><td>DENİZLİ</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>19445339514</td><td></td><td>Halit</td><td>Kağan Madenoğlu</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>13798834542</td><td></td><td>MUSTAFA KEMAL</td><td>DAĞDELEN</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>23368151368</td><td></td><td>SEMRA</td><td>ÖZTÜRK</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                    <tr><td></td><td>49561305834</td><td></td><td>SERKAN</td><td>DEMİRBAĞ</td><td><button class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></button> <button class="btn btn-success btn-sm"><i class="fa fa-send"></i></button> <button class="btn btn-danger btn-sm"><i class="fa fa-remove"></i></button></td></tr>
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 </section>
 
+<!-- Müşteri Modal -->
+<div class="modal fade" id="mdlCustomer" tabindex="-1" role="dialog" aria-labelledby="mdlCustomerLabel">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <form id="frmCustomer">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="mdlCustomerLabel">Müşteri / Cari Bilgisi</h4>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="cusId" />
+
+                    <div class="form-group">
+                        <label for="cusName">Adı</label>
+                        <input type="text" class="form-control" id="cusName" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="cusSurname">Soyadı</label>
+                        <input type="text" class="form-control" id="cusSurname" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="cusPhone">Telefon</label>
+                        <input type="text" class="form-control" id="cusPhone" placeholder="05xx xxx xx xx" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cusEmail">E-posta</label>
+                        <input type="email" class="form-control" id="cusEmail" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cusTaxNo">Vergi No / TCKN</label>
+                        <input type="text" class="form-control" id="cusTaxNo" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cusTaxOffice">Vergi Dairesi</label>
+                        <input type="text" class="form-control" id="cusTaxOffice" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cusCreatedAt">Oluşturma Tarihi</label>
+                        <input type="date" class="form-control" id="cusCreatedAt" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cusUpdatedAt">Güncelleme Tarihi</label>
+                        <input type="date" class="form-control" id="cusUpdatedAt" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @section Scripts {
-    <script>
-        $(function () {
-            $('#grid_cari').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
-            });
-        });
-    </script>
+    <script type="module" src="~/apps/mustericarilist.js"></script>
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,9 +18,9 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime UpdatedAt { get; set; }
 
         // Navigation
-        public ICollection<UserRole> UserRoles { get; set; }
+        [ValidateNever] public ICollection<UserRole> UserRoles { get; set; }
 
         // 🔹 İlişki: 1 kullanıcı birden fazla duyuruyu okumuş olabilir
-        public ICollection<UserAnnouncementRead>? UserAnnouncementReads { get; set; }
+        [ValidateNever] public ICollection<UserAnnouncementRead>? UserAnnouncementReads { get; set; }
     }
 }

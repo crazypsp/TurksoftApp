@@ -4,89 +4,101 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<section class="content-header">
+    <h1>Kullanıcı Ayarları</h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
+        <li class="active">Kullanıcı Ayarları</li>
+    </ol>
+</section>
 
-<div class="box box-primary">
-    <div class="box-header with-border">
-        <h3 class="box-title">Kullanıcı İşlemleri</h3>
-    </div>
-    <div class="box-body">
-        <div class="row">
-            <div class="col-md-4">
-                <br>
-                <button id="sifreDegistirBtn" class="btn btn-block btn-info" onclick="yeniSifreAktif()">
-                    Şifre değişikliği yapmak istiyorsanız tıklayınız
-                </button>
-                <br>
-
-                <div id="sifreDegistirmeAktif" style="display: none;">
-                    <div class="form-horizontal row">
-                        <label class="control-label col-sm-3">Mevcut Şifre*</label>
-                        <div class="col-sm-9">
-                            <input type="password" name="txteskisifre" id="txteskisifre" class="form-control">
-                        </div>
-                    </div>
-                    <br>
-                    <div class="form-horizontal row">
-                        <label id="lblkullanicisifre" class="control-label col-sm-3">Yeni Şifre*</label>
-                        <div class="col-sm-9">
-                            <input type="password" name="txtyenisifre" id="txtyenisifre" class="form-control">
-                        </div>
-                    </div>
-                    <div class="form-horizontal row">
-                        <label id="lblkullanicisifretekrar" class="control-label col-sm-3">Şifre Tekrar*</label>
-                        <div class="col-sm-9">
-                            <input type="password" name="txtyenisifretekrar" id="txtyenisifretekrar" class="form-control">
-                        </div>
-                    </div>
+<section class="content">
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <h3 class="box-title">Filtreleme</h3>
+            <div class="box-tools pull-right">
+                <button id="btnNewUser" class="btn btn-success btn-sm"><i class="fa fa-plus"></i> Yeni Kullanıcı</button>
+            </div>
+        </div>
+        <div class="box-body form-horizontal">
+            <div class="row">
+                <div class="form-group col-md-3">
+                    <label>Kullanıcı Adı</label>
+                    <input id="fltUsername" type="text" class="form-control" placeholder="Kullanıcı adı..." />
                 </div>
-
-                <br><br>
-
-                <div class="form-horizontal row">
-                    <label class="control-label col-sm-3">E-Mail*</label>
-                    <div class="col-sm-9">
-                        <input type="email" name="txtkullanicimail" id="txtkullanicimail" class="form-control">
-                        <div id="mailDogrulandidiv"><span class="label label-success"> Mail adresi doğrulandı </span></div>
-                        <div id="mailDogrulanmadidiv" style="display: none;"><span class="label label-danger"> Mail adresi doğrulanmadı! </span></div>
-                        <br>
-                        <button class="btn btn-block btn-default" id="mailDogrulamagonder" onclick="changeUserInfos('Mail')" style="display: none;">
-                            Mail için doğrulama kodu gönder
-                        </button>
-                        <br>
-                    </div>
+                <div class="form-group col-md-3">
+                    <label>E-Posta</label>
+                    <input id="fltEmail" type="text" class="form-control" placeholder="E-Posta..." />
                 </div>
-
-                <div class="form-horizontal row">
-                    <label class="control-label col-sm-3">Cep Telefonu</label>
-                    <div class="col-sm-9">
-                        <input type="tel" name="txtkullanicitelefon" onchange="telefonChange()" id="txtkullanicitelefon" class="form-control">
-                        <div id="telefonDogrulandidiv"><span class="label label-success"> Telefon doğrulandı </span></div>
-                        <div id="telefonDogrulanmadidiv" style="display: none;"><span class="label label-danger"> Telefon doğrulanmadı! </span></div>
-                        <br>
-                        <button class="btn btn-block btn-default" id="telDogrulamagonder" onclick="changeUserInfos('Phone')" style="display: none;">
-                            Telefon için doğrulama kodu gönder
-                        </button>
-                        <br>
-                    </div>
+                <div class="form-group col-md-2" style="margin-top:25px;">
+                    <button id="btnFilter" class="btn btn-info"><i class="fa fa-search"></i> Filtrele</button>
                 </div>
-
-                <div class="form-horizontal row">
-                    <div class="callout callout-warning">
-                        &nbsp;&nbsp;* Mail adresi veya Cep Telefonundan birini doğrulamanız yeterlidir.
-                        <br> &nbsp;&nbsp;* Cep Telefonu zorunlu değildir, mail adresi kullanılamaz ise alternatif bir doğrulama seçeneğiniz olacaktır.
-                        <br> &nbsp;&nbsp;* Her cihaz ve IP adresi için bir defa doğrulamanız yeterli olacaktır.
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
-</div>
 
-<button name="btn_guncelle" id="btn_guncelle" class="btn btn-success" onclick="changeUserInfos('')">
-    Güncelle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-edit"></i></span>
-</button>
+    <div class="box box-primary">
+        <div class="box-body">
+            <table id="grid_users" class="table table-bordered table-hover dataTable">
+                <thead>
+                    <tr>
+                        <th>Kullanıcı Adı</th>
+                        <th>E-Posta</th>
+                        <th>Telefon</th>
+                        <th>Durum</th>
+                        <th>Yönetici</th>
+                        <th>Son Giriş</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
+    <!-- Modal: Yeni / Güncelle Kullanıcı -->
+    <div class="modal fade" id="mdlUser" tabindex="-1">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <form id="frmUser">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Kullanıcı Bilgileri</h4>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="usrId" />
+                        <div class="form-group">
+                            <label>Kullanıcı Adı</label>
+                            <input id="usrUsername" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label>E-Posta</label>
+                            <input id="usrEmail" type="email" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label>Telefon</label>
+                            <input id="usrPhone" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label>Şifre</label>
+                            <input id="usrPassword" type="password" class="form-control" placeholder="Yeni şifre (isteğe bağlı)" />
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" id="usrIsActive" /> Aktif</label>
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" id="usrIsSuper" /> Yönetici (SuperUser)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Kaydet</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
 @section Scripts {
-    <script src="/hizlicss/jsv643136158/usersettings.js"></script>
+    <script type="module" src="~/apps/usersettings.js"></script>
 }

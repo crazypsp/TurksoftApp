@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,7 +21,7 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime UpdatedAt { get; set; }
 
         // Navigation
-        public User User { get; set; }
-        public ICollection<UserAnnouncementRead> UserAnnouncementReads { get; set; }
+        [ValidateNever] public User User { get; set; }
+        [ValidateNever] public ICollection<UserAnnouncementRead> UserAnnouncementReads { get; set; }
     }
 }

@@ -5,57 +5,82 @@
 }
 
 <section class="content-header">
-    <h1>
-        Listeler
-        <small>İhraç Kayıtlı Kod Listesi</small>
-    </h1>
-    <ol class="breadcrumb">
-        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
-        <li>Listeler</li>
-        <li class="active">İhraç Kayıtlı Kod Listesi</li>
-    </ol>
+    <h1>Listeler <small>İhraç Kayıtlı Kod Listesi</small></h1>
 </section>
 
 <section class="content">
-    <h2>İhraç Kayıtlı Kod Listesi</h2>
     <div class="box box-primary">
+        <div class="box-header with-border">
+            <button id="btnNewExport" class="btn btn-success btn-sm pull-right">
+                <i class="fa fa-plus"></i> Yeni İhraç Kayıtlı Kod Ekle
+            </button>
+        </div>
         <div class="box-body">
             <table id="grid_Export" class="table table-bordered table-hover dataTable">
                 <thead>
                     <tr>
                         <th>İhraç Kayıtlı Kodu</th>
                         <th>İhraç Kayıtlı Adı</th>
+                        <th>İşlemler</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>701</td>
-                        <td>3065 s. KDV Kanununun 11/1-c md. Kapsamındaki İhraç Kayıtlı Satış</td>
-                    </tr>
-                    <tr>
-                        <td>704</td>
-                        <td>3065 sayılı KDV Kanununun (11/1-c) maddesi ve 4760 s. Ötv Kanununun 8/2. Md. Kapsamındaki İhraç Kayıtlı Satış</td>
-                    </tr>
-                    <tr>
-                        <td>703</td>
-                        <td>4760 s. ÖTV Kanununun 8/2 Md. Kapsamındaki İhraç Kayıtlı Satış</td>
-                    </tr>
-                    <tr>
-                        <td>702</td>
-                        <td>DİİB ve Geçici Kabul Rejimi Kapsamındaki Satışlar</td>
-                    </tr>
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 </section>
 
+<!-- İhraç Kayıtlı Kod Modal -->
+<div class="modal fade" id="mdlExport" tabindex="-1" role="dialog" aria-labelledby="mdlExportLabel">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <form id="frmExport">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="mdlExportLabel">İhraç Kayıtlı Kod Bilgisi</h4>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="expId" />
+
+                    <div class="form-group">
+                        <label for="expCode">İhraç Kayıtlı Kodu</label>
+                        <input type="text" class="form-control" id="expCode" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expTitle">İhraç Kayıtlı Adı</label>
+                        <input type="text" class="form-control" id="expTitle" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expSolution">Açıklama / Çözüm 1</label>
+                        <textarea class="form-control" id="expSolution" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expSolution2">Açıklama / Çözüm 2</label>
+                        <textarea class="form-control" id="expSolution2" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expType">Tür</label>
+                        <input type="text" class="form-control" id="expType" value="Export" readonly />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
-    <script>
-        $(function () {
-            $('#grid_Export').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
-            });
-        });
-    </script>
+    <script type="module" src="~/apps/exportregisteredcodes.js"></script>
 }

@@ -1,7 +1,16 @@
 ﻿@{
     ViewData["Title"] = "Ayarlar";
+    ViewData["Subtitle"] = "Sistem Ayarları";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+
+<section class="content-header">
+    <h1>Ayarlar</h1>
+    <ol class="breadcrumb">
+        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
+        <li class="active">Ayarlar</li>
+    </ol>
+</section>
 
 <section class="content">
     <div class="panel panel-sky">
@@ -10,86 +19,80 @@
             <!-- 🔧 Firma Bilgileri -->
             <div class="box box-default">
                 <div class="box-header with-border">
-                    <h3 class="box-title">Firma Bilgileri</h3>
+                    <h3 class="box-title"><i class="fa fa-building"></i> Firma Bilgileri</h3>
                 </div>
-                <div class="box-body">
-                    <form class="form-horizontal">
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">Firma Adı</label>
-                            <div class="col-sm-6"><input type="text" class="form-control" id="CompanyName"></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">VKN/TCKN</label>
-                            <div class="col-sm-6"><input type="text" class="form-control" id="VknTckn"></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">Adres</label>
-                            <div class="col-sm-6"><textarea class="form-control" id="Address"></textarea></div>
-                        </div>
-                    </form>
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Firma Adı</label>
+                        <div class="col-sm-6"><input type="text" class="form-control" id="CompanyName" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">VKN/TCKN</label>
+                        <div class="col-sm-6"><input type="text" class="form-control" id="VknTckn" maxlength="11" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Adres</label>
+                        <div class="col-sm-6"><textarea class="form-control" id="Address"></textarea></div>
+                    </div>
                 </div>
             </div>
 
             <!-- 👤 Kullanıcı Ayarları -->
             <div class="box box-default">
                 <div class="box-header with-border">
-                    <h3 class="box-title">Kullanıcı Ayarları</h3>
+                    <h3 class="box-title"><i class="fa fa-user"></i> Kullanıcı Bilgileri</h3>
                 </div>
-                <div class="box-body">
-                    <form class="form-horizontal">
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">Ad Soyad</label>
-                            <div class="col-sm-6"><input type="text" class="form-control" id="FullName"></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">Email</label>
-                            <div class="col-sm-6"><input type="email" class="form-control" id="Email"></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">Telefon</label>
-                            <div class="col-sm-6"><input type="tel" class="form-control" id="Phone"></div>
-                        </div>
-                    </form>
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Ad Soyad</label>
+                        <div class="col-sm-6"><input type="text" class="form-control" id="FullName" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">E-Posta</label>
+                        <div class="col-sm-6"><input type="email" class="form-control" id="Email" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Telefon</label>
+                        <div class="col-sm-6"><input type="tel" class="form-control" id="Phone" /></div>
+                    </div>
                 </div>
             </div>
 
             <!-- ⚙️ Genel Ayarlar -->
             <div class="box box-default">
                 <div class="box-header with-border">
-                    <h3 class="box-title">Genel Ayarlar</h3>
+                    <h3 class="box-title"><i class="fa fa-cog"></i> Genel Ayarlar</h3>
                 </div>
-                <div class="box-body">
-                    <form class="form-horizontal">
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">Tema</label>
-                            <div class="col-sm-6">
-                                <select class="form-control" id="Theme">
-                                    <option value="red">Kırmızı</option>
-                                    <option value="blue">Mavi</option>
-                                    <option value="green">Yeşil</option>
-                                </select>
-                            </div>
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Tema</label>
+                        <div class="col-sm-6">
+                            <select id="Theme" class="form-control">
+                                <option value="red">Kırmızı</option>
+                                <option value="blue">Mavi</option>
+                                <option value="green">Yeşil</option>
+                            </select>
                         </div>
-                        <div class="form-group">
-                            <label class="col-sm-2 control-label">Dil</label>
-                            <div class="col-sm-6">
-                                <select class="form-control" id="Language">
-                                    <option value="tr">Türkçe</option>
-                                    <option value="en">İngilizce</option>
-                                </select>
-                            </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Dil</label>
+                        <div class="col-sm-6">
+                            <select id="Language" class="form-control">
+                                <option value="tr">Türkçe</option>
+                                <option value="en">İngilizce</option>
+                            </select>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
             <!-- 📑 Belge Durumu -->
             <div class="box box-default">
                 <div class="box-header with-border">
-                    <h3 class="box-title">Belge Durumu</h3>
+                    <h3 class="box-title"><i class="fa fa-file-text-o"></i> Belge Durumu</h3>
                 </div>
                 <div class="box-body">
-                    <table class="table table-bordered table-hover">
+                    <table class="table table-bordered table-hover" id="tblDocumentStatus">
                         <thead>
                             <tr>
                                 <th>Belge</th>
@@ -111,5 +114,5 @@
 </section>
 
 @section Scripts {
-    <script src="/hizlicss/jsv643136158/Settings/settings.js"></script>
+    <script type="module" src="~/js/pages/Settings/Settings.js"></script>
 }

@@ -81,7 +81,8 @@ namespace TurkSoft.Data.GibData
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(GibAppDbContext).Assembly);
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(GibAppDbContext).Assembly,
+     x => x.Namespace != null && x.Namespace.Contains("TurkSoft.Data.GibData"));
 
             // === Cascade Delete hatalarını engelle ===
             foreach (var fk in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))

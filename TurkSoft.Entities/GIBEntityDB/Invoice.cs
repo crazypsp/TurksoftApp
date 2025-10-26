@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,14 +19,14 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime UpdatedAt { get; set; }
 
         // Navigation
-        public Customer Customer { get; set; }
-        public ICollection<InvoicesItem> InvoicesItems { get; set; }
-        public ICollection<InvoicesTax> InvoicesTaxes { get; set; }
-        public ICollection<InvoicesDiscount> InvoicesDiscounts { get; set; }
-        public ICollection<Tourist> Tourists { get; set; }
-        public ICollection<Sgk> SgkRecords { get; set; }
-        public ICollection<ServicesProvider> ServicesProviders { get; set; }
-        public ICollection<Returns> Returns { get; set; }
-        public ICollection<InvoicesPayment> InvoicesPayments { get; set; }
+        [ValidateNever] public Customer Customer { get; set; }
+        [ValidateNever] public ICollection<InvoicesItem> InvoicesItems { get; set; }
+        [ValidateNever] public ICollection<InvoicesTax> InvoicesTaxes { get; set; }
+        [ValidateNever] public ICollection<InvoicesDiscount> InvoicesDiscounts { get; set; }
+        [ValidateNever] public ICollection<Tourist> Tourists { get; set; }
+        [ValidateNever] public ICollection<Sgk> SgkRecords { get; set; }
+        [ValidateNever] public ICollection<ServicesProvider> ServicesProviders { get; set; }
+        [ValidateNever] public ICollection<Returns> Returns { get; set; }
+        [ValidateNever] public ICollection<InvoicesPayment> InvoicesPayments { get; set; }
     }
 }

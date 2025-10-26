@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,7 +16,7 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime UpdatedAt { get; set; }
 
         // Navigation
-        public Invoice Invoice { get; set; }
-        public Payment Payment { get; set; }
+        [ValidateNever] public Invoice Invoice { get; set; }
+        [ValidateNever] public Payment Payment { get; set; }
     }
 }
