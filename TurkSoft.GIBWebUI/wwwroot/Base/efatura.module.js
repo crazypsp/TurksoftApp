@@ -1,0 +1,1 @@
+﻿import { InvoiceApi } from '../Entites/index.js'; window.InvoiceApi = InvoiceApi;
