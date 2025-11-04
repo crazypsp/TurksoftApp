@@ -8,6 +8,21 @@
 
 
 
+    <!-- ==== BEGIN: EInvoice minimal alignment css (append-only) ==== -->
+    <style id="lines-header-fix">
+        /* Tablo yapısına dokunmadan başlık–gövde hizasını korumaya yardımcı olur */
+        #tblLines, #lines, #manuel_grid {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+            #tblLines th, #tblLines td,
+            #lines th, #lines td,
+            #manuel_grid th, #manuel_grid td {
+                white-space: nowrap;
+            }
+    </style>
+    <!-- ==== END: EInvoice minimal alignment css ==== -->
 
 
     <script>

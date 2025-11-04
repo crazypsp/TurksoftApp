@@ -443,6 +443,14 @@
 // - PDF/XML indir
 // - API: InvoiceApi (global varsa) / REST fallback
 // - "Nox Yazılım" gibi alt yazıları gizler
+// wwwroot/apps/invoice.js (FINAL — patched)
+// Özellikler:
+// - Yeni Satır Ekle: lines (#manuel_grid öncelikli), irsaliye_grid, saticiekalan_grid, saticiAgentekalan_grid, aliciekalan_grid
+// - Canlı toplamlar, taslak kaydet/yükle
+// - Önizleme: modalPreview -> modal-onizleme -> yeni sekme
+// - PDF/XML indir
+// - API: InvoiceApi (global varsa) / REST fallback
+// - "Nox Yazılım" gibi alt yazıları gizler
 (function ($, w, d) {
     'use strict';
 
@@ -487,10 +495,8 @@
         sgkStart: '#txtSendingDateBaslangic',
         sgkEnd: '#txtSendingDateBitis',
 
-        // Kalem tablo (esnek tespit: #lines / #tblLines / #manuel_grid)
-        linesTable: (d.getElementById('lines') ? '#lines' :
-            (d.getElementById('tblLines') ? '#tblLines' :
-                (d.getElementById('manuel_grid') ? '#manuel_grid' : '#tblLines'))),
+        // Kalem tablo (başlangıçta varsayılan; DOM ready’de manuel_grid önceliği verilecek)
+        linesTable: '#tblLines',
 
         // Diğer gridler
         despatchTable: '#irsaliye_grid',
@@ -498,7 +504,7 @@
         sellerAgentTbl: '#saticiAgentekalan_grid',
         buyerExtraTbl: '#aliciekalan_grid',
 
-        // Butonlar (birden fazla muhtemel id/metin)
+        // Butonlar
         btnAddLine: '#btnAddRow, #btnNewLine, .btn-new-line',
         btnAddByText: 'button,a', // metninde “Yeni Satır Ekle” olanlar
         btnDespatchAdd: '#btnDespatchAdd',
@@ -568,8 +574,6 @@
         const x = ($('#vatMode').val() || '').toUpperCase();
         return x.indexOf('DAH') >= 0 ? VAT_MODE.INCL : VAT_MODE.EXCL;
     }
-
-    // küçük yardımcı: input temizleme
     function clearInputs($scope) {
         $scope.find('input,select,textarea').each(function () {
             const $el = $(this);
@@ -583,23 +587,18 @@
     // LOOKUP DOLUM
     // ===========================
     function loadLookups() {
-        // Şube
         if (w.subeList) fillSelect($(SEL.subeKodu), subeList, x => x.SubeKodu, x => x.SubeAdi, (subeList?.length > 1 ? 'Seçiniz' : ''));
 
-        // Prefix
         const prefixList = [];
         try { if (w.invoicemodel?.invoiceheader?.Prefix) prefixList.push(w.invoicemodel.invoiceheader.Prefix); } catch { }
         ['INV', 'TS', 'NYZ'].forEach(x => { if (!prefixList.includes(x)) prefixList.push(x); });
         fillSelect($(SEL.prefix), prefixList, x => x, x => x, 'Seçiniz');
 
-        // Gönderen/Alıcı Etiket
         if (w.GondericiEtiketList) fillSelect($(SEL.sourceUrn), GondericiEtiketList, x => x, x => x, 'Seçiniz');
         if (w.KurumEtiketList) fillSelect($(SEL.destUrn), KurumEtiketList, x => x, x => x, 'Seçiniz');
 
-        // XSLT
         if (w.GetXsltList) fillSelect($(SEL.xslt), GetXsltList, x => x, x => x, 'Seçiniz');
 
-        // Para birimi
         if (w.parabirimList) {
             fillSelect($(SEL.currency), parabirimList, x => x.Kodu, x => `${x.Kodu} — ${x.Aciklama}`, 'Seçiniz');
             if (!$(SEL.currency).val()) $(SEL.currency).val(DEFAULTS.CURRENCY).trigger('change');
@@ -608,7 +607,6 @@
             $(SEL.currency).val('TRY').trigger('change');
         }
 
-        // Ülke / İl / İlçe
         if (w.ulkeList) fillSelect($(SEL.country), ulkeList, x => x.UlkeKodu || x.UlkeAdi, x => x.UlkeAdi, 'Seçiniz');
         if (w.ilList) fillSelect($(SEL.city), ilList, x => x.IlAdi, x => x.IlAdi, 'Seçiniz');
         $(SEL.city).off('change.district').on('change.district', function () {
@@ -617,16 +615,13 @@
                 const rows = ilceList.filter(x => x.IlAdi === city);
                 fillSelect($(SEL.district), rows, x => x.IlceAdi, x => x.IlceAdi, 'Seçiniz');
             } else {
-                // İlçe listesi yoksa varsa text kutusuna bırak
                 if ($(SEL.txtIlce).length) { $(SEL.district).hide(); $(SEL.txtIlce).show().val(''); }
             }
         });
 
-        // Ödeme
         if (w.OdemeList) fillSelect($(SEL.payMeans), OdemeList, x => x.OdemeKodu, x => `${x.OdemeKodu} — ${x.Aciklama}`, 'Seçiniz');
         if (w.OdemeKanalList) fillSelect($(SEL.payChannel), OdemeKanalList, x => x.OdemeKanalKodu, x => `${x.OdemeKanalKodu} — ${x.Aciklama}`, 'Seçiniz');
 
-        // Birim cache
         w.__unitList = (w.birimList || []).map(b => ({ ShortName: b.BirimKodu, Name: b.Aciklama }));
     }
 
@@ -687,17 +682,69 @@
         setVal(SEL.tGenel, fmt(grand) + ' TL');
     }
 
+    // ====== ÖZEL: #manuel_grid’e satır ekleme (klonlama) ======
+    function addRow_manuelGrid() {
+        const $tb = $('#manuel_grid tbody');
+        const $last = $tb.find('tr:last');
+        if (!$last.length) return;
+
+        const $clone = $last.clone(true, true);
+
+        // tüm input/select/textarea alanlarını temizle
+        $clone.find('input,select,textarea').each(function () {
+            const $el = $(this);
+            const type = ($el.attr('type') || '').toLowerCase();
+            if (type === 'checkbox' || type === 'radio') $el.prop('checked', false);
+            else $el.val('');
+        });
+
+        // ln-* alanları için varsayılanlar
+        $clone.find('.ln-qty').val('1');
+        // .ln-unit select ise ilk option veya C62
+        const $unit = $clone.find('.ln-unit');
+        if ($unit.is('select')) {
+            const firstOpt = $unit.find('option:first').val();
+            $unit.val(firstOpt || 'C62');
+        } else {
+            $unit.val('C62');
+        }
+        $clone.find('.ln-price').val('1');
+        $clone.find('.ln-discp').val('0');
+        $clone.find('.ln-kdv').val(String(DEFAULTS.VAT));
+        $clone.find('.ln-total').val('');
+
+        // ilk kolon sıra no güncelle
+        const idx = $tb.find('tr').length + 1;
+        $clone.find('td:first').text(idx);
+
+        // silme butonları çalışsın
+        $clone.find('.js-del-line,.btnDel,.js-del-row').off('click._m').on('click._m', function () {
+            $(this).closest('tr').remove();
+            recalcTotals('#manuel_grid');
+            saveDraft();
+        });
+
+        $tb.append($clone);
+        recalcTotals('#manuel_grid');
+        saveDraft();
+    }
+
     // ===========================
     // LINES TABLOSUNU BAĞLA
     // ===========================
     function bindLineTable() {
         const linesSel = SEL.linesTable;
+        const isManGrid = (linesSel === '#manuel_grid');
 
         function addLine() {
-            const idx = $(`${linesSel} tbody tr`).length + 1;
-            $(`${linesSel} tbody`).append(makeLineRow(idx));
-            recalcTotals(linesSel);
-            saveDraft();
+            if (isManGrid) {
+                addRow_manuelGrid();
+            } else {
+                const idx = $(`${linesSel} tbody tr`).length + 1;
+                $(`${linesSel} tbody`).append(makeLineRow(idx));
+                recalcTotals(linesSel);
+                saveDraft();
+            }
         }
 
         // Bilinen buton id’leri
@@ -710,6 +757,13 @@
                 addLine();
             }
         });
+
+        // Sırf #manuel_grid caption’ı için özel bağlayıcı
+        $(d).off('click.addline_cap_m', '#manuel_grid caption .btn, #manuel_grid caption button, #manuel_grid caption a')
+            .on('click.addline_cap_m', '#manuel_grid caption .btn, #manuel_grid caption button, #manuel_grid caption a', function () {
+                const t = ($(this).text() || '').trim().toLowerCase();
+                if (t.indexOf('yeni') >= 0 && t.indexOf('ekle') >= 0) addRow_manuelGrid();
+            });
 
         // Silme
         $(d).off('click.delline', '.js-del-line, .btnDel').on('click.delline', '.js-del-line, .btnDel', function () {
@@ -797,7 +851,7 @@
             { type: 'text', placeholder: 'Değer' }
         ]);
 
-        // Ek: caption’da “Yeni Satır Ekle”’ye bakan genel yakalayıcı (ek güvence)
+        // Ek güvence: caption’da “Yeni Satır Ekle” yakalayıcı
         $(d).off('click.add_caption_all', 'table caption .btn, table caption button, table caption a')
             .on('click.add_caption_all', 'table caption .btn, table caption button, table caption a', function () {
                 const txt = ($(this).text() || '').trim().toLowerCase();
@@ -1049,7 +1103,6 @@
     // ÖNİZLEME / İNDİRME
     // ===========================
     function openPreview(dto) {
-        // 1) Yeni modal
         if ($('#modalPreview').length && $('#previewContent').length) {
             const rows = (dto.invoicesItems || []).map((x, i) => `<tr><td>${i + 1}</td><td>${x.item?.name || ''}</td><td class="text-right">${x.quantity}</td><td class="text-right">${x.item?.unit?.shortName || ''}</td><td class="text-right">${fmt(x.price)}</td><td class="text-right">${fmt(x.total)}</td></tr>`).join('');
             const html = `<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>#</th><th>Ürün</th><th>Miktar</th><th>Birim</th><th>Birim Fiyat</th><th>Tutar</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="5" class="text-right">Genel Toplam</th><th class="text-right">${fmt(dto.total)}</th></tr></tfoot></table></div>`;
@@ -1057,7 +1110,6 @@
             $('#modalPreview').modal('show');
             return true;
         }
-        // 2) Eski modal
         if ($('#modal-onizleme').length && $('#onizle-iframe').length) {
             let html = '<html><head><meta charset="utf-8"><title>Önizleme</title>';
             html += '<style>body{font-family:Arial;padding:14px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:6px;font-size:12px}</style>';
@@ -1078,7 +1130,6 @@
         const dto = collectInvoice();
         if (!dto || !dto.invoicesItems || !dto.invoicesItems.length) { alert('En az bir satır ekleyin.'); return; }
         if (!openPreview(dto)) {
-            // 3) Yeni sekme
             let html = '<html><head><meta charset="utf-8"><title>Önizleme</title></head><body>';
             html += '<h3>e-Fatura Önizleme</h3>';
             const linesSel = SEL.linesTable;
@@ -1152,7 +1203,12 @@
     // INIT
     // ===========================
     $(function () {
-        console.log('🧾 Invoice.js (final) yüklendi');
+        console.log('🧾 Invoice.js (final+patch) yüklendi');
+
+        // lines tablosunu DOM yüklendikten sonra belirle — manuel_grid > tblLines > lines
+        SEL.linesTable = (document.getElementById('manuel_grid') ? '#manuel_grid'
+            : (document.getElementById('tblLines') ? '#tblLines'
+                : (document.getElementById('lines') ? '#lines' : '#tblLines')));
 
         // “Nox Yazılım” vb. alt yazıları gizle
         $('.help-block, small').filter(function () {
@@ -1167,7 +1223,7 @@
         bindActions();
         loadDraft();
 
-        // UI’da “Yeni Satır Ekle” metnini taşıyan butonlara güvence için sınıf ver
+        // “Yeni Satır Ekle” metnini taşıyan butonlara güvence için sınıf ver
         $('button, a').filter(function () { return ($(this).text() || '').trim().toLowerCase().indexOf('yeni satır ekle') >= 0; })
             .addClass('btn-new-line');
 
@@ -1175,7 +1231,181 @@
         w.EinvoiceUI = { collectInvoice, recalcTotals, saveDraft, applyDraft };
     });
 
+    /* ==== BEGIN: EInvoice patch (non-destructive, append-only) ==== */
+    (function ($, w, d) {
+        'use strict';
+
+        if (w.__EINV_PATCH_APPLIED__) return; // iki kez eklenmesin
+        w.__EINV_PATCH_APPLIED__ = true;
+
+        // 1) Başlık–gövde hizası (TH/TD)
+        if (typeof w.fixLinesHeaderAlignment !== 'function') {
+            w.fixLinesHeaderAlignment = function fixLinesHeaderAlignment() {
+                try {
+                    var $tbl = $('#tblLines').length ? $('#tblLines')
+                        : ($('#lines').length ? $('#lines')
+                            : ($('#manuel_grid').length ? $('#manuel_grid') : $()));
+                    if (!$tbl.length) return;
+
+                    // thead th ve ilk görünür satırın td’leri eşitlenir
+                    var $head = $tbl.find('thead th');
+                    var $row = $tbl.find('tbody tr:visible:first');
+                    if (!$head.length || !$row.length) return;
+
+                    var $tds = $row.children('td');
+                    if ($tds.length !== $head.length) return;
+
+                    $tds.each(function (i) {
+                        var w = $(this).outerWidth();
+                        $($head[i]).css('width', w);
+                    });
+                } catch (e) { /* yok say */ }
+            };
+        }
+
+        // 2) Satır işlem butonları (+ / ✎ / 🗑) – şablona dokunmadan, çalışma anında ekle
+        function ensureRowActionButtons($tbl) {
+            try {
+                $tbl.find('tbody tr').each(function () {
+                    var $last = $(this).children('td').last();
+                    if (!$last.length) return;
+
+                    var hasGroup = $last.find('.einv-btn-group').length > 0;
+                    if (!hasGroup) {
+                        // Sil butonu zaten varsa kalsın; biz sadece + ve ✎ ekleyelim
+                        var $del = $last.find('.js-del-line, .btnDel').first();
+                        var $grp = $('<div class="btn-group btn-group-xs einv-btn-group" role="group" style="margin-left:4px;"></div>');
+
+                        // + butonu
+                        $('<button type="button" class="btn btn-success js-line-add" title="Altına Satır Ekle"><i class="fa fa-plus"></i></button>')
+                            .appendTo($grp);
+
+                        // ✎ butonu
+                        $('<button type="button" class="btn btn-warning js-line-edit" title="Düzenle"><i class="fa fa-pencil"></i></button>')
+                            .appendTo($grp);
+
+                        // Grup yerleşimi: varsa sil butonunun SAĞINA ekle; yoksa tek başına ekle
+                        if ($del.length) {
+                            $del.after($grp);
+                        } else {
+                            // hiç sil butonu yoksa komple grubu ekle
+                            $last.append($grp);
+                            // ve yoksa bir de sil butonu ekleyelim
+                            $(
+                                '<button type="button" class="btn btn-danger js-del-line" title="Sil" style="margin-left:4px;"><i class="fa fa-trash"></i></button>'
+                            ).appendTo($grp);
+                        }
+                    }
+                });
+            } catch (e) { }
+        }
+
+        // 3) Toplam hesap – var olan recalc/recalcTotals neyse onu kullan
+        function triggerTotals() {
+            try {
+                if (typeof w.recalcTotals === 'function') {
+                    // bazı projelerde linesSel gerekir; bazısında gerekmez
+                    try { w.recalcTotals((w.SEL && w.SEL.linesTable) || '#tblLines'); }
+                    catch { w.recalcTotals(); }
+                } else if (typeof w.recalc === 'function') {
+                    w.recalc();
+                }
+            } catch (e) { }
+        }
+
+        // 4) Satır numarası – varsa mevcut fonksiyonu çağır
+        function triggerRenumber() {
+            try {
+                if (typeof w.renumberLines === 'function') {
+                    w.renumberLines((w.SEL && w.SEL.linesTable) || '#tblLines');
+                } else if (typeof w.renumber === 'function') {
+                    w.renumber();
+                }
+            } catch (e) { }
+        }
+
+        // 5) + / ✎ / 🗑 olayları – delege
+        $(d)
+            // + altına satır ekle
+            .off('click.einv.add', '.js-line-add')
+            .on('click.einv.add', '.js-line-add', function () {
+                var $tr = $(this).closest('tr');
+                var $tbl = $tr.closest('table');
+                var idx = $tbl.find('tbody tr').length + 1;
+
+                // Tercihen mevcut rowTemplate/makeLineRow fonksiyonlarını kullan, yoksa satırı klonla
+                try {
+                    if (typeof w.rowTemplate === 'function') {
+                        $tr.after(w.rowTemplate(idx));
+                    } else if (typeof w.makeLineRow === 'function') {
+                        $tr.after(w.makeLineRow(idx));
+                    } else {
+                        var $clone = $tr.clone(true, true);
+                        // değerleri sıfırla/temizle
+                        $clone.find('.ln-qty').val('1');
+                        $clone.find('.ln-price').val('1');
+                        $clone.find('.ln-discp').val('0');
+                        $clone.find('.ln-kdv').val($clone.find('.ln-kdv').val() || '20');
+                        $clone.find('.ln-total').val('');
+                        $tr.after($clone);
+                    }
+                } catch { /* fallback klon yukarıda */ }
+
+                triggerRenumber();
+                triggerTotals();
+                w.fixLinesHeaderAlignment && w.fixLinesHeaderAlignment();
+                // buton grubu yeni satıra da gelsin
+                ensureRowActionButtons($tbl);
+            })
+
+            // ✎ düzenle toggle
+            .off('click.einv.edit', '.js-line-edit')
+            .on('click.einv.edit', '.js-line-edit', function () {
+                var $tr = $(this).closest('tr');
+                var $eds = $tr.find('.ln-ad,.ln-qty,.ln-unit,.ln-price,.ln-discp,.ln-kdv');
+                var disabled = $eds.prop('disabled');
+                $eds.prop('disabled', !disabled);
+                if (!disabled) { $eds.first().focus(); }
+            })
+
+            // 🗑 sil – mevcut handler varsa da çalışır, sonunda hizayı düzelt
+            .off('click.einv.del.after', '.js-del-line, .btnDel')
+            .on('click.einv.del.after', '.js-del-line, .btnDel', function () {
+                setTimeout(function () {
+                    triggerRenumber();
+                    triggerTotals();
+                    w.fixLinesHeaderAlignment && w.fixLinesHeaderAlignment();
+                }, 0);
+            })
+
+            // Hesap tetikleyicileri – alan değişimleri
+            .off('input.einv change.einv', '.ln-qty,.ln-price,.ln-discp,.ln-kdv,.ln-unit,.ln-ad')
+            .on('input.einv change.einv', '.ln-qty,.ln-price,.ln-discp,.ln-kdv,.ln-unit,.ln-ad', function () {
+                triggerTotals();
+            });
+
+        // 6) Hazır olunca ilk hizalama ve buton ekleme
+        $(function () {
+            var $tbl = $('#tblLines').length ? $('#tblLines')
+                : ($('#lines').length ? $('#lines')
+                    : ($('#manuel_grid').length ? $('#manuel_grid') : $()));
+            if ($tbl.length) {
+                ensureRowActionButtons($tbl);
+                setTimeout(function () {
+                    w.fixLinesHeaderAlignment && w.fixLinesHeaderAlignment();
+                }, 100);
+                $(w).on('resize.einv', function () {
+                    w.fixLinesHeaderAlignment && w.fixLinesHeaderAlignment();
+                });
+            }
+        });
+
+    })(jQuery, window, document);
+    /* ==== END: EInvoice patch ==== */
+
+
 })(jQuery, window, document);
+
 
 
 
