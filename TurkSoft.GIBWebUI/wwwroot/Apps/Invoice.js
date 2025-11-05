@@ -1,5 +1,5 @@
 ﻿//// wwwroot/apps/invoice.js
-//import { InvoiceApi } from '../Entites/index.js';
+import { InvoiceApi } from '../Entites/index.js';
 
 //(function ($) {
 //    const APP_KEY = 'einvoice_draft_v1';
@@ -511,7 +511,7 @@
         btnSellerExtra: '#btnSellerExtraAdd',
         btnSellerAgent: '#btnSellerAgentExtraAdd',
         btnBuyerExtra: '#btnBuyerExtraAdd',
-        btnSave: '#btnKaydet, #btnDraftSave',
+        btnSave: '#btn_taslak, [name="btn_taslak"], #btnKaydet, #btnDraftSave',
         btnSend: '#btnSendGib, #btnGibSend',
         btnPreview: '#btnPreview, #btnOnizleme',
         btnPdf: '#btnPdfDownload, #btnPdf',
@@ -1080,10 +1080,12 @@
     }
 
     async function doSave() {
+        console.log('💾 Fatura kaydediliyor...');
         const dto = collectInvoice();
         if (!(dto.invoicesItems || []).length) { alert('En az bir satır ekleyin.'); return; }
         try {
-            const res = await getInvoiceApi().create(dto);
+            console.log(dto);
+            const res = await InvoiceApi.create(dto);
             (w.toastr ? toastr.success('Fatura başarıyla kaydedildi.') : alert('Fatura başarıyla kaydedildi.'));
             log('✅ API Yanıtı:', res);
             clearDraft();
@@ -1178,6 +1180,7 @@
     // ACTION BINDINGS
     // ===========================
     function bindActions() {
+        console.log("🔗 Buton eylemleri bağlanıyor...");
         $(SEL.btnSave).off('click.save').on('click.save', doSave);
         $(SEL.btnSend).off('click.send').on('click.send', doSend);
 

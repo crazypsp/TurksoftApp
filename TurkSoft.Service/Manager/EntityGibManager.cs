@@ -67,6 +67,12 @@ namespace TurkSoft.Service.Manager
                 if (entity is Invoice inv)
                 {
                     await FixInvoiceGraphAsync(inv, token);
+
+                    // Fail-fast güvenliği: Phone NOT NULL kırılmasın
+                    if (inv.Customer != null && string.IsNullOrWhiteSpace(inv.Customer.Phone))
+                    {
+                        NormalizeCustomer(inv.Customer);
+                    }
                 }
 
                 await _set.AddAsync(entity, token);
@@ -218,6 +224,14 @@ namespace TurkSoft.Service.Manager
             b.Country = string.IsNullOrWhiteSpace(b.Country) ? "TR" : b.Country;
             if (b.CreatedAt == default) b.CreatedAt = DateTime.UtcNow;
             b.UpdatedAt = DateTime.UtcNow;
+        }
+
+        private static void NormalizeCustomer(Customer c)
+        {
+            c.Name  = string.IsNullOrWhiteSpace(c.Name)  ? "GENEL MÜŞTERİ" : c.Name;
+            c.Phone = string.IsNullOrWhiteSpace(c.Phone) ? "-" : c.Phone; // Phone NOT NULL güvenliği
+            if (c.CreatedAt == default) c.CreatedAt = DateTime.UtcNow;
+            c.UpdatedAt = DateTime.UtcNow;
         }
 
         // ======================================================
@@ -462,14 +476,43 @@ namespace TurkSoft.Service.Manager
         {
             var now = DateTime.UtcNow;
 
-            // ---- Customer normalize
-            if (inv.Customer != null)
+            // ---- CUSTOMER: Id varsa mevcut müşteriyi bağla; yoksa yeni müşteriyi normalize et
+            try
             {
-                inv.Customer.Invoices = null;
-                inv.Customer.Addresses = null;
-                inv.Customer.CustomersGroups = null;
-                if (inv.Customer.CreatedAt == default) inv.Customer.CreatedAt = now;
-                inv.Customer.UpdatedAt = now;
+                if (inv.CustomerId > 0)
+                {
+                    var existing = await FindByIdAsync<Customer>(inv.CustomerId, ct);
+                    if (existing == null)
+                        throw new Exception($"CustomerId {inv.CustomerId} bulunamadı.");
+
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    inv.Customer = existing; // yeni kayıt denemesini engeller
+                }
+                else if (inv.Customer != null)
+                {
+                    NormalizeCustomer(inv.Customer); // Phone dahil zorunlu alanları garanti et
+
+                    // döngüleri kır + timestamp
+                    inv.Customer.Invoices = null;
+                    inv.Customer.Addresses = null;
+                    inv.Customer.CustomersGroups = null;
+                    if (inv.Customer.CreatedAt == default) inv.Customer.CreatedAt = now;
+                    inv.Customer.UpdatedAt = now;
+                }
+            }
+            catch (MissingMemberException)
+            {
+                // Eğer Invoice tipinizde CustomerId yoksa sadece normalize/temizle
+                if (inv.Customer != null)
+                {
+                    NormalizeCustomer(inv.Customer);
+                    inv.Customer.Invoices = null;
+                    inv.Customer.Addresses = null;
+                    inv.Customer.CustomersGroups = null;
+                    if (inv.Customer.CreatedAt == default) inv.Customer.CreatedAt = now;
+                    inv.Customer.UpdatedAt = now;
+                }
             }
 
             // ---- Backrefs temizle (döngü kır)

@@ -2,7 +2,7 @@
 // jQuery orchestrator for e-İhracat Create page (Angular-free)
 // Works against #manuel_grid, irsaliye_grid and buttons in İhracat.txt.
 // (c) you
-
+import { InvoiceApi } from '../Entites/index.js';
 (function ($, w, d) {
     'use strict';
 
@@ -88,7 +88,6 @@
             raw += r.qty * r.price;
             isk += c.isk; net += c.base; kdv += c.kdvt; grand += c.gross;
         });
-        // opsiyonel: sayfada varsa bu id'lere yaz
         $('#tAra').text(fmt(raw) + ' TL'); $('#tIsk').text(fmt(isk) + ' TL');
         $('#tMatrah20').text(fmt(net) + ' TL'); $('#tKdv20').text(fmt(kdv) + ' TL');
         $('#tGenel').text(fmt(grand) + ' TL');
@@ -115,7 +114,6 @@
         recalc(); saveDraft();
     }
 
-    // satır silme
     function bindRowDeletes() {
         $(d).off('click.rowdel', `${SEL.lines} .btn-danger, ${SEL.lines} .js-del-row`).on('click.rowdel', `${SEL.lines} .btn-danger, ${SEL.lines} .js-del-row`, function () {
             $(this).closest('tr').remove();
@@ -196,14 +194,18 @@
         });
         dto.invoicesDiscounts.push({ name: 'Toplam İskonto', desc: 'Otomatik', base: 'Ara Toplam', rate: 0, amount: totalDisc, createdAt: now, updatedAt: now });
 
+        // >>> DÜZELTME: Banka artık PaymentAccount altında
         dto.invoicesPayments.push({
             createdAt: now, updatedAt: now,
             payment: {
                 amount: dto.total, currency, date: now, note: '',
                 createdAt: now, updatedAt: now,
                 paymentType: { name: 'NAKIT', createdAt: now, updatedAt: now },
-                paymentAccount: { name: 'KASA', createdAt: now, updatedAt: now },
-                bank: { name: 'Banka', createdAt: now, updatedAt: now }
+                paymentAccount: {
+                    name: 'KASA',
+                    createdAt: now, updatedAt: now,
+                    bank: { name: 'Banka', createdAt: now, updatedAt: now } // doğru yer
+                }
             }
         });
 
@@ -231,6 +233,8 @@
 
     function getInvoiceApi() {
         if (w.InvoiceApi && typeof w.InvoiceApi.create === 'function') return w.InvoiceApi;
+        if (InvoiceApi && typeof InvoiceApi.create === 'function') return InvoiceApi;
+        // güvenli fallback
         return {
             create: dto => $.ajax({ url: '/api/v1/invoice', method: 'POST', data: JSON.stringify(dto), contentType: 'application/json' }),
             send: dto => $.ajax({ url: '/api/v1/invoice/send', method: 'POST', data: JSON.stringify(dto), contentType: 'application/json' })
@@ -241,7 +245,8 @@
         const dto = collectDto();
         if (!(dto.invoicesItems || []).length) { alert('En az bir satır ekleyin.'); return; }
         try {
-            const res = await getInvoiceApi().create(dto);
+            console.log(dto);
+            const res = await InvoiceApi.create(dto);
             (w.toastr ? toastr.success('Fatura taslağı kaydedildi.') : alert('Fatura taslağı kaydedildi.'));
             log('✅ API Yanıtı:', res);
             clearDraft();
@@ -253,7 +258,7 @@
     async function doSend() {
         const dto = collectDto();
         try {
-            await getInvoiceApi().send(dto);
+            await getInvoiceApi().send(dto); // >>> düzeltilmiş (fallback’li)
             alert('GİB’e gönderildi.');
             clearDraft();
         } catch (e) { alert('Gönderim hatası: ' + (e?.responseText || e?.message || e)); }
@@ -332,7 +337,6 @@
             openPreview(collectDto());
         });
 
-        // optional handlers for download
         $(d).off('click.dlpdf').on('click.dlpdf', SEL.btnDlPdf, function (e) { e.preventDefault(); alert('PDF indirme entegrasyonu eklenecek.'); });
         $(d).off('click.dlxml').on('click.dlxml', SEL.btnDlXml, function (e) { e.preventDefault(); alert('XML indirme entegrasyonu eklenecek.'); });
     }
