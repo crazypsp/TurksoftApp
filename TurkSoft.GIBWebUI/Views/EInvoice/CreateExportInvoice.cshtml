@@ -7,15 +7,35 @@
 <section class="content">
 
     <!-- Angular bağımlılıkları kaldırıldı; jQuery ile çalışan sürüm -->
-    <style id="lines-header-fix">
-        #tblLines, #lines, #manuel_grid {
-            table-layout: fixed;
-            width: 100%;
+    <style>
+        /* Yatay kaydırmayı kapat, tablo düzenini sabitle */
+        #manuel_grid_wrapper .dataTables_scrollBody {
+            overflow-x: hidden !important;
         }
 
-            #tblLines th, #tblLines td, #lines th, #lines td, #manuel_grid th, #manuel_grid td {
-                white-space: nowrap;
+        #manuel_grid_wrapper .dataTables_scrollHeadInner {
+            box-sizing: content-box !important;
+        }
+
+            #manuel_grid_wrapper .dataTables_scrollHeadInner table,
+            #manuel_grid_wrapper #manuel_grid {
+                table-layout: fixed; /* her iki tablo aynı algoritmayı kullansın */
+                width: 100% !important;
             }
+
+        #manuel_grid_wrapper thead th,
+        #manuel_grid_wrapper tbody td {
+            box-sizing: border-box;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+        /* Başlık metni taşarsa satıra binsin (istersen ellipsis yapabilirsin) */
+        #manuel_grid_wrapper thead th {
+            white-space: normal;
+            word-break: break-word;
+        }
+
     </style>
 
 
@@ -47,6 +67,60 @@
         var OdemeList = [{"OdemeKodu":"1","Aciklama":"Ödeme Tipi Muhtelif"},{"OdemeKodu":"10","Aciklama":"Nakit"},{"OdemeKodu":"20","Aciklama":"Çek"},{"OdemeKodu":"23","Aciklama":"Banka Çeki"},{"OdemeKodu":"42","Aciklama":"Eft/Havale"},{"OdemeKodu":"48","Aciklama":"Kredi Kartı/Banka Kartı"},{"OdemeKodu":"ZZZ","Aciklama":"Diğer"}];
         var OdemeEArsivList = [{"OdemeKodu":"1","Aciklama":"Ödeme Aracısı"},{"OdemeKodu":"10","Aciklama":"Kapıda Ödeme"},{"OdemeKodu":"30","Aciklama":"EFT/Havale"},{"OdemeKodu":"48","Aciklama":"Kredi kartı/Banka kartı"},{"OdemeKodu":"97","Aciklama":"Diğer"},{"OdemeKodu":"ZZZ","Aciklama":"Diğer"}];
         var kdvOranKontrol = true;
+
+                       (function fixManuelGrid(){
+          var wrapper = document.getElementById('manuel_grid_wrapper');
+          if(!wrapper) return;
+
+          var body      = wrapper.querySelector('.dataTables_scrollBody');
+          var headInner = wrapper.querySelector('.dataTables_scrollHeadInner');
+          var headTable = headInner && headInner.querySelector('table');
+          var bodyTable = wrapper.querySelector('#manuel_grid');
+          if(!body || !headInner || !headTable || !bodyTable) return;
+
+          function sync(){
+            // 1) Header'ın sağ padding'ini, body'deki dikey scrollbar genişliği kadar ayarla
+            var sbw = body.offsetWidth - body.clientWidth;            // dikey scrollbar genişliği
+            headInner.style.paddingRight = sbw + 'px';
+
+            // 2) İlk satırdan gerçek hücre genişliklerini ölç ve iki tabloya da uygula
+            var firstRow = bodyTable.tBodies[0] && bodyTable.tBodies[0].rows[0];
+            var headRow  = headTable.tHead && headTable.tHead.rows[0];
+            if(!firstRow || !headRow) return;
+
+            // Eski colgroup'ları temizle
+            [headTable, bodyTable].forEach(function(t){
+              var old = t.querySelector('colgroup'); if(old) old.remove();
+            });
+
+            var widths = [];
+            var cells = firstRow.children, n = headRow.children.length;
+            for(var i=0;i<n;i++){
+              widths.push( Math.ceil(cells[i].getBoundingClientRect().width) + 'px' );
+            }
+
+            function makeColGroup(ws){
+              var cg = document.createElement('colgroup');
+              ws.forEach(function(w){ var c=document.createElement('col'); c.style.width=w; cg.appendChild(c); });
+              return cg;
+            }
+
+            headTable.prepend( makeColGroup(widths) );
+            bodyTable.prepend( makeColGroup(widths) );
+          }
+
+          // İlk yüklemede ve pencerede boyut değişince hizala
+          window.addEventListener('load', sync);
+          window.addEventListener('resize', sync);
+
+          // DataTables kullanıyorsan draw sonrası da hizala
+          if (window.jQuery && jQuery.fn && jQuery.fn.dataTable){
+            jQuery('#manuel_grid').on('draw.dt', sync);
+          }
+
+          // Dinamik satır ekleme/silme butonlarından sonra çağırmak isteyebilirsin:
+          // document.addEventListener('rowChanged', sync);
+        })();
     </script>
 
     <div class="ng-scope">
