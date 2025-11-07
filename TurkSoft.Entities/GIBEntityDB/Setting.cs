@@ -2,7 +2,7 @@
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Setting
+    public class Setting: BaseEntity
     {
         public long Id { get; set; }
 
@@ -20,8 +20,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public string Theme { get; set; }
         public string Language { get; set; }
 
-        // 📅 Metadata
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+      
     }
 }

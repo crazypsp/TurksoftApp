@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class ItemsExport
+    public class ItemsExport:BaseEntity
     {
         public long Id { get; set; }
         public string Company { get; set; }

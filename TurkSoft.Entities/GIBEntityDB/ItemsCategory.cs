@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class ItemsCategory
+    public class ItemsCategory: BaseEntity
     {
         public long Id { get; set; }
         public long ItemId { get; set; }
         public long CategoryId { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public Item Item { get; set; }

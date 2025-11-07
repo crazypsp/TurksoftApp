@@ -14,8 +14,10 @@ namespace TurkSoft.Service.Manager
 {
     /// <summary>
     /// GIB veritabanı (GibAppDbContext) üzerinde çalışan generic servis.
-    /// Id tipi (TKey) entity sınıflarına göre belirlenir (int/long/Guid).
-    /// IsActive özelliği varsa soft delete uygular.
+    /// - Id tipi (TKey) entity sınıflarına göre belirlenir (int/long/Guid).
+    /// - IsActive özelliği varsa soft delete uygular (DbContext SaveChanges override ile).
+    /// - DB tarafındaki filtered unique index kurallarını ihlal eden eklemelerde
+    ///   2601/2627 SQL hataları yakalanıp anlamlı mesaj üretilir.
     /// </summary>
     public class EntityGibManager<TEntity, TKey> : IEntityGibService<TEntity, TKey>
         where TEntity : class
@@ -27,6 +29,7 @@ namespace TurkSoft.Service.Manager
             ?? throw new InvalidOperationException($"'{typeof(TEntity).Name}' üzerinde 'Id' alanı yok.");
 
         private static readonly PropertyInfo? IsActiveProp = typeof(TEntity).GetProperty("IsActive");
+        private static readonly PropertyInfo? DeleteDateProp = typeof(TEntity).GetProperty("DeleteDate");
 
         public EntityGibManager(GibAppDbContext db)
         {
@@ -40,6 +43,7 @@ namespace TurkSoft.Service.Manager
 
         public async Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default)
         {
+            // Global query filters (IsActive=1) zaten aktif; yine de tip güvenli filtre destekliyoruz.
             var query = _set.AsNoTracking().AsQueryable();
             query = ApplyIsActiveFilterIfExists(query);
             var predicate = BuildIdEqualsExpression(id);
@@ -55,40 +59,33 @@ namespace TurkSoft.Service.Manager
 
         public async Task<TEntity> AddAsync(TEntity entity, CancellationToken ct = default)
         {
-            // RequestAborted’a yakalanmamak için EF tarafında iptal edilemeyen token
-            var token = CancellationToken.None;
-
-            // Yoğun grafikler (lookup + ekleme) için zaman aşımını yükselt
+            // Komut zaman aşımını kısa süre artır (yoğun işlemler için)
             var prevTimeout = _db.Database.GetCommandTimeout();
             _db.Database.SetCommandTimeout(TimeSpan.FromSeconds(120));
 
             try
             {
+                // Fatura grafını normalize et (FK/Nav çözümle, döngü kır, NOT NULL koru)
                 if (entity is Invoice inv)
                 {
-                    await FixInvoiceGraphAsync(inv, token);
+                    await FixInvoiceGraphAsync(inv, ct);
 
-                    // Fail-fast güvenliği: Phone NOT NULL kırılmasın
                     if (inv.Customer != null && string.IsNullOrWhiteSpace(inv.Customer.Phone))
-                    {
                         NormalizeCustomer(inv.Customer);
-                    }
                 }
 
-                await _set.AddAsync(entity, token);
-                await _db.SaveChangesAsync(token);
-
+                await _set.AddAsync(entity, ct);
+                await _db.SaveChangesAsync(ct);
                 return entity;
+            }
+            catch (DbUpdateException due) when (IsUniqueViolation(due))
+            {
+                throw new Exception(BuildUniqueViolationMessage<TEntity>(due), due);
             }
             catch (OperationCanceledException oce)
             {
                 throw new Exception(
                     "Veri kaydı iptal edildi (OperationCanceled). Genellikle istek iptali veya SQL zaman aşımı/kilit kaynaklıdır.", oce);
-            }
-            catch (DbUpdateException due)
-            {
-                var root = due.InnerException?.Message ?? due.Message;
-                throw new Exception("DB update sırasında hata: " + root, due);
             }
             finally
             {
@@ -99,7 +96,14 @@ namespace TurkSoft.Service.Manager
         public async Task<TEntity> UpdateAsync(TEntity entity, CancellationToken ct = default)
         {
             _set.Update(entity);
-            await _db.SaveChangesAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException due) when (IsUniqueViolation(due))
+            {
+                throw new Exception(BuildUniqueViolationMessage<TEntity>(due), due);
+            }
             return entity;
         }
 
@@ -108,13 +112,18 @@ namespace TurkSoft.Service.Manager
             var entity = await _set.FirstOrDefaultAsync(BuildIdEqualsExpression(id), ct);
             if (entity == null) return false;
 
+            // Soft delete tercihimiz:
             if (IsActiveProp != null && IsActiveProp.PropertyType == typeof(bool))
             {
-                // Şemanı koruyorum (true); gerekiyorsa false yap.
-                IsActiveProp.SetValue(entity, true);
+                IsActiveProp.SetValue(entity, false);
+                if (DeleteDateProp != null && (DeleteDateProp.PropertyType == typeof(DateTimeOffset?) || DeleteDateProp.PropertyType == typeof(DateTime?)))
+                    DeleteDateProp.SetValue(entity, DateTime.UtcNow);
+                _set.Update(entity);
             }
             else
             {
+                // Base şemanın dışında bir entity ise DbContext zaten Deleted->Modified dönüşümü yapacaktır,
+                // ama güvenli olmak adına hard delete'e düşebiliriz:
                 _set.Remove(entity);
             }
 
@@ -134,7 +143,7 @@ namespace TurkSoft.Service.Manager
             object? idValue;
             try
             {
-                idValue = Convert.ChangeType(id, IdProp.PropertyType);
+                idValue = Convert.ChangeType(id, Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType);
             }
             catch (Exception ex)
             {
@@ -159,6 +168,25 @@ namespace TurkSoft.Service.Manager
             return query.Where(lambda);
         }
 
+        private static bool IsUniqueViolation(DbUpdateException ex)
+        {
+            // SQL Server: 2601 (duplicate key), 2627 (unique constraint)
+            var msg = (ex.InnerException?.Message ?? ex.Message)?.ToLowerInvariant() ?? "";
+            return msg.Contains("2601") || msg.Contains("2627") ||
+                   msg.Contains("cannot insert duplicate key") ||
+                   msg.Contains("with unique index") ||
+                   msg.Contains("unique constraint");
+        }
+
+        private static string BuildUniqueViolationMessage<T>(DbUpdateException ex)
+        {
+            // İndeks adı mesaj içindeyse yakalayalım
+            var msg = ex.InnerException?.Message ?? ex.Message;
+            // Basit ve anlaşılır dönüş
+            return $"Aynı veriden mükerrer kayıt eklenemez (tablo: {typeof(T).Name}). " +
+                   $"Detay: {msg}";
+        }
+
         private static object? ChangeType(object? value, Type targetType)
         {
             var t = Nullable.GetUnderlyingType(targetType) ?? targetType;
@@ -175,7 +203,6 @@ namespace TurkSoft.Service.Manager
             return !Equals(value, def);
         }
 
-        private static CancellationToken SafeToken(CancellationToken ct) => CancellationToken.None;
         private static long ToInt64(object v) { try { return Convert.ToInt64(v); } catch { return 0; } }
 
         private Type GetPkType(Type entityType)
@@ -209,7 +236,7 @@ namespace TurkSoft.Service.Manager
         private static void NormalizePaymentAccount(PaymentAccount pa, string defaultCurrency)
         {
             pa.Name = string.IsNullOrWhiteSpace(pa.Name) ? "KASA" : pa.Name;
-            pa.Desc = string.IsNullOrWhiteSpace(pa.Desc) ? "Varsayılan Kasa" : pa.Desc; // NOT NULL
+            pa.Desc = string.IsNullOrWhiteSpace(pa.Desc) ? "Varsayılan Kasa" : pa.Desc;
             pa.AccountNo = string.IsNullOrWhiteSpace(pa.AccountNo) ? "0001" : pa.AccountNo;
             pa.Iban = string.IsNullOrWhiteSpace(pa.Iban) ? "TR000000000000000000000000" : pa.Iban;
             pa.Currency = string.IsNullOrWhiteSpace(pa.Currency) ? (string.IsNullOrWhiteSpace(defaultCurrency) ? "TRY" : defaultCurrency) : pa.Currency;
@@ -228,8 +255,8 @@ namespace TurkSoft.Service.Manager
 
         private static void NormalizeCustomer(Customer c)
         {
-            c.Name  = string.IsNullOrWhiteSpace(c.Name)  ? "GENEL MÜŞTERİ" : c.Name;
-            c.Phone = string.IsNullOrWhiteSpace(c.Phone) ? "-" : c.Phone; // Phone NOT NULL güvenliği
+            c.Name = string.IsNullOrWhiteSpace(c.Name) ? "GENEL MÜŞTERİ" : c.Name;
+            c.Phone = string.IsNullOrWhiteSpace(c.Phone) ? "-" : c.Phone;
             if (c.CreatedAt == default) c.CreatedAt = DateTime.UtcNow;
             c.UpdatedAt = DateTime.UtcNow;
         }
@@ -240,10 +267,9 @@ namespace TurkSoft.Service.Manager
 
         private async Task<object?> FindByIdAsync(Type entityType, object id, CancellationToken ct)
         {
-            var token = SafeToken(ct);
             var pk = GetPkType(entityType);
             var keyObj = ChangeType(id, pk)!;
-            var found = await _db.FindAsync(entityType, new object[] { keyObj }, token);
+            var found = await _db.FindAsync(entityType, new object[] { keyObj }, ct);
             return found;
         }
 
@@ -254,9 +280,8 @@ namespace TurkSoft.Service.Manager
             where T : class
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
-            var token = SafeToken(ct);
-            var type = typeof(T);
 
+            var type = typeof(T);
             var pi = type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
             if (pi == null || pi.PropertyType != typeof(string)) return null;
 
@@ -264,7 +289,7 @@ namespace TurkSoft.Service.Manager
             var body = Expression.Equal(Expression.Property(p, pi), Expression.Constant(value));
             var lambda = Expression.Lambda<Func<T, bool>>(body, p);
 
-            return await _db.Set<T>().AsNoTracking().FirstOrDefaultAsync(lambda, token);
+            return await _db.Set<T>().AsNoTracking().FirstOrDefaultAsync(lambda, ct);
         }
 
         private async Task<T?> FindLookupAsync<T>(object? probe, CancellationToken ct) where T : class
@@ -350,23 +375,10 @@ namespace TurkSoft.Service.Manager
             TrySetStr("Desc", candidates.TryGetValue("Desc", out var desc) ? desc : null);
             TrySetStr("Country", candidates.TryGetValue("Country", out var country) ? country : null);
 
-            // NOT NULL alanlar için normalize
-            if (obj is PaymentAccount paObj)
-            {
-                NormalizePaymentAccount(paObj, paObj.Currency ?? "TRY");
-            }
-            if (obj is Bank bankObj)
-            {
-                NormalizeBank(bankObj);
-            }
-            if (obj is PaymentType ptObj)
-            {
-                NormalizePaymentType(ptObj);
-            }
-            if (obj is Brand brObj)
-            {
-                NormalizeBrand(brObj);
-            }
+            if (obj is PaymentAccount paObj) NormalizePaymentAccount(paObj, paObj.Currency ?? "TRY");
+            if (obj is Bank bankObj) NormalizeBank(bankObj);
+            if (obj is PaymentType ptObj) NormalizePaymentType(ptObj);
+            if (obj is Brand brObj) NormalizeBrand(brObj);
 
             typeof(T).GetProperty("CreatedAt")?.SetValue(obj, now);
             typeof(T).GetProperty("UpdatedAt")?.SetValue(obj, now);
@@ -404,7 +416,7 @@ namespace TurkSoft.Service.Manager
                 {
                     var ensured = await EnsureLookupAsync<TLookup>(toCandidates(navVal), ct);
                     navProp.SetValue(owner, ensured);
-                    fkProp.SetValue(owner, null); // EF doldurur
+                    fkProp.SetValue(owner, Activator.CreateInstance(fkProp.PropertyType)); // EF doldurur
                     return;
                 }
 
@@ -476,7 +488,7 @@ namespace TurkSoft.Service.Manager
         {
             var now = DateTime.UtcNow;
 
-            // ---- CUSTOMER: Id varsa mevcut müşteriyi bağla; yoksa yeni müşteriyi normalize et
+            // ---- CUSTOMER
             try
             {
                 if (inv.CustomerId > 0)
@@ -491,7 +503,7 @@ namespace TurkSoft.Service.Manager
                 }
                 else if (inv.Customer != null)
                 {
-                    NormalizeCustomer(inv.Customer); // Phone dahil zorunlu alanları garanti et
+                    NormalizeCustomer(inv.Customer);
 
                     // döngüleri kır + timestamp
                     inv.Customer.Invoices = null;
@@ -503,7 +515,6 @@ namespace TurkSoft.Service.Manager
             }
             catch (MissingMemberException)
             {
-                // Eğer Invoice tipinizde CustomerId yoksa sadece normalize/temizle
                 if (inv.Customer != null)
                 {
                     NormalizeCustomer(inv.Customer);
@@ -544,7 +555,6 @@ namespace TurkSoft.Service.Manager
                         var unitObj = unitPi?.GetValue(it);
                         var unitIdVal = unitIdPi?.GetValue(it);
 
-                        // Adaylar
                         string? unitCode = it.GetType().GetProperty("UnitCode")?.GetValue(it)?.ToString();
                         string? unitShort = it.GetType().GetProperty("UnitShortName")?.GetValue(it)?.ToString();
                         string? unitName = it.GetType().GetProperty("UnitName")?.GetValue(it)?.ToString();
@@ -593,7 +603,6 @@ namespace TurkSoft.Service.Manager
 
                         Brand ensuredBrand;
 
-                        // 1) Geçerli BrandId varsa, bul; yoksa sıfırla ki conflict olmasın
                         if (brandIdVal != null && ToInt64(brandIdVal) != 0L)
                         {
                             var existingBrand = await FindByIdAsync<Brand>(brandIdVal!, ct);
@@ -603,9 +612,7 @@ namespace TurkSoft.Service.Manager
                             }
                             else
                             {
-                                // geçersiz FK → conflict önlemek için 0’a çek
                                 brandIdPi?.SetValue(it, Activator.CreateInstance(brandIdPi.PropertyType));
-                                // nav’dan veya default’tan ilerle
                                 if (brandObj != null)
                                 {
                                     var found = await FindLookupAsync<Brand>(brandObj, ct);
@@ -619,7 +626,6 @@ namespace TurkSoft.Service.Manager
                         }
                         else
                         {
-                            // 2) Brand nav varsa bul/oluştur, yoksa default
                             if (brandObj != null)
                             {
                                 var found = await FindLookupAsync<Brand>(brandObj, ct);
@@ -634,7 +640,7 @@ namespace TurkSoft.Service.Manager
                         NormalizeBrand(ensuredBrand);
                         brandPi?.SetValue(it, ensuredBrand);
 
-                        // — Item tali koleksiyonlar (döngüleri kır)
+                        // döngüleri kır
                         it.GetType().GetProperty("ItemsCategories")?.SetValue(it, null);
                         it.GetType().GetProperty("ItemsDiscounts")?.SetValue(it, null);
                         it.GetType().GetProperty("Identifiers")?.SetValue(it, null);
@@ -644,10 +650,7 @@ namespace TurkSoft.Service.Manager
 
             // ---- Taxes
             foreach (var tx in inv.InvoicesTaxes ?? Enumerable.Empty<InvoicesTax>())
-            {
-                if (tx.CreatedAt == default) tx.CreatedAt = now;
-                tx.UpdatedAt = now;
-            }
+            { if (tx.CreatedAt == default) tx.CreatedAt = now; tx.UpdatedAt = now; }
 
             // ---- Payments (PaymentType / PaymentAccount / Bank)
             if (inv.InvoicesPayments != null)
@@ -696,7 +699,6 @@ namespace TurkSoft.Service.Manager
                         var pa = p.PaymentAccount;
                         if (pa != null)
                         {
-                            // 1) BankId verilmişse doğrula, yoksa sıfırla
                             if (pa.BankId != 0)
                             {
                                 var bank = await FindByIdAsync<Bank>(pa.BankId, ct);
@@ -704,7 +706,6 @@ namespace TurkSoft.Service.Manager
                                 else pa.BankId = 0;
                             }
 
-                            // 2) Nav ile bağla/oluştur
                             if (pa.Bank == null)
                             {
                                 await AttachLookupByFkOrNavOrEnsure<Bank>(
@@ -721,28 +722,24 @@ namespace TurkSoft.Service.Manager
                                     ct);
                             }
 
-                            // 3) Hâlâ yoksa default banka
                             if (pa.Bank == null && pa.BankId == 0)
                             {
                                 var defBank = await EnsureDefaultBankAsync(ct);
                                 pa.Bank = defBank;
                             }
 
-                            // NOT NULL alanları garanti et
                             NormalizePaymentAccount(pa, p.Currency);
                             if (pa.Bank != null) NormalizeBank(pa.Bank);
 
-                            // Döngü kır
-                            pa.Payments = null;
+                            pa.Payments = null; // döngü kır
                         }
 
-                        // Döngü kır
-                        p.InvoicesPayments = null;
+                        p.InvoicesPayments = null; // döngü kır
                     }
                 }
             }
 
-            // ---- Discounts (varsa ilk item’a bağla)
+            // ---- Discounts
             if (inv.InvoicesDiscounts != null && inv.InvoicesDiscounts.Count > 0)
             {
                 var firstItem = inv.InvoicesItems?.FirstOrDefault()?.Item;
@@ -754,7 +751,7 @@ namespace TurkSoft.Service.Manager
                 }
             }
 
-            // ---- SGK / SP / Returns / Tourists zaman damgası
+            // ---- SGK / SP / Returns / Tourists
             foreach (var sg in inv.SgkRecords ?? Enumerable.Empty<Sgk>())
             { if (sg.CreatedAt == default) sg.CreatedAt = now; sg.UpdatedAt = now; }
 
@@ -773,7 +770,6 @@ namespace TurkSoft.Service.Manager
             if (inv.CreatedAt == default) inv.CreatedAt = now;
             inv.UpdatedAt = now;
 
-            // İstemci total göndermediyse hesapla
             if (inv.Total <= 0 && inv.InvoicesItems?.Any() == true)
             {
                 var gross = inv.InvoicesItems.Sum(x => x.Total);

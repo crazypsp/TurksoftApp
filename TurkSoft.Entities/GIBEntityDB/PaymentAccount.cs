@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class PaymentAccount
+    public class PaymentAccount:BaseEntity
     {
         public long Id { get; set; }
         public string Name { get; set; }
@@ -16,8 +16,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public string AccountNo { get; set; }
         public string Iban { get; set; }
         public string Currency { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public Bank Bank { get; set; }

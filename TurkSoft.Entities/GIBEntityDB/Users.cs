@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Users
+    public class Users:BaseEntity
     {
         public long Id { get; set; }
         public string Uuid { get; set; }

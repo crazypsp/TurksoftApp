@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class BranchInformation
+    public class BranchInformation: BaseEntity
     {
         [Key]
         public long Id { get; set; }

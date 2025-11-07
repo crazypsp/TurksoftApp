@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Address
+    public class Address:BaseEntity
     {
         public long Id { get; set; }
         public long CustomerId { get; set; }
@@ -16,8 +16,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public string District { get; set; }
         public string Street { get; set; }
         public string PostCode { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public Customer Customer { get; set; }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class CompanyInformation
+    public class CompanyInformation: BaseEntity
     {
         [Key]
         public long Id { get; set; }
@@ -59,8 +59,5 @@ namespace TurkSoft.Entities.GIBEntityDB
 
         [StringLength(300)]
         public string LogoUrl { get; set; }
-
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 }

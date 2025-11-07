@@ -7,16 +7,12 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Log
+    public class Log:BaseEntity
     {
         public long Id { get; set; }
         public string Level { get; set; }
         public string Message { get; set; }
         public string Exception { get; set; }
-        public DateTime CreatedAt { get; set; }
-
-        // Navigation
-        public long? UserId { get; set; }
         [ValidateNever] public User User { get; set; }
     }
 }

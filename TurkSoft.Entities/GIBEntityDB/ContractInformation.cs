@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class ContractInformation
+    public class ContractInformation: BaseEntity
     {
         [Key]
         public long Id { get; set; }
@@ -33,8 +33,5 @@ namespace TurkSoft.Entities.GIBEntityDB
 
         [ValidateNever] public ICollection<ContractInformation> Contracts { get; set; }
         [ValidateNever] public ICollection<BranchInformation> Branches { get; set; }
-
-        [ValidateNever] public DateTime CreatedAt { get; set; } = DateTime.Now;
-        [ValidateNever] public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 }

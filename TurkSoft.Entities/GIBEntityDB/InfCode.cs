@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class InfCode
+    public class InfCode:BaseEntity
     {
         public short Id { get; set; }
         public string Code { get; set; }

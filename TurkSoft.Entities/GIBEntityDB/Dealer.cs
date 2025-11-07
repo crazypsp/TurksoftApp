@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Dealer
+    public class Dealer: BaseEntity
     {
         public int Id { get; set; }
         public string Uuid { get; set; }
@@ -24,8 +24,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public string Website { get; set; }
         public string Phone { get; set; }
         public int TaxOffice { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
         public short Commission { get; set; }
 
         // Navigation

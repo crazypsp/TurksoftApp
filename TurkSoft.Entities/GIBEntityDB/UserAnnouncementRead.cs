@@ -7,10 +7,9 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class UserAnnouncementRead
+    public class UserAnnouncementRead: BaseEntity
     {
         public int Id { get; set; }
-        public long UserId { get; set; }
         public DateTime ReadAt { get; set; }
         public int AnnouncementId { get; set; }
 

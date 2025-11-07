@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class CustomersGroup
+    public class CustomersGroup:BaseEntity
     {
         public long Id { get; set; }
         public long CustomerId { get; set; }
         public long GroupId { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public Customer Customer { get; set; }

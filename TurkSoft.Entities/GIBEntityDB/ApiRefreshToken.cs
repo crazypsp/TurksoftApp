@@ -7,10 +7,9 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class ApiRefreshToken
+    public class ApiRefreshToken: BaseEntity
     {
-        public long Id { get; set; }
-        public long UserId { get; set; }           // Users.Id
+        public long Id { get; set; }      
         public string Token { get; set; } = default!;
         public DateTime ExpiresAtUtc { get; set; }
         public DateTime CreatedAtUtc { get; set; }
@@ -20,7 +19,5 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime? RevokedAtUtc { get; set; }
         public string? RevokedByIp { get; set; }
         public string? ReplacedByToken { get; set; }
-
-        public bool IsActive => RevokedAtUtc == null && DateTime.UtcNow < ExpiresAtUtc;
     }
 }

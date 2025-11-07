@@ -7,14 +7,13 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class StockMovement
+    public class StockMovement: BaseEntity
     {
         public long Id { get; set; }
         public long StockId { get; set; }
         public string MovementType { get; set; } // Giriş / Çıkış
         public decimal Quantity { get; set; }
         public DateTime MovementDate { get; set; }
-        public DateTime CreatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public Stock Stock { get; set; }

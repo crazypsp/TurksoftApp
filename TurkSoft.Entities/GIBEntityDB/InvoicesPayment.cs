@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class InvoicesPayment
+    public class InvoicesPayment: BaseEntity
     {
         public long Id { get; set; }
         public long InvoiceId { get; set; }
         public long PaymentId { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public Invoice Invoice { get; set; }

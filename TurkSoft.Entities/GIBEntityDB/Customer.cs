@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Customer
+    public class Customer:BaseEntity
     {
         public long Id { get; set; }
         public string Name { get; set; }
@@ -16,8 +16,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public string Email { get; set; }
         public string TaxNo { get; set; }
         public string TaxOffice { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public ICollection<CustomersGroup> CustomersGroups { get; set; }

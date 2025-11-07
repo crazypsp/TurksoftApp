@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Country
+    public class Country: BaseEntity
     {
         public long Id { get; set; }
         public string Name { get; set; }
         public string IsoCode { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public ICollection<City> Cities { get; set; }

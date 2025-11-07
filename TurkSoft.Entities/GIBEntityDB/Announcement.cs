@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Announcement
+    public class Announcement: BaseEntity
     {
         public int Id { get; set; }
         public string Uuid { get; set; }
@@ -16,9 +16,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public bool Status { get; set; }
-        public long UserId { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public User User { get; set; }

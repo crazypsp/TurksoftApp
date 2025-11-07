@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Item
+    public class Item: BaseEntity
     {
         public long Id { get; set; }
         public string Name { get; set; }
@@ -16,8 +16,6 @@ namespace TurkSoft.Entities.GIBEntityDB
         public long UnitId { get; set; }
         public decimal Price { get; set; }
         public string Currency { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
 
         // Navigation
         [ValidateNever] public Brand Brand { get; set; }
