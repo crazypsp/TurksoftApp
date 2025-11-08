@@ -4,84 +4,156 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content-header">
-    <h1>Listeler <small>GİB Durum Kodları</small></h1>
-</section>
+
+@section Styles {
+    <style>
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 220px;
+        }
+
+        .box.box-primary {
+            border-top-color: #3c8dbc;
+        }
+
+        .dt-head-center thead th {
+            text-align: center;
+        }
+
+        td pre {
+            white-space: pre-wrap;
+            margin: 0;
+            font-family: inherit;
+        }
+    </style>
+}
 
 <section class="content">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <button id="btnNewDurumKod" class="btn btn-success btn-sm pull-right">
-                <i class="fa fa-plus"></i> Yeni Durum Kodu Ekle
-            </button>
-        </div>
+    <h2>GİB Durum Kodları</h2>
+
+    <div class="box box-primary" ng-app="myApp" ng-controller="gibCodesController">
         <div class="box-body">
-            <table id="grid_DurumKod" class="table table-bordered table-hover dataTable">
+            <table id="grid_Tevkifat" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
                 <thead>
                     <tr>
-                        <th>Durum Kodu</th>
-                        <th>Sebep</th>
-                        <th>Çözüm</th>
-                        <th>Yapılması Gereken</th>
-                        <th>İşlemler</th>
+                        <th style="width: 14%">Durum Kodu</th>
+                        <th style="width: 28%">Sebep</th>
+                        <th style="width: 34%">Çözüm</th>
+                        <th style="width: 24%">Yapılması Gereken</th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody>
+                    <tr ng-repeat="r in codes" on-finish-render>
+                        <td><pre>{{r.code}}</pre></td>
+                        <td><pre>{{r.reason}}</pre></td>
+                        <td><pre>{{r.solution}}</pre></td>
+                        <td><pre>{{r.action}}</pre></td>
+                    </tr>
+                    <tr ng-if="!codes || codes.length===0">
+                        <td colspan="4" class="text-center">Kayıt bulunamadı.</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </div>
 </section>
 
-<!-- Durum Kod Modal -->
-<div class="modal fade" id="mdlDurumKod" tabindex="-1" role="dialog" aria-labelledby="mdlDurumKodLabel">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <form id="frmDurumKod">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <h4 class="modal-title" id="mdlDurumKodLabel">Durum Kodu Bilgisi</h4>
-                </div>
-
-                <div class="modal-body">
-                    <input type="hidden" id="drmId" />
-
-                    <div class="form-group">
-                        <label for="drmCode">Durum Kodu</label>
-                        <input type="text" class="form-control" id="drmCode" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="drmTitle">Sebep</label>
-                        <input type="text" class="form-control" id="drmTitle" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="drmSolution">Çözüm</label>
-                        <textarea class="form-control" id="drmSolution" rows="2"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="drmSolution2">Yapılması Gereken</label>
-                        <textarea class="form-control" id="drmSolution2" rows="2"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="drmType">Tür</label>
-                        <input type="text" class="form-control" id="drmType" value="DurumKod" readonly />
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 @section Scripts {
-    <script type="module" src="~/js/pages/Lists/DurumKod.js"></script>
+   
+    <script>
+        (function () {
+            var app;
+            try { app = angular.module('myApp'); }
+            catch (e) { app = angular.module('myApp', []); }
+
+            // ng-repeat tamamlandığında DataTables başlatmak için küçük bir yardımcı
+            app.directive('onFinishRender', function ($timeout) {
+                return {
+                    restrict: 'A',
+                    link: function (scope, element, attr) {
+                        if (scope.$last === true) {
+                            $timeout(function () {
+                                scope.$emit('ngRepeatFinished');
+                            }, 0);
+                        }
+                    }
+                };
+            });
+
+            app.controller('gibCodesController', ['$scope', '$http', function ($scope, $http) {
+                $scope.codes = [];
+                var dt = null;
+
+                // (İsteğe bağlı) API'den çekme: /api/gib-codes -> [{code, reason, solution, action}]
+                $http.get('/api/gib-codes').then(function (res) {
+                    if (Array.isArray(res.data) && res.data.length > 0) {
+                        $scope.codes = res.data;
+                    } else {
+                        $scope.codes = fallbackCodes;
+                    }
+                }).catch(function () {
+                    // API yoksa senin verdiğin tam liste ile devam
+                    $scope.codes = fallbackCodes;
+                });
+
+                // DataTables başlat / yeniden başlat
+                function initDataTable() {
+                    if (!$.fn.DataTable) return;
+                    var $tbl = $('#grid_Tevkifat');
+                    if ($.fn.DataTable.isDataTable($tbl)) {
+                        $tbl.DataTable().destroy();
+                    }
+                    $tbl.DataTable({
+                        pageLength: 25,
+                        order: [[0, 'asc']],
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+                    });
+                }
+
+                // ng-repeat bittiğinde tabloyu başlat
+                $scope.$on('ngRepeatFinished', function () {
+                    initDataTable();
+                });
+            }]);
+
+            // Senin paylaştığın verilerden oluşturulmuş fallback dataset (36 kayıt)
+            var fallbackCodes = [
+                { code:`1120   ZARF ARŞİVDEN\nKOPYALANAMADI`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1143   GEÇERSİZ VERSİYON`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1161   İMZA SAHİBİ TCKN VKN ALINAMADI`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1162   İMZA KAYDEDİLEMEDİ`, reason:`-`, solution:`Hatasız gönderim için gönderimden önce imza doğrulama kontrolü yapılmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1163`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmemeli` },
+                { code:`1170   YETKİ KONTROL EDİLEMEDİ`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1176   İMZA SAHİBİ YETKİSİZ`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1180   ADRES KONTROL EDİLEMEDİ`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1182   KULLANICI\nEKLENEMEDİ`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1183   KULLANICI SİLİNEMEDİ`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1190   SİSTEM YANITI HAZIRLANAMADI`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1195   SİSTEM HATASI`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1200   ZARF BAŞARIYLA İŞLENDİ`, reason:`-`, solution:`-`, action:`-` },
+                { code:`1210   DOKUMAN BULUNAN ADRESE GÖNDERİLEMEDİ`, reason:`-`, solution:`GİB'in tekrar gönderim denemesi başarılı olur ise, 1300 BAŞARIYLA TAMAMLANDI durum kodu alınır. Eğer bu süre sonlandıktan sonra gönderim hala başarısız ise, 1215 DOKÜMAN GÖNDERİMİ BAŞARISIZ, TEKRAR GÖNDERME SONLANDI durum kodu alınır.`, action:`1210 durumunun 1215, 1220, 1230 ya da 1300 durumuna dönmesi beklenmelidir.` },
+                { code:`1220   HEDEFTEN SİSTEM YANITI GELMEDİ`, reason:`-`, solution:`Bu durumda GİB yanıt dönmeyen mükelleflere otomatik uyarı maili atar. Ancak alıcı ile iletişime geçilerek yanıt dönmeleri sağlanabilir. Bu durumdaki zarfların içerisindeki faturaların tekrar gönderilmesi mükerrer gönderim olacağından ikinci kez gönderilmemesi gerekmektedir`, action:`1220 durumunun 1230 veya 1300 durumuna dönmesi beklenmelidir. NOT 1: İki gün içinde durum kodu güncellenmezse alıcı ile görüşülebilir. NOT 2: Gönderici ve alıcı taraf da ilgili faturayı muhasebeleştirebilir.` },
+                { code:`1230   HEDEFTEN SİSTEM YANITI BAŞARISIZ GELDİ`, reason:`-`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1300   BAŞARIYLA TAMAMLANDI`, reason:`-`, solution:`-`, action:`-` },
+                { code:`1215   DOKÜMAN GÖNDERİMİ BAŞARISIZ`, reason:`1220 HEDEFTEN SİSTEM YANITI GELMEDİ durum kodunda alıcı zarfı sistemine aldığını GİB'e bildirmiş ancak zarfı sorunsuzca işleyip işlemeyeceğine dair olumlu/olumsuz bir cevap dönmemiştir.`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1132   XML DOSYASI DEĞİL`, reason:`Dosyalar (Fatura, U&S Yanıtı) XML formatında olmadığında ilgili hata alınır.`, solution:`Dosyalar (Fatura, U&S Yanıtı) XML formatında olmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1181   ADRES BULUNAMADI`, reason:`Etiket bilgisi ve VKN eşleşmesi yapılamıyor.`, solution:`Alıcının VKN/TCKN ve etiket bilgisinin güncel olduğundan emin olunuz. (Etiket ya da yöntem değiştirmiş olabilir.) Göndericinin VKN/TCKN ve etiket bilgisinin güncel olduğundan emin olunuz. (Etiket ya da yöntem değiştirmiş olabilir.)`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1150   SCHEMATRON KONTROL SONUCU HATALI`, reason:`GİB'in belirlediği standartlarda olması gereken bilgiler yanlış girilmiştir.`, solution:`Bilgiler kontrol edilip GİB'in belirlediği standartlara uygun hale getirilmelidir.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1160   XML ŞEMA KONTROLÜNDEN GEÇEMEDİ`, reason:`GİB şema kontrollerinden geçen bir faturanın alıcının sisteminde de XML kontrollerinden geçebilmesi gerekir.`, solution:`Alıcıyı uyarınız.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1000   ZARF KUYRUĞA EKLENDİ`, reason:`GİB'teki yoğunluk`, solution:`-`, action:`Durum kodunun güncellenmesi beklenmelidir.` },
+                { code:`1100   ZARF İŞLENİYOR`, reason:`GİB'teki yoğunluk`, solution:`-`, action:`Durum kodunun güncellenmesi beklenmelidir.` },
+                { code:`1171   GÖNDERİCİ BİRİM YETKİSİ YOK`, reason:`Gönderici birim etiketinde GB yerine PK tanımlanmış olabilir.`, solution:`Gönderici birim etiketinde GB tanımlı olmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1175   İMZA YETKİSİ KONTROL EDİLEMEDİ`, reason:`İmza yetkisi kontrol edilemedi yanıtı imzanın yetersiz olduğu anlamına gelmez.`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1177   GEÇERSİZ İMZA`, reason:`İmza doğrulama geçersizdir.`, solution:`Hatasız gönderim için gönderimden önce imza doğrulama kontrolü yapılmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1172   POSTA KUTUSU YETKİSİ YOK`, reason:`Posta kutusu etiketinde PK yerinde GB tanımlanmış olabilir.`, solution:`Posta kutusu etiketinde PK tanımlı olmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1141   ZARF ID YOK`, reason:`Zarf ID alanı boş ise ilgili hata alınır.`, solution:`Zarf ID alanı boş olmamalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1142   ZARF ID VE ZIP DOSYASI ADI AYNI OLMALI`, reason:`Zarf ID ve ZIP dosyası adı aynı değilse ilgili hata alınır.`, solution:`Zarf ID ve ZIP dosyası adı aynı olmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1131   ZIP BİR DOSYA İÇERMELİ`, reason:`Zarf içerisinde dosya bulunmadığında ilgili hata alınır.`, solution:`Zarf içerisinde dosya (Fatura, uygulama yanıtı, sistem yanıtı) olmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1110   ZIP DOSYASI DEĞİL`, reason:`Zarf formatı ZIP formatında değilse ilgili hata alınır.`, solution:`Gönderilen zarf formatı ZIP olmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1133   ZARF ID VE XML DOSYASININ ADI AYNI OLMALI`, reason:`Zarf ID (&lt;sh:DocumentIdentification&gt;) ile XML ID (xxxxxxxx.xml) aynı değilse hata alınır.`, solution:`Zarf ID ile XML ID aynı karakterleri içermelidir.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1111   ZARF ID UZUNLUĞU GEÇERSİZ`, reason:`Zarf ID uzunluğu 32 karakterden farklıysa hata alınır.`, solution:`Zarf ID uzunluğu 32 karakter olmalıdır.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1130   ZIP AÇILAMADI`, reason:`Zarf okunamadığı durumlarda hata alınır.`, solution:`GİB sisteminde geçici durum olabilir ya da dosyada hata olabilir. Dosyada hata varsa yeniden zarflanıp gönderilmeli; aksi halde faturalar yeniden gönderilmeli.`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` },
+                { code:`1140   DOKÜMAN AYRIŞTIRILAMADI`, reason:`Zarftaki faturalar doğru şekilde çıkarılamadığı için hata alınır.`, solution:`-`, action:`Faturalar yeniden gönderilmeli (faturanın aynı ETTN ile tekrar gönderimine izin verilir.)` }
+            ];
+        })();
+    </script>
 }

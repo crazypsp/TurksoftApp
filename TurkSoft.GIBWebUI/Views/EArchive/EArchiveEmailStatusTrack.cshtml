@@ -4,22 +4,75 @@
 }
 
 
-<section class="content">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+@section Styles {
+    <style>
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 240px;
+        }
 
+        .dt-head-center thead th {
+            text-align: center;
+        }
+
+        .box {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+
+        .box-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .box-body {
+            padding: 15px;
+        }
+
+        .inputPadding {
+            padding-left: 0;
+        }
+
+        .table-vertical {
+            overflow-x: auto;
+        }
+        /* Checkbox hizalama */
+        #myDataTable tbody td:first-child, #myDataTable thead th:first-child {
+            text-align: center;
+            width: 32px;
+        }
+
+        .btn + .btn {
+            margin-left: 6px;
+        }
+        /* Bootstrap olmayan projelerde küçük spacing */
+        .me-2 {
+            margin-right: .5rem;
+        }
+
+        .align-items-center {
+            align-items: center;
+        }
+
+        .d-flex {
+            display: flex;
+        }
+    </style>
+}
+
+<section class="content">
     <div class="panel panel-sky">
-        <div class="panel-body" style="overflow: scroll;">
+        <div class="panel-body" style="overflow:auto;">
             <div class="box box-default">
                 <div class="box-body" id="btnAramaYapEnter">
                     <div class="row">
-                        <!-- Tarih aralıkları -->
                         <div class="col-md-3">
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-6">Email Tarihi (Başlangıç)</label>
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="IssueDateStart" type="text" class="form-control datepicker">
+                                        <input id="IssueDateStart" type="text" class="form-control datepicker" placeholder="yyyy-mm-dd">
                                     </div>
                                 </div>
                             </div>
@@ -30,19 +83,19 @@
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="IssueDateStartEnd" type="text" class="form-control datepicker">
+                                        <input id="IssueDateStartEnd" type="text" class="form-control datepicker" placeholder="yyyy-mm-dd">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Butonlar -->
-                        <div class="col-md-6 d-flex align-items-center">
+                        <div class="col-md-6 d-flex align-items-center" style="margin-top:6px;">
                             <button id="btnOk" type="button" class="btn btn-success me-2">
                                 <i class="fa fa-check"></i> Tamam
                             </button>
                             <button id="btnClear" type="button" class="btn btn-danger me-2">
-                                <i class="fa fa-xing"></i> Temizle
+                                <i class="fa fa-times"></i> Temizle
                             </button>
                             <button id="btnRequeue" type="button" class="btn btn-primary me-2">
                                 <i class="fa fa-arrow-right"></i> Seçilenleri Mail Kuyruğuna Tekrar Ekle
@@ -55,19 +108,18 @@
                 </div>
             </div>
 
-            <!-- DataTable -->
             <div class="body-inner">
                 <div class="table-vertical">
-                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
                         <thead>
                             <tr>
-                                <th><input type="checkbox"></th>
+                                <th><input type="checkbox" id="chkAll" /></th>
                                 <th>EMail Service Id</th>
-                                <th>Fatura Tür</th>
+                                <th>Fatura Tur</th>
                                 <th>UUID</th>
                                 <th>Fatura No</th>
-                                <th>Alıcı Adı</th>
-                                <th>Alıcı EMail</th>
+                                <th>Alici Adi</th>
+                                <th>Alici EMail</th>
                                 <th>İptal Fatura</th>
                                 <th>Durum</th>
                                 <th>Okundu</th>
@@ -79,17 +131,397 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td colspan="15" class="text-center">Tabloda herhangi bir veri mevcut değil</td>
-                            </tr>
+                            <!-- JS ile doldurulacak -->
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- gizli indirme linki (CSV) -->
+            <a id="csvDownload" href="#" download="email-kayitlari.csv" style="display:none;"></a>
         </div>
     </div>
 </section>
 
 @section Scripts {
-    <script src="/hizlicss/jsv643136158/earchiveemailstatustrack.js"></script>
+    <script>
+        (function(){
+            // ===== API uçları =====
+            var API = {
+                search: '/api/email-service/search',            // DataTables server-side JSON
+                requeue: '/api/email-service/requeue'           // POST { ids: [..] }
+            };
+
+            // ===== Fallback örnek veri =====
+            var sampleRows = [
+                {
+                    EMailServiceId: 101,
+                    FaturaTur: 'e-Fatura',
+                    UUID: '5b1b4c0b-aaaa-bbbb-cccc-000000000001',
+                    FaturaNo: 'FAT2025-0001',
+                    AliciAdi: 'Acme A.Ş.',
+                    AliciEmail: 'muhasebe@acme.com',
+                    IptalFatura: false,
+                    Durum: 'Gönderildi',
+                    Okundu: true,
+                    OkunmaTarihi: '2025-10-31 09:12:45',
+                    OkuyanIp: '192.168.1.10',
+                    GonderimZamani: '2025-10-31 09:10:00',
+                    KayitTarihi: '2025-10-31 09:09:30',
+                    HataMesaj: ''
+                },
+                {
+                    EMailServiceId: 102,
+                    FaturaTur: 'e-İrsaliye',
+                    UUID: '5b1b4c0b-aaaa-bbbb-cccc-000000000002',
+                    FaturaNo: 'IRS2025-0142',
+                    AliciAdi: 'Beta Ltd.',
+                    AliciEmail: 'info@beta.com',
+                    IptalFatura: false,
+                    Durum: 'Kuyrukta',
+                    Okundu: false,
+                    OkunmaTarihi: '',
+                    OkuyanIp: '',
+                    GonderimZamani: '2025-11-01 13:40:00',
+                    KayitTarihi: '2025-11-01 13:35:10',
+                    HataMesaj: ''
+                },
+                {
+                    EMailServiceId: 103,
+                    FaturaTur: 'e-Fatura',
+                    UUID: '5b1b4c0b-aaaa-bbbb-cccc-000000000003',
+                    FaturaNo: 'FAT2025-0002',
+                    AliciAdi: 'Gamma İç ve Dış Tic.',
+                    AliciEmail: 'destek@gamma.com',
+                    IptalFatura: true,
+                    Durum: 'Hata',
+                    Okundu: false,
+                    OkunmaTarihi: '',
+                    OkuyanIp: '',
+                    GonderimZamani: '2025-10-15 17:05:00',
+                    KayitTarihi: '2025-10-15 17:03:00',
+                    HataMesaj: 'SMTP yanıtı alınamadı'
+                }
+            ];
+
+            var grid, serverMode = true;
+
+            $(function(){
+                initDatepickers();
+                initGridServer();
+                bindEvents();
+            });
+
+            // == Datepicker ==
+            function initDatepickers(){
+                // Bölgesel TR: basit gün/ad etiketi
+                var trLocale = {
+                    closeText: 'Kapat', prevText: '&#x3C;Geri', nextText: 'İleri&#x3E;',
+                    currentText: 'Bugün', monthNames: ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'],
+                    monthNamesShort: ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'],
+                    dayNames: ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'],
+                    dayNamesShort: ['Pz','Pt','Sa','Ça','Pe','Cu','Ct'],
+                    dayNamesMin: ['Pz','Pt','Sa','Ça','Pe','Cu','Ct'],
+                    weekHeader: 'Hf', dateFormat: 'yy-mm-dd', firstDay: 1, isRTL: false, showMonthAfterYear: false, yearSuffix: ''
+                };
+                $.datepicker.setDefaults(trLocale);
+                $('.datepicker').datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    showButtonPanel: true,
+                    onClose: function(selectedDate){
+                        // Aralık doğrulama: başlangıç/bitiş kısıtı
+                        if (this.id === 'IssueDateStart' && selectedDate) {
+                            $('#IssueDateStartEnd').datepicker('option','minDate', selectedDate);
+                        }
+                        if (this.id === 'IssueDateStartEnd' && selectedDate) {
+                            $('#IssueDateStart').datepicker('option','maxDate', selectedDate);
+                        }
+                    }
+                });
+            }
+
+            // == DataTable (Server-Side dene, düşerse client) ==
+            function initGridServer(){
+                grid = $('#myDataTable').DataTable({
+                    serverSide: true,
+                    processing: true,
+                    searching: false,
+                    order: [[13,'desc']], // Kayıt Tarihi
+                    pageLength: 25,
+                    lengthMenu: [[15,25,50,100],[15,25,50,100]],
+                    ajax: function (data, callback) {
+                        var payload = {
+                            draw: data.draw,
+                            start: data.start,
+                            length: data.length,
+                            order: data.order,
+                            // Filtreler:
+                            dateStart: $('#IssueDateStart').val(),
+                            dateEnd: $('#IssueDateStartEnd').val()
+                        };
+                        // Tarih aralığı kontrol (istemcide)
+                        var err = validateDateRange(payload.dateStart, payload.dateEnd);
+                        if (err) { alert(err); callback(emptyDt(data)); return; }
+
+                        $.ajax({
+                            url: API.search,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(payload),
+                            timeout: 15000
+                        }).done(function(resp){
+                            serverMode = true;
+                            callback(resp);
+                        }).fail(function(){
+                            switchToClientMode();
+                        });
+                    },
+                    rowId: 'EMailServiceId',
+                    columns: [
+                        {
+                            data: null, orderable:false, className:'text-center',
+                            render: function(row){
+                                var id = html(row.EMailServiceId);
+                                return '<input type="checkbox" class="row-chk" value="'+id+'">';
+                            }
+                        },
+                        { data: 'EMailServiceId' },
+                        { data: 'FaturaTur' },
+                        { data: 'UUID' },
+                        { data: 'FaturaNo' },
+                        { data: 'AliciAdi' },
+                        { data: 'AliciEmail' },
+                        { data: 'IptalFatura', render: yesNo },
+                        { data: 'Durum' },
+                        { data: 'Okundu', render: yesNo },
+                        { data: 'OkunmaTarihi' },
+                        { data: 'OkuyanIp' },
+                        { data: 'GonderimZamani' },
+                        { data: 'KayitTarihi' },
+                        { data: 'HataMesaj' }
+                    ],
+                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+                });
+            }
+
+            function switchToClientMode(){
+                serverMode = false;
+                if ($.fn.DataTable.isDataTable('#myDataTable')) {
+                    $('#myDataTable').DataTable().destroy();
+                }
+                grid = $('#myDataTable').DataTable({
+                    data: sampleRows.slice(),
+                    processing: false, serverSide: false, searching: false,
+                    order: [[13,'desc']],
+                    pageLength: 25,
+                    lengthMenu: [[15,25,50,100],[15,25,50,100]],
+                    rowId: 'EMailServiceId',
+                    columns: [
+                        {
+                            data: null, orderable:false, className:'text-center',
+                            render: function(row){
+                                var id = html(row.EMailServiceId);
+                                return '<input type="checkbox" class="row-chk" value="'+id+'">';
+                            }
+                        },
+                        { data: 'EMailServiceId' },
+                        { data: 'FaturaTur' },
+                        { data: 'UUID' },
+                        { data: 'FaturaNo' },
+                        { data: 'AliciAdi' },
+                        { data: 'AliciEmail' },
+                        { data: 'IptalFatura', render: yesNo },
+                        { data: 'Durum' },
+                        { data: 'Okundu', render: yesNo },
+                        { data: 'OkunmaTarihi' },
+                        { data: 'OkuyanIp' },
+                        { data: 'GonderimZamani' },
+                        { data: 'KayitTarihi' },
+                        { data: 'HataMesaj' }
+                    ],
+                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+                });
+                applyClientFilters(); // ilk filtre
+            }
+
+            // == Eventler ==
+            function bindEvents(){
+                // Enter ile arama
+                $('#btnAramaYapEnter input').on('keydown', function(e){
+                    if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+                });
+
+                $('#btnOk').on('click', doSearch);
+                $('#btnClear').on('click', function(){
+                    $('#IssueDateStart').val('');
+                    $('#IssueDateStartEnd').val('');
+                    // min/max reset
+                    $('#IssueDateStart').datepicker('option','maxDate', null);
+                    $('#IssueDateStartEnd').datepicker('option','minDate', null);
+                    doSearch();
+                });
+
+                // Toplu seç / bırak
+                $('#chkAll').on('change', function(){
+                    var checked = this.checked;
+                    $('#myDataTable tbody .row-chk').prop('checked', checked);
+                });
+                // Tıklama ile header checkbox güncelle
+                $(document).on('change', '#myDataTable tbody .row-chk', function(){
+                    syncHeaderChk();
+                });
+
+                // Requeue
+                $('#btnRequeue').on('click', function(){
+                    var ids = getSelectedIds();
+                    if (ids.length === 0) { alert('Lütfen en az bir satır seçin.'); return; }
+
+                    $.ajax({
+                        url: API.requeue,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ ids: ids }),
+                        timeout: 15000
+                    }).done(function(){
+                        alert('Seçilen kayıtlar tekrar kuyruğa eklendi.');
+                    }).fail(function(){
+                        // Client modda sadece bilgilendirme
+                        alert('İşlem tamamlanamadı. (Demo mod) Seçilenler: ' + ids.join(', '));
+                    });
+                });
+
+                // Export CSV
+                $('#btnExport').on('click', function(){
+                    var csv = buildCsvFromGrid();
+                    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.getElementById('csvDownload');
+                    a.href = url;
+                    a.click();
+                    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+                });
+            }
+
+            // == Arama ==
+            function doSearch(){
+                var start = $('#IssueDateStart').val();
+                var end   = $('#IssueDateStartEnd').val();
+                var err = validateDateRange(start, end);
+                if (err) { alert(err); return; }
+
+                if (serverMode) {
+                    grid.ajax.reload();
+                } else {
+                    applyClientFilters();
+                }
+            }
+
+            function applyClientFilters(){
+                var start = $('#IssueDateStart').val();
+                var end   = $('#IssueDateStartEnd').val();
+                var sTime = start ? toStartOfDay(start) : null;
+                var eTime = end   ? toEndOfDay(end)   : null;
+
+                var all = sampleRows.slice();
+                var filtered = all.filter(function(r){
+                    // Kayıt Tarihi üzerinden filtre (isterseniz GonderimZamani ile değiştirin)
+                    var k = parseLooseDateTime(r.KayitTarihi); // 'YYYY-MM-DD HH:mm:ss'
+                    if (sTime && k < sTime) return false;
+                    if (eTime && k > eTime) return false;
+                    return true;
+                });
+                grid.clear().rows.add(filtered).draw();
+                syncHeaderChk();
+            }
+
+            // == Yardımcılar ==
+            function validateDateRange(start, end){
+                if (!start && !end) return '';
+                if (start && !isValidYMD(start)) return 'Başlangıç tarihi geçersiz. Beklenen format: yyyy-mm-dd';
+                if (end && !isValidYMD(end))     return 'Bitiş tarihi geçersiz. Beklenen format: yyyy-mm-dd';
+                if (start && end) {
+                    // string karşılaştırması ISO formatta güvenli
+                    if (start > end) return 'Başlangıç tarihi, bitiş tarihinden büyük olamaz.';
+                }
+                return '';
+            }
+
+            function isValidYMD(s){
+                // yyyy-mm-dd
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+                var d = new Date(s + 'T00:00:00');
+                return !isNaN(d.getTime()) && s === (d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()));
+            }
+
+            function toStartOfDay(ymd){ return new Date(ymd + 'T00:00:00'); }
+            function toEndOfDay(ymd){   return new Date(ymd + 'T23:59:59'); }
+            function pad2(n){ return (n<10?'0':'') + n; }
+
+            function parseLooseDateTime(s){
+                if (!s) return new Date('1970-01-01T00:00:00');
+                // 'YYYY-MM-DD HH:mm:ss' -> 'YYYY-MM-DDTHH:mm:ss'
+                var iso = s.replace(' ', 'T');
+                var d = new Date(iso);
+                if (isNaN(d.getTime())) {
+                    // son çare: sadece tarih
+                    var m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+                    return m ? new Date(m[1] + 'T00:00:00') : new Date('1970-01-01T00:00:00');
+                }
+                return d;
+            }
+
+            function yesNo(val){
+                return val ? 'Evet' : 'Hayır';
+            }
+
+            function html(s){
+                return String(s==null?'':s)
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            }
+
+            function getSelectedIds(){
+                var ids = [];
+                $('#myDataTable tbody .row-chk:checked').each(function(){
+                    ids.push($(this).val());
+                });
+                return ids;
+            }
+
+            function syncHeaderChk(){
+                var all = $('#myDataTable tbody .row-chk');
+                var sel = $('#myDataTable tbody .row-chk:checked');
+                $('#chkAll').prop('checked', all.length>0 && sel.length === all.length);
+            }
+
+            function buildCsvFromGrid(){
+                var cols = [
+                    'EMailServiceId','FaturaTur','UUID','FaturaNo','AliciAdi','AliciEmail',
+                    'IptalFatura','Durum','Okundu','OkunmaTarihi','OkuyanIp','GonderimZamani','KayitTarihi','HataMesaj'
+                ];
+                var lines = [];
+                lines.push(cols.join(';'));
+                // sadece görünür satırlar:
+                var data = grid.rows({ search: 'applied' }).data().toArray();
+                data.forEach(function(r){
+                    var row = [];
+                    cols.forEach(function(c){
+                        var v = (r[c] != null ? String(r[c]) : '');
+                        // CSV kaçış
+                        v = v.replace(/"/g,'""');
+                        // Noktalı virgül ayırıcı; tırnak ekleyelim
+                        row.push('"' + v + '"');
+                    });
+                    lines.push(row.join(';'));
+                });
+                return '\ufeff' + lines.join('\r\n'); // Excel için BOM
+            }
+
+            function emptyDt(req){
+                return { draw: req.draw, recordsTotal: 0, recordsFiltered: 0, data: [] };
+            }
+        })();
+    </script>
 }

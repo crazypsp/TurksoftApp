@@ -1,33 +1,2822 @@
-﻿<div class="modal fade" id="faturaOlusturModal" tabindex="-1">
+﻿@*
+    _Modals.cshtml
+    Centralized modal definitions extracted from uploaded HTML.
+    You can call these from anywhere (e.g., $('#faturaOlustur').modal('show'))
+*@
+
+<!-- Relogin -->
+<div class="modal fade in bs-example-modal-md" id="modal-session-login" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-md">
         <div class="modal-content">
-            <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Fatura Oluştur</h4></div>
-            <div class="modal-body"><form class="form-horizontal"><div class="form-group"><label class="col-sm-4 control-label">VKN / Unvan Ara :</label><div class="col-sm-8"><input class="form-control" list="MusteriCariList" /></div></div></form></div>
-            <div class="modal-footer"><button class="btn btn-success" data-dismiss="modal"><i class="fa fa-check"></i> Fatura Oluştur</button></div>
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="zarfSorgulaModal" tabindex="-1">
-    <div class="modal-dialog modal-md">
-        <div class="modal-content">
-            <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Zarf Sorgulama</h4></div>
-            <div class="modal-body">
-                <form class="form-horizontal">
-                    <div class="form-group"><label class="col-sm-4 control-label">Hizmet Türü</label><div class="col-sm-8"><select class="form-control"><option>Seçiniz</option><option>e-Fatura</option><option>e-İrsaliye</option></select></div></div>
-                    <div class="form-group"><label class="col-sm-4 control-label">Zarf Numarası</label><div class="col-sm-8"><input class="form-control" /></div></div>
-                    <div class="form-group"><label class="col-sm-4 control-label">Yıl</label><div class="col-sm-8"><select class="form-control"><option>2025</option><option>2024</option></select></div></div>
-                </form>
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Oturum süreniz sona erdi. Lütfen tekrar giriş yapınız!</h4>
             </div>
-            <div class="modal-footer"><button class="btn btn-default" data-dismiss="modal">Temizle</button><button class="btn btn-success" data-dismiss="modal">Sorgula</button></div>
+            <div class="modal-body">
+                @* <iframe onload="sessionReLoginOnLoad()" id="session-login-iframe" name="session-login-iframe" style="border:0; height:500px; width:100%"></iframe> *@
+            </div>
         </div>
     </div>
 </div>
-<div class="modal fade" id="kontorModal" tabindex="-1">
+
+<!-- Fatura Oluştur -->
+<div class="modal fade in bs-example-modal-md" id="faturaOlustur" role="dialog">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h3 class="modal-title">Fatura Oluştur</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="box-body">
+                            <div class="row">
+                                <div class="form-group">
+                                    <label class="col-sm-4">VKN / Unvan Ara :</label>
+                                    <div class="col-sm-6">
+                                        <input id="checkInput" name="checkInput" list="MusteriCariList" maxlength="11" class="form-control"
+                                               oninput="javascript: if (this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" />
+                                        <datalist id="MusteriCariList"></datalist>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success" id="checkFatura" data-dismiss="modal"><i class="fa fa-close"></i>Fatura Oluştur</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Zarf Sorgulama -->
+<div class="modal fade in bs-example-modal-lg" id="modal-envelope" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Zarf Sorgulama</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="EnvelopeForm">
+                            <div class="col-md-12">
+                                <div class="row form-group">
+                                    <label class="col-sm-4 col-form-label">Hizmet Türü</label>
+                                    <div class="col-sm-8">
+                                        <select id="hizmetTuru" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="1">e-Fatura</option>
+                                            <option value="2">e-İrsaliye</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row form-group">
+                                    <label class="col-sm-4 col-form-label">Zarf Numarası</label>
+                                    <div class="col-sm-8">
+                                        <input id="envelopeNo" name="envelopeNo" type="text" autocomplete="off" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="row form-group">
+                                    <label class="col-sm-4 col-form-label">Yıl</label>
+                                    <div class="col-sm-8">
+                                        <select id="IntegrationYearZarf" class="form-control">
+                                            <option value="2025">2025</option>
+                                            <option value="2024">2024</option>
+                                            <option value="2023">2023</option>
+                                            <option value="2022">2022</option>
+                                            <option value="2021">2021</option>
+                                            <option value="2020">2020</option>
+                                            <option value="2019">2019</option>
+                                            <option value="2018">2018</option>
+                                            <option value="2017">2017</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary pull-left" onclick="removeEnvelopeNo()" style="padding-left:16px; margin-top:10px; width:100px;">Temizle</button>
+                                    <button type="button" class="btn btn-success pull-right" onclick="checkEnvelope()" style="padding-left:16px; margin-top:10px; width:100px;">Sorgula</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Desktop helpers / warnings -->
+<div class="modal fade in" id="modal-webServerCheck" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Uyarı</h4>
+            </div>
+            <div class="modal-body">
+                <div><h4> Web Server Uygulaması bilgisayarınızda çalışmıyor!</h4></div><br />
+                <div>&nbsp;&nbsp;&nbsp;&nbsp;<img src="/hizlicss/Images/hata.png" /></div><br />
+                <div style="font-size:18px">
+                    Uygulamayı Bilgisayarınıza kurmak için <a href="/ClientServerUpdate/ClientServer.application">Tıklayınız.</a><br />
+                    <b>Portable</b> Uygulamayı Bilgisayarınıza indirmek için <a href="/ClientServerUpdate/portable.zip">Tıklayınız.</a><br />
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade in" id="modal-hizliImzaServerCheck" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Uyarı</h4>
+            </div>
+            <div class="modal-body">
+                <div><h4> Elektronik İmza Uygulaması bilgisayarınızda çalışmıyor!</h4></div><br />
+                <div>&nbsp;&nbsp;&nbsp;&nbsp;<img src="/hizlicss/Images/hata.png" /></div><br />
+                <div style="font-size:18px">
+                    Uygulamayı Bilgisayarınıza indirmek için <a href="/Gerekliler/hizliimza.zip">Tıklayınız.</a>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade in" id="modal-htBotCheck" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Uyarı</h4>
+            </div>
+            <div class="modal-body">
+                <div><h4> Erp Web Server Uygulaması(WebPro) bilgisayarınızda çalışmıyor!</h4></div><br />
+                <div>&nbsp;&nbsp;&nbsp;&nbsp;<img src="/hizlicss/Images/hata.png" /></div><br />
+                <div style="font-size:18px">
+                    İmzalama aracına ek olarak kullandığınız Erp'ye özel uygulamayı(WebPro) bilgisayarınıza indirmek için <a href="/Gerekliler/WebPro.msi">Tıklayınız.</a>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- Önizleme -->
+<div class="modal fade in bs-example-modal-lg" id="modal-onizleme" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Kontör İşlemleri</h4></div>
-            <div class="modal-body"><table class="table table-bordered"><thead><tr><th>Kontör No</th><th>Birim Türü</th><th>İşlem Türü</th><th>Birim Miktar</th><th>Satın Alma</th></tr></thead><tbody><tr><td colspan="5">Tabloda herhangi bir veri mevcut değil</td></tr></tbody></table></div>
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Önizleme</h4>
+            </div>
+            <div class="modal-body">
+                <iframe id="onizle-iframe" name="onizle-iframe" style="border:0; height:500px; width:100%"></iframe>
+                <iframe hidden id="onizle-iframe-toplu" name="onizle-iframe-toplu"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-default pull-right" onclick="iframeonizle_yazdir()">Yazdır</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kontör İşlemleri -->
+<div class="modal fade in bs-example-modal-lg" id="kontor_modal" role="dialog">
+    <div class="modal-dialog modal-lg" style="width:fit-content;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Kontör İşlemleri</h4>
+            </div>
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header"></div>
+                    <div class="modal-body">
+                        <table id="kontorTable" class="table table-bordered table-hover dataTable" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>Kontör No</th>
+                                    <th>Birim Türü</th>
+                                    <th>İşlem Türü</th>
+                                    <th>Birim Miktar</th>
+                                    <th>Satın Alma Tarihi</th>
+                                    <th>Kullanım Başlangıç Tarihi</th>
+                                    <th>Kullanım Bitiş Tarihi</th>
+                                    <th>Açıklama</th>
+                                    <th>Vkn/Tckn</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cari Hesap Hareketleri -->
+<div class="modal fade in bs-example-modal-lg" id="carihesaphareket_modal" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Cari Hesap Hareketleri</h4>
+            </div>
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header"></div>
+                    <div class="modal-body">
+                        <table id="cariHesapTableList" class="table table-bordered table-hover dataTable" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Fiş No</th>
+                                    <th>Fiş Türü</th>
+                                    <th>Açıklama</th>
+                                    <th>Tutar</th>
+                                    <th>Para Birimi</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Duyuru -->
+<div class="modal fade in bs-example-modal-lg" id="myNotificationModal" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" style="text-align:center; font-size:35px; color:red;"><b id="duyuruBaslik"></b></h4>
+            </div>
+            <div class="modal-body" style="font-size:15px;">
+                <iframe style="border:0; height:400px; width:100%" id="duyuruDetayiframe"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="okudumAnladim()" class="btn btn-default pull-right" data-dismiss="modal">Okudum, anladım.</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cari Bakiye -->
+<div class="modal fade in bs-example-modal-lg" id="myCustomerBalanceModal" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" style="text-align:center; font-size:35px; color:red;"><b id="CustomerBalanceBaslik"></b></h4>
+            </div>
+            <div class="modal-body" style="font-size:15px;">
+                <div style="white-space:pre-wrap;" id="CustomerBalanceDetay"></div>
+                <br />
+                <h3 style="text-align:center;"></h3>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cari KS -->
+<div class="modal fade in bs-example-modal-lg" id="myCustomerKSModal" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" style="text-align:center; font-size:35px; color:red;"><b id="CustomerKSBaslik"></b></h4>
+            </div>
+            <div class="modal-body" style="font-size:15px;">
+                <div style="white-space:pre-wrap;" id="CustomerKSDetay"></div>
+                <br />
+                <h3 style="text-align:center;"></h3>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rapor Özelleştirme Modal -->
+<div class="modal fade" id="modal-TasarimEkle" tabindex="-1" role="dialog" aria-labelledby="modtitle">
+    <div class="modal-dialog modal-lg" style="margin-bottom:0; height:500px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                    <span aria-hidden="true">×</span>
+                </button>
+                <h4 class="modal-title" id="modtitle">Rapor Özelleştirme</h4>
+            </div>
+
+            <div class="modal-body">
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Rapor Tasarım Adı*</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="templateName" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Rapor Türü*</label>
+                        <div class="col-sm-9">
+                            <select class="form-control" id="ReportType" name="ReportType">
+                                <option value="1">e-Fatura Gelen</option>
+                                <option value="2">e-Fatura Giden</option>
+                                <option value="3">e-Arşiv Fatura</option>
+                                <option value="4">Tüm Giden Faturalar</option>
+                                <option value="5">e-Serbest Meslek Makbuz</option>
+                                <option value="6">e-Müstahsil Makbuz</option>
+                                <option value="8">e-İrsaliye Gelen</option>
+                                <option value="9">e-İrsaliye Giden</option>
+                                <option value="11">e-Adisyon</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="solid" />
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Rapor Başlıkları*</label>
+                    <div class="col-sm-9">
+                        <!-- jsTree konteyneri -->
+                        <small class="help-block">Seçmek için kutucukları işaretleyin.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                <button id="userAddBtn" onclick="tasarimEkleBtn()" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GENEL RAPOR: Rapor Oluştur Modal -->
+<div class="modal fade" id="modal-RaporEkle" tabindex="-1">
+    <div class="modal-dialog modal-lg" style="margin-bottom:0; text-align:justify;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Rapor Oluştur</h4>
+            </div>
+
+            <div class="modal-body">
+                <form class="form-horizontal" onsubmit="return false;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Rapor Adı*</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="reportName" class="form-control" maxlength="128" placeholder="Örn. Aylık Satış Raporu">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Rapor Tipi*</label>
+                        <div class="col-sm-9">
+                            <!-- Sayfadaki ReportType ile senkronize ediliyor (newModal içinde) -->
+                            <select class="form-control" id="RaporTypeInModal" name="RaporTypeInModal">
+                                <option value="0">Tümü</option>
+                                <option value="1">e-Fatura Gelen</option>
+                                <option value="2">e-Fatura Giden</option>
+                                <option value="3">e-Arşiv Fatura</option>
+                                <option value="4">Tüm Giden Faturalar</option>
+                                <option value="5">e-Serbest Meslek Makbuz</option>
+                                <option value="6">e-Müstahsil Makbuz</option>
+                                <option value="8">e-İrsaliye Gelen</option>
+                                <option value="9">e-İrsaliye Giden</option>
+                                <option value="11">e-Adisyon</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Rapor Tasarım*</label>
+                        <div class="col-sm-9">
+                            <select class="form-control" id="TasarimType" name="TasarimType">
+                                <!-- newModal() içinde window.raporTasarimList ile dolduruluyor -->
+                            </select>
+                            <span class="help-block">Kayıtlı tasarım şablonunu seçiniz.</span>
+                        </div>
+                    </div>
+
+                    <hr style="margin:10px 0;">
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Fatura Tarihi (Başlangıç)*</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input type="text" id="faturaBaslangic" class="form-control datepicker" placeholder="gg.aa.yyyy veya gg.aa.yyyy ss:dd">
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Fatura Tarihi (Bitiş)*</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input type="text" id="faturaBitis" class="form-control datepicker" placeholder="gg.aa.yyyy veya gg.aa.yyyy ss:dd">
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                <button type="button" id="userAddBtn" class="btn btn-primary" onclick="raporEkleBtn()">Oluştur</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KONTÖR RAPORU: Excel Düzenle ve Aktar Modal -->
+<div class="modal fade" id="modal-ExcelAktar" tabindex="-1" role="dialog" aria-labelledby="excelModalTitle">
+    <div class="modal-dialog modal-lg" role="document" style="margin-bottom:0;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="excelModalTitle">Excel Düzenle ve Aktar</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal" onsubmit="return false;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">İşlem Başlangıç Tarihi</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input type="text" id="excelDateStart" class="form-control datepicker"
+                                       placeholder="gg.aa.yyyy veya gg.aa.yyyy ss:dd">
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                            </div>
+                            <span class="help-block">Sayfadaki filtreden otomatik dolar.</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">İşlem Bitiş Tarihi</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input type="text" id="excelDateEnd" class="form-control datepicker"
+                                       placeholder="gg.aa.yyyy veya gg.aa.yyyy ss:dd">
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-success" onclick="excelConfirmBtn()">Onayla</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@* SÖZLEŞME DETAYLARI *@
+<div class="modal fade bs-example-modal-lg myModalMusteri" id="sozlesme_modal" tabindex="-1" role="dialog" style="display:none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                        <h2 class="modal-title">Sözleşme Detayları</h2>
+                    </div>
+
+                    <form id="SozlesmeForm">
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <div class="box-body">
+                                    <div class="row">
+                                        <div class="col-xs-3">
+                                            <label>Sözleşme Başlangıç Tarihi *</label>
+                                            <input type="text" name="sozlesmebaslangic" id="sozlesmebaslangic" class="form-control">
+                                        </div>
+                                        <div class="col-xs-3">
+                                            <label>Sözleşme Bitiş Tarihi *</label>
+                                            <input type="text" name="sozlesmebitis" id="sozlesmebitis" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row" style="margin-top:10px;">
+                                        <div class="col-xs-3">
+                                            <button type="button" title="Sözleşme PDF" id="btnSozlesmePdf" style="width:100%" class="btn btn-warning btn-sm">
+                                                Sözleşme PDF <span class="btn-label"><i class="fa fa-file-pdf-o"></i></span>
+                                            </button>
+                                        </div>
+                                        <div class="col-xs-3">
+                                            <button type="button" id="btnTumEtiketler" title=" Tüm Etiketler" style="width:100%" class="btn btn-default btn-sm">
+                                                Tüm Etiketler <span class="btn-label"><i class="glyphicon glyphicon-align-justify"></i></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="box-body" style="margin-top:10px;">
+                                    <table class="table table-bordered" id="tblSozlesmeHizmet">
+                                        <tbody>
+                                            <tr>
+                                                <th>Hizmet</th>
+                                                <th class="colUcret" style="width:150px">Ücret</th>
+                                                <th class="colPaket" style="width:200px">Portal yada e-Connect Paketi Seçiniz</th>
+                                                <th>Açıklama</th>
+                                                <th>İptal Tarihi</th>
+                                            </tr>
+                                            <!-- satırlar JS ile dolduruluyor -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal" style="padding-left:16px;width:100px;">İptal</button>
+                            <button type="button" class="btn btn-success" id="btnSozlesmeKaydet" style="padding-left:16px;width:100px;">Kaydet</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* SÖZLEŞME PDF *@
+<div class="modal fade bs-example-modal-lg" id="sozlesmepdf_modal" tabindex="-1" role="dialog" style="display:none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+                <h4 class="modal-title">Sözleşme PDF Görüntüle</h4>
+            </div>
+            <div class="modal-body">
+                <iframe id="onizlepdf-iframe" name="onizlepdf-iframe" style="border:0;height:700px;width:100%" src=""></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ETİKETLER *@
+<div class="modal fade bs-example-modal-md myModalMusteri" id="etiketler_modal" tabindex="-1" role="dialog" style="display:none;">
+    <div class="modal-dialog modal-md" style="width:50%">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                        <h2 class="modal-title">Etiketler</h2>
+                    </div>
+
+                    <form id="EtiketForm">
+                        <div class="modal-body">
+                            <table class="table table-bordered" id="tblEtiketler">
+                                <caption>
+                                    <div class="modal-header" id="etiketCaption" style="display:none;">
+                                        <button type="button" id="btnYeniEfaturaEtiketi" class="btn btn-success">
+                                            Yeni e-Fatura Etiketi Ekle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-plus"></i></span>
+                                        </button>
+                                    </div>
+                                </caption>
+                                <tbody>
+                                    <tr>
+                                        <th style="min-width:180px;max-width:180px;text-align:center;">Hizmet Türü</th>
+                                        <th>Etiket Türü</th>
+                                        <th>Etiket</th>
+                                        <th>İşlem Türü</th>
+                                        <th>Etiket Kurum Türü</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                    <!-- satırlar JS ile dolduruluyor -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal" style="padding-left:16px;width:100px;">Kapat</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ŞUBE DETAYLARI *@
+<div class="modal fade bs-example-modal-lg myModalMusteri" id="sube_modal" tabindex="-1" role="dialog" style="display:none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                        <h4 class="modal-title">Şube Detayları</h4>
+                    </div>
+
+                    <form id="SubeFrm" novalidate>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Şube Kısa Adı *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" name="subeKisaAdi" id="subeKisaAdi">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Şube Unvanı *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" name="subeAdi" id="subeAdi">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6 row" id="wrapEfGb" style="display:none;">
+                                    <div class="col-sm-4"><label>e-Fatura Gb Etiketi *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <select id="efaturaGondericiEtiketi" name="efaturaGondericiEtiketi" class="form-control select2" style="width:100%">
+                                            <option value="">Seçiniz</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row" id="wrapEfPk" style="display:none;">
+                                    <div class="col-sm-4"><label>e-Fatura Pk Etiketi *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <select id="efaturaAliciEtiketi" name="efaturaAliciEtiketi" class="form-control select2" style="width:100%">
+                                            <option value="">Seçiniz</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:5px;">
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Ülke *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" value="TÜRKİYE" type="text" name="ulke" id="ulke">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Şehir *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <select class="form-control select2" name="sehir" id="sehir" style="width:100%">
+                                            <option value="">Seçiniz</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:5px;">
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Posta Kodu</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" maxlength="5" name="postaKodu" id="postaKodu">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>İlçe *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <select class="form-control select2" name="ilce" id="ilce" style="width:100%">
+                                            <option value="">Seçiniz</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:5px;">
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Web Sitesi *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" placeholder="www.example.com" size="30" name="website" id="website">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>E-Posta *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="email" placeholder="xxx@example.com" name="eposta" id="eposta">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:5px;">
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Telefon *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="tel" name="telefon" id="telefon" placeholder="___ ___-__-__">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Faks</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="tel" name="fax" id="fax" placeholder="___ ___-__-__">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:5px;">
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Sokak *</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" name="sokak" id="sokak">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Bina Adı</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" name="binaAdi" id="binaAdi">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:5px;">
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Bina No</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" name="binaNo" id="binaNo">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 row">
+                                    <div class="col-sm-4"><label>Daire No</label></div>
+                                    <div class="col-sm-8 form-group" style="max-width:none;">
+                                        <input class="form-control" type="text" name="daireNo" id="daireNo">
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* Tanıtıcı Grid *@
+                            <div class="modal-footer" style="padding:0;border:none;margin-top:10px;">
+                                <table class="table table-bordered table-hover dataTable pull-right" style="width:50%" id="tblTanitici">
+                                    <caption>
+                                        <div class="btn btn-success btn-sm btn-labeled" style="float:right" id="btnTaniticiAdd">
+                                            <i class="fa fa-plus"></i> Yeni Satır Ekle
+                                        </div>
+                                    </caption>
+                                    <thead>
+                                        <tr>
+                                            <th style="min-width:150px;max-width:250px;text-align:center;">Tanıtıcı Kod</th>
+                                            <th style="min-width:150px;max-width:250px;text-align:center;">Tanıtıcı Değer</th>
+                                            <th style="min-width:60px;max-width:60px;text-align:center;">Sil</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- satırlar JS ile dolduruluyor -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal" style="padding-left:16px;width:100px;">İptal</button>
+                            <button type="button" class="btn btn-success" id="btnSubeKaydet" style="padding-left:16px;width:100px;">Kaydet</button>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Mesaj/Talep Modalı -->
+<div class="modal fade in bs-example-modal-lg" id="message-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                <h4 class="modal-title">İstek/Talep Bildirimi</h4>
+            </div>
+            <div class="modal-body">
+                <div class="box-body form-horizontal" style="border-style: groove;">
+                    <div class="form-group col-sm-4">
+                        <label class="col-sm-12">Konu Tipi:*</label>
+                        <div class="col-sm-12">
+                            <select id="konutipid" class="form-control select2">
+                                <option value="0">Diğer</option>
+                                <option value="1">e-Fatura</option>
+                                <option value="2">e-Arşiv</option>
+                                <option value="3">e-Defter</option>
+                                <option value="4">e-İrsaliye</option>
+                                <option value="5">e-SMM</option>
+                                <option value="6">e-Müstahsil  Makbuzu</option>
+                                <option value="7">e-Gider Pusulası</option>
+                                <option value="8">e-Defter Saklama</option>
+                                <option value="9">e-Döviz</option>
+                                <option value="10">e-Adisyon</option>
+                                <option value="11">e-Dekont</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group col-sm-8">
+                        <label class="col-sm-12">Konu:*</label>
+                        <div class="col-sm-12"><input id="konutxt" type="text" class="form-control" maxlength="45" /></div>
+                    </div>
+                    <div class="form-group col-sm-12">
+                        <label class="col-sm-12">Açıklama:*</label>
+                        <div class="col-sm-12"><textarea id="aciklama" class="form-control" rows="10"></textarea></div>
+                    </div>
+                    <div class="form-group col-sm-6">
+                        <label class="col-sm-12">Telefon Numarası:*</label>
+                        <div class="col-sm-12"><input id="phoneNum" type="tel" placeholder="(___) ___-__-__" class="form-control" /></div>
+                    </div>
+                    <div class="form-group col-sm-6">
+                        <label class="col-sm-12">E-Mail:*</label>
+                        <div class="col-sm-12"><input id="email" type="email" class="form-control" maxlength="45" placeholder="a&#64;b.c" /></div>
+                    </div>
+                    <br />
+                    <button type="button" class="btn btn-default pull-right" id="btnSendTalep">İstek/Talep Gönder</button>
+                </div>
+                <br />
+                <div class="box-body form-horizontal" style="border-style: groove;">
+                    <div id="messagesAll"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bekleyen İndirmeler Modalı -->
+<div class="modal fade in bs-example-modal-lg" id="downloadExcel-modal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                <h4 class="modal-title">Bekleyen İndirmeleriniz</h4>
+            </div>
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header"></div>
+                    <div class="modal-body"><div id="excelTable"></div></div>
+                    <div class="modal-footer"><button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- XSLT Manuel Yükleme -->
+<div class="modal fade in bs-example-modal-lg" id="xsltYukle" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">XSLT Yükle</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">XSLT Adı :</label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control" id="manuelXsltName" />
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">XSLT Türü :</label>
+                                <div class="col-sm-8">
+                                    <select id="serviceTypeManuel" class="form-control">
+                                        <option value="-1">Seçiniz</option>
+                                        <option value="0">e-Arşiv Fatura</option>
+                                        <option value="1">e-Fatura</option>
+                                        <option value="5">e-İrsaliye</option>
+                                        <option value="6">e-Serbest Meslek Makbuzu</option>
+                                        <option value="7">e-Müstahsil Makbuzu</option>
+                                        <option value="14">e-Döviz</option>
+                                        <option value="16">e-Adisyon</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">XSLT Dosyası</label>
+                                <div class="col-sm-8">
+                                    <input type="file" class="form-control" id="manuelFileTasarim" accept=".xslt" />
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" id="btnXsltManuelKaydet" class="btn btn-success" style="width:100px;">Kaydet</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal" style="width:100px;">İptal</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Banka Modal -->
+<div class="modal fade in bs-example-modal-lg" id="banking_modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">Banka Bilgileri</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="bankaForm">
+                            <input class="form-control hidden" id="txtBankId" type="text" />
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Banka Adı:</label>
+                                <div class="col-sm-8"><input class="form-control" id="txtBankName" type="text" /></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Şube Kodu:</label>
+                                <div class="col-sm-8"><input class="form-control" id="txtBranchCode" type="text" /></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Şube Adı:</label>
+                                <div class="col-sm-8"><input class="form-control" id="txtBranchName" type="text" /></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Para Birimi:</label>
+                                <div class="col-sm-8"><input class="form-control" id="txtCurrency" type="text" /></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Swift Kodu:</label>
+                                <div class="col-sm-8"><input class="form-control" id="txtSwift" type="text" /></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Hesap No:</label>
+                                <div class="col-sm-8"><input class="form-control" id="txtAccountNumber" type="text" /></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Iban:</label>
+                                <div class="col-sm-8"><input class="form-control" id="txtIban" type="text" /></div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal" style="width:100px;">İptal</button>
+                                <button type="button" id="btnBankKaydet" class="btn btn-primary" style="width:100px;">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PrefixCode Modal -->
+<div class="modal fade bs-example-modal-lg" id="prefixcode_modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">Belge Ön Ek Bilgileri</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="PrefixCodeKayit">
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Şubeler:</label>
+                                <div class="col-sm-8">
+                                    <select id="subeler" class="form-control" style="width:100%">
+                                        <option value="57918" selected>MURAT ÖZCAN</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Belge Tür Adı:</label>
+                                <div class="col-sm-8">
+                                    <select class="form-control" id="NumaraTurIdType" name="NumaraTurIdType">
+                                        <option value="1" selected>e-Fatura</option>
+                                        <option value="2">e-Arşiv Fatura</option>
+                                        <option value="3">e-Arşiv İnternet Satışı</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Belge Ön Eki:</label>
+                                <div class="col-sm-8">
+                                    <input id="OnEk" type="text" maxlength="3" minlength="3" style="text-transform:uppercase;" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Yıl:</label>
+                                <div class="col-sm-8">
+                                    <input id="Yil" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Son Belge Sayısı:</label>
+                                <div class="col-sm-8">
+                                    <input id="Sayi" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Kullanıcı Bazlı Seri:</label>
+                                <div class="col-sm-8">
+                                    <input type="checkbox" id="kulaniciBazli" />
+                                </div>
+                            </div>
+
+                            <div class="row form-group prefixUser hidden">
+                                <label class="col-sm-4 col-form-label">Kullanıcılar:</label>
+                                <div class="col-sm-8">
+                                    <select id="kullanicilar" class="form-control" style="width: 100%;">
+                                        <option value="-1">Seçiniz</option>
+                                        <option value="64103">14177961286</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row form-group">
+                                <label class="col-sm-4 col-form-label">Öncelikli:</label>
+                                <div class="col-sm-8">
+                                    <input type="checkbox" id="aktifPasif" />
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal" style="width:100px;">İptal</button>
+                                <button type="button" id="PrefixCodeSave" class="btn btn-primary" style="width:100px;">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Uyarı Modal -->
+<div class="modal fade in" id="modal-uyari" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h4 class="modal-title">Uyarı</h4></div>
+            <div class="modal-body"><label id="lblModalUyari"></label></div>
             <div class="modal-footer"><button class="btn btn-default" data-dismiss="modal">Kapat</button></div>
         </div>
     </div>
 </div>
+
+<!-- Firma Parametre Modal -->
+<div class="modal fade" id="modal-firmaparametre">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                <h4 class="modal-title">Firma Diğer Parametre Ayarları</h4>
+            </div>
+            <div class="modal-body">
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Kullanıcı Seç</label>
+                        <div class="col-sm-10">
+                            <select id="ddlKullaniciId" class="form-control"></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Parametre Adı</label>
+                        <div class="col-sm-10">
+                            <input id="txtParametreAd" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <!-- Deger1..10 -->
+                    @for (var i = 1; i <= 10; i++)
+                    {
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Değer @i</label>
+                            <div class="col-sm-10">
+                                <input id="txtDeger@i" type="text" class="form-control" />
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                <button id="btnkisirolekle" class="btn btn-primary" data-dismiss="modal">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rol Ekle Modal -->
+<div class="modal fade" id="modal-rolEkle">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                <h4 class="modal-title">Rol Grubu Oluşturma</h4>
+            </div>
+            <div class="modal-body">
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Rol Adı</label>
+                        <div class="col-sm-10"><input id="txtRolAd" type="text" class="form-control" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Rol Açıklama</label>
+                        <div class="col-sm-10"><input id="txtRolAciklama" type="text" class="form-control" /></div>
+                    </div>
+                </div>
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Yetki Açıklaması</label>
+                        <div class="col-sm-10">
+                            <select id="YetkiSelect" class="form-control select2" multiple data-placeholder="Yetki Seçiniz" style="width:100%"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                <button id="roklebtn" class="btn btn-primary" data-dismiss="modal">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kullanıcı Ekle Modal -->
+<div class="modal fade" id="modal-UserEkle">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                <h4 class="modal-title">Yeni Kullanıcı Oluştur</h4>
+            </div>
+            <div class="modal-body">
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Ad*</label>
+                        <div class="col-sm-10"><input type="text" id="userName" class="form-control" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Soyad*</label>
+                        <div class="col-sm-10"><input type="text" id="userSurname" class="form-control" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Kullanıcı Adı*</label>
+                        <div class="col-sm-10"><input type="text" id="userUserName" class="form-control" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">e-Posta*</label>
+                        <div class="col-sm-10"><input type="text" id="userEmail" class="form-control" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Admin Kullanıcı</label>
+                        <div class="col-sm-10"><input id="userIsAdmin" type="checkbox" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Aktif Kullanıcı</label>
+                        <div class="col-sm-10"><input id="userIsActive" type="checkbox" checked /></div>
+                    </div>
+                </div>
+
+                <div class="box-body form-horizontal">
+                    <ul class="nav nav-tabs"><li class="active"><a data-toggle="tab" href="#Subeler">Şube Bilgileri</a></li></ul>
+                </div>
+                <br />
+                <div class="tab-content">
+                    <div id="Subeler" class="tab-pane in active">
+                        <div class="row">
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Kullanıcı İçin Firma Seçiniz</label>
+                                <div class="col-sm-12">
+                                    <select id="subeMulti" class="form-control select2" multiple data-placeholder="Firma Seçiniz" style="width:100%">
+                                        <option value="57918">14177961286 - MURAT ÖZCAN (İZMİR)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- /tab -->
+                </div> <!-- /tab-content -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                <button id="userAddBtn" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Luca Giriş Modal -->
+<div class="modal fade" id="modal-LucaLogin">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                <h4 class="modal-title">Luca Kullanıcı ve Mükellef Bilgileri</h4>
+                <h3 class="highlight">Tanımlanan Luca kullanıcısı admin kullanıcı olmaz ise e-Defter Gib'e gönderim sonrası dönem kapatma(fiş kilitleme) işlemi yapılamaz!!!</h3>
+            </div>
+            <div class="modal-body">
+                <h4 class="modal-title">Luca Kullanıcı Bilgileri</h4>
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Üye Numarası</label>
+                        <div class="col-sm-10"><input id="txtLucaUyeNo" type="text" class="form-control" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Kullanıcı Adı</label>
+                        <div class="col-sm-10"><input id="txtLucaKullaniciAdi" type="text" class="form-control" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Parola</label>
+                        <div class="col-sm-10"><input id="txtLucaParola" type="password" class="form-control" /></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="lucaLoginControl" class="btn btn-primary">Üye Girişi için Çalıştır</button>
+                    </div>
+                </div>
+                <br />
+                <h4 class="modal-title">Mükellef Bilgileri -- MURAT ÖZCAN</h4>
+                <div class="box-body form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Kısa Ad</label>
+                        <div class="col-sm-10">
+                            <select id="selectLucaKisaAd" class="form-control"></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Dönem</label>
+                        <div class="col-sm-10">
+                            <select id="selectLucaDonem" class="form-control"></select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="LucaUzunAdKontrol" disabled class="btn btn-primary">Uzun Ad Kontrolü için Çalıştır</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Uzun Ad</label>
+                        <div class="col-sm-10"><input id="txtLucaUzunAd" type="text" class="form-control" /></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="lblLucaFaliyetKodu" class="col-sm-12 control-label bx-area"></label>
+                    </div>
+                </div>
+
+                <!-- Gizli alanlar -->
+                <input id="txtLucaKisaAd" type="text" class="form-control" style="display:none;" />
+                <input id="txtLucaTCKimlikNo" type="text" class="form-control" style="display:none;" />
+                <input id="txtLucaVergiNo" type="text" class="form-control" style="display:none;" />
+                <input id="txtLucaVergiDairesi" type="text" class="form-control" style="display:none;" />
+                <input id="txtLucaFaaliyetKodu" type="text" class="form-control" style="display:none;" />
+                <input id="txtLucaSicilNo" type="text" class="form-control" style="display:none;" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
+                <button id="lucaGMKayit" disabled class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Müşteri Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-errorDocumentCustomer" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <h4 class="modal-title">Müşteri Listesi</h4>
+                    </div>
+                    <div class="modal-body" style="overflow-y:auto; max-height:500px;">
+                        <table class="table table-bordered table-hover dataTable dt-head-center">
+                            <thead>
+                                <tr>
+                                    <th>VergiNo / TCKN</th>
+                                    <th>Unvan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in errorCustomerList">
+                                    <td>{{x.TaxOrId}}</td>
+                                    <td>{{x.Title}}</td>
+                                </tr>
+                                <tr ng-if="!errorCustomerList || errorCustomerList.length===0">
+                                    <td colspan="2" class="text-center">Kayıt bulunamadı.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-default" data-dismiss="modal">Kapat</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /Müşteri Modal -->
+<!-- ========== CARI MODAL ========== -->
+<div class="modal fade in bs-example-modal-lg" id="cari_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div>
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                        <h4 class="modal-title">Müşteri/Cari Bilgileri</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="modal-header" style="border:none;padding-left:0;">
+                            <form id="KayitForm" novalidate>
+                                <input type="hidden" id="CariId" />
+
+                                <div class="col-md-6">
+                                    <div class="row form-group">
+                                        <label for="CariMusteriKodu" class="col-sm-4 col-form-label">Müşteri Kodu: </label>
+                                        <div class="col-sm-8">
+                                            <input id="CariMusteriKodu" type="text" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="row form-group">
+                                        <label for="CariVergiNoTCKimlikNo" class="col-sm-4 col-form-label">Vkn/Tckn*: </label>
+                                        <div class="col-sm-8">
+                                            <input id="CariVergiNoTCKimlikNo" type="text" maxlength="11" class="form-control" disabled="disabled">
+                                        </div>
+                                    </div>
+                                    <div class="row form-group">
+                                        <label for="CariFirmaAdi" class="col-sm-4 col-form-label">Firma Unvanı*: </label>
+                                        <div class="col-sm-8">
+                                            <input id="CariFirmaAdi" type="text" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="row form-group">
+                                        <label for="CariAdi" class="col-sm-4 col-form-label">Adı: </label>
+                                        <div class="col-sm-8">
+                                            <input id="CariAdi" type="text" class="form-control" disabled="">
+                                        </div>
+                                    </div>
+                                    <div class="row form-group">
+                                        <label for="CariSoyadi" class="col-sm-4 col-form-label">Soyadı: </label>
+                                        <div class="col-sm-8">
+                                            <input id="CariSoyadi" type="text" class="form-control" disabled="">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariVergiDairesi" class="col-sm-4 col-form-label">Vergi Dairesi: </label>
+                                        <div class="col-sm-8">
+                                            <input id="CariVergiDairesi" type="text" class="form-control" disabled="disabled">
+                                        </div>
+                                    </div>
+                                    <div class="row form-group">
+                                        <label for="CariUlkeAdi" class="col-sm-4 col-form-label">Ülke*:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariUlkeAdi" type="text" class="form-control" value="TÜRKİYE">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label class="col-sm-4 col-form-label">
+                                            İl *
+                                            <input type="checkbox" id="manuelSehir" title="İl ve ilçe manuel giriş" style="margin-left:6px;">
+                                        </label>
+                                        <div class="col-sm-8">
+                                            <select class="form-control select2" id="selIl" name="selIl">
+                                                <option value="" selected="selected">Seçiniz</option>
+                                            </select>
+                                            <input type="text" id="txtIl" name="txtIl" class="form-control" style="display:none;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-horizontal row">
+                                        <label class="col-sm-4 col-form-label">İlçe *</label>
+                                        <div class="col-sm-8">
+                                            <select class="form-control select2" id="selIlce" name="selIlce">
+                                                <option value="" selected="selected">Seçiniz</option>
+                                            </select>
+                                            <input type="text" id="txtIlce" name="txtIlce" class="form-control" style="display:none;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="row form-group">
+                                        <label for="CariMahalleSemt" class="col-sm-4 col-form-label">Semt/Mahalle*:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariMahalleSemt" type="text" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariCaddeSokak" class="col-sm-4 col-form-label">Cadde:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariCaddeSokak" type="text" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariBinaAdi" class="col-sm-4 col-form-label"> Bina Adı:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariBinaAdi" type="text" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariKapiNo" class="col-sm-4 col-form-label"> Kapı Numarası:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariKapiNo" type="text" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariPostaKodu" class="col-sm-4 col-form-label">Posta Kodu:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariPostaKodu" type="text" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariTelefon" class="col-sm-4 col-form-label">Telefon:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariTelefon" type="text" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariFax" class="col-sm-4 col-form-label">Faks Numarası:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariFax" type="text" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariEMail" class="col-sm-4 col-form-label">E-Mail:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariEMail" type="email" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label for="CariWebSite" class="col-sm-4 col-form-label">Web Sitesi:</label>
+                                        <div class="col-sm-8">
+                                            <input id="CariWebSite" type="text" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tanıtıcı Kodlar -->
+                        <div class="modal-footer" style="border-top:0; padding-top:5px;">
+                            <table class="table table-bordered table-hover dataTable pull-right" id="subeekalan_grid" style="width:65%">
+                                <caption>
+                                    <div class="btn btn-success btn-sm btn-labeled" style="float:right" id="btnTaniticiAdd">
+                                        <i class="fa fa-plus"></i>
+                                        Yeni Tanıtıcı Satır Ekle
+                                    </div>
+                                </caption>
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 180px; max-width: 250px;text-align:center;">Tanıtıcı Kod</th>
+                                        <th style="min-width: 180px; max-width: 250px;text-align:center;">Tanıtıcı Değer</th>
+                                        <th style="min-width: 60px; max-width: 60px;text-align:center;">Sil</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="taniticiBody"><!-- JS dolduracak --></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Kaydet/İptal -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal" style="padding-left: 16px; width: 100px;">İptal</button>
+                            <button type="button" class="btn btn-success" id="btnCariKaydet" style="padding-left: 16px; width: 100px;">Kaydet</button>
+                        </div>
+
+                        <!-- Şubeler -->
+                        <div>
+                            <div>
+                                <div class="modal-header" style="border-top:0;">
+                                    <button type="button" id="btnSubeOlustur" class="btn btn-success">
+                                        Yeni Şube Ekle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-plus"></i></span>
+                                    </button>
+                                    <label class="ng-binding"></label>
+                                </div>
+                            </div>
+                            <table class="table table-bordered table-hover dataTable" style="width:100%" id="tblSubeler">
+                                <thead>
+                                    <tr>
+                                        <th>Şube Tur</th>
+                                        <th>Şube Adı</th>
+                                        <th>Şehir</th>
+                                        <th>İlçe</th>
+                                        <th>E-Posta</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody><!-- JS dolduracak --></tbody>
+                            </table>
+                        </div>
+
+                    </div><!-- /modal-body -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== EXCEL MODAL ========== -->
+<div class="modal fade in bs-example-modal-md" id="excelModal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                        <h3 class="modal-title">Excel'den Listeye Kaydet</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="box-body">
+                            <div class="row" style="align-items:center;">
+                                <div class="form-group col-md-8">
+                                    <input class="btn btn-default" type="file" id="FileExcel" name="FileExcel" accept=".xlsx">
+                                </div>
+                                <div class="form-group col-md-4">
+                                    <button id="btnExcelYukle" type="button" class="btn btn-success"> Yükle  <i class="glyphicon glyphicon-upload"></i> </button>
+                                </div>
+                            </div>
+                            <small class="text-muted">.xlsx formatı beklenir. İlk satır başlık olmalı.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== ŞUBE MODAL ========== -->
+<div class="modal fade" id="subeModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">Şube Bilgileri</h4>
+            </div>
+            <div class="modal-body">
+                <form id="frmSube">
+                    <input type="hidden" id="SubeIndex" value="-1" />
+                    <div class="form-group">
+                        <label>Şube Tür</label>
+                        <select id="SubeTur" class="form-control">
+                            <option value="Merkez">Merkez</option>
+                            <option value="Şube">Şube</option>
+                            <option value="Depo">Depo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="required">Şube Adı</label>
+                        <input id="SubeAdi" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="required">Şehir</label>
+                        <input id="SubeIl" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="required">İlçe</label>
+                        <input id="SubeIlce" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>E-Posta</label>
+                        <input id="SubeEmail" type="email" class="form-control" />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal">Vazgeç</button>
+                <button id="btnSubeKaydet" class="btn btn-success">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Malzeme Modal -->
+<div class="modal fade" id="malzemeModal" tabindex="-1" role="dialog" aria-labelledby="malzemeModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h3 class="modal-title" id="malzemeModalLabel">Ürün/Hizmet Bilgisi</h3>
+            </div>
+
+            <div class="modal-body">
+                <form id="UrunKayit" novalidate>
+                    <input type="hidden" id="mdlId" value="0" />
+
+                    <div class="row">
+                        <!-- Sol -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Satıcı Ürün Kodu*</label>
+                                <input id="mdlSaticiKod" class="form-control" maxlength="45" required />
+                            </div>
+                            <div class="form-group">
+                                <label>Ürün/Hizmet Adı*</label>
+                                <input id="mdlAd" class="form-control" maxlength="255" required />
+                            </div>
+                            <div class="form-group">
+                                <label>Alıcı Ürün Kodu</label>
+                                <input id="mdlAliciKod" class="form-control" maxlength="45" />
+                            </div>
+                            <div class="form-group">
+                                <label>Ürün/Hizmet Birimi*</label>
+                                <select id="mdlBirim" class="form-control" required>
+                                    <option value="">Seçiniz</option>
+                                </select>
+                            </div>
+
+                            <!-- Vergi satırları -->
+                            <div class="form-group">
+                                <button type="button" id="btnTaxAdd" class="btn btn-primary btn-sm">
+                                    <i class="fa fa-plus"></i> Yeni Vergi Ekle
+                                </button>
+
+                                <table id="manuel_gridVergi" class="table table-bordered" style="margin-top:10px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Vergi</th>
+                                            <th>Vergi Oranı</th>
+                                            <th>Vergi Tutarı</th>
+                                            <th>KDV Tevkifat Türü</th>
+                                            <th style="width:60px;">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- JS ile doldurulacak -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Sağ -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>KDV *</label>
+                                <select id="mdlKdv" class="form-control" required>
+                                    <option value="">Seçiniz</option>
+                                    <option>20</option>
+                                    <option>18</option>
+                                    <option>10</option>
+                                    <option>8</option>
+                                    <option>1</option>
+                                    <option>0</option>
+                                </select>
+                            </div>
+
+                            <div id="istisnaDivId" class="form-group" style="display:none;">
+                                <label>İstisna Sebebi*</label>
+                                <select id="mdlIstisna" class="form-control">
+                                    <option value="">Seçiniz</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>GTİP Numarası</label>
+                                <input id="mdlGtip" class="form-control" maxlength="12" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>Para Birimi*</label>
+                                <select id="mdlPara" class="form-control" required>
+                                    <option value="">Seçiniz</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Birim Fiyat</label>
+                                <input id="mdlBirimFiyat" class="form-control" type="number" step="0.0001" placeholder="0,00" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success" id="StokSave">Kaydet</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Mükellef Detay Modal -->
+<div class="modal fade" id="modal-mukellefDetail" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 id="txtTitle" class="modal-title">GİB Etiketleri</h4>
+            </div>
+            <div class="modal-body">
+                <table id="mukellefDetail" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
+                    <thead>
+                        <tr>
+                            <th>Etiket</th>
+                            <th>Tip</th>
+                            <th>Etiket Kayıt Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- JS ile doldurulacak -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gönderilmiş EArşiv Raporları -->
+<div class="modal fade" id="modal-reportDetail" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">Rapor Detayı</h4>
+            </div>
+            <div class="modal-body">
+                <pre id="reportDetailBody" style="white-space: pre-wrap; word-break: break-word;">Yükleniyor...</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Rapor Talebi Modal -->
+<div class="modal fade in bs-example-modal-md" id="newReportModal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>×</span></button>
+                        <h3 class="modal-title">Yeni Rapor Talebi</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="box-body">
+                            <div class="row">
+                                <div class="form-group">
+                                    Yeni rapor talebi oluşturmak istiyor musunuz?
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal">İptal</button>
+                        <button type="button" class="btn btn-success pull-right" id="ReportConfirm" onclick="reportSend()">Oluştur</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /Modal -->
+<!-- ==== MODALLAR (İptal / İtiraz / Mail / Excel / Muhasebe) ==== -->
+<!-- İptal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-cancel" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h4 class="modal-title-iptal">E-Arşivi İptal Et (<span id="modalFaturaNoIptal"></span>)</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="IptalForm" novalidate>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">İptal Zamanı *</label>
+                                <div class="col-sm-8">
+                                    <input name="CancelDate" id="CancelDate" type="text" class="form-control withlastDate datepicker" autocomplete="off">
+                                    <div class="hint">Belge alıcıya iletilme tarihinden itibaren 8 gün.</div>
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">İptal Sebebi *</label>
+                                <div class="col-sm-8">
+                                    <textarea rows="4" id="CancelReason" name="CancelReason" class="form-control" placeholder="Açıklama..."></textarea>
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">Mail Adresi</label>
+                                <div class="col-sm-8">
+                                    <input name="CancelMail" id="CancelMail" type="email" class="form-control" placeholder="Opsiyonel">
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <span class="col-sm-12">
+                                    * e-Arşiv Fatura / e-SMM iptallerinde 8 günlük süre alıcıya iletimden başlar.
+                                </span>
+                            </div>
+                            <div class="row form-group">
+                                <span class="col-sm-3">Uyarıyı Okudum*</span>
+                                <div class="col-sm-8">
+                                    <input type="checkbox" id="uyariyiOkudumchk">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="width:100px">Kapat</button>
+                                <button type="button" id="iptalEtBtn" class="btn btn-success pull-right" style="width:100px" disabled>Gönder</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İtiraz -->
+<div class="modal fade in bs-example-modal-lg" id="modal-object" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h4 class="modal-title">E-Arşive İtiraz Et (<span id="modalFaturaNoItiraz"></span>)</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="ItirazForm" novalidate>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">İtiraz Belge Zamanı *</label>
+                                <div class="col-sm-8">
+                                    <input name="ObjectDocumentDate" id="ObjectDocumentDate" type="text" class="form-control withlastDate datepicker" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">İtiraz Belge No *</label>
+                                <div class="col-sm-8">
+                                    <input name="ObjectDocumentNo" id="ObjectDocumentNo" type="text" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">İtiraz Belge Yöntemi *</label>
+                                <div class="col-sm-8">
+                                    <select name="ObjectType" id="ObjectType" class="form-control">
+                                        <option value="">Seçiniz</option>
+                                        <option value="KEP">KEP</option>
+                                        <option value="NOTER">NOTER</option>
+                                        <option value="TELGRAF">TELGRAF</option>
+                                        <option value="TAAHHUTLU_MEKTUP">TAAHHÜTLÜ MEKTUP</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">İtiraz Sebebi/Açıklama *</label>
+                                <div class="col-sm-8">
+                                    <textarea rows="4" id="ObjectReason" name="ObjectReason" class="form-control" placeholder="Açıklama..."></textarea>
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <span class="col-sm-12">
+                                    * 6102 sayılı TTK 18/3: noter/taahhütlü/telgraf/KEP ile yapılan işlemlerin belge no, tarih ve yöntemi girilmeli.
+                                </span>
+                            </div>
+                            <div class="row form-group">
+                                <span class="col-sm-3">Uyarıyı Okudum *</span>
+                                <div class="col-sm-8">
+                                    <input type="checkbox" id="itirazUyariyiOkudumchk">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="width:100px;">Kapat</button>
+                                <button type="button" id="itirazEtBtn" class="btn btn-success pull-right" disabled style="width:200px;">İtiraz Talebi Oluştur</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mail -->
+<div class="modal fade in bs-example-modal-lg" id="modal-mail" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h4 class="modal-title">E-Posta Gönderimi</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="MailForm" novalidate>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">Alıcı E-Posta *</label>
+                                <div class="col-sm-8"><input id="ReceiverMail" name="ReceiverMail" type="email" class="form-control" required></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">Konu Başlığı *</label>
+                                <div class="col-sm-8"><input id="Title" name="Title" type="text" class="form-control" required></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">Alıcı Ad Soyad *</label>
+                                <div class="col-sm-8"><input id="ReceiverFirstnameLastname" name="ReceiverFirstnameLastname" type="text" class="form-control" required></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3"></label>
+                                <div class="col-sm-8">
+                                    <label style="margin-right:20px"><input type="checkbox" id="sendXml" checked> XML</label>
+                                    <label><input type="checkbox" id="sendPdf" checked> PDF</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="width:100px;">Kapat</button>
+                                <button type="button" id="sendMailBtn" class="btn btn-success pull-right" style="width:100px;">Gönder</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Excel Aktar -->
+<div class="modal fade in bs-example-modal-lg" id="modal-exceleaktar" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h4 class="modal-title">Excel Düzenle ve Aktar</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="ExceleAktarForm" novalidate>
+                            <label style="margin-bottom:10px">Tarih Aralığına Göre Aktar:</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <span>Fatura Başlangıç Tarihi</span>
+                                    <input type="text" class="form-control datepicker" id="faturaBaslangicTarihi" autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <span>Fatura Bitiş Tarihi</span>
+                                    <input type="text" class="form-control datepicker" id="faturaBitisTarihi" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="row" style="margin-top:10px">
+                                <div class="col-md-6">
+                                    <span>İşleme Başlama</span>
+                                    <input type="text" class="form-control datepicker" id="faturaIslemeBaslamaTarihi" autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <span>İşlem Bitiş</span>
+                                    <input type="text" class="form-control datepicker" id="faturaIslemBitisTarihi" autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div style="margin:15px 0 10px;">Özelleştir:</div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <span>Arşiv Durumu</span>
+                                    <select id="isArchive" class="form-control">
+                                        <option value="">Tümü</option>
+                                        <option value="YES">Arşivlenenler</option>
+                                        <option value="NO">Arşivlenmeyenler</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <span>İptal Durumu</span>
+                                    <select id="isCancel" class="form-control">
+                                        <option value="">Tümü</option>
+                                        <option value="1">İptal Edilmiş</option>
+                                        <option value="0">İptal Edilmemiş</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:10px">
+                                <div class="col-md-6">
+                                    <span>Alıcı VKN/TCKN</span>
+                                    <input id="receiverIdentifier" type="text" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <span>Alıcı Unvan</span>
+                                    <input id="receiverTitle" type="text" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top:10px">
+                                <div class="col-md-6">
+                                    <span>Yıl</span>
+                                    <select id="IntegrationYearExcel" class="form-control">
+                                        <option>2025</option>
+                                        <option>2024</option>
+                                        <option>2023</option>
+                                        <option>2022</option>
+                                        <option>2021</option>
+                                        <option>2020</option>
+                                        <option>2019</option>
+                                        <option>2018</option>
+                                        <option>2017</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <span>Toplam KDV Matrah</span>
+                                    <select id="sumKdv" class="form-control">
+                                        <option value="0">Toplamsız</option>
+                                        <option value="1">Toplamlı</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button id="exceleAktar" type="button" class="btn btn-success pull-right" style="width:120px;">
+                                    Onayla <i class="glyphicon glyphicon-plus"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Excel'den Taslağa Modal -->
+<div class="modal fade in bs-example-modal-lg" id="excelDraftModal" role="dialog" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h3 class="modal-title">Excel'den Taslağa Kaydet</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="box-body">
+                            <div class="row">
+                                <div class="form-group">
+                                    <label class="control-label col-sm-3">Şube</label>
+                                    <div class="col-md-5">
+                                        <select id="excel_sube" class="form-control" style="width:100%;">
+                                            <option value="1" selected>MURAT ÖZCAN</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="control-label col-sm-3">Gönderici Etiket</label>
+                                    <div class="col-md-5">
+                                        <select id="excel_gbetiket" class="form-control" style="width:100%;">
+                                            <option value="urn:mail:defaultgb@icloud.com" selected>urn:mail:defaultgb@icloud.com</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="control-label col-sm-3">e-Fatura Ön Ek</label>
+                                    <div class="col-md-5"><select id="excel_onek" class="form-control" style="width:100%"></select></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label col-sm-3">e-Arşiv Ön Ek</label>
+                                    <div class="col-md-5"><select id="excel_onek_earsiv" class="form-control" style="width:100%"></select></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label col-sm-3">e-Arşiv İnternet Satış Ön Ek</label>
+                                    <div class="col-md-5"><select id="excel_onek_earsiv_internet" class="form-control" style="width:100%"></select></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label col-sm-3">e-Fatura XSLT</label>
+                                    <div class="col-md-5"><select id="excel_efatura_xslt" class="form-control" style="width:100%"></select></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label col-sm-3">e-Arşiv XSLT</label>
+                                    <div class="col-md-5"><select id="excel_earsiv_xslt" class="form-control" style="width:100%"></select></div>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="col-md-4">
+                                        <input class="btn btn-default" type="file" id="FileExcel" name="FileExcel" accept=".xlsx">
+                                    </div>
+                                    <div class="input-group col-md-4">
+                                        <a class="btn btn-success" href="/EInvoice/DownloadExcelPattern">Desen İndir</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <table id="gridExcelDraft" class="table table-bordered table-hover" style="width:100%;">
+                                <thead>
+                                    <tr><th>ETTN</th><th>Unvan</th><th>TCKN</th><th>Ödenecek Tutar</th><th>Senaryo</th><th>Status</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <input class="btn btn-success" type="button" id="excelSave" style="float:right" value="Taslak Kaydet">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İmzalama Modal -->
+<div class="modal fade in bs-example-modal-lg" id="signDraftModal" role="dialog" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h3 class="modal-title">Belgeyi İmzalama</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">Akıllı kartınızı takın ve sertifika seçip imzalayın.</div>
+
+                        <div class="row" style="margin-bottom:10px;">
+                            <label class="col-sm-2 col-form-label">Kart/Token</label>
+                            <div class="col-sm-3">
+                                <select id="karttip" class="form-control">
+                                    <option value="akis">Akis</option>
+                                    <option value="gemsafe">GemSafe</option>
+                                    <option value="seimens">Seimens</option>
+                                    <option value="starcos">StarCOS</option>
+                                    <option value="aladdin">Aladdin</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <button type="button" id="btnFetchCerts" class="btn btn-primary btn-sm">Sertifikaları Getir</button>
+                            </div>
+                        </div>
+
+                        <div id="certArea" style="display:none">
+                            <div class="row" style="margin-bottom:8px;">
+                                <div class="col-sm-3">Sertifika</div>
+                                <div class="col-sm-9"><select id="sertifikaList" class="form-control"></select></div>
+                            </div>
+                            <div class="row" style="margin-bottom:8px;">
+                                <div class="col-sm-3">Ortak ad</div><div class="col-sm-9" id="ortakAd"></div>
+                            </div>
+                            <div class="row" style="margin-bottom:8px;">
+                                <div class="col-sm-3">Seri no</div><div class="col-sm-9" id="seriNo"></div>
+                            </div>
+                            <div class="row" style="margin-bottom:8px;">
+                                <div class="col-sm-3">Geçerlilik</div><div class="col-sm-9"><span id="gecerlilikBaslangicTarih"></span> — <span id="gecerlilikBitisTarih"></span></div>
+                            </div>
+                            <div class="row" style="margin-bottom:8px;">
+                                <div class="col-sm-3">PIN</div>
+                                <div class="col-sm-3"><input id="kartPin" type="password" maxlength="20" class="form-control" autocomplete="new-password"></div>
+                                <div class="col-sm-3"><button type="button" class="btn btn-success" id="btnImzala" disabled>İmzala</button></div>
+                            </div>
+                        </div>
+
+                    </div> <!-- /modal-body -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ===================== MODALLAR ===================== -->
+<!-- GİB İptal/İtiraz Bilgilendirme (işaretle/kaldır) -->
+<div class="modal fade in bs-example-modal-lg" id="modal-cancel" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">Belgeyi GİB Portalından İptal/İtiraz Edildi Olarak İşaretle <b><span id="modalGibIptal"></span></b></h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div>
+                            <form id="IptalForm">
+                                <div class="col-md-12">
+
+                                    <div class="row form-group">
+                                        <span class="col-sm-12">
+                                            <a target="_blank" href="https://portal.efatura.gov.tr/FaturaIptal/">e-Fatura İptal/İtiraz Portalı</a>
+                                            üzerinden işlem yaptıktan sonra bu opsiyonu kullanınız.
+                                        </span>
+                                    </div>
+                                    <div class="row form-group">
+                                        <span class="col-sm-12">
+                                            Portal üzerinden yapılmayan işlemlerden şirketimiz sorumlu değildir.
+                                            <b>GİB Portalından İptal/İtiraz Edildi Olarak İşaretle</b> opsiyonu yalnızca bilgi amaçlıdır.
+                                        </span>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <span class="col-sm-3">Uyarıyı Okudum*</span>
+                                        <div class="col-sm-8">
+                                            <input type="checkbox" onclick="uyariyiOkudumClick()" name="uyariyiOkudumGibIptalchk" id="uyariyiOkudumGibIptalchk" value="">
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="padding-left:16px; width:100px;">Kapat</button>
+                                        <button type="button" id="iptalEtGibBtn" disabled class="btn btn-success pull-right" onclick="invoiceCancelGibSend(1)">Gib Portalından İptal/İtiraz Edildi</button>
+                                        <button type="button" id="iptalKaldirGibBtn" disabled class="btn btn-danger pull-right" onclick="invoiceCancelGibSend(0)">Gib İptal/İtiraz Durumunu Kaldır</button>
+                                    </div>
+
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mail Gönder Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-mail" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">E-Posta Gönderimi</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div>
+                            <form id="MailForm" novalidate="novalidate">
+                                <div class="col-md-12">
+                                    <div class="row form-group">
+                                        <label class="col-sm-3 col-form-label">Alıcı E-Posta Adresi *</label>
+                                        <div class="col-sm-8"><input id="ReceiverMail" name="ReceiverMail" type="text" autocomplete="off" class="form-control"></div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label class="col-sm-3 col-form-label">Konu Başlığı *</label>
+                                        <div class="col-sm-8"><input id="Title" type="text" name="Title" class="form-control"></div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label class="col-sm-3 col-form-label">Alıcı Adı Soyadı *</label>
+                                        <div class="col-sm-8"><input id="ReceiverFirstnameLastname" name="ReceiverFirstnameLastname" type="text" class="form-control "></div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label class="col-sm-3"></label>
+                                        <div class="col-sm-8">
+                                            <input type="checkbox" name="sendXml" checked id="sendXml" value="XML"> <span style="padding-right:35%">XML</span>
+                                            <input type="checkbox" name="sendPdf" checked id="sendPdf" value="PDF"> <span>PDF</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="padding-left:16px; width:100px;">Kapat</button>
+                                        <button type="button" id="sendMailBtn" class="btn btn-success pull-right" style="padding-left:16px; width:100px;">Gönder</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Zarf Sorgu Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-envelope" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">Zarf Sorgulama</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div>
+                            <form id="EnvelopeForm">
+                                <div class="col-md-12">
+                                    <div class="row form-group">
+                                        <label class="col-sm-4 col-form-label">Zarf Numarası</label>
+                                        <div class="col-sm-8"><input id="envelopeNo" name="envelopeNo" type="text" autocomplete="off" class="form-control"></div>
+                                    </div>
+
+                                    <div class="row form-group">
+                                        <label class="col-sm-4 col-form-label">Yıl</label>
+                                        <div class="col-sm-8">
+                                            <select id="IntegrationYearZarf" class="form-control">
+                                                <option>2025</option>
+                                                <option>2024</option>
+                                                <option>2023</option>
+                                                <option>2022</option>
+                                                <option>2021</option>
+                                                <option>2020</option>
+                                                <option>2019</option>
+                                                <option>2018</option>
+                                                <option>2017</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary pull-left" onclick="removeEnvelopeNo()" style="padding-left:16px; margin-top:10px; width:100px;">Temizle</button>
+                                        <button type="button" id="checkEnvelope" class="btn btn-success pull-right" onclick="envelopeCheckAll()" style="padding-left:16px; margin-top:10px; width:100px;">Sorgula</button>
+                                    </div>
+
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Excel Aktar Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-exceleaktar" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">Excel Düzenle ve Aktar</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div>
+                            <form id="ExceleAktarForm">
+                                <div class="col-md-12">
+                                    <label style="margin-bottom:20px">Tarih Aralığına Göre Aktar:</label>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <span>Fatura Başlangıç Tarihi</span>
+                                            <input type="text" class="form-control datepicker" id="faturaBaslangicTarihi">
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <span>Fatura Bitiş Tarihi</span>
+                                            <input type="text" class="form-control datepicker" id="faturaBitisTarihi">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <span>Fatura İşleme Başlama Tarihi</span>
+                                            <input type="text" class="form-control datepicker" id="faturaIslemeBaslamaTarihi">
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <span>Fatura İşlem Bitiş Tarihi</span>
+                                            <input type="text" class="form-control datepicker" id="faturaIslemBitisTarihi">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="margin:15px 0px 10px 0px">Özelleştir:</label>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group ">
+                                            <span class="col-md-4">Arşiv Durumu</span>
+                                            <div class="col-md-7">
+                                                <select id="isArchive" class="form-control">
+                                                    <option value="">Tümü</option>
+                                                    <option value="YES">Arşivlenenler</option>
+                                                    <option value="NO">Arşivlenmeyenler</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group ">
+                                            <span class="col-md-4 col-form-label">Alıcı VKN/TCKN</span>
+                                            <div class="col-md-7"><input id="receiverIdentifier" type="text" class="form-control "></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group ">
+                                            <span class="col-md-4 col-form-label">Alıcı Unvan</span>
+                                            <div class="col-md-7"><input id="receiverTitle" type="text" class="form-control "></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-horizontal row" style="margin-bottom:15px">
+                                        <span class="col-md-4">İptal Durumu</span>
+                                        <div class="col-md-7">
+                                            <select id="isCancel" class="form-control">
+                                                <option value="">Tümü</option>
+                                                <option value="1">İptal Edilmiş</option>
+                                                <option value="0">İptal Edilmemiş</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group ">
+                                            <span class="col-md-4 col-form-label">Yıl</span>
+                                            <div class="col-md-7">
+                                                <select id="IntegrationYearExcel" class="form-control">
+                                                    <option>2025</option>
+                                                    <option>2024</option>
+                                                    <option>2023</option>
+                                                    <option>2022</option>
+                                                    <option>2021</option>
+                                                    <option>2020</option>
+                                                    <option>2019</option>
+                                                    <option>2018</option>
+                                                    <option>2017</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-horizontal row" style="margin-bottom:15px">
+                                        <span class="col-md-4">Toplam KDV Matrah</span>
+                                        <div class="col-md-7">
+                                            <select id="sumKdv" class="form-control">
+                                                <option value="0">Toplamsız</option>
+                                                <option value="1">Toplamlı</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button id="exceleAktar" type="button" class="btn btn-success pull-right" style="padding-left: 16px; width: 100px;">Onayla <i class="glyphicon glyphicon-plus"></i></button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tekrar Dene Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-invoiceTryAgainModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title" id="TekrarDeneNo"> </h4>
+                    </div>
+                    <div class="modal-body">
+                        <div>
+                            <form id="invoiceTryAgainModalForm">
+                                <input type="text" hidden name="TekrarDeneUUID" id="TekrarDeneUUID" value="">
+                                <input type="text" hidden name="issueDateStr" id="issueDateStr" value="">
+                                <input type="text" hidden name="AppType" id="AppType" value="">
+                                <div class="col-md-12">
+                                    <div class="row form-group">
+                                        <label class="col-sm-3 col-form-label">Şube *</label>
+                                        <div class="col-sm-8">
+                                            <select id="SubeKodu" name="SubeKodu" class="form-control select2" style="width:100%;">
+                                                <option selected value="1">MURAT ÖZCAN</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row form-group">
+                                        <label class="col-sm-3 col-form-label">Gönderici Birim Etiketi *</label>
+                                        <div class="col-sm-8">
+                                            <select id="GondericiBirimEtiketi" name="GondericiBirimEtiketi" class="form-control">
+                                                <option value="">Seçiniz</option>
+                                                <option selected value="urn:mail:defaultgb@icloud.com">urn:mail:defaultgb@icloud.com</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row form-group">
+                                        <label class="col-sm-3 col-form-label">Alıcı Posta Kutusu Etiketi *</label>
+                                        <div class="col-sm-8"><select id="AliciBirimEtiketi" name="AliciBirimEtiketi" class="form-control"><option value="">Seçiniz</option></select></div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="padding-left:16px; width:100px;">Kapat</button>
+                                        <button type="button" class="btn btn-success pull-right" onclick="InvoiceTryAgain()" style="padding-left:16px; width:100px;">Gönder</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Kayıtları Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-showLogRecordOpenModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                    <h4 class="modal-title">Log Kayıtları</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="body-inner">
+                        <div class="table-vertical">
+                            <table id="grid_logRecordList" class="table table-bordered table-hover dataTable dt-head-center" style="width:100%;">
+                                <thead>
+                                    <tr><th>RecordId</th><th>Belge UUID</th><th>Zarf UUID</th><th>Tarih</th><th>Yıl</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="padding-left:16px; width:100px;">İptal</button>
+                        <button type="button" class="btn btn-success pull-right" data-dismiss="modal" style="padding-left:16px; width:100px;">Tamam</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div class="modal fade in bs-example-modal-lg" id="modal-Mhatsapp" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="box-body form-horizontal">
+                <div class="col-md-12">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">WhatsApp Gönderimi</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="col-md-12">
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">Alıcı Telefon *</label>
+                                <div class="col-sm-8"><input id="MhatsappReceiverTel" name="MhatsappReceiverTel" type="text" autocomplete="off" class="form-control"></div>
+                            </div>
+                            <div class="row form-group">
+                                <label class="col-sm-3 col-form-label">Konu</label>
+                                <div class="col-sm-8"><input id="MhatsappTitle" type="text" name="MhatsappTitle" class="form-control"></div>
+                            </div>
+                            <div hidden id="MHATSAPP_TOKEN"></div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary pull-left" data-dismiss="modal" style="padding-left:16px; width:100px;">Kapat</button>
+                                <button type="button" class="btn btn-success pull-right" onclick="SendMhatsapp()">WhatsApp Gönder</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Muhasebe Fişi Modal -->
+<div class="modal fade" id="muhasebeFisiModal" tabindex="-1" aria-labelledby="muhasebeFisiLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Muhasebe Fişi Aktarım Formu</h5></div>
+            <div class="modal-body">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-2"><label class="form-label">Muh. Fiş No</label><input type="text" id="muhFisNo" class="form-control" placeholder="Muh. Fiş No"></div>
+                    <div class="col-md-2"><label class="form-label">Belge Türü</label><input type="text" id="belgeTuru" class="form-control" disabled value="TICARIFATURA"></div>
+                    <div class="col-md-2"><label class="form-label">Genel Açıklama</label><input type="text" id="genelAciklama" class="form-control" placeholder="Genel Açıklama"></div>
+                    <div class="col-md-2"><label class="form-label">Fatura Tipi</label><input type="text" id="faturaTipi" class="form-control" disabled value="SATIS"></div>
+                    <div class="col-md-2"><label class="form-label">Belge No</label><input type="text" id="belgeNo" class="form-control" placeholder="Belge No"></div>
+                    <div class="col-md-2"><label class="form-label">Fiş Tarihi</label><input type="date" id="fisTarihi" class="form-control"></div>
+                </div>
+
+                <div class="row g-2" style="margin-top:20px;">
+                    <div class="col-12 col-md-4 d-grid"><button type="button" onclick="getInvoicePreviewFromModal()" class="btn btn-info" style="width:100%;"><i class="fa fa-eye"></i> Fatura Görüntüle</button></div>
+                    <div class="col-12 col-md-4 d-grid"><button type="button" onclick="openAyarModal()" class="btn btn-primary" style="width:100%;"><i class="fa fa-gear"></i> Ayarlar</button></div>
+                    <div class="col-12 col-md-4 d-grid"><button type="button" onclick="muhasebeyeAktar()" class="btn btn-success" style="width:100%;"><i class="fa fa-paper-plane"></i> Muhasebe'ye Aktar</button></div>
+                </div>
+
+                <div class="table-responsive mt-4">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-block:15px;">
+                        <h5 class="mb-0" style="font-size: 14px;">Hesap Planı</h5>
+                        <button class="btn btn-sm btn-primary" onclick="addNewEmptyRow()">Ekle</button>
+                    </div>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <table id="hesapPlanTable" class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px; text-align:center;">SN</th>
+                                    <th style="width:100px; text-align:center;">Hesap Kodu</th>
+                                    <th style="width:250px; text-align:center;">Hesap Planı</th>
+                                    <th style="width:200px; text-align:center;">Satır Açıklaması</th>
+                                    <th style="width:120px; text-align:center;">Borç</th>
+                                    <th style="width:120px; text-align:center;">Alacak</th>
+                                    <th style="width:80px; text-align:center;">Sil</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hesapPlaniTableBody"></tbody>
+                            <tfoot>
+                                <tr style="background:#f5f5f5; font-weight:bold;">
+                                    <td colspan="4" style="text-align:right;">Toplam</td>
+                                    <td id="toplamBorc" style="text-align:right;">0.00</td>
+                                    <td id="toplamAlacak" style="text-align:right;">0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-responsive mt-2">
+                    <h5 class="mb-3" style="font-size:14px;">Ürün Detayları</h5>
+                    <table id="urunDetaylariTablo" class="table table-bordered" style="font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>S.N</th>
+                                <th>Xml Ürün Kodu</th>
+                                <th>Erp Ürün Kodu</th>
+                                <th>Erp Ürün Seçiniz</th>
+                                <th>Malzeme/Hizmet</th>
+                                <th>Miktar</th>
+                                <th>Birim</th>
+                                <th>Fiyat</th>
+                                <th>KDV O.</th>
+                                <th>KDV Tutarı</th>
+                                <th>Tutar</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div class="text-danger fw-bold mt-2">e-Defter Çalışma Veritabanı :</div>
+                    <button class="btn btn-secondary" onclick="closeMuhasebeModal()">Kapat</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Muhasebe Ayar Modal -->
+<div class="modal fade" id="muhasebeAyarModal" tabindex="-1" aria-labelledby="muhasebeAyarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="muhasebeAyarModalLabel">Muhasebe Ayarları</h5></div>
+            <div class="modal-body">
+                <form>
+                    <div class="row pt-0" style="padding:25px; padding-top:0px;">
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-md-6">
+                                <label class="form-label" for="faturaTipi">Fatura Tipi</label>
+                                <select id="faturaTipiOption" class="form-control" value="Satış Faturası">
+                                    <option value="Alış Faturası">Alış Faturası</option>
+                                    <option value="Alış İade Faturası">Alış İade Faturası</option>
+                                    <option value="Satış Faturası">Satış Faturası</option>
+                                    <option value="Satış İade Faturası">Satış İade Faturası</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="oivHesapKodu">ÖİV Hesap Kodu</label>
+                                <select id="oivHesapKodu" class="form-control">
+                                    <option>661 UZUN VADELİ...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-md-6">
+                                <label class="form-label" for="genelToplam120320">Genel Toplam 120 / 320</label>
+                                <select id="genelToplam120320" class="form-control"><option>100 KASA</option></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdvMatrah1">%1 KDV Matrah</label>
+                                <select id="kdvMatrah1" class="form-control"><option>101 ALINAN ÇEKLER</option></select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdvMatrah8">%8 KDV Matrah</label>
+                                <select id="kdvMatrah8" class="form-control"><option>101 ALINAN ÇEKLER</option></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdvMatrah18">%18 KDV Matrah</label>
+                                <select id="kdvMatrah18" class="form-control"><option>102 BANKALAR</option></select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdvMatrah10">%10 KDV Matrah</label>
+                                <select id="kdvMatrah10" class="form-control"><option>103 VERİLEN ÇEK...</option></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdvMatrah20">%20 KDV Matrah</label>
+                                <select id="kdvMatrah20" class="form-control"><option>118 DİĞER MENKUL...</option></select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdv1">%1 KDV</label>
+                                <select id="kdv1" class="form-control"><option>131 ORTAKLARDAN ALACAKLAR</option></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdv8">%8 KDV</label>
+                                <select id="kdv8" class="form-control"><option>139 ŞÜPHELİ DİĞER...</option></select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdv18">%18 KDV</label>
+                                <select id="kdv18" class="form-control"><option>151 YARI MAMULLER</option></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdv10">%10 KDV</label>
+                                <select id="kdv10" class="form-control"><option>195 İŞ AVANSLARI</option></select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="kdv20">%20 KDV</label>
+                                <select id="kdv20" class="form-control"><option>580 GEÇMİŞ YILLAR...</option></select>
+                            </div>
+                            <div class="row" style="margin-bottom:10px">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold" for="kdvIstisnaFatura">KDV İstisna Fatura</label>
+                                    <select id="kdvIstisnaFatura" class="form-control"><option value="">Seçiniz</option></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center d-flex justify-content-center gap-3">
+                        <button type="button" onclick="SaveMuhasebeAyar()" class="btn btn-success px-4"><i class="bi bi-check-circle"></i> Kaydet</button>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="otomatikCari">
+                                <label class="form-check-label" for="otomatikCari">Otomatik Cari Hesap Planı oluşsun mu?</label>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =================== /MODALLAR =================== -->

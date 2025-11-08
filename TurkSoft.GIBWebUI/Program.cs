@@ -28,6 +28,6 @@ app.UseAuthorization();
 // Varsayýlan route
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=LoginCover}/{action=Index}/{id?}");
+    pattern: "{controller=Login}/{action=Index}/{id?}");
 
 app.Run();

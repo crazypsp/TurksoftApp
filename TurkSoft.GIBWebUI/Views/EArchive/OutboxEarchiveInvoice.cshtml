@@ -3,109 +3,959 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+@section Styles {
+    <style>
+        .box {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
 
+        .box-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .box-body {
+            padding: 15px;
+        }
+
+        .dt-head-center thead th {
+            text-align: center;
+        }
+
+        .inputPadding {
+            padding-left: 0
+        }
+
+        .withlastDate {
+            background: #fff;
+        }
+
+        .is-invalid {
+            border-color: #e74c3c !important
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #777
+        }
+
+        tfoot td span {
+            font-weight: 700;
+            margin-left: 6px
+        }
+
+        .select2-container--default .select2-selection--single,
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ccc;
+            min-height: 34px
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 220px
+        }
+
+        .myCollapseIcon {
+            transition: transform .2s
+        }
+
+        .rotate-45 {
+            transform: rotate(45deg)
+        }
+    </style>
+}
 
 <section class="content">
-    <div class="box box-default">
-        <div class="box-header with-border">
-            <h3 class="box-title">Giden e-Arşiv Fatura Listesi</h3>
-        </div>
-        <div class="box-body">
-            <div class="table-responsive">
-                <table id="outboxEarchiveTable" class="table table-bordered table-hover dataTable">
-                    <thead>
-                        <tr>
-                            <th>Fatura No</th>
-                            <th>Tarih</th>
-                            <th>Alıcı Ünvan</th>
-                            <th>VKN/TCKN</th>
-                            <th>Tutar</th>
-                            <th>Para Birimi</th>
-                            <th>Durum</th>
-                            <th>İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>ARŞ20250001</td>
-                            <td>02.10.2025</td>
-                            <td>ABC A.Ş.</td>
-                            <td>1234567890</td>
-                            <td>15.250,00</td>
-                            <td>TRY</td>
-                            <td>Onaylandı</td>
-                            <td>
-                                <button class="btn btn-info btn-sm" onclick="showInvoiceDetail('ARŞ20250001')">
-                                    <i class="fa fa-search"></i> Detay
-                                </button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>ARŞ20250002</td>
-                            <td>30.09.2025</td>
-                            <td>XYZ Ltd. Şti.</td>
-                            <td>9876543210</td>
-                            <td>7.850,00</td>
-                            <td>TRY</td>
-                            <td>Gönderildi</td>
-                            <td>
-                                <button class="btn btn-info btn-sm" onclick="showInvoiceDetail('ARŞ20250002')">
-                                    <i class="fa fa-search"></i> Detay
-                                </button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>ARŞ20250003</td>
-                            <td>28.09.2025</td>
-                            <td>Test Kullanıcı</td>
-                            <td>1928374650</td>
-                            <td>1.200,00</td>
-                            <td>TRY</td>
-                            <td>Bekliyor</td>
-                            <td>
-                                <button class="btn btn-info btn-sm" onclick="showInvoiceDetail('ARŞ20250003')">
-                                    <i class="fa fa-search"></i> Detay
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+
+    <div class="panel panel-sky">
+        <div class="panel-body" style="overflow:auto;">
+
+            <div class="box box-default">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Giden e-Arşiv Fatura Arama Seçenekleri</h3>
+                    <div class="box-tools pull-right">
+                        <button type="button" class="btn btn-box-tool box-title" id="btnDetayliArama"
+                                style="color:black;" data-toggle="collapse" data-target=".myCollapseExample">
+                            Detaylı Arama <i class="fa fa-plus myCollapseIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="box-body" id="btnAramaYapEnter">
+
+                    <div class="row">
+                        <!-- Sütun 1 -->
+                        <div class="col-md-3">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Arşiv</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <select id="IsArchive" class="form-control">
+                                        <option value="">Tümü</option>
+                                        <option value="True">Arşivlenenler</option>
+                                        <option value="False" selected>Arşivlenmeyenler</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Fatura Tarihi (Başlangıç)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="IssueDateStart" type="text" class="form-control datepicker" autocomplete="off">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sütun 2 -->
+                        <div class="col-md-3">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Fatura Durumu</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <select id="Status" class="form-control">
+                                        <option value="">Tümü</option>
+                                        <option value="Hata">Hatalı</option>
+                                        <option value="Hatasiz">Hatasız</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Fatura Tarihi (Bitiş)</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                        <input id="IssueDateStartEnd" type="text" class="form-control datepicker" autocomplete="off">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sütun 3 -->
+                        <div class="col-md-3">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Fatura No</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <input id="DocumentId" type="text" class="form-control" autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Fatura ETTN</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <input id="UUID" type="text" class="form-control" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sütun 4 -->
+                        <div class="col-md-3">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">
+                                    Alıcı VKN/TCKN
+                                    <input id="TargetIdentifierChk" type="checkbox" title="Virgül ile çoklu VKN/TCKN" style="margin-left:6px">
+                                </label>
+                                <div class="col-sm-6 inputPadding">
+                                    <input id="TargetIdentifier" type="text" maxlength="11" class="form-control" autocomplete="off" placeholder="11 hane">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-6">Alıcı Unvan</label>
+                                <div class="col-sm-6 inputPadding">
+                                    <input id="TargetTitle" type="text" class="form-control" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detaylı Arama -->
+                    <div class="collapse myCollapseExample">
+                        <div class="row">
+                            <!-- Col 1 -->
+                            <div class="col-md-3">
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">İşlem Tarihi (Başlangıç)</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <div class="input-group">
+                                            <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                            <input id="CreatedDateStart" type="text" class="form-control datepicker" autocomplete="off">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">İtiraz Durumu</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="IsObjected" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="YES">İtiraz Edilenler</option>
+                                            <option value="NO">İtiraz Edilmeyenler</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Col 2 -->
+                            <div class="col-md-3">
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">İşlem Tarihi (Bitiş)</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <div class="input-group">
+                                            <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                                            <input id="CreatedDateEnd" type="text" class="form-control datepicker" autocomplete="off">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">Fatura Türü</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="InvoiceTypeCode" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="SATIS">Satış</option>
+                                            <option value="IADE">İade</option>
+                                            <option value="ISTISNA">İstisna</option>
+                                            <option value="TEVKIFAT">Tevkifat</option>
+                                            <option value="OZELMATRAH">Özel Matrah</option>
+                                            <option value="IHRACKAYITLI">İhraç Kayıtlı</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">Ödendi Durumu</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="IsPaid" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="YES">Ödendi</option>
+                                            <option value="NO">Ödenmedi</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Col 3 -->
+                            <div class="col-md-3">
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">E-Posta Durumu</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="HasEMail" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="YES">Mail Gönderildi</option>
+                                            <option value="NO">Mail Gönderilmedi</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">Ödenecek Tutar</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <input id="PayableAmount" type="number" class="form-control" step="0.01" min="0" placeholder=">=">
+                                    </div>
+                                </div>
+
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">Para Birimi</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="CurrencyCode" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="TRY">Türk Lirası</option>
+                                            <option value="USD">Dolar</option>
+                                            <option value="EUR">Euro</option>
+                                            <option value="GBP">İngiliz Sterlini</option>
+                                            <option value="CHF">İsviçre Frangı</option>
+                                            <option value="CAD">Kanada Doları</option>
+                                            <option value="DKK">Danimarka Kronu</option>
+                                            <option value="SEK">İsveç Kronu</option>
+                                            <option value="NOK">Norveç Kronu</option>
+                                            <option value="JPY">Japon Yeni</option>
+                                            <option value="AED">BAE Dirhemi</option>
+                                            <option value="AUD">Avustralya Doları</option>
+                                            <option value="RUB">Rus Rublesi</option>
+                                            <option value="KWD">Kuveyt Dinarı</option>
+                                            <option value="ZAR">Güney Afrika Parası</option>
+                                            <option value="BHD">Bahreyn Dinarı</option>
+                                            <option value="LYD">Libya Dinarı</option>
+                                            <option value="SAR">Suudi Arabistan Riyali</option>
+                                            <option value="IQD">Irak Dinarı</option>
+                                            <option value="ILS">Yeni İsrail Şekeli</option>
+                                            <option value="IRR">İran Riyali</option>
+                                            <option value="INR">Hindistan Rupisi</option>
+                                            <option value="MXN">Meksika Pezosu</option>
+                                            <option value="HUF">Forint</option>
+                                            <option value="NZD">Yeni Zelanda Doları</option>
+                                            <option value="BRL">Brezilya Reali</option>
+                                            <option value="IDR">Rupiah</option>
+                                            <option value="PLN">Polonya Zlotisi</option>
+                                            <option value="BGN">Bulgar Levası</option>
+                                            <option value="CNY">Yuan</option>
+                                            <option value="ARS">Arjantin Pezosu</option>
+                                            <option value="ALL">Arnavutluk Leki</option>
+                                            <option value="AZN">Azerbaycan Manatı</option>
+                                            <option value="CLP">Şili Pezosu</option>
+                                            <option value="EGP">Mısır Lirası</option>
+                                            <option value="HKD">Hong Kong Doları</option>
+                                            <option value="KRW">Won</option>
+                                            <option value="KZT">Kazakistan Tengesi</option>
+                                            <option value="LBP">Lübnan Lirası</option>
+                                            <option value="LKR">Sri Lanka Rupisi</option>
+                                            <option value="MAD">Fas Dirhemi</option>
+                                            <option value="MYR">Malezya Ringiti</option>
+                                            <option value="OMR">Umman Riyali</option>
+                                            <option value="PEN">Nuevo Sol</option>
+                                            <option value="PHP">Filipin Pezosu</option>
+                                            <option value="PKR">Pakistan Rupisi</option>
+                                            <option value="QAR">Katar Riyali</option>
+                                            <option value="RSD">Sırp Dinarı</option>
+                                            <option value="SGD">Singapur Doları</option>
+                                            <option value="THB">Tayland Bahtı</option>
+                                            <option value="TWD">Yeni Tayvan Doları</option>
+                                            <option value="UAH">Hryvnia</option>
+                                            <option value="UYU">Uruguay Pesosu</option>
+                                            <option value="XAU_22C">22 Ayar Çeyrek</option>
+                                            <option value="XAU_22Y">22 Ayar Yarım</option>
+                                            <option value="XAU_22T">22 Ayar Tam</option>
+                                            <option value="XAU_22I">22 Ayar İkibuçuk</option>
+                                            <option value="XAU_22B">22 Ayar Beşlik</option>
+                                            <option value="XAU_24G">24 Ayar Gram</option>
+                                            <option value="XAU_24G_1000">Külçe Altın</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Col 4 -->
+                            <div class="col-md-3">
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">İptal Durumu</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="IsCanceled" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="YES">İptal Edilenler</option>
+                                            <option value="NO">İptal Edilmeyenler</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">Yazdırılma Durumu</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="IsPrinted" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="YES">Yazdırıldı</option>
+                                            <option value="NO">Yazdırılmadı</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-horizontal row">
+                                    <label class="control-label col-sm-6">Muhasebeleştirme</label>
+                                    <div class="col-sm-6 inputPadding">
+                                        <select id="IsAccount" class="form-control">
+                                            <option value="">Seçiniz</option>
+                                            <option value="YES">Muhasebeleştirildi</option>
+                                            <option value="NO">Muhasebeleştirilmedi</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <!-- /Detaylı -->
+                </div>
+
+                <div class="box-footer">
+                    <div>
+                        <!-- Toplu İşlem Menüsü -->
+                        <div class="input-group pull-left" style="margin-right:10px;">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" class="bulk" data-action="archive-1"><i class="fa fa-archive"></i> Arşive Kaldır</a></li>
+                                <li><a href="#" class="bulk" data-action="archive-0"><i class="fa fa-archive"></i> Arşivden Çıkar</a></li>
+                                <li><a href="#" class="bulk" data-action="paid-1"><i class="fa fa-money"></i> Ödendi Olarak İşaretle</a></li>
+                                <li><a href="#" class="bulk" data-action="paid-0"><i class="fa fa-money"></i> Ödenmedi Olarak İşaretle</a></li>
+                                <li><a href="#" class="bulk" data-action="mail"><i class="fa fa-mail-forward"></i> Seçilenleri Mail Gönder</a></li>
+                                <li><a href="#" class="bulk" data-action="excel-selected"><i class="fa fa-file-excel-o"></i> Seçilenleri Excel’e Aktar</a></li>
+                                <li><a href="#" class="bulk" data-action="excel-all"><i class="fa fa-file-excel-o"></i> Toplu Excel’e Aktar</a></li>
+                                <li><a href="#" class="bulk" data-action="luca"><i class="fa fa-file-excel-o"></i> Toplu Nettecap ile Luca’ya Aktar</a></li>
+                                <li><a href="#" class="bulk" data-action="erp"><i class="fa fa-paper-plane"></i> Toplu ERP Muhasebe Fişi Aktar</a></li>
+                                <li><a href="#" class="bulk" data-action="print"><i class="fa fa-print"></i> Seçilenleri Yazdır</a></li>
+                                <li class="divider"></li>
+                                <li><a href="#" class="bulk" data-action="dl-XML"><i class="fa fa-download"></i> XML Olarak İndir</a></li>
+                                <li><a href="#" class="bulk" data-action="dl-PDF"><i class="fa fa-download"></i> PDF Olarak İndir</a></li>
+                                <li><a href="#" class="bulk" data-action="dl-TPDF"><i class="fa fa-download"></i> Tek PDF Olarak İndir</a></li>
+                                <li><a href="#" class="bulk" data-action="dl-HTML"><i class="fa fa-download"></i> HTML Olarak İndir</a></li>
+                                <li><a href="#" class="bulk" data-action="dl-JPG"><i class="fa fa-download"></i> JPG Olarak İndir</a></li>
+                            </ul>
+                        </div>
+
+                        <!-- Şube Seçimi -->
+                        <div class="input-group input-group-md pull-left" style="margin-right:10px;min-width:260px;">
+                            <select id="subeler" class="form-control" multiple data-placeholder="Şube Seçiniz" style="width:100%;">
+                                <option selected value="1">MURAT ÖZCAN</option>
+                            </select>
+                        </div>
+
+                        <!-- Yıl -->
+                        <div class="input-group input-group-md pull-left" style="margin-right:10px;">
+                            <div class="col-sm-12">
+                                <label class="control-label col-sm-3">Yıl</label>
+                                <div class="col-sm-9">
+                                    <select id="IntegrationYear" class="form-control">
+                                        <option>2025</option>
+                                        <option>2024</option>
+                                        <option>2023</option>
+                                        <option>2022</option>
+                                        <option>2021</option>
+                                        <option>2020</option>
+                                        <option>2019</option>
+                                        <option>2018</option>
+                                        <option>2017</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ay -->
+                        <div class="input-group input-group-md pull-left" style="margin-right:10px;">
+                            <div class="col-sm-12">
+                                <label class="control-label col-sm-3">Ay</label>
+                                <div class="col-sm-9">
+                                    <select id="IntegrationMonth" class="form-control">
+                                        <option value="-1">Tümü</option>
+                                        <option value="1">Ocak</option>
+                                        <option value="2">Şubat</option>
+                                        <option value="3">Mart</option>
+                                        <option value="4">Nisan</option>
+                                        <option value="5">Mayıs</option>
+                                        <option value="6">Haziran</option>
+                                        <option value="7">Temmuz</option>
+                                        <option value="8">Ağustos</option>
+                                        <option value="9">Eylül</option>
+                                        <option value="10">Ekim</option>
+                                        <option value="11">Kasım</option>
+                                        <option value="12">Aralık</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aksiyon Butonları -->
+                        <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                            <button id="btnSearch" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                        <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                            <button id="btnClear" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
+
+            <!-- GRID -->
+            <div class="body-inner">
+                <div class="table-vertical">
+                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
+                        <thead>
+                            <tr>
+                                <th style="width:18px;"><input type="checkbox" id="chkAll" /></th>
+                                <th>Fatura No/ETTN</th>
+                                <th>Firma Adı</th>
+                                <th>Vergi Kimlik No</th>
+                                <th>Fatura Tip/Senaryo</th>
+                                <th>Fatura Tarihi</th>
+                                <th>İşlem Tarihi</th>
+                                <th>KDV</th>
+                                <th>Ödenecek Tutar</th>
+                                <th>Muhasebeleştirme</th>
+                                <th>Durum</th>
+                                <th>E-Posta Durumu</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">Toplam KDV Matrah:<span id="totalKDVTaxableAmount">0,00 TL</span></td>
+                                <td colspan="3">Toplam KDV Tutar:<span id="totalKDVAmount">0,00 TL</span></td>
+                                <td colspan="4">Toplam Ödenecek Tutar:<span id="totalPayableAmount">0,00 TL</span></td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            
         </div>
     </div>
 
-    <!-- Modal: Fatura Detay -->
-    <div class="modal fade" id="invoiceDetailModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                    <h4 class="modal-title">Fatura Detayları</h4>
-                </div>
-                <div class="modal-body">
-                    <iframe id="invoiceDetailIframe" style="width:100%;height:500px;border:none;"></iframe>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                </div>
-            </div>
-        </div>
-    </div>
 </section>
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
-            $('#outboxEarchiveTable').DataTable({
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json"
+        (function(){
+            // =================== Yardımcı ===================
+            var TR_DATE = {
+                closeText: "Kapat", prevText: "Önceki", nextText: "Sonraki", currentText: "Bugün",
+                monthNames: ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"],
+                monthNamesShort: ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
+                dayNames: ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"],
+                dayNamesShort: ["Paz","Pts","Sal","Çar","Per","Cum","Cts"],
+                dayNamesMin: ["Pz","Pt","Sa","Ça","Pe","Cu","Ct"],
+                dateFormat: "dd.mm.yy", firstDay: 1, isRTL: false
+            };
+
+            function toApiDate(str){ // "dd.MM.yyyy" -> "yyyy-MM-dd"
+                if(!str) return "";
+                var p = str.split(".");
+                if(p.length !== 3) return "";
+                return p[2] + "-" + p[1].padStart(2,"0") + "-" + p[0].padStart(2,"0");
+            }
+            function num(v){ v = (v==null?0:v); var n = +v; return isNaN(n)?0:n; }
+            function fmtMoney(n, c, d, t){
+                c = isNaN(c = Math.abs(c)) ? 2 : c; d = d === undefined ? "," : d; t = t === undefined ? "." : t;
+                var s = n < 0 ? "-" : "", i = String(parseInt(n = Math.abs(Number(n) || 0).toFixed(c))), j = (j = i.length) > 3 ? j % 3 : 0;
+                return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
+            }
+            function notifyOk(msg){ toastr && toastr.success ? toastr.success(msg) : alert(msg); }
+            function notifyErr(msg){ toastr && toastr.error ? toastr.error(msg) : alert(msg); }
+
+            // =================== Datepicker init ===================
+            function initDatepicker($els){
+                if(!$.fn.datepicker){ // jQuery UI yoksa basit mask
+                    $els.attr("placeholder","gg.aa.yyyy");
+                    return;
+                }
+                $.datepicker.setDefaults(TR_DATE);
+                $els.datepicker({
+                    changeMonth:true, changeYear:true, showAnim:"fadeIn",
+                    maxDate:"+0d"
+                });
+            }
+            initDatepicker($('.datepicker'));
+
+            // Başlangıç-bitiş senkronizasyonları
+            function linkRange($start, $end){
+                if(!$.fn.datepicker) return;
+                $start.on("change", function(){
+                    var d = $start.datepicker("getDate");
+                    if(d){ $end.datepicker("option","minDate", d); }
+                });
+                $end.on("change", function(){
+                    var d = $end.datepicker("getDate");
+                    if(d){ $start.datepicker("option","maxDate", d); }
+                });
+            }
+            linkRange($('#IssueDateStart'), $('#IssueDateStartEnd'));
+            linkRange($('#CreatedDateStart'), $('#CreatedDateEnd'));
+            linkRange($('#faturaBaslangicTarihi'), $('#faturaBitisTarihi'));
+            linkRange($('#faturaIslemeBaslamaTarihi'), $('#faturaIslemBitisTarihi'));
+            linkRange($('#CancelDate'), $('#CancelDate')); // tek alan; yine de min/max korunur
+            linkRange($('#ObjectDocumentDate'), $('#ObjectDocumentDate'));
+
+            // Varsayılan olarak bugün
+            var today = (function(){
+                var dt = new Date(), dd = String(dt.getDate()).padStart(2,"0"),
+                    mm = String(dt.getMonth()+1).padStart(2,"0"), yyyy = dt.getFullYear();
+                return dd + "." + mm + "." + yyyy;
+            })();
+            if(!$('#CancelDate').val()) $('#CancelDate').val(today);
+            if(!$('#ObjectDocumentDate').val()) $('#ObjectDocumentDate').val(today);
+
+            // =================== Select2 init ===================
+            function initSelect2(sel){ if($.fn.select2){ $(sel).select2({ width: '100%', placeholder: $(sel).data('placeholder') || 'Seçiniz' }); } }
+            initSelect2('#CurrencyCode');
+            initSelect2('#subeler');
+
+            // =================== VKN/TCKN çoklu mod ===================
+            $('#TargetIdentifierChk').on('change', function(){
+                var multi = $(this).is(':checked');
+                var $inp = $('#TargetIdentifier');
+                $inp.val('');
+                if(multi){
+                    $inp.attr('maxlength','400').attr('placeholder','Virgülle ayrılmış liste (örn: 111...,222...)');
+                }else{
+                    $inp.attr('maxlength','11').attr('placeholder','11 hane');
                 }
             });
-        });
+            // Sayısal/küme giriş filtresi
+            $('#TargetIdentifier').on('keypress', function(e){
+                var multi = $('#TargetIdentifierChk').is(':checked');
+                var ch = String.fromCharCode(e.which || e.keyCode);
+                if(multi){
+                    if(!/[0-9,]/.test(ch)) e.preventDefault();
+                }else{
+                    if(!/[0-9]/.test(ch)) e.preventDefault();
+                }
+            });
 
-        function showInvoiceDetail(invoiceNo) {
-            $("#invoiceDetailIframe").attr("src", "/EArchive/Detail/" + invoiceNo);
-            $("#invoiceDetailModal").modal("show");
-        }
+            // =================== Detaylı Arama toggle ikonu ===================
+            $('#btnDetayliArama').on('click', function(){
+                var $i = $(this).find('.myCollapseIcon');
+                setTimeout(function(){ $i.toggleClass('fa-plus fa-minus'); }, 150);
+            });
+
+            // =================== Yıl/Ay davranışları ===================
+            function yearChange(){
+                // Ay seçiminde otomatik "Kasım 2025" gibi bugüne gel
+                var now = new Date();
+                var selY = +$('#IntegrationYear').val();
+                if(selY === now.getFullYear()){
+                    $('#IntegrationMonth').val(String(now.getMonth()+1));
+                }else{
+                    $('#IntegrationMonth').val('-1'); // tümü
+                }
+            }
+            $('#IntegrationYear').on('change', yearChange);
+            yearChange();
+
+            // =================== DataTables ===================
+            var table;
+            function buildFilters(){
+                // API’ye gönderilecek filtreler
+                var ids = $('#TargetIdentifier').val() || "";
+                if($('#TargetIdentifierChk').is(':checked')){
+                    ids = ids.split(',').map(function(s){ return $.trim(s); }).filter(Boolean);
+                }
+                return {
+                    IsArchive: $('#IsArchive').val(),
+                    Status: $('#Status').val(),
+                    IssueDateStart: toApiDate($('#IssueDateStart').val()),
+                    IssueDateEnd: toApiDate($('#IssueDateStartEnd').val()),
+                    DocumentId: $('#DocumentId').val(),
+                    UUID: $('#UUID').val(),
+                    TargetIdentifier: ids,
+                    TargetTitle: $('#TargetTitle').val(),
+                    CreatedDateStart: toApiDate($('#CreatedDateStart').val()),
+                    CreatedDateEnd: toApiDate($('#CreatedDateEnd').val()),
+                    IsObjected: $('#IsObjected').val(),
+                    InvoiceTypeCode: $('#InvoiceTypeCode').val(),
+                    IsPaid: $('#IsPaid').val(),
+                    HasEMail: $('#HasEMail').val(),
+                    PayableAmountMin: $('#PayableAmount').val(),
+                    CurrencyCode: $('#CurrencyCode').val(),
+                    IsCanceled: $('#IsCanceled').val(),
+                    IsPrinted: $('#IsPrinted').val(),
+                    IsAccount: $('#IsAccount').val(),
+                    Year: $('#IntegrationYear').val(),
+                    Month: $('#IntegrationMonth').val(),
+                    BranchIds: $('#subeler').val() || []
+                };
+            }
+
+            function updateFooters(totalObj){
+                // totalObj beklenen şema: { totalKdvTaxable, totalKdv, totalPayable }
+                if(totalObj){
+                    $('#totalKDVTaxableAmount').text(fmtMoney(num(totalObj.totalKdvTaxable),2,",",".") + " TL");
+                    $('#totalKDVAmount').text(fmtMoney(num(totalObj.totalKdv),2,",",".") + " TL");
+                    $('#totalPayableAmount').text(fmtMoney(num(totalObj.totalPayable),2,",",".") + " TL");
+                    return;
+                }
+                // Aksi halde sayfa içi topla
+                var kdvsum = 0, paysum = 0, kdvtaxablesum = 0;
+                table.rows({page:'current'}).every(function(){
+                    var d = this.data();
+                    kdvsum += num(d.KdvAmount || d.kdv || d.KDV);
+                    paysum += num(d.PayableAmount || d.payable || d.OdenecekTutar);
+                    kdvtaxablesum += num(d.KdvTaxable || d.kdvMatrah || d.KDVMatrah);
+                });
+                $('#totalKDVTaxableAmount').text(fmtMoney(kdvtaxablesum,2,",",".") + " TL");
+                $('#totalKDVAmount').text(fmtMoney(kdvsum,2,",",".") + " TL");
+                $('#totalPayableAmount').text(fmtMoney(paysum,2,",",".") + " TL");
+            }
+
+            function initTable(){
+                if($.fn.DataTable.isDataTable('#myDataTable')){
+                    table.destroy();
+                    $('#myDataTable').empty().append(
+                        '<thead><tr>'+
+                        '<th><input type="checkbox" id="chkAll"/></th>'+
+                        '<th>Fatura No/ETTN</th><th>Firma Adı</th><th>Vergi Kimlik No</th>'+
+                        '<th>Fatura Tip/Senaryo</th><th>Fatura Tarihi</th><th>İşlem Tarihi</th>'+
+                        '<th>KDV</th><th>Ödenecek Tutar</th><th>Muhasebeleştirme</th>'+
+                        '<th>Durum</th><th>E-Posta Durumu</th><th>İşlemler</th></tr></thead><tbody></tbody>'+
+                        $('#myDataTable tfoot')[0].outerHTML
+                    );
+                }
+
+                table = $('#myDataTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    deferRender: true,
+                    order: [[6,'desc']], // İşlem Tarihi
+                    pageLength: 25,
+                    lengthMenu: [[25,50,75,100,250,500,1000],[25,50,75,100,250,500,"1.000"]],
+                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+                    ajax: {
+                        url: '/api/earsiv/outbox/search', // <- backend endpointin
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: function (d) {
+                            var f = buildFilters();
+                            return JSON.stringify({ dt: d, filters: f });
+                        },
+                        dataSrc: function(res){
+                            // res: { data:[...], recordsTotal, recordsFiltered, totals:{...} }
+                            if(res && res.totals){ updateFooters(res.totals); } else { updateFooters(null); }
+                            return (res && res.data) ? res.data : [];
+                        },
+                        error: function(){
+                            notifyErr('Liste alınamadı.');
+                        }
+                    },
+                    columns: [
+                        { data: null, orderable:false, searchable:false,
+                          render:function(d,t,r){ return '<input type="checkbox" class="rowchk" data-id="'+(r.UUID||r.uuid||'')+'">'; } },
+                        { data: null, render:function(d){ return (d.DocumentId||'') + (d.UUID?'<br><small>'+d.UUID+'</small>':''); } },
+                        { data: 'TargetTitle', defaultContent:'' },
+                        { data: 'TargetIdentifier', defaultContent:'' },
+                        { data: null, render:function(d){ return (d.InvoiceTypeCode||'') + (d.Scenario?'/'+d.Scenario:''); } },
+                        { data: 'IssueDate', render:function(v){ return v ? v.substr(0,10) : ''; } },
+                        { data: 'CreatedDate', render:function(v){ return v ? v.replace('T',' ').substr(0,16) : ''; } },
+                        { data: 'KdvAmount', render:function(v){ return fmtMoney(num(v),2,",","."); }, className:'text-right' },
+                        { data: 'PayableAmount', render:function(v){ return fmtMoney(num(v),2,",","."); }, className:'text-right' },
+                        { data: 'IsAccount', render:function(v){ return v==='YES'?'Evet':'Hayır'; }, className:'text-center' },
+                        { data: 'Status', defaultContent:'', className:'text-center' },
+                        { data: 'HasEMail', render:function(v){ return v==='YES'?'Gönderildi':'Gönderilmedi'; }, className:'text-center' },
+                        { data: null, orderable:false, searchable:false,
+                          render:function(d){
+                              var uid = d.UUID || '';
+                              var doc = d.DocumentId || '';
+                              return ''+
+                                '<div class="btn-group btn-group-xs">'+
+                                '<button class="btn btn-info" title="Önizle" onclick="invoicePreview(\''+uid+'\')"><i class="fa fa-eye"></i></button>'+
+                                '<button class="btn btn-primary" title="Mail" onclick="invoiceSendMailModal(\''+uid+'\')"><i class="fa fa-envelope"></i></button>'+
+                                '<button class="btn btn-warning" title="İtiraz" onclick="openItiraz(\''+doc+'\', \''+uid+'\')"><i class="fa fa-exclamation"></i></button>'+
+                                '<button class="btn btn-danger" title="İptal" onclick="openIptal(\''+doc+'\', \''+uid+'\')"><i class="fa fa-times"></i></button>'+
+                                '</div>';
+                          }
+                        }
+                    ],
+                    drawCallback: function(){
+                        // Sayfa bazlı seç-tümünü yönet
+                        $('#chkAll').prop('checked', false);
+                    }
+                });
+
+                // Header "select all"
+                $('#myDataTable').on('change', '#chkAll', function(){
+                    var checked = $(this).is(':checked');
+                    $('#myDataTable .rowchk').prop('checked', checked);
+                });
+            }
+            initTable();
+
+            // =================== Arama/Temizle/Enter ===================
+            function gridSearch(){
+                if(table){ table.ajax.reload(); }
+            }
+            window.gridSearch = gridSearch; // dışarı da açık kalsın
+
+            function clearSearchInputs(){
+                $('#IsArchive').val('');
+                $('#Status').val('');
+                $('#IssueDateStart, #IssueDateStartEnd, #CreatedDateStart, #CreatedDateEnd').val('');
+                $('#DocumentId, #UUID, #TargetIdentifier, #TargetTitle').val('');
+                $('#IsObjected, #InvoiceTypeCode, #IsPaid, #HasEMail, #CurrencyCode, #IsCanceled, #IsPrinted, #IsAccount').val('');
+                $('#TargetIdentifierChk').prop('checked', false).trigger('change');
+                $('#IntegrationMonth').val('-1');
+                yearChange();
+                if($.fn.select2){
+                    $('#CurrencyCode').trigger('change');
+                    $('#subeler').val(null).trigger('change');
+                }
+                gridSearch();
+            }
+
+            $('#btnSearch').on('click', gridSearch);
+            $('#btnClear').on('click', clearSearchInputs);
+
+            // Enter ile arama
+            $('#btnAramaYapEnter').on('keypress', 'input', function(e){
+                if(e.which === 13){ e.preventDefault(); gridSearch(); }
+            });
+
+            // =================== Toplu İşlemler ===================
+            function getSelectedUUIDs(){
+                var ids = [];
+                $('#myDataTable .rowchk:checked').each(function(){ ids.push($(this).data('id')); });
+                return ids;
+            }
+
+            $('.dropdown-menu').on('click', 'a.bulk', function(e){
+                e.preventDefault();
+                var action = $(this).data('action');
+                var uuids = getSelectedUUIDs();
+                if(!uuids.length){ notifyErr('Lütfen en az bir kayıt seçin.'); return; }
+
+                // Aksiyon türüne göre endpoint ve/veya modal
+                switch(action){
+                    case 'archive-1': return bulkToggle('/api/earsiv/outbox/archive', uuids, true);
+                    case 'archive-0': return bulkToggle('/api/earsiv/outbox/archive', uuids, false);
+                    case 'paid-1':    return bulkToggle('/api/earsiv/outbox/paid', uuids, true);
+                    case 'paid-0':    return bulkToggle('/api/earsiv/outbox/paid', uuids, false);
+                    case 'mail':      return invoiceSendMailModalCol(uuids, true);
+                    case 'excel-selected': return excelAktarModal(false, uuids);
+                    case 'excel-all': return excelAktarModal(true, []);
+                    case 'luca':      return sendLucaToplu(uuids);
+                    case 'erp':       return muhasebeyeTopluAktar(uuids);
+                    case 'print':     return topluPrint(uuids);
+                    case 'dl-XML':    return getDownloadFileAll('XML', uuids);
+                    case 'dl-PDF':    return getDownloadFileAll('PDF', uuids);
+                    case 'dl-TPDF':   return getDownloadFileAll('TPDF', uuids);
+                    case 'dl-HTML':   return getDownloadFileAll('HTML', uuids);
+                    case 'dl-JPG':    return getDownloadFileAll('JPG', uuids);
+                }
+            });
+
+            function bulkToggle(url, uuids, flag){
+                $.ajax({
+                    url: url, method:'POST', contentType:'application/json',
+                    data: JSON.stringify({ uuids: uuids, value: flag })
+                }).done(function(){
+                    notifyOk('İşlem tamamlandı.');
+                    gridSearch();
+                }).fail(function(xhr){
+                    notifyErr('İşlem başarısız: ' + (xhr.responseText||''));
+                });
+            }
+
+            // =================== Modallar: aç/kapat/validasyon ve gönderim ===================
+            window.openIptal = function(docNo, uuid){
+                $('#modalFaturaNoIptal').text(docNo||'');
+                $('#iptalEtBtn').prop('disabled', !$('#uyariyiOkudumchk').is(':checked'));
+                $('#modal-cancel').modal('show');
+                $('#iptalEtBtn').off('click').on('click', function(){ sendCancelDocument(uuid); });
+            };
+            window.openItiraz = function(docNo, uuid){
+                $('#modalFaturaNoItiraz').text(docNo||'');
+                $('#itirazEtBtn').prop('disabled', !$('#itirazUyariyiOkudumchk').is(':checked'));
+                $('#modal-object').modal('show');
+                $('#itirazEtBtn').off('click').on('click', function(){ sendObjectDocument(uuid); });
+            };
+            $('#uyariyiOkudumchk').on('change', function(){ $('#iptalEtBtn').prop('disabled', !this.checked); });
+            $('#itirazUyariyiOkudumchk').on('change', function(){ $('#itirazEtBtn').prop('disabled', !this.checked); });
+
+            window.sendCancelDocument = function(uuid){
+                var dto = {
+                    UUID: uuid,
+                    CancelDate: toApiDate($('#CancelDate').val()),
+                    CancelReason: $('#CancelReason').val(),
+                    CancelMail: $('#CancelMail').val()
+                };
+                if(!dto.CancelDate || !dto.CancelReason){ notifyErr('Zorunlu alanları doldurunuz.'); return; }
+                $.ajax({
+                    url:'/api/earsiv/outbox/cancel', method:'POST', contentType:'application/json', data: JSON.stringify(dto)
+                }).done(function(){
+                    notifyOk('İptal talebi gönderildi.');
+                    $('#modal-cancel').modal('hide'); gridSearch();
+                }).fail(function(xhr){ notifyErr('İptal başarısız: '+(xhr.responseText||'')); });
+            };
+
+            window.sendObjectDocument = function(uuid){
+                var dto = {
+                    UUID: uuid,
+                    ObjectDocumentDate: toApiDate($('#ObjectDocumentDate').val()),
+                    ObjectDocumentNo: $('#ObjectDocumentNo').val(),
+                    ObjectType: $('#ObjectType').val(),
+                    ObjectReason: $('#ObjectReason').val()
+                };
+                if(!dto.ObjectDocumentDate || !dto.ObjectDocumentNo || !dto.ObjectType || !dto.ObjectReason){
+                    notifyErr('Zorunlu alanları doldurunuz.'); return;
+                }
+                $.ajax({
+                    url:'/api/earsiv/outbox/object', method:'POST', contentType:'application/json', data: JSON.stringify(dto)
+                }).done(function(){
+                    notifyOk('İtiraz talebi oluşturuldu.');
+                    $('#modal-object').modal('hide'); gridSearch();
+                }).fail(function(xhr){ notifyErr('İtiraz başarısız: '+(xhr.responseText||'')); });
+            };
+
+            window.invoicePreview = function(uuid){
+                // Örnek: yeni pencerede pdf önizleme
+                window.open('/api/earsiv/outbox/preview?uuid='+encodeURIComponent(uuid),'_blank');
+            };
+
+            window.invoiceSendMailModal = function(uuid){
+                $('#modal-mail').data('uuid', uuid).modal('show');
+            };
+            window.invoiceSendMailModalCol = function(uuids, fromBulk){
+                $('#modal-mail').data('uuids', uuids || []).modal('show');
+            };
+
+            $('#sendMailBtn').on('click', function(){
+                var uuid = $('#modal-mail').data('uuid') || null;
+                var uuids = $('#modal-mail').data('uuids') || (uuid ? [uuid] : []);
+                var dto = {
+                    Uuids: uuids,
+                    ReceiverMail: $('#ReceiverMail').val(),
+                    Title: $('#Title').val(),
+                    ReceiverFirstnameLastname: $('#ReceiverFirstnameLastname').val(),
+                    AttachXml: $('#sendXml').is(':checked'),
+                    AttachPdf: $('#sendPdf').is(':checked')
+                };
+                if(!dto.ReceiverMail || !dto.Title || !dto.ReceiverFirstnameLastname){
+                    notifyErr('E-posta, konu ve alıcı adı zorunlu.'); return;
+                }
+                $.ajax({
+                    url:'/api/earsiv/outbox/send-mail', method:'POST', contentType:'application/json', data: JSON.stringify(dto)
+                }).done(function(){
+                    notifyOk('E-posta gönderildi.');
+                    $('#modal-mail').modal('hide');
+                }).fail(function(xhr){
+                    notifyErr('E-posta gönderilemedi: '+(xhr.responseText||''));
+                });
+            });
+
+            // Excel modal tetikleyicisi
+            window.excelAktarModal = function(all, uuids){
+                $('#modal-exceleaktar').data('all', !!all).data('uuids', uuids||[]).modal('show');
+            };
+            $('#exceleAktar').on('click', function(){
+                var all = $('#modal-exceleaktar').data('all');
+                var uuids = $('#modal-exceleaktar').data('uuids') || [];
+                var dto = {
+                    All: !!all,
+                    Uuids: uuids,
+                    IssueStart: toApiDate($('#faturaBaslangicTarihi').val()),
+                    IssueEnd: toApiDate($('#faturaBitisTarihi').val()),
+                    ProcStart: toApiDate($('#faturaIslemeBaslamaTarihi').val()),
+                    ProcEnd: toApiDate($('#faturaIslemBitisTarihi').val()),
+                    IsArchive: $('#isArchive').val(),
+                    ReceiverIdentifier: $('#receiverIdentifier').val(),
+                    ReceiverTitle: $('#receiverTitle').val(),
+                    IsCancel: $('#isCancel').val(),
+                    Year: $('#IntegrationYearExcel').val(),
+                    SumKdv: $('#sumKdv').val()
+                };
+                $.ajax({
+                    url:'/api/earsiv/outbox/export-excel', method:'POST', contentType:'application/json', data: JSON.stringify(dto)
+                }).done(function(resp){
+                    notifyOk('Excel hazırlanıyor/indirildi.');
+                    if(resp && resp.fileUrl){ window.location = resp.fileUrl; }
+                    $('#modal-exceleaktar').modal('hide');
+                }).fail(function(xhr){
+                    notifyErr('Excel aktarım hatası: '+(xhr.responseText||''));
+                });
+            });
+
+            // =================== Diğer stub fonksiyonlar ===================
+            window.sendLucaToplu = function(uuids){ notifyOk('Luca aktarım isteği gönderildi ('+uuids.length+' kayıt).'); };
+            window.muhasebeyeTopluAktar = function(uuids){ $('#muhasebeFisiModal').modal && $('#muhasebeFisiModal').modal('show'); };
+            window.topluPrint = function(uuids){ window.open('/api/earsiv/outbox/print?uuids='+encodeURIComponent(uuids.join(',')),'_blank'); };
+            window.getDownloadFileAll = function(type, uuids){
+                uuids = uuids || getSelectedUUIDs();
+                if(!uuids.length){ notifyErr('Lütfen en az bir kayıt seçin.'); return; }
+                window.open('/api/earsiv/outbox/download?type='+encodeURIComponent(type)+'&uuids='+encodeURIComponent(uuids.join(',')),'_blank');
+            };
+
+        })();
     </script>
 }
+

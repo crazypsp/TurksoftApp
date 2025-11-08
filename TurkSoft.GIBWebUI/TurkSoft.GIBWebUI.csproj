@@ -11,4 +11,11 @@
     <Folder Include="wwwroot\lib\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="wwwroot\Login\css\.DS_Store" />
+    <None Include="wwwroot\Login\fonts\.DS_Store" />
+    <None Include="wwwroot\Login\images\.DS_Store" />
+    <None Include="wwwroot\Login\scss\.DS_Store" />
+  </ItemGroup>
+
 </Project>

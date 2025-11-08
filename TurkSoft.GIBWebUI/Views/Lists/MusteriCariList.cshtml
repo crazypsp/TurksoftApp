@@ -4,91 +4,580 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content-header">
-    <h1>Listeler <small>Müşteri / Cari Listesi</small></h1>
-</section>
+
+@section Styles {
+
+    <style>
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 240px;
+        }
+
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .dt-head-center thead th {
+            text-align: center;
+        }
+
+        td pre {
+            white-space: pre-wrap;
+            margin: 0;
+            font-family: inherit;
+        }
+
+        .required::after {
+            content: " *";
+            color: #d9534f;
+        }
+
+        .cursor-pointer {
+            cursor: pointer;
+        }
+
+        .modal .table caption {
+            caption-side: top;
+        }
+
+        .panel-body {
+            overflow: auto;
+        }
+    </style>
+}
 
 <section class="content">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <button id="btnNewCustomer" class="btn btn-success btn-sm pull-right">
-                <i class="fa fa-plus"></i> Yeni Müşteri Ekle
-            </button>
+
+    <!-- ========== Sabit Listeler (gönderdiğin data) ========== -->
+    <script>
+        var taniticikodList = [{"TaniticiId":1,"TaniticiKod":"TICARETSICILNO"},{"TaniticiId":2,"TaniticiKod":"MERSISNO"},{"TaniticiId":3,"TaniticiKod":"ABONENO"},{"TaniticiId":4,"TaniticiKod":"MUSTERINO"},{"TaniticiId":5,"TaniticiKod":"BAYINO"},{"TaniticiId":6,"TaniticiKod":"HIZMETNO"},{"TaniticiId":7,"TaniticiKod":"TESISATNO"},{"TaniticiId":8,"TaniticiKod":"DISTRIBUTORNO"},{"TaniticiId":9,"TaniticiKod":"TAPDKNO"},{"TaniticiId":10,"TaniticiKod":"SAYACNO"},{"TaniticiId":11,"TaniticiKod":"URETICINO"},{"TaniticiId":12,"TaniticiKod":"CIFTCINO"},{"TaniticiId":13,"TaniticiKod":"IMALATCINO"},{"TaniticiId":14,"TaniticiKod":"DOSYANO"},{"TaniticiId":15,"TaniticiKod":"HASTANO"},{"TaniticiId":16,"TaniticiKod":"SUBENO"},{"TaniticiId":17,"TaniticiKod":"PLAKA"},{"TaniticiId":18,"TaniticiKod":"ARACKIMLIKNO"},{"TaniticiId":19,"TaniticiKod":"PASAPORTNO"}];
+        var ilList = [{"IlId":1,"IlAdi":"ADANA"},{"IlId":2,"IlAdi":"ADIYAMAN"},{"IlId":3,"IlAdi":"AFYONKARAHİSAR"},{"IlId":4,"IlAdi":"AĞRI"},{"IlId":5,"IlAdi":"AMASYA"},{"IlId":6,"IlAdi":"ANKARA"},{"IlId":7,"IlAdi":"ANTALYA"},{"IlId":8,"IlAdi":"ARTVİN"},{"IlId":9,"IlAdi":"AYDIN"},{"IlId":10,"IlAdi":"BALIKESİR"},{"IlId":11,"IlAdi":"BİLECİK"},{"IlId":12,"IlAdi":"BİNGÖL"},{"IlId":13,"IlAdi":"BİTLİS"},{"IlId":14,"IlAdi":"BOLU"},{"IlId":15,"IlAdi":"BURDUR"},{"IlId":16,"IlAdi":"BURSA"},{"IlId":17,"IlAdi":"ÇANAKKALE"},{"IlId":18,"IlAdi":"ÇANKIRI"},{"IlId":19,"IlAdi":"ÇORUM"},{"IlId":20,"IlAdi":"DENİZLİ"},{"IlId":21,"IlAdi":"DİYARBAKIR"},{"IlId":22,"IlAdi":"EDİRNE"},{"IlId":23,"IlAdi":"ELAZIĞ"},{"IlId":24,"IlAdi":"ERZİNCAN"},{"IlId":25,"IlAdi":"ERZURUM"},{"IlId":26,"IlAdi":"ESKİŞEHİR"},{"IlId":27,"IlAdi":"GAZİANTEP"},{"IlId":28,"IlAdi":"GİRESUN"},{"IlId":29,"IlAdi":"GÜMÜŞHANE"},{"IlId":30,"IlAdi":"HAKKARİ"},{"IlId":31,"IlAdi":"HATAY"},{"IlId":32,"IlAdi":"ISPARTA"},{"IlId":33,"IlAdi":"MERSİN"},{"IlId":34,"IlAdi":"İSTANBUL"},{"IlId":35,"IlAdi":"İZMİR"},{"IlId":36,"IlAdi":"KARS"},{"IlId":37,"IlAdi":"KASTAMONU"},{"IlId":38,"IlAdi":"KAYSERİ"},{"IlId":39,"IlAdi":"KIRKLARELİ"},{"IlId":40,"IlAdi":"KIRŞEHİR"},{"IlId":41,"IlAdi":"KOCAELİ"},{"IlId":42,"IlAdi":"KONYA"},{"IlId":43,"IlAdi":"KÜTAHYA"},{"IlId":44,"IlAdi":"MALATYA"},{"IlId":45,"IlAdi":"MANİSA"},{"IlId":46,"IlAdi":"KAHRAMANMARAŞ"},{"IlId":47,"IlAdi":"MARDİN"},{"IlId":48,"IlAdi":"MUĞLA"},{"IlId":49,"IlAdi":"MUŞ"},{"IlId":50,"IlAdi":"NEVŞEHİR"},{"IlId":51,"IlAdi":"NİĞDE"},{"IlId":52,"IlAdi":"ORDU"},{"IlId":53,"IlAdi":"RİZE"},{"IlId":54,"IlAdi":"SAKARYA"},{"IlId":55,"IlAdi":"SAMSUN"},{"IlId":56,"IlAdi":"SİİRT"},{"IlId":57,"IlAdi":"SİNOP"},{"IlId":58,"IlAdi":"SİVAS"},{"IlId":59,"IlAdi":"TEKİRDAĞ"},{"IlId":60,"IlAdi":"TOKAT"},{"IlId":61,"IlAdi":"TRABZON"},{"IlId":62,"IlAdi":"TUNCELİ"},{"IlId":63,"IlAdi":"ŞANLIURFA"},{"IlId":64,"IlAdi":"UŞAK"},{"IlId":65,"IlAdi":"VAN"},{"IlId":66,"IlAdi":"YOZGAT"},{"IlId":67,"IlAdi":"ZONGULDAK"},{"IlId":68,"IlAdi":"AKSARAY"},{"IlId":69,"IlAdi":"BAYBURT"},{"IlId":70,"IlAdi":"KARAMAN"},{"IlId":71,"IlAdi":"KIRIKKALE"},{"IlId":72,"IlAdi":"BATMAN"},{"IlId":73,"IlAdi":"ŞIRNAK"},{"IlId":74,"IlAdi":"BARTIN"},{"IlId":75,"IlAdi":"ARDAHAN"},{"IlId":76,"IlAdi":"IĞDIR"},{"IlId":77,"IlAdi":"YALOVA"},{"IlId":78,"IlAdi":"KARABÜK"},{"IlId":79,"IlAdi":"KİLİS"},{"IlId":80,"IlAdi":"OSMANİYE"},{"IlId":81,"IlAdi":"DÜZCE"}];
+    </script>
+
+    <!-- Angular attribute'ları sayfada dursa da JS jQuery ile çalışır -->
+    <div ng-app="myApp" ng-controller="myController" class="ng-scope">
+
+        <div id="CariBilgileri" class="tab-pane fade in">
+            <div class="form-group">
+                <div class="panel panel-sky">
+                    <div class="panel-body">
+
+                        <!-- ========== Arama / Filtre Kutusu ========== -->
+                        <div class="box box-default" id="searchBox">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Müşteri/Cari Arama</h3>
+                                <div class="box-tools pull-right">
+                                    <button id="btnDetay" type="button" class="btn btn-box-tool"><i class="fa fa-minus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="box-body" id="btnAramaYapEnter">
+                                <div class="box-body">
+                                    <div class="row">
+                                        <div class="form-group col-md-1">
+                                            <label>Müsteri Kodu</label>
+                                            <input id="txtMusteriKodu" type="text" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-2">
+                                            <label>VKN/TCKN</label>
+                                            <input id="txtVknTckn" type="text" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-3">
+                                            <label>Unvanı</label>
+                                            <input id="txtUnvan" type="text" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-3">
+                                            <label>Adı</label>
+                                            <input id="txtAdi" type="text" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-3">
+                                            <label>Soyadı</label>
+                                            <input id="txtSoyadi" type="text" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="box-footer">
+                                <div>
+                                    <div class="input-group input-group-md pull-left">
+                                        <div class="col-sm-8">
+                                            <button type="button" name="CariOlustur" id="CariOlustur" class="btn btn-success">
+                                                Yeni Oluştur &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-plus"></i></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="input-group input-group-md pull-left">
+                                        <div class="col-sm-8">
+                                            <button type="button" id="ExceldenAktar" class="btn btn-default">
+                                                Excel'den Aktar &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-import"></i></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="input-group input-group-md pull-left">
+                                        <div class="col-sm-8">
+                                            <button type="button" id="ExceleAktar" class="btn btn-default">
+                                                Excel'e Aktar &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-export"></i></span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                                        <button id="btnAra" type="button" class="btn btn-success"> Arama Yap  <i class="glyphicon glyphicon-search"></i> </button>
+                                    </div>
+                                    <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                                        <button id="btnTemizle" type="button" class="btn btn-danger"> Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ========== Liste ========== -->
+                        <div id="accordioninpanel" class="accordion-group">
+                            <div class="box-body">
+                                <table id="gridCari" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
+                                    <thead>
+                                        <tr>
+                                            <th>Müşteri Kodu</th>
+                                            <th>Vergi No TC Kimlik No</th>
+                                            <th>Firma Adı</th>
+                                            <th>Adı</th>
+                                            <th>Soyadı</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody><!-- JS dolduracak --></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="box-body">
-            <table id="grid_cari" class="table table-bordered table-hover dataTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>VKN / TCKN</th>
-                        <th>Vergi Dairesi</th>
-                        <th>Adı</th>
-                        <th>Soyadı</th>
-                        <th>Telefon</th>
-                        <th>E-Posta</th>
-                        <th>Oluşturma</th>
-                        <th>İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+
+
+    
+
     </div>
 </section>
 
-<!-- Müşteri Modal -->
-<div class="modal fade" id="mdlCustomer" tabindex="-1" role="dialog" aria-labelledby="mdlCustomerLabel">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content">
-            <form id="frmCustomer">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="mdlCustomerLabel">Müşteri / Cari Bilgisi</h4>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="cusId" />
-
-                    <div class="form-group">
-                        <label for="cusName">Adı</label>
-                        <input type="text" class="form-control" id="cusName" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="cusSurname">Soyadı</label>
-                        <input type="text" class="form-control" id="cusSurname" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="cusPhone">Telefon</label>
-                        <input type="text" class="form-control" id="cusPhone" placeholder="05xx xxx xx xx" />
-                    </div>
-                    <div class="form-group">
-                        <label for="cusEmail">E-posta</label>
-                        <input type="email" class="form-control" id="cusEmail" />
-                    </div>
-                    <div class="form-group">
-                        <label for="cusTaxNo">Vergi No / TCKN</label>
-                        <input type="text" class="form-control" id="cusTaxNo" />
-                    </div>
-                    <div class="form-group">
-                        <label for="cusTaxOffice">Vergi Dairesi</label>
-                        <input type="text" class="form-control" id="cusTaxOffice" />
-                    </div>
-                    <div class="form-group">
-                        <label for="cusCreatedAt">Oluşturma Tarihi</label>
-                        <input type="date" class="form-control" id="cusCreatedAt" />
-                    </div>
-                    <div class="form-group">
-                        <label for="cusUpdatedAt">Güncelleme Tarihi</label>
-                        <input type="date" class="form-control" id="cusUpdatedAt" />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @section Scripts {
-    <script type="module" src="~/apps/mustericarilist.js"></script>
+
+    <script>
+        // ======= Sayfa Durumu =======
+        var DT = null; // DataTable instance
+        var CurrentCari = null;
+        var TaniticiDegerList = []; // {TaniticiId, TaniticiDeger}
+        var SubeList = [];          // {Tur, Adi, Il, Ilce, Email}
+
+        function toast(msg){ alert(msg); } // İstersen Toastr ekleyebilirsin
+
+        // ======= Yardımcılar =======
+        function clearSearch(){
+            $("#txtMusteriKodu,#txtVknTckn,#txtUnvan,#txtAdi,#txtSoyadi").val("");
+        }
+
+        function fillIlSelect(){
+            var $sel = $("#selIl");
+            $sel.empty().append('<option value="">Seçiniz</option>');
+            ilList.forEach(function(it){ $sel.append('<option value="'+it.IlAdi+'">'+it.IlAdi+'</option>'); });
+        }
+
+        function loadIlceler(il){
+            if(!il){ $("#selIlce").empty().append('<option value="">Seçiniz</option>'); return; }
+            $.getJSON("/api/geo/ilceler",{ il: il })
+             .done(function(list){
+                 var $sel = $("#selIlce");
+                 $sel.empty().append('<option value="">Seçiniz</option>');
+                 (list||[]).forEach(function(ad){ $sel.append('<option value="'+ad+'">'+ad+'</option>'); });
+             })
+             .fail(function(){
+                 $("#selIlce").empty().append('<option value="">Seçiniz</option>');
+             });
+        }
+
+        // ======= Grid =======
+        function initGrid(){
+            DT = $("#gridCari").DataTable({
+                pageLength: 25,
+                lengthMenu: [[10,25,50,100,-1],[10,25,50,100,"Tümü"]],
+                processing: true,
+                deferRender: true,
+                stateSave: true,
+                language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json" },
+                columns: [
+                    { data: "MusteriKodu", defaultContent:"" },
+                    { data: "VergiNoTCKimlikNo", defaultContent:"" },
+                    { data: "FirmaAdi", defaultContent:"" },
+                    { data: "Adi", defaultContent:"" },
+                    { data: "Soyadi", defaultContent:"" },
+                    {
+                        data: null,
+                        orderable: false,
+                        render: function(row){
+                            return ''+
+                              '<div class="btn-group btn-group-sm">'+
+                              '<button class="btn btn-primary btn-edit">Düzenle</button>'+
+                              '<button class="btn btn-danger btn-del">Sil</button>'+
+                              '</div>';
+                        }
+                    }
+                ]
+            });
+        }
+
+        function queryParams(){
+            return {
+                musteriKodu: $("#txtMusteriKodu").val(),
+                vknTckn: $("#txtVknTckn").val(),
+                unvan: $("#txtUnvan").val(),
+                adi: $("#txtAdi").val(),
+                soyadi: $("#txtSoyadi").val()
+            };
+        }
+
+        function loadGrid(){
+            var q = queryParams();
+            DT.clear().draw(false);
+            $.getJSON("/api/cari/search", q)
+             .done(function(rows){
+                 DT.rows.add(rows||[]).draw(false);
+             })
+             .fail(function(){
+                 toast("Kayıtlar yüklenemedi.");
+             });
+        }
+
+        // ======= Cari Modal =======
+        function renderTaniticiTable(){
+            var $tb = $("#taniticiBody");
+            $tb.empty();
+            TaniticiDegerList.forEach(function(t,idx){
+                var selHtml = '<select class="form-control selTanitici" data-idx="'+idx+'">'+
+                              '<option value="0">Seçiniz</option>';
+                taniticikodList.forEach(function(k){
+                    selHtml += '<option value="'+k.TaniticiId+'" '+(Number(t.TaniticiId)===Number(k.TaniticiId)?'selected':'')+'>'+k.TaniticiKod+'</option>';
+                });
+                selHtml += '</select>';
+
+                var row = '<tr>'+
+                          '<td style="min-width:180px;max-width:250px;">'+selHtml+'</td>'+
+                          '<td style="min-width:180px;max-width:250px;"><input type="text" class="form-control txtTaniticiDeger" data-idx="'+idx+'" placeholder="Numara Giriniz" value="'+(t.TaniticiDeger||'')+'"/></td>'+
+                          '<td style="text-align:center;min-width:60px;max-width:60px;"><button class="btn btn-sm btn-danger btnTaniticiDel" data-idx="'+idx+'">X</button></td>'+
+                          '</tr>';
+                $tb.append(row);
+            });
+        }
+
+        function renderSubeTable(){
+            var $tb = $("#tblSubeler tbody");
+            $tb.empty();
+            if(!SubeList.length){
+                $tb.append('<tr><td colspan="6" class="text-center text-muted">Şube bulunmuyor</td></tr>');
+                return;
+            }
+            SubeList.forEach(function(s,idx){
+                var row = '<tr>'+
+                    '<td><pre>'+ (s.Tur||'') +'</pre></td>'+
+                    '<td><pre>'+ (s.Adi||'') +'</pre></td>'+
+                    '<td><pre>'+ (s.Il||'') +'</pre></td>'+
+                    '<td><pre>'+ (s.Ilce||'') +'</pre></td>'+
+                    '<td><pre>'+ (s.Email||'') +'</pre></td>'+
+                    '<td>'+
+                      '<div class="btn-group btn-group-sm">'+
+                        '<button class="btn btn-primary btnSubeEdit" data-idx="'+idx+'">Düzenle</button>'+
+                        '<button class="btn btn-danger btnSubeDel" data-idx="'+idx+'">Sil</button>'+
+                      '</div>'+
+                    '</td>'+
+                '</tr>';
+                $tb.append(row);
+            });
+        }
+
+        function openCariModal(cari){
+            CurrentCari = cari || {};
+            // form
+            $("#CariId").val(CurrentCari.MusteriId || "");
+            $("#CariMusteriKodu").val(CurrentCari.MusteriKodu || "");
+            $("#CariVergiNoTCKimlikNo").val(CurrentCari.VergiNoTCKimlikNo || "");
+            $("#CariFirmaAdi").val(CurrentCari.FirmaAdi || "");
+            $("#CariAdi").val(CurrentCari.Adi || "");
+            $("#CariSoyadi").val(CurrentCari.Soyadi || "");
+            $("#CariVergiDairesi").val(CurrentCari.VergiDairesi || "");
+            $("#CariUlkeAdi").val(CurrentCari.UlkeAdi || "TÜRKİYE");
+
+            var manuel = !!CurrentCari.ManuelCityAndSubdivision;
+            $("#manuelSehir").prop("checked", manuel).trigger("change");
+
+            if(manuel){
+                $("#txtIl").val(CurrentCari.IlAdi || "");
+                $("#txtIlce").val(CurrentCari.IlceAdi || "");
+            }else{
+                $("#selIl").val(CurrentCari.IlAdi || "").trigger("change");
+                if(CurrentCari.IlAdi){
+                    loadIlceler(CurrentCari.IlAdi);
+                    setTimeout(function(){ $("#selIlce").val(CurrentCari.IlceAdi || ""); }, 200);
+                }else{
+                    $("#selIlce").empty().append('<option value="">Seçiniz</option>');
+                }
+            }
+
+            $("#CariMahalleSemt").val(CurrentCari.MahalleSemt || "");
+            $("#CariCaddeSokak").val(CurrentCari.CaddeSokak || "");
+            $("#CariBinaAdi").val(CurrentCari.BinaAdi || "");
+            $("#CariKapiNo").val(CurrentCari.KapiNo || "");
+            $("#CariPostaKodu").val(CurrentCari.PostaKodu || "");
+            $("#CariTelefon").val(CurrentCari.Telefon || "");
+            $("#CariFax").val(CurrentCari.Fax || "");
+            $("#CariEMail").val(CurrentCari.EMail || "");
+            $("#CariWebSite").val(CurrentCari.WebSite || "");
+
+            TaniticiDegerList = (CurrentCari.TaniticiDegerler && CurrentCari.TaniticiDegerler.length)
+                                ? JSON.parse(JSON.stringify(CurrentCari.TaniticiDegerler))
+                                : [ { TaniticiId: 0, TaniticiDeger: "" } ];
+
+            SubeList = (CurrentCari.Subeler && CurrentCari.Subeler.length)
+                       ? JSON.parse(JSON.stringify(CurrentCari.Subeler))
+                       : [];
+
+            renderTaniticiTable();
+            renderSubeTable();
+
+            $("#cari_modal").modal("show");
+        }
+
+        function getFormCari(){
+            var manuel = $("#manuelSehir").is(":checked");
+            var il = manuel ? $("#txtIl").val() : $("#selIl").val();
+            var ilce = manuel ? $("#txtIlce").val() : $("#selIlce").val();
+
+            return {
+                MusteriId: $("#CariId").val() || 0,
+                MusteriKodu: $("#CariMusteriKodu").val(),
+                VergiNoTCKimlikNo: $("#CariVergiNoTCKimlikNo").val(),
+                FirmaAdi: $("#CariFirmaAdi").val(),
+                Adi: $("#CariAdi").val(),
+                Soyadi: $("#CariSoyadi").val(),
+                VergiDairesi: $("#CariVergiDairesi").val(),
+                UlkeAdi: $("#CariUlkeAdi").val(),
+                IlAdi: il,
+                IlceAdi: ilce,
+                ManuelCityAndSubdivision: manuel,
+                MahalleSemt: $("#CariMahalleSemt").val(),
+                CaddeSokak: $("#CariCaddeSokak").val(),
+                BinaAdi: $("#CariBinaAdi").val(),
+                KapiNo: $("#CariKapiNo").val(),
+                PostaKodu: $("#CariPostaKodu").val(),
+                Telefon: $("#CariTelefon").val(),
+                Fax: $("#CariFax").val(),
+                EMail: $("#CariEMail").val(),
+                WebSite: $("#CariWebSite").val(),
+                TaniticiDegerler: TaniticiDegerList.filter(function(x){ return x.TaniticiId && (x.TaniticiDeger||"").trim()!==""; }),
+                Subeler: SubeList
+            };
+        }
+
+        function validateCari(c){
+            if(!c.VergiNoTCKimlikNo || (c.VergiNoTCKimlikNo.length!==10 && c.VergiNoTCKimlikNo.length!==11)) { toast("VKN/TCKN 10 veya 11 haneli olmalıdır."); return false; }
+            if(!c.FirmaAdi){ toast("Firma Unvanı zorunludur."); return false; }
+            if(!c.UlkeAdi){ toast("Ülke zorunludur."); return false; }
+            if(!c.IlAdi){ toast("İl seçiniz/giriniz."); return false; }
+            if(!c.IlceAdi){ toast("İlçe seçiniz/giriniz."); return false; }
+            if(!c.MahalleSemt){ toast("Semt/Mahalle zorunludur."); return false; }
+            return true;
+        }
+
+        function saveCari(){
+            var c = getFormCari();
+            if(!validateCari(c)) return;
+            var isUpdate = !!Number(c.MusteriId);
+            $.ajax({
+                url: isUpdate ? ("/api/cari/"+c.MusteriId) : "/api/cari",
+                method: isUpdate ? "PUT" : "POST",
+                data: JSON.stringify(c),
+                contentType: "application/json"
+            }).done(function(){
+                toast("Kayıt başarıyla " + (isUpdate ? "güncellendi." : "oluşturuldu."));
+                $("#cari_modal").modal("hide");
+                loadGrid();
+            }).fail(function(xhr){
+                toast("Kaydetme başarısız: " + (xhr && xhr.responseText ? xhr.responseText : ""));
+            });
+        }
+
+        function deleteCari(row){
+            if(!confirm("Bu cari kaydını silmek istiyor musunuz?")) return;
+            $.ajax({
+                url: "/api/cari/"+ row.MusteriId,
+                method: "DELETE"
+            }).done(function(){
+                toast("Kayıt silindi.");
+                loadGrid();
+            }).fail(function(){
+                toast("Silme işlemi başarısız.");
+            });
+        }
+
+        function uploadExcel(file){
+            if(!file){ toast("Lütfen bir dosya seçin."); return; }
+            var fd = new FormData();
+            fd.append("file", file);
+            $.ajax({
+                url: "/api/cari/import-excel",
+                method: "POST",
+                data: fd,
+                contentType: false,
+                processData: false
+            }).done(function(){
+                toast("Excel yükleme tamamlandı.");
+                $("#excelModal").modal("hide");
+                loadGrid();
+            }).fail(function(){
+                toast("Excel yükleme başarısız.");
+            });
+        }
+
+        // ======= Global fonksiyon isimleri (ng-* uyumluluğu için) =======
+        function gridCariSearch(){ loadGrid(); }
+        function ClearSearchInputs(){ clearSearch(); loadGrid(); }
+        function musteriNewAdd(){ openCariModal(null); }
+        function ExceldenAktar(){ $("#excelModal").modal("show"); }
+        function ExceleAktar(){ window.location = "/api/cari/export-excel"; }
+        function exceldenYukle(){ uploadExcel($("#FileExcel")[0].files[0]); }
+        function taniticiAdd(){ $("#btnTaniticiAdd").click(); }
+        function taniticiRemove(t,scope){ /* jQuery ile butona bağlı, ayrı gerek yok */ }
+        function subeNewAdd(){ $("#btnSubeOlustur").click(); }
+        function musteriSave(){ saveCari(); }
+
+        // ======= Document Ready =======
+        $(function(){
+            // Select2
+            $(".select2").select2();
+            fillIlSelect();
+
+            // Arama paneli aç/kapa (ikon değişimi)
+            $("#btnDetay").on("click", function(){
+                var $body = $("#btnAramaYapEnter");
+                var $footer = $("#searchBox .box-footer");
+                var open = $body.is(":visible");
+                $body.toggle(!open);
+                $footer.toggle(!open);
+                $(this).find(".fa")
+                    .toggleClass("fa-minus", !open)
+                    .toggleClass("fa-plus", open);
+            });
+
+            // Manuel şehir/ilçe
+            $("#manuelSehir").on("change", function(){
+                var manu = $(this).is(":checked");
+                $("#selIl, #selIlce").closest(".select2-container").toggle(!manu);
+                $("#txtIl, #txtIlce").toggle(manu);
+            });
+
+            // İl değiştikçe ilçe yükle
+            $("#selIl").on("change", function(){
+                var il = $(this).val();
+                loadIlceler(il);
+            });
+
+            // DataTable init + load
+            initGrid();
+            loadGrid();
+
+            // Arama butonları
+            $("#btnAra").on("click", loadGrid);
+            $("#btnTemizle").on("click", function(){ ClearSearchInputs(); });
+
+            // Yeni oluştur
+            $("#CariOlustur").on("click", function(){ musteriNewAdd(); });
+
+            // Excel
+            $("#ExceldenAktar").on("click", function(){ ExceldenAktar(); });
+            $("#btnExcelYukle").on("click", function(){ exceldenYukle(); });
+            $("#ExceleAktar").on("click", function(){ ExceleAktar(); });
+
+            // Grid olayları
+            $("#gridCari tbody").on("click", ".btn-edit", function(){
+                var row = DT.row($(this).closest("tr")).data();
+                $.getJSON("/api/cari/"+ row.MusteriId)
+                 .done(function(full){ openCariModal(full||row); })
+                 .fail(function(){ openCariModal(row); });
+            });
+
+            $("#gridCari tbody").on("click", ".btn-del", function(){
+                var row = DT.row($(this).closest("tr")).data();
+                deleteCari(row);
+            });
+
+            // Tanıtıcı ekle/sil/değer değişimi
+            $("#btnTaniticiAdd").on("click", function(){
+                TaniticiDegerList.push({ TaniticiId: 0, TaniticiDeger: "" });
+                renderTaniticiTable();
+            });
+
+            $("#taniticiBody").on("click", ".btnTaniticiDel", function(){
+                var idx = Number($(this).data("idx"));
+                TaniticiDegerList.splice(idx,1);
+                if(TaniticiDegerList.length===0) TaniticiDegerList.push({TaniticiId:0,TaniticiDeger:""});
+                renderTaniticiTable();
+            });
+
+            $("#taniticiBody").on("change", ".selTanitici", function(){
+                var idx = Number($(this).data("idx"));
+                TaniticiDegerList[idx].TaniticiId = Number($(this).val()||0);
+            });
+
+            $("#taniticiBody").on("input", ".txtTaniticiDeger", function(){
+                var idx = Number($(this).data("idx"));
+                TaniticiDegerList[idx].TaniticiDeger = $(this).val();
+            });
+
+            // Şube işlemleri
+            $("#btnSubeOlustur").on("click", function(){
+                $("#frmSube")[0].reset();
+                $("#SubeIndex").val(-1);
+                $("#subeModal").modal("show");
+            });
+
+            $("#tblSubeler").on("click", ".btnSubeEdit", function(){
+                var idx = Number($(this).data("idx"));
+                var s = SubeList[idx];
+                $("#SubeIndex").val(idx);
+                $("#SubeTur").val(s.Tur||"Şube");
+                $("#SubeAdi").val(s.Adi||"");
+                $("#SubeIl").val(s.Il||"");
+                $("#SubeIlce").val(s.Ilce||"");
+                $("#SubeEmail").val(s.Email||"");
+                $("#subeModal").modal("show");
+            });
+
+            $("#tblSubeler").on("click", ".btnSubeDel", function(){
+                var idx = Number($(this).data("idx"));
+                if(!confirm("Şubeyi silmek istiyor musunuz?")) return;
+                SubeList.splice(idx,1);
+                renderSubeTable();
+            });
+
+            $("#btnSubeKaydet").on("click", function(){
+                var model = {
+                    Tur: $("#SubeTur").val(),
+                    Adi: $("#SubeAdi").val(),
+                    Il: $("#SubeIl").val(),
+                    Ilce: $("#SubeIlce").val(),
+                    Email: $("#SubeEmail").val()
+                };
+                if(!model.Adi || !model.Il || !model.Ilce){
+                    toast("Şube Adı/İl/İlçe zorunludur."); return;
+                }
+                var idx = Number($("#SubeIndex").val());
+                if(idx>=0) SubeList[idx] = model; else SubeList.push(model);
+                $("#subeModal").modal("hide");
+                renderSubeTable();
+            });
+
+            // Kaydet
+            $("#btnCariKaydet").on("click", function(){ musteriSave(); });
+        });
+    </script>
 }
+

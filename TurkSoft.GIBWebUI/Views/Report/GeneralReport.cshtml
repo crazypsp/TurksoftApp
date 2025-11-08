@@ -1,146 +1,196 @@
 ﻿@{
-    ViewData["Title"] = "Genel Raporlar";
-    ViewData["Subtitle"] = "Raporlar";
+    ViewData["Title"] = "Genel Rapor";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <h3 class="box-title">Genel Rapor</h3>
-        </div>
-        <div class="box-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="form-horizontal row">
-                        <label class="control-label col-sm-6">Rapor Tipi</label>
-                        <div class="col-sm-6 inputPadding">
-                            <select class="form-control" id="ReportType" name="ReportType">
-                                <option value="0">Tümü</option>
-                                <option value="1">e-Fatura Gelen</option>
-                                <option value="2">e-Fatura Giden</option>
-                                <option value="3">e-Arşiv Fatura</option>
-                                <option value="4">Tüm Giden Faturalar</option>
-                                <option value="5">e-Serbest Meslek Makbuz</option>
-                                <option value="6">e-Müstahsil Makbuz</option>
-                                <option value="8">e-İrsaliye Gelen</option>
-                                <option value="9">e-İrsaliye Giden</option>
-                                <option value="11">e-Adisyon</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+<style>
+    .box .box-title {
+        font-weight: 600;
+    }
+
+    .dt-head-center thead th {
+        text-align: center;
+    }
+
+    .panel-sky {
+        background: transparent;
+        border: none;
+    }
+
+        .panel-sky .panel-body {
+            padding: 0;
+        }
+</style>
+
+<script>
+    // İstersen Controller üzerinden Model ile de besleyebilirsin
+    window.raporTurList = [
+        {"id":0,"name":"Tümü"},
+        {"id":1,"name":"e-Fatura Gelen"},
+        {"id":2,"name":"e-Fatura Giden"},
+        {"id":3,"name":"e-Arşiv Fatura"},
+        {"id":4,"name":"Tüm Giden Faturalar"},
+        {"id":5,"name":"e-Serbest Meslek Makbuz"},
+        {"id":6,"name":"e-Müstahsil Makbuz"},
+        {"id":8,"name":"e-İrsaliye Gelen"},
+        {"id":9,"name":"e-İrsaliye Giden"},
+        {"id":11,"name":"e-Adisyon"}
+    ];
+
+    // Tasarım listesi sunucudan da gelebilir; burada boş bırakıyoruz
+    window.raporTasarimList = window.raporTasarimList || [];
+</script>
+
+<div class="panel panel-sky">
+    <div class="panel-body" style="overflow:auto;">
+
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title">Genel Rapor</h3>
             </div>
 
-            <hr />
-
-            <div class="input-group input-group-md pull-left" style="padding: 3px 6px;">
-                <button type="button" class="btn btn-info" onclick="newModal()"> Yeni Oluştur <i class="glyphicon glyphicon-plus-sign"></i></button>
-            </div>
-            <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
-                <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
-            </div>
-            <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
-                <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
-            </div>
-        </div>
-
-        <div class="box-body">
-            <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
-                <thead>
-                    <tr>
-                        <th>Rapor Adı</th>
-                        <th>Rapor Tipi</th>
-                        <th>Tarih Aralığı</th>
-                        <th>İstek Tarihi</th>
-                        <th>Oluşturulma Tarihi</th>
-                        <th>Durum</th>
-                        <th>İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Burada backend’den gelen rapor kayıtları listelenecek -->
-                    <tr>
-                        <td>efaturagiden</td>
-                        <td>e-Fatura Giden</td>
-                        <td>01.07.2025 - 15.07.2025</td>
-                        <td>31.07.2025 00:00:00</td>
-                        <td>31.07.2025 00:00:00</td>
-                        <td>Raporunuz hazırlanırken sorun yaşandı.</td>
-                        <td>
-                            <button type="button" class="btn btn-danger btn-sm" title="Sil">
-                                <i class="fa fa-remove"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>SmmTasarim</td>
-                        <td>e-Serbest Meslek Makbuz</td>
-                        <td>03.06.2025 - 03.07.2025</td>
-                        <td>31.07.2025 00:00:00</td>
-                        <td>31.07.2025 00:00:00</td>
-                        <td>Raporunuz indirmeye hazırdır.</td>
-                        <td>
-                            <button type="button" class="btn btn-info btn-sm" title="İndir">
-                                <i class="fa fa-download"></i>
-                            </button>
-                            <button type="button" class="btn btn-danger btn-sm" title="Sil">
-                                <i class="fa fa-remove"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <!-- Dosyada bulunan tüm satırlar burada backend tarafında dinamik olarak yüklenecek -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Modal: Rapor Oluştur -->
-    <div class="modal fade" id="modal-RaporEkle">
-        <div class="modal-dialog modal-lg" style="margin-bottom: 0px; height: 500px; text-align: justify;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">×</span></button>
-                    <h4 class="modal-title" id="modtitle">Rapor Oluştur</h4>
-                </div>
-                <div class="modal-body">
-                    <div class="box-body form-horizontal">
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Rapor Tasarim*</label>
-                            <div class="col-sm-9">
-                                <select class="form-control" id="TasarimType" name="TasarimType"></select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Fatura Tarihi(Başlangıç):*</label>
-                            <div class="col-sm-9">
-                                <input type="text" id="faturaBaslangic" class="form-control datepicker" />
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Fatura Tarihi(Bitiş):*</label>
-                            <div class="col-sm-9">
-                                <input type="text" id="faturaBitis" class="form-control datepicker" />
+            <div class="box-body" id="btnAramaYapEnter">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-horizontal row">
+                            <label class="control-label col-sm-6">Rapor Tipi</label>
+                            <div class="col-sm-6 inputPadding">
+                                <select class="form-control" id="ReportType" name="ReportType">
+                                    <option value="0">Tümü</option>
+                                    <option value="1">e-Fatura Gelen</option>
+                                    <option value="2">e-Fatura Giden</option>
+                                    <option value="3">e-Arşiv Fatura</option>
+                                    <option value="4">Tüm Giden Faturalar</option>
+                                    <option value="5">e-Serbest Meslek Makbuz</option>
+                                    <option value="6">e-Müstahsil Makbuz</option>
+                                    <option value="8">e-İrsaliye Gelen</option>
+                                    <option value="9">e-İrsaliye Giden</option>
+                                    <option value="11">e-Adisyon</option>
+                                </select>
                             </div>
                         </div>
                     </div>
+                    <!-- Gerekirse ek filtre kolonları buraya -->
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Kapat</button>
-                    <button id="userAddBtn" onclick="raporEkleBtn()" class="btn btn-primary">Oluştur</button>
+            </div>
+
+            <div class="box-footer">
+                <div>
+                    <div class="input-group input-group-md pull-left" style="padding: 3px 6px;">
+                        <button type="button" class="btn btn-info" onclick="newModal()">
+                            Yeni Oluştur <i class="glyphicon glyphicon-plus-sign"></i>
+                        </button>
+                    </div>
+                    <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                        <button onclick="gridSearch()" type="button" class="btn btn-success">
+                            Arama Yap <i class="glyphicon glyphicon-search"></i>
+                        </button>
+                    </div>
+                    <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
+                        <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">
+                            Temizle <i class="glyphicon glyphicon-remove-circle"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div class="body-inner">
+            <div class="table-vertical">
+                <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Rapor Adı</th>
+                            <th>Rapor Tipi</th>
+                            <th>Tarih Aralığı</th>
+                            <th>İstek Tarihi</th>
+                            <th>Oluşturulma Tarihi</th>
+                            <th>Durum</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
-</section>
+</div>
+
 
 @section Scripts {
     <script>
-        $(function () {
-            $('#myDataTable').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
+        // Rapor Oluştur modalını aç
+        function newModal(){
+            var $m = $('#modal-RaporEkle');
+            if(!$m.length){
+                if(window.toastr) toastr.error('Rapor modalı bulunamadı (_Modals.cshtml).');
+                return;
+            }
+
+            // Varsayılanlar
+            $m.find('#TasarimType').empty();
+            if (Array.isArray(window.raporTasarimList) && window.raporTasarimList.length){
+                window.raporTasarimList.forEach(function(x){
+                    $('<option/>',{value:x.id,text:x.name}).appendTo($m.find('#TasarimType'));
+                });
+            } else {
+                // Boş ise uyarı için placeholder
+                $('<option/>',{value:'',text:'(Tasarım bulunamadı)'}).appendTo($m.find('#TasarimType'));
+            }
+
+            // Tarih girişlerini temizle / varsayılan
+            $m.find('#faturaBaslangic').val('');
+            $m.find('#faturaBitis').val('');
+
+            // Rapor tipi seçimini sayfadaki filtre ile eşitle
+            var rt = $('#ReportType').val() || 0;
+            $m.find('#RaporTypeInModal').val(rt);
+
+            // (Layout’ta init edilen) datepicker/datetimepicker varsa tetikle
+            // Örn: $('.datepicker').trigger('reinit'); gibi bir mekanizmanız varsa burada çağırın.
+
+            $m.modal('show');
+        }
+
+        // Arama / Temizle örnekleri (kendi DataTable kurulumuna göre güncelle)
+        function gridSearch(){
+            // window.generalReportDT senin DataTable örneğin ise:
+            if(window.generalReportDT){ window.generalReportDT.ajax.reload(null, false); }
+            else if(window.toastr){ toastr.info('Arama işlemi bağlanmadı.'); }
+        }
+
+        function clearSearchInputs(){
+            $('#ReportType').val('0').trigger('change');
+        }
+
+        // KAYDET
+        function raporEkleBtn(){
+            var $m = $('#modal-RaporEkle'); if(!$m.length) return;
+
+            var payload = {
+                reportName: $m.find('#reportName').val(),
+                reportType: $m.find('#RaporTypeInModal').val(),
+                designId:   $m.find('#TasarimType').val(),
+                startDate:  $m.find('#faturaBaslangic').val(),
+                endDate:    $m.find('#faturaBitis').val()
+            };
+
+            $.ajax({
+                url: '/GeneralReport/Save',   // <- kendi endpoint’inle değiştir
+                method: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify(payload)
+            })
+            .done(function(){
+                if (window.toastr) toastr.success('Rapor isteği oluşturuldu');
+                $m.modal('hide');
+                // Listeyi yenile
+                if(window.generalReportDT){ window.generalReportDT.ajax.reload(null,false); }
+            })
+            .fail(function(){
+                if (window.toastr) toastr.error('Rapor isteği oluşturulamadı');
             });
-        });
+        }
     </script>
-    <script src="/hizlicss/jsv643136158/Report/generalReport.js"></script>
 }

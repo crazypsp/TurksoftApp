@@ -4,82 +4,186 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content-header">
-    <h1>Listeler <small>Vergi Listesi</small></h1>
-</section>
 
-<section class="content">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <button id="btnNewTax" class="btn btn-success btn-sm pull-right">
-                <i class="fa fa-plus"></i> Yeni Vergi Ekle
-            </button>
-        </div>
-        <div class="box-body">
-            <table id="grid_taxlist" class="table table-bordered table-hover dataTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Vergi Adı</th>
-                        <th>Açıklama</th>
-                        <th>Oran (%)</th>
-                        <th>Oluşturma</th>
-                        <th>Güncelleme</th>
-                        <th>İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-</section>
+@section Styles{
+        <style>
+            .dataTables_wrapper .dataTables_filter input {
+                min-width: 240px;
+            }
 
-<!-- Vergi Modal -->
-<div class="modal fade" id="mdlTax" tabindex="-1" role="dialog" aria-labelledby="mdlTaxLabel">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content">
-            <form id="frmTax">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="mdlTaxLabel">Vergi Bilgisi</h4>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="taxId" />
+            .box.box-primary {
+                border-top-color: #3c8dbc;
+            }
 
-                    <div class="form-group">
-                        <label for="taxName">Vergi Adı</label>
-                        <input type="text" class="form-control" id="taxName" required />
-                    </div>
+            .dt-head-center thead th {
+                text-align: center;
+            }
 
-                    <div class="form-group">
-                        <label for="taxDesc">Açıklama</label>
-                        <textarea class="form-control" id="taxDesc" rows="2"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="taxRate">Oran (%)</label>
-                        <input type="number" class="form-control" id="taxRate" min="0" max="100" step="0.01" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="taxCreatedAt">Oluşturma Tarihi</label>
-                        <input type="date" class="form-control" id="taxCreatedAt" />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="taxUpdatedAt">Güncelleme Tarihi</label>
-                        <input type="date" class="form-control" id="taxUpdatedAt" />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script type="module" src="~/apps/taxlist.js"></script>
+            td pre {
+                white-space: pre-wrap;
+                margin: 0;
+                font-family: inherit;
+            }
+        </style>
 }
+
+    <section class="content">
+        <h2>Vergi Listesi</h2>
+
+        <div class="box box-primary">
+            <div class="box-body">
+                <table id="grid_taxlist" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
+                    <thead>
+                        <tr>
+                            <th style="width:20%">Vergi Kodu</th>
+                            <th style="width:80%">Vergi Adı</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var r in Model)
+                            {
+                                <tr>
+                                    <td><pre>@(r.Code)</pre></td>
+                                    <td><pre>@(r.Name)</pre></td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <!-- JS ile doldurulacak -->
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+@section Scripts{
+
+        <script>
+            (function () {
+                // Çok uzun listedeki ilk kısım: API yoksa fallback olarak kullanılır
+                var fallbackTaxCodes = [
+                    { code: "9006", name: "1475 SAYILI İŞ KANUNUNA BAĞLI PARA CEZASI" },
+                    { code: "9306", name: "1475 SAYILI İŞ KANUNUNA BAĞLI PARA CEZASI" },
+                    { code: "9339", name: "1567 SAYILI TÜRK PARASININ KIYMETİNİ KORUMA KANUNU İPC" },
+                    { code: "9089", name: "2000/266 SAYILI BKK GEREĞİNCE YATIRIMLARI TEŞVİK FONUNA AKTIRILACAK TUTARLAR" },
+                    { code: "9127", name: "2004/5682 SAYILI BKK İLE HAZİNE ALACĞINA DÖNÜŞEN TOHUMLUK KREDİLERİ" },
+                    { code: "1027", name: "2004/5682 ... TOHUMLUK KREDİLERİNE DÖNÜŞENLER AİT FAİZ" },
+                    { code: "9235", name: "2015/1 SERİ NOLU KURUMLAR VERGİSİ İÇ GENELGESİ (KIZILAY) TAHSİL" },
+                    { code: "9112", name: "2762 SAYILI KANUNA GÖRE ALINAN TAVİZ BEDELİ" },
+                    { code: "9158", name: "3039 SAYILI ÇELTİK EKİM KANUNU İPC" },
+                    { code: "9007", name: "3516 SAYILI KANUNA GÖRE ÖLÇÜ AYAR PARA CEZASI" },
+                    { code: "9307", name: "3516 SAYILI KANUNA GÖRE ÖLÇÜ AYAR PARA CEZASI" },
+                    { code: "9316", name: "4054 SAYILI REKABET KANUNU 55. MADDE KAPSAMINDA İPC" },
+                    { code: "9323", name: "4250 SAYILI ... İSPİRTOLU İÇKİLER ... İDARİ PARA CEZASI" },
+                    { code: "9096", name: "4369/15 SUÇA İŞTİRAK EDEN KİŞİLER" },
+                    { code: "9128", name: "4447 SAYILI İŞSİZLİK SİGORTASI KANUNU UYARINCA KESİLEN İPC" },
+                    { code: "4021", name: "4705 SAYILI KANUNA GÖRE TAHSİL EDİLEN ÖZEL İŞLEM VERGİSİ" },
+                    { code: "9049", name: "4749 KAMU FİNANS ... HAZİNE ALACAKLARI" },
+                    { code: "4811", name: "4811 VERGİ BARIŞI TECİLLİ TAHSİLAT" },
+                    { code: "4035", name: "4837 S.K EK MOTORLU TAŞITLAR VERGİSİ" },
+                    { code: "9106", name: "4857 S.K. 101. MAD. KAP. İDARİ PARA CEZALARI" },
+                    { code: "9108", name: "4857 SAYILI KANUNA GÖRE GELİR KAYDEDİLECEK PARA CEZALARI" },
+                    { code: "9129", name: "4904 SAYILI İŞ KURUMU KANUNU UYARINCA KESİLEN İPC" },
+                    { code: "9148", name: "4915 ve 5035 SK. GÖRE AVCILIK RUHSATI HARCI" },
+                    { code: "9021", name: "4961 BANKA SİGORTA MUAMELELERİ VERGİSİ" },
+                    { code: "9079", name: "4961 S.K. GEÇİCİ 1. MAD. GÖRE PARA CEZASI" },
+                    { code: "9095", name: "4961 S.K. GEÇİCİ 2. MAD. 1.FIKRAYA GÖRE TAHSİLAT" },
+                    { code: "9044", name: "4961 S.K. GEÇİCİ 2. MAD. 3.FIKRASINA GÖRE TAHSİLAT" },
+                    { code: "4036", name: "4962 S. TAŞIT VERGİSİ" },
+                    { code: "9121", name: "5015 SAYILI PETROL PİYASASI KANUNU İPC" },
+                    { code: "4042", name: "5035 RTÜK EĞİTİME KATKI PAYI" },
+                    { code: "1048", name: "5035 SAYILI KANUNA GÖRE DAMGA VERGİSİ" },
+                    { code: "4049", name: "5035 SAYILI KANUNA GÖRE FİNANSAL FAALİYET HARCI" },
+                    { code: "9048", name: "5035 SAYILI KANUNA GÖRE HARÇ" },
+                    { code: "4081", name: "5035 SAYILI KANUNA GÖRE ÖZEL İLETİŞİM VERGİSİ" },
+                    { code: "9178", name: "5070 SK. ELEKTRONİK SERTİFİKA SAĞLAYICILARINA KESİLEN İPC" },
+                    { code: "9177", name: "5070 SK. 13. MAD. SİGORTA ŞİRKETLERİNE KESİLEN İPC" },
+                    { code: "9103", name: "5188 SK. GÖRE GÜVENLİK RUHSATI HARCI" },
+                    { code: "9126", name: "5254 ... ÖDÜNÇ TOHUMLUKLARDAN HAZİNE ALACAĞI" },
+                    { code: "1026", name: "5254 ... ÖDÜNÇ TOHUMLUKLAR FAİZ" },
+                    { code: "9122", name: "5307 LPG PİYASASI KANUNU İPC" },
+                    { code: "9109", name: "5326 KABAHATLER KANUNU İDARİ PARA CEZASI" },
+                    { code: "9317", name: "5326 ... CUMHURİYET SAVCILIKLARINCA VERİLEN İPC" },
+                    { code: "9318", name: "5326 ... MAHKEMELER TARAFINDAN VERİLEN İPC" },
+                    { code: "1028", name: "5335 ... DESTEKLEME FİYAT İSTİKRAR FONU FAİZ" },
+                    { code: "1052", name: "5335 ... GEÇ ÖDEME ZAMMI (Tohumluk Kredileri)" },
+                    { code: "9322", name: "5378 ENGELLİLER HAKKINDA KANUN UYARINCA İPC" },
+                    { code: "9310", name: "5549 SUÇ GELİRLERİNİN AKLANMASININ ÖNLENMESİ İPC" }
+                    // ... Tam listeyi API'den alacağız (503+ kayıt)
+                ];
+
+                function renderRows(rows) {
+                    var $tb = $('#grid_taxlist tbody');
+                    $tb.empty();
+                    rows.forEach(function (r) {
+                        var code = (r.code ?? r.Code);
+                        var name = (r.name ?? r.Name);
+                        var tr = '<tr>'
+                            + '<td><pre>' + code + '</pre></td>'
+                            + '<td><pre>' + name + '</pre></td>'
+                            + '</tr>';
+                        $tb.append(tr);
+                    });
+                }
+
+                function initDataTable() {
+                    var $tbl = $('#grid_taxlist');
+                    if ($.fn.DataTable.isDataTable($tbl)) {
+                        $tbl.DataTable().destroy();
+                    }
+                    $tbl.DataTable({
+                        pageLength: 100,
+                        lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, "Tümü"]],
+                        order: [[0, 'asc']],
+                        columnDefs: [{ targets: 0, type: 'num' }],
+                        deferRender: true,
+                        stateSave: true,
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+                    });
+                }
+
+                $(function () {
+                    var hasServerRows = $('#grid_taxlist tbody tr').length > 0;
+
+                    if (hasServerRows) {
+                        initDataTable();
+                        return;
+                    }
+
+                    // Önce API'den çek; başarısızsa fallback'i bas
+                    $.ajax({
+                        url: '/api/vergi-kodlari', // beklenen: [{ code: "xxxx", name: "..." }]
+                        method: 'GET',
+                        dataType: 'json',
+                        timeout: 15000
+                    }).done(function (data) {
+                        if (Array.isArray(data) && data.length > 0) {
+                            renderRows(data);
+                        } else {
+                            renderRows(fallbackTaxCodes);
+                        }
+                    }).fail(function () {
+                        renderRows(fallbackTaxCodes);
+                    }).always(function () {
+                        initDataTable();
+                    });
+                });
+            })();
+        </script>
+
+        <!--
+        NOT: 500+ kayıt için sunucu tarafı sayfalama isterseniz DataTables server-side moduna geçebilirsiniz:
+        $('#grid_taxlist').DataTable({
+            serverSide: true,
+            processing: true,
+            ajax: { url: '/api/vergi-kodlari/paged', type: 'POST' },
+            columns: [{ data: 'code' }, { data: 'name' }],
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+        });
+        -->
+}
+

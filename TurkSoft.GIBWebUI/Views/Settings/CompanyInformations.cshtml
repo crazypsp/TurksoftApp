@@ -1,115 +1,746 @@
 ﻿@{
-    ViewData["Title"] = "Firma Bilgileri";
-    ViewData["Subtitle"] = "Ayarlar";
+    ViewData["Title"] = "Ayarlar Müşteri Genel Bilgileri";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content-header">
-    <h1>Firma Bilgileri</h1>
-    <ol class="breadcrumb">
-        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
-        <li class="active">Firma Bilgileri</li>
-    </ol>
-</section>
+<style>
+    .panel-sky {
+        background: transparent;
+        border: none;
+    }
 
-<section class="content">
-    <div class="box box-default">
-        <div class="box-header with-border">
-            <h3 class="box-title" style="font-weight:bold">Firma Bilgileri</h3>
-        </div>
+        .panel-sky .panel-body {
+            padding: 0;
+        }
 
-        <form id="frmCompany" class="form-horizontal">
-            <input type="hidden" id="cmpId" />
-            <div class="box-body">
-                <div class="row">
-                    <div class="col-sm-6 row">
-                        <div class="col-sm-4"><label>VKN/TCKN *</label></div>
-                        <div class="col-sm-8"><input class="form-control" id="vknTckn" maxlength="11" /></div>
+    .box .box-title {
+        font-weight: 600;
+    }
+
+    .dt-head-center thead th {
+        text-align: center;
+    }
+
+    .textShort {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+
+<!-- View kapsamındaki veriler (Controller'dan Model ile de verilebilir) -->
+<script>
+    // ---- VERİLER (senin verdiğin ham JSON aynen korundu) ----
+    var musteri = {"krediListesi":null,"kullaniciAdi":null,"kurumTuru":1,"musteriAdi":"MURAT ÖZCAN","sehir":"İZMİR","sorumluAd":"MURAT","sorumluCepTel":"5316393468","sorumluEPosta":"muratozcan02@icloud.com","sorumluSoyad":"ÖZCAN","sorumluTckn":"14177961286","ad":"MURAT","soyad":"ÖZCAN","sozlesmeListesi":[{"referansId":114121,"hizmetListesi":[{"etiketListesi":[{"referansId":231910,"etiket":"urn:mail:defaultgb@icloud.com","etiketTuru":0,"DurumAciklamasi":null,"IslemDurumu":"","IslemTuru":"AKTİF","kurumTuru":1,"hizmetTuru":1},{"referansId":231911,"etiket":"urn:mail:defaultpk@icloud.com","etiketTuru":1,"DurumAciklamasi":null,"IslemDurumu":"","IslemTuru":"AKTİF","kurumTuru":1,"hizmetTuru":1}],"hizmetTuru":1,"referansId":0,"iptalTarihi":"","fiyat":0.00,"aciklama":"","isCancelable":false},{"etiketListesi":[{"referansId":231912,"etiket":null,"etiketTuru":1,"DurumAciklamasi":null,"IslemDurumu":"","IslemTuru":"AKTİF","kurumTuru":1,"hizmetTuru":0}],"hizmetTuru":0,"referansId":0,"iptalTarihi":"","fiyat":0.00,"aciklama":"","isCancelable":false}],"sozlesmeBaslangicTarihi":"05-11-2025","sozlesmeBitisTarihi":"05-11-2026","tarifeTuru":1,"imzaTarihi":"\/Date(1762290000000)\/","imzaDurum":2,"otomatikYenilenme":true,"FesihTarihi":null,"FesihNedeni":null}],"subeListesi":[{"binaAdi":null,"binaNo":"43/6","caddeAdi":"CUMHURİYET MAH HALUK ALPSÜ BLV BARIŞ YAPI NO:43 /6 İÇ KAPI NO:11","eposta":"muratozcan02@icloud.com","fax":"","ilceAdi":"TORBALI","kapiNo":null,"postaKodu":null,"sehirAdi":"İZMİR","subeAdi":"MURAT ÖZCAN","telefon":"5316393468","webSitesi":null,"ulke":"TURKIYE","efaturaGbEtiket":"urn:mail:defaultgb@icloud.com","efaturaPkEtiket":"urn:mail:defaultpk@icloud.com","eirsaliyeGbEtiket":"","eirsaliyePkEtiket":"","taniticiList":[],"subeKisaAdi":"MURAT ÖZCAN","ResmiSube":false,"MerkezMi":true,"FirmaId":57918,"referansId":87061,"subeKodu":1}],"ticaretOdasi":null,"ticaretSicilNo":null,"unvan":"MURAT ÖZCAN","vergiDairesi":"TORBALI VERGİ DAİRESİ MÜDÜRLÜĞÜ","vknTckn":"14177961286","bayiVknTckn":"6321250052","kaydedenAd":null,"kaydedenSoyad":null,"kaydedenTel":"","musteriTemsilcisi":"NOX YAZILIM","kurumsalEposta":"muratozcan02@icloud.com","vergiDairesiIl":"İzmir","kepAdresi":null,"mersisNo":null,"AktifPasif":true,"BayiMi":false,"BayiOdemeYuzde":0.0000,"FirmaId":57918,"referansId":86187,"KullaniciMailGonder":false,"etiketListesi":[{"referansId":231910,"etiket":"urn:mail:defaultgb@icloud.com","etiketTuru":0,"DurumAciklamasi":null,"IslemDurumu":"","IslemTuru":"AKTİF","kurumTuru":1,"hizmetTuru":1},{"referansId":231911,"etiket":"urn:mail:defaultpk@icloud.com","etiketTuru":1,"DurumAciklamasi":null,"IslemDurumu":"","IslemTuru":"AKTİF","kurumTuru":1,"hizmetTuru":1},{"referansId":231912,"etiket":null,"etiketTuru":1,"DurumAciklamasi":null,"IslemDurumu":"","IslemTuru":"AKTİF","kurumTuru":1,"hizmetTuru":0}],"Aciklama":null,"openBankUserGsm":null,"openBankSecretKey":null};
+
+    var vergiDaireIlList = [{"VergiDairesiIl":"Adana"},{"VergiDairesiIl":"Adıyaman"},{"VergiDairesiIl":"Afyonkarahisar"},{"VergiDairesiIl":"Ağrı"},{"VergiDairesiIl":"Aksaray"},{"VergiDairesiIl":"Amasya"},{"VergiDairesiIl":"Ankara"},{"VergiDairesiIl":"Antalya"},{"VergiDairesiIl":"Ardahan"},{"VergiDairesiIl":"Artvin"},{"VergiDairesiIl":"Aydın"},{"VergiDairesiIl":"Balıkesir"},{"VergiDairesiIl":"Bartın"},{"VergiDairesiIl":"Batman"},{"VergiDairesiIl":"Bayburt"},{"VergiDairesiIl":"Bilecik"},{"VergiDairesiIl":"Bingöl"},{"VergiDairesiIl":"Bitlis"},{"VergiDairesiIl":"Bolu"},{"VergiDairesiIl":"Burdur"},{"VergiDairesiIl":"Bursa"},{"VergiDairesiIl":"Çanakkale"},{"VergiDairesiIl":"Çankırı"},{"VergiDairesiIl":"Çorum"},{"VergiDairesiIl":"Denizli"},{"VergiDairesiIl":"Diyarbakır"},{"VergiDairesiIl":"Düzce"},{"VergiDairesiIl":"Edirne"},{"VergiDairesiIl":"Elazığ"},{"VergiDairesiIl":"Erzincan"},{"VergiDairesiIl":"Erzurum"},{"VergiDairesiIl":"Eskişehir"},{"VergiDairesiIl":"Gaziantep"},{"VergiDairesiIl":"Giresun"},{"VergiDairesiIl":"Gümüşhane"},{"VergiDairesiIl":"Hakkari"},{"VergiDairesiIl":"Hatay"},{"VergiDairesiIl":"Iğdır"},{"VergiDairesiIl":"Isparta"},{"VergiDairesiIl":"İstanbul"},{"VergiDairesiIl":"İzmir"},{"VergiDairesiIl":"Kahramanmaraş"},{"VergiDairesiIl":"Karabük"},{"VergiDairesiIl":"Karaman"},{"VergiDairesiIl":"Kars"},{"VergiDairesiIl":"Kastamonu"},{"VergiDairesiIl":"Kayseri"},{"VergiDairesiIl":"Kırıkkale"},{"VergiDairesiIl":"Kırklareli"},{"VergiDairesiIl":"Kırşehir"},{"VergiDairesiIl":"Kilis"},{"VergiDairesiIl":"Kocaeli"},{"VergiDairesiIl":"Konya"},{"VergiDairesiIl":"Kütahya"},{"VergiDairesiIl":"Malatya"},{"VergiDairesiIl":"Manisa"},{"VergiDairesiIl":"Mardin"},{"VergiDairesiIl":"Mersin"},{"VergiDairesiIl":"Muğla"},{"VergiDairesiIl":"Muş"},{"VergiDairesiIl":"Nevşehir"},{"VergiDairesiIl":"Niğde"},{"VergiDairesiIl":"Ordu"},{"VergiDairesiIl":"Osmaniye"},{"VergiDairesiIl":"Rize"},{"VergiDairesiIl":"Sakarya"},{"VergiDairesiIl":"Samsun"},{"VergiDairesiIl":"Siirt"},{"VergiDairesiIl":"Sinop"},{"VergiDairesiIl":"Sivas"},{"VergiDairesiIl":"Şanlıurfa"},{"VergiDairesiIl":"Şırnak"},{"VergiDairesiIl":"Tekirdağ"},{"VergiDairesiIl":"Tokat"},{"VergiDairesiIl":"Trabzon"},{"VergiDairesiIl":"Tunceli"},{"VergiDairesiIl":"Uşak"},{"VergiDairesiIl":"Van"},{"VergiDairesiIl":"Yalova"},{"VergiDairesiIl":"Yozgat"},{"VergiDairesiIl":"Zonguldak"}];
+
+    var ilList = [{"IlId":1,"IlAdi":"ADANA"},{"IlId":2,"IlAdi":"ADIYAMAN"},{"IlId":3,"IlAdi":"AFYONKARAHİSAR"},{"IlId":4,"IlAdi":"AĞRI"},{"IlId":5,"IlAdi":"AMASYA"},{"IlId":6,"IlAdi":"ANKARA"},{"IlId":7,"IlAdi":"ANTALYA"},{"IlId":8,"IlAdi":"ARTVİN"},{"IlId":9,"IlAdi":"AYDIN"},{"IlId":10,"IlAdi":"BALIKESİR"},{"IlId":11,"IlAdi":"BİLECİK"},{"IlId":12,"IlAdi":"BİNGÖL"},{"IlId":13,"IlAdi":"BİTLİS"},{"IlId":14,"IlAdi":"BOLU"},{"IlId":15,"IlAdi":"BURDUR"},{"IlId":16,"IlAdi":"BURSA"},{"IlId":17,"IlAdi":"ÇANAKKALE"},{"IlId":18,"IlAdi":"ÇANKIRI"},{"IlId":19,"IlAdi":"ÇORUM"},{"IlId":20,"IlAdi":"DENİZLİ"},{"IlId":21,"IlAdi":"DİYARBAKIR"},{"IlId":22,"IlAdi":"EDİRNE"},{"IlId":23,"IlAdi":"ELAZIĞ"},{"IlId":24,"IlAdi":"ERZİNCAN"},{"IlId":25,"IlAdi":"ERZURUM"},{"IlId":26,"IlAdi":"ESKİŞEHİR"},{"IlId":27,"IlAdi":"GAZİANTEP"},{"IlId":28,"IlAdi":"GİRESUN"},{"IlId":29,"IlAdi":"GÜMÜŞHANE"},{"IlId":30,"IlAdi":"HAKKARİ"},{"IlId":31,"IlAdi":"HATAY"},{"IlId":32,"IlAdi":"ISPARTA"},{"IlId":33,"IlAdi":"MERSİN"},{"IlId":34,"IlAdi":"İSTANBUL"},{"IlId":35,"IlAdi":"İZMİR"},{"IlId":36,"IlAdi":"KARS"},{"IlId":37,"IlAdi":"KASTAMONU"},{"IlId":38,"IlAdi":"KAYSERİ"},{"IlId":39,"IlAdi":"KIRKLARELİ"},{"IlId":40,"IlAdi":"KIRŞEHİR"},{"IlId":41,"IlAdi":"KOCAELİ"},{"IlId":42,"IlAdi":"KONYA"},{"IlId":43,"IlAdi":"KÜTAHYA"},{"IlId":44,"IlAdi":"MALATYA"},{"IlId":45,"IlAdi":"MANİSA"},{"IlId":46,"IlAdi":"KAHRAMANMARAŞ"},{"IlId":47,"IlAdi":"MARDİN"},{"IlId":48,"IlAdi":"MUĞLA"},{"IlId":49,"IlAdi":"MUŞ"},{"IlId":50,"IlAdi":"NEVŞEHİR"},{"IlId":51,"IlAdi":"NİĞDE"},{"IlId":52,"IlAdi":"ORDU"},{"IlId":53,"IlAdi":"RİZE"},{"IlId":54,"IlAdi":"SAKARYA"},{"IlId":55,"IlAdi":"SAMSUN"},{"IlId":56,"IlAdi":"SİİRT"},{"IlId":57,"IlAdi":"SİNOP"},{"IlId":58,"IlAdi":"SİVAS"},{"IlId":59,"IlAdi":"TEKİRDAĞ"},{"IlId":60,"IlAdi":"TOKAT"},{"IlId":61,"IlAdi":"TRABZON"},{"IlId":62,"IlAdi":"TUNCELİ"},{"IlId":63,"IlAdi":"ŞANLIURFA"},{"IlId":64,"IlAdi":"UŞAK"},{"IlId":65,"IlAdi":"VAN"},{"IlId":66,"IlAdi":"YOZGAT"},{"IlId":67,"IlAdi":"ZONGULDAK"},{"IlId":68,"IlAdi":"AKSARAY"},{"IlId":69,"IlAdi":"BAYBURT"},{"IlId":70,"IlAdi":"KARAMAN"},{"IlId":71,"IlAdi":"KIRIKKALE"},{"IlId":72,"IlAdi":"BATMAN"},{"IlId":73,"IlAdi":"ŞIRNAK"},{"IlId":74,"IlAdi":"BARTIN"},{"IlId":75,"IlAdi":"ARDAHAN"},{"IlId":76,"IlAdi":"IĞDIR"},{"IlId":77,"IlAdi":"YALOVA"},{"IlId":78,"IlAdi":"KARABÜK"},{"IlId":79,"IlAdi":"KİLİS"},{"IlId":80,"IlAdi":"OSMANİYE"},{"IlId":81,"IlAdi":"DÜZCE"}];
+
+    // İzmir için vergi dairesi örnek listesi (html’deki seçeneklerin jQuery versiyonu)
+    var vergiDaireList = [
+        "BORNOVA VERGİ DAİRESİ MÜDÜRLÜĞÜ","ÇAKABEY VERGİ DAİRESİ MÜDÜRLÜĞÜ","KORDON VERGİ DAİRESİ MÜDÜRLÜĞÜ","HASAN TAHSİN VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "İZMİR İHTİSAS VERGİ DAİRESİ MÜDÜRLÜĞÜ","9 EYLÜL VERGİ DAİRESİ MÜDÜRLÜĞÜ","YAMANLAR VERGİ DAİRESİ MÜDÜRLÜĞÜ","KARŞIYAKA VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "KEMERALTI VERGİ DAİRESİ MÜDÜRLÜĞÜ","KONAK VERGİ DAİRESİ MÜDÜRLÜĞÜ","ŞİRİNYER VERGİ DAİRESİ MÜDÜRLÜĞÜ","KADİFEKALE VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "TAŞITLAR VERGİ DAİRESİ MÜDÜRLÜĞÜ","BELKAHVE VERGİ DAİRESİ MÜDÜRLÜĞÜ","BALÇOVA VERGİ DAİRESİ MÜDÜRLÜĞÜ","GAZİEMİR VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "EGE VERGİ DAİRESİ MÜDÜRLÜĞÜ","ÇİĞLİ VERGİ DAİRESİ MÜDÜRLÜĞÜ","BAYINDIR VERGİ DAİRESİ MÜDÜRLÜĞÜ","BERGAMA VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "MENEMEN VERGİ DAİRESİ MÜDÜRLÜĞÜ","ÖDEMİŞ VERGİ DAİRESİ MÜDÜRLÜĞÜ","TİRE VERGİ DAİRESİ MÜDÜRLÜĞÜ","TORBALI VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "KEMALPAŞA VERGİ DAİRESİ MÜDÜRLÜĞÜ","URLA VERGİ DAİRESİ MÜDÜRLÜĞÜ","SELÇUK VERGİ DAİRESİ MÜDÜRLÜĞÜ","KINIK VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "KİRAZ VERGİ DAİRESİ MÜDÜRLÜĞÜ","ÇEŞME VERGİ DAİRESİ MÜDÜRLÜĞÜ","ALİAĞA VERGİ DAİRESİ MÜDÜRLÜĞÜ","MENDERES VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+        "DİKİLİ MALMÜDÜRLÜĞÜ","FOÇA MALMÜDÜRLÜĞÜ","KARABURUN MALMÜDÜRLÜĞÜ","SEFERİHİSAR MALMÜDÜRLÜĞÜ","BEYDAĞ MALMÜDÜRLÜĞÜ"
+    ];
+
+    var bayiList = [];
+    var taniticikodList = [{"Id":0,"TaniticiId":1,"TaniticiKod":"TICARETSICILNO","TaniticiDeger":null},{"Id":0,"TaniticiId":2,"TaniticiKod":"MERSISNO","TaniticiDeger":null},{"Id":0,"TaniticiId":3,"TaniticiKod":"ABONENO","TaniticiDeger":null},{"Id":0,"TaniticiId":4,"TaniticiKod":"MUSTERINO","TaniticiDeger":null},{"Id":0,"TaniticiId":5,"TaniticiKod":"BAYINO","TaniticiDeger":null},{"Id":0,"TaniticiId":6,"TaniticiKod":"HIZMETNO","TaniticiDeger":null},{"Id":0,"TaniticiId":7,"TaniticiKod":"TESISATNO","TaniticiDeger":null},{"Id":0,"TaniticiId":8,"TaniticiKod":"DISTRIBUTORNO","TaniticiDeger":null},{"Id":0,"TaniticiId":9,"TaniticiKod":"TAPDKNO","TaniticiDeger":null},{"Id":0,"TaniticiId":10,"TaniticiKod":"SAYACNO","TaniticiDeger":null},{"Id":0,"TaniticiId":11,"TaniticiKod":"URETICINO","TaniticiDeger":null},{"Id":0,"TaniticiId":12,"TaniticiKod":"CIFTCINO","TaniticiDeger":null},{"Id":0,"TaniticiId":13,"TaniticiKod":"IMALATCINO","TaniticiDeger":null},{"Id":0,"TaniticiId":14,"TaniticiKod":"DOSYANO","TaniticiDeger":null},{"Id":0,"TaniticiId":15,"TaniticiKod":"HASTANO","TaniticiDeger":null},{"Id":0,"TaniticiId":16,"TaniticiKod":"SUBENO","TaniticiDeger":null},{"Id":0,"TaniticiId":17,"TaniticiKod":"PLAKA","TaniticiDeger":null},{"Id":0,"TaniticiId":18,"TaniticiKod":"ARACKIMLIKNO","TaniticiDeger":null},{"Id":0,"TaniticiId":19,"TaniticiKod":"PASAPORTNO","TaniticiDeger":null}];
+
+    var editAdmin = false;            // Angular yerine plain boolean
+    var yeniSozlesme = false;         // ödeme alanları görünürlüğü ör.
+    var bayiYetkiliBasvuru = false;   // görünürlük kontrollerinde kullanılır
+    var EBelgePaket = false;          // görünürlük kontrollerinde kullanılır
+    var SelectDef = false;            // görünürlük kontrollerinde kullanılır
+
+    // ---- Yardımcılar ----
+    function toStr(v){ return (v===undefined || v===null) ? '' : (''+v); }
+    function fmtTarife(t){ return t===1 ? 'Kontörlü' : (t===0 ? 'Sabit' : ''); }
+    function fmtImzaDurum(d){ return d===2 ? 'İmzalandı' : (d===1?'İmza Bekliyor': 'Taslak'); }
+    function hizmetKodToText(id){ switch(id){ case 0: return 'e-Arşiv Fatura'; case 1: return 'e-Fatura'; case 2: return 'e-Defter'; case 5: return 'e-İrsaliye'; case 6: return 'e-SMM'; case 7: return 'e-Müstahsil Makbuzu'; case 16: return 'e-Adisyon'; default: return 'Diğer'; } }
+</script>
+
+<div class="content-wrapper">
+ 
+    <section class="content">
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title" style="font-weight:bold">Firma Bilgileri</h3>
+            </div>
+
+            <form id="companyInformation" novalidate>
+                <div class="box-body form-horizontal">
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>VKN/TCKN *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" maxlength="11" name="vknTckn" id="vknTckn">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Müşteri Adı *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" name="musteriAdi" id="musteriAdi">
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-sm-6 row">
-                        <div class="col-sm-4"><label>Müşteri Adı *</label></div>
-                        <div class="col-sm-8"><input class="form-control" id="musteriAdi" /></div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Unvan *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" name="unvan" id="unvan">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Kep Adresi</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="email" placeholder="x@hs0.kep.tr" name="kepAdresi" id="kepAdresi">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Adı (*Tckn)</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" name="ad" id="ad">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Kurum Türü *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <select class="form-control select2" id="kurumTuru" name="kurumTuru">
+                                    <option value="1">ÖZEL</option>
+                                    <option value="0">KAMU</option>
+                                    <option value="3">VUK 507 ÖZEL</option>
+                                    <option value="2">VUK 507 KAMU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Soyadı  (*Tckn)</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" name="soyad" id="soyad">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Kurumsal e-Posta *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="email" name="kurumsalEposta" id="kurumsalEposta">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Vergi Dairesi İl *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <select class="form-control select2" id="vergiDairesiIl" name="vergiDairesiIl"></select>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Vergi Dairesi *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <select class="form-control select2" id="vergiDairesi" name="vergiDairesi"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Müşteri Temsilcisi *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" name="musteriTemsilcisi" id="musteriTemsilcisi" data-vlength="1,45">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="margin:10px 0 20px">
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu Tckn *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" maxlength="11" type="text" name="sorumluTckn" id="sorumluTckn">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row"></div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu Adı *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" name="sorumluAd" id="sorumluAd">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu Soyadı *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="text" name="sorumluSoyad" id="sorumluSoyad">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu Cep Tel. *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="tel" name="sorumluCepTel" id="sorumluCepTel" placeholder="___ ___-__-__">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 row">
+                            <div class="col-sm-4"><label>Sorumlu e-Posta *</label></div>
+                            <div class="col-sm-8 form-group">
+                                <input class="form-control" type="email" name="sorumluEPosta" id="sorumluEPosta">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="margin:10px 0 20px">
+                    <label>Müşteri Kaydını Alan Kişinin:</label>
+                    <div class="row">
+                        <div class="col-sm-4 row">
+                            <div class="col-sm-4"><label>Adı *</label></div>
+                            <div class="col-sm-8 form-group"><input class="form-control" type="text" name="kaydedenAd" id="kaydedenAd"></div>
+                        </div>
+                        <div class="col-sm-4 row">
+                            <div class="col-sm-4"><label>Soyadı *</label></div>
+                            <div class="col-sm-8 form-group"><input class="form-control" type="text" name="kaydedenSoyad" id="kaydedenSoyad"></div>
+                        </div>
+                        <div class="col-sm-4 row">
+                            <div class="col-sm-4"><label>Cep No *</label></div>
+                            <div class="col-sm-8 form-group"><input class="form-control" type="tel" name="kaydedenTel" id="kaydedenTel" placeholder="___ ___-__-__"></div>
+                        </div>
+                    </div>
+
+                    <hr style="margin:40px 0 20px">
+                </div>
+            </form>
+
+            <ul class="nav nav-tabs">
+                <li class="active"><a data-toggle="tab" href="#SozlesmeBilgileri">Sözleşme Bilgileri</a></li>
+                <li><a data-toggle="tab" href="#SubeBilgileri">Şube Bilgileri</a></li>
+            </ul>
+
+            <div class="tab-content">
+                <div id="SozlesmeBilgileri" class="tab-pane fade in active">
+                    <div class="form-group-12">
+                        <div class="panel panel-sky">
+                            <div class="panel-body">
+                                <table id="SozlesmeGrid" class="table table-bordered table-hover dataTable" style="width:80%">
+                                    <thead>
+                                        <tr>
+                                            <th style="min-width:180px;max-width:180px;text-align:center;">Sözleşme Başlangıç ve Bitiş Tarihi</th>
+                                            <th style="min-width:150px;max-width:200px;text-align:center;">Hizmetler</th>
+                                            <th style="min-width:100px;max-width:100px;text-align:center;">Tarife Türü</th>
+                                            <th style="min-width:100px;max-width:100px;text-align:center;">Durum</th>
+                                            <th style="min-width:150px;max-width:200px;text-align:center;">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-sm-6 row">
-                        <div class="col-sm-4"><label>Unvan *</label></div>
-                        <div class="col-sm-8"><input class="form-control" id="unvan" /></div>
-                    </div>
-                    <div class="col-sm-6 row">
-                        <div class="col-sm-4"><label>Kep Adresi</label></div>
-                        <div class="col-sm-8"><input class="form-control" id="kepAdresi" type="email" /></div>
+                <div id="SubeBilgileri" class="tab-pane fade in">
+                    <div class="form-group-12">
+                        <div class="panel panel-sky">
+                            <div class="panel-body">
+                                <div class="modal-header">
+                                    <button type="button" id="btnSubeOlustur" class="btn btn-success">
+                                        Şube Ekle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-plus"></i></span>
+                                    </button>
+                                </div>
+                                <table id="SubeGrid" class="table table-bordered table-hover dataTable" style="width:50%">
+                                    <thead>
+                                        <tr>
+                                            <th style="min-width:30px;max-width:40px;text-align:center;">Tip</th>
+                                            <th style="min-width:150px;max-width:200px;text-align:center;">Şube Kodu</th>
+                                            <th style="min-width:150px;max-width:200px;text-align:center;">Şube Adı</th>
+                                            <th style="min-width:100px;max-width:100px;text-align:center;">Şehir</th>
+                                            <th style="min-width:100px;max-width:100px;text-align:center;">İlçe</th>
+                                            <th style="min-width:100px;max-width:100px;text-align:center;">Telefon</th>
+                                            <th style="min-width:150px;max-width:200px;text-align:center;">E-Posta</th>
+                                            <th style="min-width:150px;max-width:200px;text-align:center;">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <hr />
-                <div class="row">
-                    <div class="col-sm-6 row">
-                        <div class="col-sm-4"><label>Sorumlu TCKN *</label></div>
-                        <div class="col-sm-8"><input class="form-control" id="sorumluTckn" maxlength="11" /></div>
-                    </div>
-                    <div class="col-sm-6 row">
-                        <div class="col-sm-4"><label>Sorumlu Adı *</label></div>
-                        <div class="col-sm-8"><input class="form-control" id="sorumluAd" /></div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-6 row">
-                        <div class="col-sm-4"><label>Sorumlu Soyadı *</label></div>
-                        <div class="col-sm-8"><input class="form-control" id="sorumluSoyad" /></div>
-                    </div>
-                </div>
-
-                <hr />
-                <button type="submit" class="btn btn-success pull-right">
-                    <i class="fa fa-save"></i> Değişiklikleri Kaydet
+            <div class="panel-body">
+                <button type="button" id="btnDegisiklikleriKaydet" class="btn btn-success pull-right" style="margin:0 10px 10px 0">
+                    Değişiklikleri Kaydet &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-saved"></i></span>
                 </button>
             </div>
-        </form>
-
-        <ul class="nav nav-tabs">
-            <li class="active"><a data-toggle="tab" href="#SozlesmeBilgileri">Sözleşme Bilgileri</a></li>
-            <li><a data-toggle="tab" href="#SubeBilgileri">Şube Bilgileri</a></li>
-        </ul>
-
-        <div class="tab-content">
-            <div id="SozlesmeBilgileri" class="tab-pane fade in active">
-                <table id="SozlesmeGrid" class="table table-bordered table-hover">
-                    <thead>
-                        <tr>
-                            <th>Sözleşme Tarihleri</th>
-                            <th>Hizmetler</th>
-                            <th>Tarife Türü</th>
-                            <th>Durum</th>
-                            <th>İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div id="SubeBilgileri" class="tab-pane fade">
-                <table id="SubeGrid" class="table table-bordered table-hover">
-                    <thead>
-                        <tr>
-                            <th>Tip</th>
-                            <th>Şube Kodu</th>
-                            <th>Şube Adı</th>
-                            <th>Şehir</th>
-                            <th>İlçe</th>
-                            <th>Telefon</th>
-                            <th>E-Posta</th>
-                            <th>İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
         </div>
-    </div>
-</section>
+    </section>
+</div>
+
+
 
 @section Scripts {
-    <script type="module" src="~/apps/companyinformations.js"></script>
+    <script>
+        /* =========================
+           YARDIMCI FONKSİYONLAR
+           ========================= */
+        function toStr(v){ return (v===undefined||v===null)?'':String(v); }
+        function _num(v){ var n=parseFloat(v); return isNaN(n)?0:n; }
+        function hizmetKodToText(k){
+          switch(+k){ case 1:return 'e-Fatura'; case 2:return 'e-İhracat'; case 3:return 'e-İrsaliye'; case 4:return 'e-Defter'; case 5:return 'e-Arşiv Fatura'; default:return 'Hizmet'; }
+        }
+        function fmtTarife(t){ switch(+t){ case 1:return 'Standart'; case 2:return 'Kurumsal'; default:return '-'; } }
+        function fmtImzaDurum(d){ switch(+d){ case 0:return 'Taslak'; case 1:return 'Bekliyor'; case 2:return 'İmzalı'; default:return '-'; } }
+        function etikTurText(t){ return t===1?'Gönderici Birim (GB)':(t===2?'Alıcı Birim (PK)':''); }
+        function fillSelect($sel, arr, getText){
+          $sel.empty().append('<option value="">Seçiniz</option>');
+          (arr||[]).forEach(function(x){
+            var t = typeof getText==='function'? getText(x) : x;
+            $sel.append('<option value="'+toStr(t)+'">'+toStr(t)+'</option>');
+          });
+        }
+
+        /* =========================
+           GLOBAL STATE
+           ========================= */
+        var _currentSozlesme = null;
+        var _currentSube = null;
+
+        /* =========================
+           FORMU DOLDUR
+           ========================= */
+        function fillCustomerForm(){
+          var mus = window.musteri || {};
+          $('#vknTckn').val(toStr(mus.vknTckn)).prop('disabled', !!mus.FirmaId);
+          $('#musteriAdi').val(toStr(mus.musteriAdi));
+          $('#unvan').val(toStr(mus.unvan)).prop('disabled', !window.editAdmin);
+          $('#kepAdresi').val(toStr(mus.kepAdresi || ''));
+          $('#ad').val(toStr(mus.ad)).prop('disabled', !window.editAdmin);
+          $('#kurumTuru').val(toStr(mus.kurumTuru));
+          $('#soyad').val(toStr(mus.soyad)).prop('disabled', !window.editAdmin);
+          $('#kurumsalEposta').val(toStr(mus.kurumsalEposta));
+
+          // Vergi İl
+          var $ilSel = $('#vergiDairesiIl').empty().append('<option value="">Seçiniz</option>');
+          (window.vergiDaireIlList||[]).forEach(function(x){ $ilSel.append('<option value="'+x.VergiDairesiIl+'">'+x.VergiDairesiIl+'</option>'); });
+          $ilSel.val(mus.vergiDairesiIl || 'İzmir');
+
+          // Vergi Dairesi
+          var $vdSel = $('#vergiDairesi').empty().append('<option value="">Seçiniz</option>');
+          (window.vergiDaireList||[]).forEach(function(v){ $vdSel.append('<option value="'+v+'">'+v+'</option>'); });
+          $vdSel.val(mus.vergiDairesi || '');
+
+          $('#musteriTemsilcisi').val(toStr(mus.musteriTemsilcisi));
+          $('#sorumluTckn').val(toStr(mus.sorumluTckn));
+          $('#sorumluAd').val(toStr(mus.sorumluAd));
+          $('#sorumluSoyad').val(toStr(mus.sorumluSoyad));
+          $('#sorumluCepTel').val(toStr(mus.sorumluCepTel));
+          $('#sorumluEPosta').val(toStr(mus.sorumluEPosta));
+          $('#kaydedenAd').val(toStr(mus.kaydedenAd || ''));
+          $('#kaydedenSoyad').val(toStr(mus.kaydedenSoyad || ''));
+          $('#kaydedenTel').val(toStr(mus.kaydedenTel || ''));
+        }
+
+        /* =========================
+           TABLOLAR
+           ========================= */
+        function loadSozlesmeGrid(){
+          var $tb = $('#SozlesmeGrid tbody').empty();
+          ( (window.musteri||{}).sozlesmeListesi || [] ).forEach(function(s){
+            var hizmetler = (s.hizmetListesi||[]).map(function(h){ return hizmetKodToText(h.hizmetTuru); }).join(',');
+            var tr = [
+              '<tr>',
+                '<td style="text-align:center;">',toStr(s.sozlesmeBaslangicTarihi),' - ',toStr(s.sozlesmeBitisTarihi),'</td>',
+                '<td style="text-align:center;">',hizmetler,'</td>',
+                '<td style="text-align:center;">',fmtTarife(s.tarifeTuru),'</td>',
+                '<td style="text-align:center;">',fmtImzaDurum(s.imzaDurum),'</td>',
+                '<td style="text-align:center;">',
+                  '<button type="button" class="btn btn-info btn-sm jsSozlesmeDetay" data-id="',s.referansId,'">Sözleşme Detayları <span class="btn-label"><i class="glyphicon glyphicon-zoom-in"></i></span></button>',
+                '</td>',
+              '</tr>'
+            ].join('');
+            $tb.append(tr);
+          });
+        }
+
+        function loadSubeGrid(){
+          var $tb = $('#SubeGrid tbody').empty();
+          ( (window.musteri||{}).subeListesi || [] ).forEach(function(sb){
+            var tip = sb.MerkezMi ? 'Merkez' : (sb.ResmiSube ? 'Resmi' : 'Şube');
+            var tr = [
+              '<tr>',
+                '<td style="text-align:center;">',tip,'</td>',
+                '<td style="text-align:center;">',toStr(sb.subeKodu),'</td>',
+                '<td style="text-align:center;"><div class="textShort">',toStr(sb.subeAdi),'</div></td>',
+                '<td style="text-align:center;">',toStr(sb.sehirAdi),'</td>',
+                '<td style="text-align:center;">',toStr(sb.ilceAdi),'</td>',
+                '<td style="text-align:center;">',toStr(sb.telefon),'</td>',
+                '<td style="text-align:center;">',toStr(sb.eposta),'</td>',
+                '<td style="text-align:center;">',
+                  '<button type="button" class="btn btn-warning btn-sm jsSubeEdit" data-id="',sb.referansId,'">Düzenle <span class="btn-label"><i class="glyphicon glyphicon-edit"></i></span></button> ',
+                  '<button type="button" class="btn btn-danger btn-sm jsSubeDelete" data-id="',sb.referansId,'"><span class="btn-label"><i class="glyphicon glyphicon-remove"></i></span></button>',
+                '</td>',
+              '</tr>'
+            ].join('');
+            $tb.append(tr);
+          });
+        }
+
+        /* =========================
+           SÖZLEŞME MODAL (DETAY)
+           ========================= */
+        function renderHizmetSatiri(h, idx){
+          var name = 'paket_'+idx;
+          var etiketGorBtn = (h.hizmetTuru===1 || h.hizmetTuru===5)
+            ? '<br><label type="button" title="Etiketler" class="label label-info jsEtiketleriGor" data-hizmet="'+h.hizmetTuru+'">Etiketleri Gör <span class="label"><i class="glyphicon glyphicon-zoom-in"></i></span></label>'
+            : '';
+          return [
+            '<tr data-idx="'+idx+'" data-hizmet-turu="'+(h.hizmetTuru||0)+'">',
+              '<td class="ng-binding">',hizmetKodToText(h.hizmetTuru), etiketGorBtn,'</td>',
+              '<td class="colUcret"><input type="number" class="form-control jsPaketFiyat" value="'+toStr(h.paketFiyat||'')+'"></td>',
+              '<td class="colPaket">',
+                '<input name="'+name+'" type="radio" style="width:30px;height:20px;" value="1" '+(h.paketSec==1?'checked':'')+'>',
+                '<input name="'+name+'" type="radio" style="width:30px;height:20px;margin-left:10px;" value="2" '+(h.paketSec==2?'checked':'')+'>',
+              '</td>',
+              '<td><input type="text" class="form-control jsAciklama" value="'+toStr(h.aciklama||'')+'"></td>',
+              '<td class="ng-binding"><input type="text" class="form-control jsIptalTarih" value="'+toStr(h.iptalTarihi||'')+'"></td>',
+            '</tr>'
+          ].join('');
+        }
+
+        function openSozlesmeModal(refId){
+          var list = ( (window.musteri||{}).sozlesmeListesi || [] );
+          _currentSozlesme = list.find(function(s){ return s.referansId==refId; });
+          if(!_currentSozlesme){ return; }
+
+          // header alanları
+          $('#sozlesme_modal #sozlesmebaslangic').val(toStr(_currentSozlesme.sozlesmeBaslangicTarihi));
+          $('#sozlesme_modal #sozlesmebitis').val(toStr(_currentSozlesme.sozlesmeBitisTarihi));
+
+          // hizmet listesi
+          var $tb = $('#tblSozlesmeHizmet tbody');
+          $tb.find('tr:gt(0)').remove(); // başlığı koru
+          (_currentSozlesme.hizmetListesi||[]).forEach(function(h, i){
+            $tb.append( renderHizmetSatiri(h, i) );
+          });
+
+          // Ücret/ Paket kolon görünürlüğü (orijinale yakın)
+          var yeniSozlesme = window.yeniSozlesme || false;
+          var EBelgePaket = window.EBelgePaket || false;
+          var SelectDef = window.SelectDef || false;
+          var bayiYetkiliBasvuru = window.bayiYetkiliBasvuru || false;
+          var hideCols = (yeniSozlesme && (!EBelgePaket && (SelectDef || !bayiYetkiliBasvuru)));
+          if(hideCols){ $('.colUcret, .colPaket').hide(); } else { $('.colUcret, .colPaket').show(); }
+
+          // PDF & Etiket butonları
+          $('#btnSozlesmePdf').off('click').on('click', function(){ SozlesmePdf(_currentSozlesme.referansId); });
+          $('#btnTumEtiketler').off('click').on('click', function(){ etiketList(_currentSozlesme); });
+
+          $('#sozlesme_modal').modal('show');
+        }
+
+        function SozlesmePdf(id){
+          var url = '/AdminPanel/ReadCustomerContractPdf?id=' + encodeURIComponent(id||0);
+          $('#onizlepdf-iframe').attr('src', url);
+          $('#sozlesmepdf_modal').modal('show');
+        }
+
+        $('#btnSozlesmeKaydet').off('click').on('click', function(){
+          if(!_currentSozlesme) return;
+          var payload = {
+            referansId: _currentSozlesme.referansId,
+            sozlesmeBaslangicTarihi: $('#sozlesmebaslangic').val(),
+            sozlesmeBitisTarihi: $('#sozlesmebitis').val(),
+            hizmetListesi: []
+          };
+          $('#tblSozlesmeHizmet tbody tr').each(function(i){
+            if(i===0) return; // başlık satırı
+            var $tr = $(this);
+            var name = 'paket_'+(i-1);
+            payload.hizmetListesi.push({
+              hizmetTuru: +$tr.data('hizmet-turu')||0,
+              paketFiyat: _num($tr.find('.jsPaketFiyat').val()),
+              paketSec: +($('input[name="'+name+'"]:checked', $tr).val()||0),
+              aciklama: $tr.find('.jsAciklama').val(),
+              iptalTarihi: $tr.find('.jsIptalTarih').val()
+            });
+          });
+
+          $.ajax({
+            url:'/Settings/SaveSozlesme', // kendi endpoint’in
+            method:'POST',
+            contentType:'application/json; charset=utf-8',
+            data: JSON.stringify(payload)
+          }).done(function(){
+            if(window.toastr) toastr.success('Sözleşme kaydedildi');
+            $('#sozlesme_modal').modal('hide');
+            loadSozlesmeGrid(); // görünümü tazele
+          }).fail(function(xhr){
+            if(window.toastr) toastr.error('Kaydetme hatası');
+            console.error(xhr.responseText||xhr.statusText);
+          });
+        });
+
+        /* =========================
+           ETİKETLER MODAL
+           ========================= */
+        function renderEtiketSatiri(e){
+          var isEfatura = (e.hizmetTuru===1 || e.hizmetTuru===5);
+          return [
+            '<tr>',
+              '<td style="min-width:180px;max-width:180px;text-align:center;" class="ng-binding">', hizmetKodToText(e.hizmetTuru), '</td>',
+              '<td class="ng-binding">', etikTurText(e.etiketTuru)||'', '</td>',
+              '<td>', isEfatura ? ('<input type="text" placeholder="'+(e.etiketTuru===1?'urn:mail:defaultgb@xxx.com.tr':'urn:mail:defaultpk@xxx.com.tr')+'" '+(e.referansId!=0?'disabled':'')+' class="form-control" value="'+toStr(e.etiket||'')+'">') : '' , '</td>',
+              '<td class="ng-binding">', toStr(e.IslemTuru||'AKTİF'), '</td>',
+              '<td class="ng-binding">', toStr(e.KurumTuru||'ÖZEL'), '</td>',
+              '<td>',
+                // Görsel sadakat için buton placeholder’ları:
+                '<button type="button" title="Sil" class="btn btn-danger btn-sm jsEtiketSil" style="display:none;">Sil <span class="btn-label"><i class="glyphicon glyphicon-remove"></i></span></button> ',
+                '<button type="button" title="İptal Et" class="btn btn-danger btn-sm jsEtiketIptal" style="display:none;">İptal Et <span class="btn-label"><i class="glyphicon glyphicon-remove"></i></span></button> ',
+                '<button type="button" title="Tekrar Gib Zarf Oluştur" class="btn btn-warning btn-sm jsEtiketZarf" style="display:none;">Tekrar Gib Zarf Oluştur <span class="btn-label"><i class="glyphicon glyphicon-warning-sign"></i></span></button>',
+              '</td>',
+            '</tr>'
+          ].join('');
+        }
+
+        function etiketList(sozlesme){
+          var list = ( (window.musteri||{}).etiketListesi || [] );
+          var $tb = $('#tblEtiketler tbody');
+          $tb.find('tr:gt(0)').remove();
+          list.forEach(function(e){ $tb.append( renderEtiketSatiri(e) ); });
+
+          if(window.editAdmin){ $('#etiketCaption').show(); } else { $('#etiketCaption').hide(); }
+          $('#etiketler_modal').modal('show');
+        }
+
+        /* =========================
+           ŞUBE MODAL
+           ========================= */
+        function ilceGet(il){
+          var arr = (typeof window.getIlceList==='function') ? (window.getIlceList(il)||[]) : [];
+          fillSelect($('#ilce'), arr);
+        }
+
+        function renderTaniticiRow(t){
+          return [
+            '<tr>',
+              '<td style="min-width:180px;max-width:250px;">',
+                '<select name="TaniticiId" class="form-control jsTaniticiKod" style="width:100%;">',
+                  '<option value="">Seçiniz</option>',
+                  '<option value="1">TICARETSICILNO</option>',
+                  '<option value="2">MERSISNO</option>',
+                  '<option value="3">ABONENO</option>',
+                  '<option value="4">MUSTERINO</option>',
+                  '<option value="5">BAYINO</option>',
+                  '<option value="6">HIZMETNO</option>',
+                  '<option value="7">TESISATNO</option>',
+                  '<option value="8">DISTRIBUTORNO</option>',
+                  '<option value="9">TAPDKNO</option>',
+                  '<option value="10">SAYACNO</option>',
+                  '<option value="11">URETICINO</option>',
+                  '<option value="12">CIFTCINO</option>',
+                  '<option value="13">IMALATCINO</option>',
+                  '<option value="14">DOSYANO</option>',
+                  '<option value="15">HASTANO</option>',
+                  '<option value="16">SUBENO</option>',
+                  '<option value="17">PLAKA</option>',
+                  '<option value="18">ARACKIMLIKNO</option>',
+                  '<option value="19">PASAPORTNO</option>',
+                '</select>',
+              '</td>',
+              '<td style="min-width:180px;max-width:250px;">',
+                '<input name="TaniticiKod" class="form-control jsTaniticiDeger" type="text" value="'+toStr(t.TaniticiDeger||'')+'">',
+              '</td>',
+              '<td style="min-width:30px;max-width:30px;">',
+                '<input type="button" class="btn btn-sm btn-danger center-block jsTaniticiRemove" value="X">',
+              '</td>',
+            '</tr>'
+          ].join('');
+        }
+
+        function openSubeModal(refId){
+          var list = ( (window.musteri||{}).subeListesi || [] );
+          _currentSube = list.find(function(x){ return x.referansId==refId; }) || { taniticiList:[] };
+
+          // Etiket seçenekleri (varsa göster)
+          var gb = (window.eFaturaEtiketListGb || []), pk = (window.eFaturaEtiketListPk || []);
+          if(gb.length){ $('#wrapEfGb').show(); fillSelect($('#efaturaGondericiEtiketi'), gb, function(x){return x;}); } else { $('#wrapEfGb').hide(); }
+          if(pk.length){ $('#wrapEfPk').show(); fillSelect($('#efaturaAliciEtiketi'), pk, function(x){return x;}); } else { $('#wrapEfPk').hide(); }
+          $('#efaturaGondericiEtiketi').val(toStr(_currentSube.efaturaGbEtiket||'')).trigger('change');
+          $('#efaturaAliciEtiketi').val(toStr(_currentSube.efaturaPkEtiket||'')).trigger('change');
+
+          // Alanlar
+          $('#subeKisaAdi').val(toStr(_currentSube.subeKisaAdi||''));
+          $('#subeAdi').val(toStr(_currentSube.subeAdi||''));
+          $('#ulke').val(toStr(_currentSube.ulke||'TÜRKİYE'));
+
+          fillSelect($('#sehir'), (window.ilList||[]), function(x){ return (x.IlAdi||x); });
+          $('#sehir').val(toStr(_currentSube.sehirAdi||'')).trigger('change');
+          ilceGet($('#sehir').val());
+          $('#ilce').val(toStr(_currentSube.ilceAdi||'')).trigger('change');
+
+          $('#postaKodu').val(toStr(_currentSube.postaKodu||''));
+          $('#website').val(toStr(_currentSube.webSitesi||''));
+          $('#eposta').val(toStr(_currentSube.eposta||''));
+          $('#telefon').val(toStr(_currentSube.telefon||''));
+          $('#fax').val(toStr(_currentSube.fax||''));
+          $('#sokak').val(toStr(_currentSube.caddeAdi||''));
+          $('#binaAdi').val(toStr(_currentSube.binaAdi||''));
+          $('#binaNo').val(toStr(_currentSube.binaNo||''));
+          $('#daireNo').val(toStr(_currentSube.kapiNo||''));
+
+          // Tanıtıcı grid
+          var $tbody = $('#tblTanitici tbody').empty();
+          (_currentSube.taniticiList||[]).forEach(function(t){
+            var $row = $(renderTaniticiRow(t));
+            $row.find('.jsTaniticiKod').val(toStr(t.TaniticiId||''));
+            $tbody.append($row);
+          });
+
+          $('#sube_modal').modal('show');
+        }
+
+        $('#btnTaniticiAdd').off('click').on('click', function(){
+          $('#tblTanitici tbody').append( renderTaniticiRow({}) );
+        });
+        $(document).on('click','.jsTaniticiRemove', function(){ $(this).closest('tr').remove(); });
+
+        $('#sehir').on('change', function(){ ilceGet($(this).val()); });
+
+        $('#btnSubeKaydet').off('click').on('click', function(){
+          var payload = {
+            referansId: _currentSube && _currentSube.referansId || 0,
+            subeKisaAdi: $('#subeKisaAdi').val(),
+            subeAdi: $('#subeAdi').val(),
+            ulke: $('#ulke').val(),
+            sehirAdi: $('#sehir').val(),
+            ilceAdi: $('#ilce').val(),
+            postaKodu: $('#postaKodu').val(),
+            webSitesi: $('#website').val(),
+            eposta: $('#eposta').val(),
+            telefon: $('#telefon').val(),
+            fax: $('#fax').val(),
+            caddeAdi: $('#sokak').val(),
+            binaAdi: $('#binaAdi').val(),
+            binaNo: $('#binaNo').val(),
+            kapiNo: $('#daireNo').val(),
+            efaturaGbEtiket: $('#efaturaGondericiEtiketi').val(),
+            efaturaPkEtiket: $('#efaturaAliciEtiketi').val(),
+            taniticiList: []
+          };
+          $('#tblTanitici tbody tr').each(function(){
+            payload.taniticiList.push({
+              TaniticiId: +($(this).find('.jsTaniticiKod').val()||0),
+              TaniticiDeger: $(this).find('.jsTaniticiDeger').val()
+            });
+          });
+
+          $.ajax({
+            url:'/Settings/SaveSube', // kendi endpoint’in
+            method:'POST',
+            contentType:'application/json; charset=utf-8',
+            data: JSON.stringify(payload)
+          }).done(function(){
+            if(window.toastr) toastr.success('Şube kaydedildi');
+            $('#sube_modal').modal('hide');
+            loadSubeGrid();
+          }).fail(function(xhr){
+            if(window.toastr) toastr.error('Kaydetme hatası');
+            console.error(xhr.responseText||xhr.statusText);
+          });
+        });
+
+        /* =========================
+           MÜŞTERİ KAYDET
+           ========================= */
+        function collectForm(){
+          return {
+            vknTckn: $('#vknTckn').val(),
+            musteriAdi: $('#musteriAdi').val(),
+            unvan: $('#unvan').val(),
+            kepAdresi: $('#kepAdresi').val(),
+            ad: $('#ad').val(),
+            kurumTuru: +($('#kurumTuru').val()||1),
+            soyad: $('#soyad').val(),
+            kurumsalEposta: $('#kurumsalEposta').val(),
+            vergiDairesiIl: $('#vergiDairesiIl').val(),
+            vergiDairesi: $('#vergiDairesi').val(),
+            musteriTemsilcisi: $('#musteriTemsilcisi').val(),
+            sorumluTckn: $('#sorumluTckn').val(),
+            sorumluAd: $('#sorumluAd').val(),
+            sorumluSoyad: $('#sorumluSoyad').val(),
+            sorumluCepTel: $('#sorumluCepTel').val(),
+            sorumluEPosta: $('#sorumluEPosta').val(),
+            kaydedenAd: $('#kaydedenAd').val(),
+            kaydedenSoyad: $('#kaydedenSoyad').val(),
+            kaydedenTel: $('#kaydedenTel').val()
+          };
+        }
+
+        function saveCustomer(){
+          var payload = collectForm();
+          $.ajax({
+            url: '/Settings/SaveCustomer',   // endpoint’ini ayarla
+            method: 'POST',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(payload)
+          })
+          .done(function(){
+            if(window.toastr) toastr.success('Kaydedildi');
+          })
+          .fail(function(xhr){
+            if(window.toastr) toastr.error('Kaydetme hatası');
+            console.error(xhr.responseText||xhr.statusText);
+          });
+        }
+
+        /* =========================
+           EVENTS
+           ========================= */
+        $(document).on('click','.jsSozlesmeDetay',function(){ openSozlesmeModal($(this).data('id')); });
+        $(document).on('click','.jsSubeEdit',function(){ openSubeModal($(this).data('id')); });
+        $(document).on('click','#btnSubeOlustur',function(){ openSubeModal(null); }); // boş modal
+        $(document).on('click','.jsSubeDelete',function(){
+          var id = $(this).data('id');
+          if(confirm('Şube silinsin mi?')){
+            // TODO: AJAX ile sil -> başarılıysa tabloyu yenile
+            if(window.toastr) toastr.info('Örnek: Silme işlemi tetiklendi (#'+id+')');
+          }
+        });
+        $('#btnDegisiklikleriKaydet').off('click').on('click', saveCustomer);
+
+        /* =========================
+           INIT
+           ========================= */
+        $(function(){
+          // Select2
+          $('.select2').select2({ width: '100%' });
+
+          fillCustomerForm();
+          loadSozlesmeGrid();
+          loadSubeGrid();
+
+          // (İstersen tarih/maske eklersin)
+          // $('#sozlesmebaslangic,#sozlesmebitis').datepicker({...});
+        });
+    </script>
 }
+

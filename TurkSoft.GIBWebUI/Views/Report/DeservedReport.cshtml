@@ -1,136 +1,237 @@
 ﻿@{
-    ViewData["Title"] = "Hakediş Raporu";
-    ViewData["Subtitle"] = "Raporlar";
+    ViewData["Title"] = "Kontör Raporu";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<style>
+    .dt-head-center thead th {
+        text-align: center;
+    }
 
-<section class="content">
-    <div class="box box-default">
-        <div class="box-header with-border">
-            <h3 class="box-title">Hakediş Raporu</h3>
-        </div>
-        <div class="box-body">
+    .panel-sky {
+        background: transparent;
+        border: none;
+    }
 
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="form-horizontal row">
-                        <label class="control-label col-sm-6">Fatura Tarihi (Başlangıç)</label>
-                        <div class="col-sm-6 inputPadding">
-                            <div class="input-group">
-                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                <input id="DateStart" type="text" class="form-control datepicker" value="02.09.2025">
-                            </div>
+        .panel-sky .panel-body {
+            padding: 0;
+        }
+</style>
+<script>
+    // 1) Butona hem data-attr ile (BS3/4/5), hem de JS fallback ile destek veriyoruz
+    $(function () {
+      // Fallback: tıklamada manuel aç
+      $(document).on('click', '#exceleAktar', function (e) {
+        // Eğer data-bs-toggle / data-toggle zaten açarsa sorun yok; yine de garanti olsun:
+        setTimeout(openExcelModal, 0);
+      });
+    });
+
+    function getExcelModal$() {
+      // Önce yeni ID
+      var $m = $('#modal-ExcelAktar');
+      // Eski ID’yi de destekle (yanlışlıkla değişmemiş olabilir)
+      if (!$m.length) $m = $('#modal-exceleaktar');
+      return $m;
+    }
+
+    function ensureModalInBody($m) {
+      // Bazı layout/container durumlarında modal backdrop görünmez; body’ye taşı
+      if ($m.length && !$m.data('appended-to-body')) {
+        $m.appendTo('body');
+        $m.data('appended-to-body', true);
+      }
+    }
+
+    function showModal($m) {
+      // BS5 ise:
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        var inst = bootstrap.Modal.getOrCreateInstance($m[0]);
+        inst.show();
+        return;
+      }
+      // BS3/4 ise:
+      if ($.fn.modal) {
+        $m.modal('show');
+        return;
+      }
+      // Hiçbiri yoksa:
+      alert('Modal kütüphanesi bulunamadı. Lütfen Bootstrap JS yüklemesini kontrol edin.');
+    }
+
+    // Ana açma fonksiyonu
+    function openExcelModal() {
+      var $m = getExcelModal$();
+      if (!$m.length) {
+        if (window.toastr) toastr.error('Excel modalı bulunamadı (_Modals.cshtml).');
+        return;
+      }
+
+      // Sayfa filtrelerini modala taşı
+      $m.find('#excelDateStart').val($('#DateStart').val() || '');
+      $m.find('#excelDateEnd').val($('#DateEnd').val() || '');
+
+      // container sorunlarını önle
+      ensureModalInBody($m);
+
+      // Göster
+      showModal($m);
+    }
+
+    // Onay butonu (mevcut endpointini kullan)
+    function excelConfirmBtn() {
+      var $m = getExcelModal$(); if (!$m.length) return;
+
+      var payload = {
+        dateStart: $m.find('#excelDateStart').val(),
+        dateEnd:   $m.find('#excelDateEnd').val(),
+        creditType: $('#creditType').val(),
+        actionType: $('#actionType').val(),
+        vknTckn:    $('#VknTckn').val()
+      };
+
+      $.ajax({
+        url: '/KontorReport/ExportExcel', // kendi aksiyonun
+        method: 'POST',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify(payload)
+      })
+      .done(function (res) {
+        if (window.toastr) toastr.success('Excel hazırlanmaya başladı');
+        // BS5/BS3 kapatma
+        try {
+          if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            bootstrap.Modal.getInstance($m[0])?.hide();
+          } else if ($.fn.modal) {
+            $m.modal('hide');
+          }
+        } catch(e){}
+        // if (res && res.url) window.location = res.url;
+      })
+      .fail(function () {
+        if (window.toastr) toastr.error('Excel oluşturulamadı');
+      });
+    }
+</script>
+<div class="panel panel-sky">
+    <div class="panel-body" style="overflow:auto;">
+
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title">Kontör Raporu</h3>
+            </div>
+
+            <div class="box-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>İşlem Tarihi (Başlangıç)</label>
+                            <input id="DateStart" type="datetime" class="form-control datepicker" value="02.09.2025" />
+                        </div>
+                        <div class="form-group">
+                            <label>Kontör Türü</label>
+                            <select id="creditType" class="form-control">
+                                <option value="">Tümü</option>
+                                <option value="1">Fatura Adedi</option>
+                                <option value="2">Alan Boyutu</option>
+                                <option value="3">Arşiv Kasa</option>
+                            </select>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-horizontal row">
-                        <label class="control-label col-sm-6">Fatura Tarihi (Bitiş)</label>
-                        <div class="col-sm-6 inputPadding">
-                            <div class="input-group">
-                                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                <input id="DateEnd" type="text" class="form-control datepicker" value="02.10.2025">
-                            </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>İşlem Tarihi (Bitiş)</label>
+                            <input id="DateEnd" type="datetime" class="form-control datepicker" value="02.10.2025" />
+                        </div>
+                        <div class="form-group">
+                            <label>İşlem Türü</label>
+                            <select id="actionType" class="form-control">
+                                <option value="">Tümü</option>
+                                <option value="1">Satınalma</option>
+                                <option value="2">Hediye</option>
+                                <option value="3">Transfer</option>
+                                <option value="4">Devir</option>
+                                <option value="5">İade</option>
+                                <option value="6">Miad Düşüm</option>
+                                <option value="7">Önceki Sistemden Harcanan</option>
+                                <option value="8">Düzenleme Giriş</option>
+                                <option value="9">Düzenleme Çıkış</option>
+                                <option value="10">Bayi kanalıyla satış</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>VKN / TCKN</label>
+                            <input id="VknTckn" type="text" class="form-control" />
                         </div>
                     </div>
                 </div>
             </div>
 
-        </div>
-        <div class="box-footer">
-            <div>
-                <div class="input-group input-group-md pull-left">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                        Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a href="#" onclick="excelAktarModal(true)"><i class="fa fa-file-excel-o"></i> Toplu Excel'e Aktar</a></li>
-                    </ul>
-                </div>
-
-                <div class="input-group input-group-md pull-right" style="padding: 3px 6px;">
-                    <button onclick="gridSearch()" type="button" class="btn btn-success">
-                        Sorgula <i class="glyphicon glyphicon-search"></i>
-                    </button>
-                </div>
+            <div class="box-footer">
+                <button id="exceleAktar" type="button" class="btn btn-success" data-toggle="modal" data-target="#modal-ExcelAktar" data-bs-toggle="modal" data-bs-target="#modal-ExcelAktar">Excel Çıktı</button>
+                <button class="btn btn-success pull-right" onclick="gridSearch()">Sorgula</button>
             </div>
         </div>
-    </div>
 
-    <div class="body-inner">
-        <div class="table-vertical">
-            <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
-                <thead>
-                    <tr>
-                        <th>VKN/TCKN</th>
-                        <th>AD</th>
-                        <th>Toplam Ödeme</th>
-                        <th>Hakediş Oranı</th>
-                        <th>Hakediş</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td colspan="5" class="dataTables_empty">Tabloda herhangi bir veri mevcut değil</td></tr>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="5" align="right">
-                            Toplam Hakediş :
-                            <span id="totalDeservedAmount" style="font-weight: bold">₺0,00</span>
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-
-    <!-- Modal: Excel Aktar -->
-    <div class="modal fade" id="modal-exceleaktar">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="box-body form-horizontal">
-                    <div class="col-md-12">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                            <h4 class="modal-title">Excel Düzenle ve Aktar</h4>
-                        </div>
-                        <div class="modal-body">
-                            <form id="ExceleAktarForm">
-                                <div class="col-md-12">
-                                    <label style="margin-bottom:20px">Tarih Aralığına Göre Aktar:</label>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <span>Fatura Başlangıç Tarihi</span>
-                                            <input type="text" class="form-control datepicker" id="faturaBaslangicTarihi">
-                                        </div>
-                                        <div class="form-group col-md-6">
-                                            <span>Fatura Bitiş Tarihi</span>
-                                            <input type="text" class="form-control datepicker" id="faturaBitisTarihi">
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button id="exceleAktar" onclick="excelaktar()" type="button" class="btn btn-success pull-right">
-                                            Onayla <i class="glyphicon glyphicon-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+        <div class="box box-primary">
+            <div class="box-body table-responsive">
+                <table id="grid_kontor" class="table table-bordered table-hover dataTable dt-head-center" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>VKN/TCKN</th>
+                            <th>Ad</th>
+                            <th>Bayi</th>
+                            <th>Kontör</th>
+                            <th>Kontör Türü</th>
+                            <th>İşlem Türü</th>
+                            <th>İşlem Tarihi</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- örnek satırlar -->
+                        <tr>
+                            <td>0200016544</td>
+                            <td>AKÇURA PETROL ÜRÜNLERİ TURİZM SANAYİ VE TİCARET LİMİTED ŞİRKETİ</td>
+                            <td>NOX YAZILIM HİZMETLERİ  LTD. ŞTİ</td>
+                            <td>5,00</td>
+                            <td>Fatura</td>
+                            <td>Düzenleme Çıkış</td>
+                            <td>2.10.2025 00:00:00</td>
+                            <td>Aktif</td>
+                        </tr>
+                        <tr>
+                            <td>36451239508</td>
+                            <td>MEHMET GÖKALP</td>
+                            <td>NOX YAZILIM HİZMETLERİ  LTD. ŞTİ</td>
+                            <td>2,00</td>
+                            <td>Fatura</td>
+                            <td>Düzenleme Çıkış</td>
+                            <td>2.10.2025 00:00:00</td>
+                            <td>Aktif</td>
+                        </tr>
+                        <tr>
+                            <td>61444170018</td>
+                            <td>DOĞAN ACAR</td>
+                            <td>NOX YAZILIM HİZMETLERİ  LTD. ŞTİ</td>
+                            <td>1,00</td>
+                            <td>Fatura</td>
+                            <td>Düzenleme Çıkış</td>
+                            <td>2.10.2025 00:00:00</td>
+                            <td>Aktif</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
-</section>
 
-@section Scripts {
-    <script>
-        $(function () {
-            $('#myDataTable').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
-            });
-        });
-    </script>
-    <script src="/hizlicss/jsv643136158/Report/deservedReport.js"></script>
-}
+    </div>
+</div>
+
+
+
+

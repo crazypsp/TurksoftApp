@@ -4,30 +4,76 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content">
 
+@section Styles {
+    <style>
+        .box {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+
+        .box-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .box-body {
+            padding: 15px;
+        }
+
+        .inputPadding {
+            padding-left: 0
+        }
+
+        .is-invalid {
+            border-color: #e74c3c !important
+        }
+
+        .helper-text {
+            color: #777;
+            font-size: 12px;
+            margin-top: 4px;
+            display: block
+        }
+
+        .btn-gap > .btn {
+            margin-left: 6px
+        }
+    </style>
+}
+
+<section class="content">
     <div class="panel panel-sky">
         <div class="panel-body">
 
             <div class="box box-default">
                 <div class="box-header with-border">
                     <h3 class="box-title">Gib Portalı İptal/İtiraz</h3>
+                    <div class="box-tools pull-right">
+                        <button type="button" class="btn btn-box-tool box-title" style="color:black;"
+                                data-toggle="collapse" href=".myCollapseExample"></button>
+                    </div>
                 </div>
 
                 <div class="box-body" id="btnAramaYapEnter">
                     <div class="row">
                         <div class="col-md-12">
 
+                            <!-- UUID -->
                             <div class="form-horizontal row">
-                                <label class="control-label col-sm-2">Belge UUID</label>
+                                <label class="control-label col-sm-2">Belge UUID (ETTN)</label>
                                 <div class="col-sm-6 inputPadding">
                                     <div class="col-sm-5">
-                                        <input id="GibPortalCancelUUID" type="text" class="form-control" />
+                                        <input id="GibPortalCancelUUID" type="text" class="form-control" autocomplete="off"
+                                               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx veya 32 hane">
+                                        <span id="uuidHelp" class="helper-text"></span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="form-horizontal row">
+                            <!-- Belge Türü -->
+                            <div class="form-horizontal row" style="margin-top:10px;">
                                 <label class="control-label col-sm-2">Belge Türü</label>
                                 <div class="col-sm-6 inputPadding">
                                     <div class="col-sm-5">
@@ -40,16 +86,18 @@
                                 </div>
                             </div>
 
-                            <div class="form-horizontal row">
+                            <!-- Bilgilendirme -->
+                            <div class="form-horizontal row" style="margin-top:10px;">
                                 <label class="control-label col-sm-2"></label>
                                 <div class="col-sm-6 inputPadding">
                                     <span class="col-sm-12">
-                                        <a target="_blank" href="https://portal.efatura.gov.tr/FaturaIptal/">e-Fatura İptal/İtiraz Portalı</a> üzerinden iptal/itiraz işlemi gerçekleştirildikten sonra bu opsiyon kullanılabilir.
+                                        <a target="_blank" href="https://portal.efatura.gov.tr/FaturaIptal/">e-Fatura İptal/İtiraz Portalı</a>
+                                        üzerinden iptal/itiraz işlemi gerçekleştirildikten sonra bu opsiyon kullanılabilir.
                                     </span>
                                 </div>
                             </div>
 
-                            <div class="form-horizontal row">
+                            <div class="form-horizontal row" style="margin-top:6px;">
                                 <label class="control-label col-sm-2"></label>
                                 <div class="col-sm-6 inputPadding">
                                     <span class="col-sm-12">
@@ -59,24 +107,35 @@
                                 </div>
                             </div>
 
-                            <div class="form-horizontal row">
+                            <!-- Uyarıyı okudum -->
+                            <div class="form-horizontal row" style="margin-top:10px;">
                                 <label class="control-label col-sm-2"></label>
                                 <div class="col-sm-6 inputPadding">
-                                    <span class="col-sm-3">Uyarıyı Okudum*</span>
+                                    <span class="col-sm-3">Uyarıyı Okudum *</span>
                                     <div class="col-sm-8">
-                                        <input type="checkbox" onclick="uyariyiOkudumClick()" id="uyariyiOkudumGibIptalchk" />
+                                        <input type="checkbox" name="uyariyiOkudumGibIptalchk" id="uyariyiOkudumGibIptalchk" value="">
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="form-horizontal row">
+                            <!-- Butonlar -->
+                            <div class="form-horizontal row" style="margin-top:12px;">
                                 <label class="control-label col-sm-2"></label>
-                                <div class="col-sm-6 inputPadding">
-                                    <button type="button" class="btn btn-secondary pull-left" style="width:100px;">Kapat</button>
-                                    <button type="button" id="iptalEtGibBtn" disabled class="btn btn-success pull-right" onclick="invoiceCancelGibSend(1)">
+                                <div class="col-sm-6 inputPadding btn-gap">
+                                    <button type="button" class="btn btn-default pull-left" id="btnClose"
+                                            style="padding-left:16px;width:100px;">
+                                        Kapat
+                                    </button>
+
+                                    <button type="button" id="iptalEtGibBtn" disabled
+                                            class="btn btn-success pull-right"
+                                            onclick="invoiceCancelGibSend(1)">
                                         Gib Portalından İptal/İtiraz Edildi Olarak İşaretle
                                     </button>
-                                    <button type="button" id="iptalKaldirGibBtn" disabled class="btn btn-danger pull-right" onclick="invoiceCancelGibSend(0)">
+
+                                    <button type="button" id="iptalKaldirGibBtn" disabled
+                                            class="btn btn-danger pull-right"
+                                            onclick="invoiceCancelGibSend(0)">
                                         Gib Portalından İptal/İtiraz Durumunu Kaldır
                                     </button>
                                 </div>
@@ -88,24 +147,120 @@
 
                 <div class="box-footer"></div>
             </div>
+
         </div>
     </div>
 </section>
 
 @section Scripts {
     <script>
-        function uyariyiOkudumClick() {
-            var checked = document.getElementById("uyariyiOkudumGibIptalchk").checked;
-            document.getElementById("iptalEtGibBtn").disabled = !checked;
-            document.getElementById("iptalKaldirGibBtn").disabled = !checked;
-        }
+        (function(){
+            // Basit bildirim yardımcıları
+            function ok(m){ if(window.toastr && toastr.success) toastr.success(m); else alert(m); }
+            function err(m){ if(window.toastr && toastr.error) toastr.error(m); else alert(m); }
 
-        function invoiceCancelGibSend(val) {
-            if (val === 1) {
-                Swal.fire("Bilgi", "Fatura 'İptal/İtiraz Edildi' olarak işaretlendi.", "success");
-            } else {
-                Swal.fire("Bilgi", "Fatura 'İptal/İtiraz Durumu Kaldırıldı'.", "info");
+            // UUID/ETTN doğrulama (36 haneli UUID veya 32 haneli düz hex)
+            var uuidHyphenRe = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+            var uuidPlainRe  = /^[0-9a-fA-F]{32}$/;
+
+            function formatUUIDIfPlain(v){
+                var s=(v||"").replace(/[^0-9a-fA-F]/g,"");
+                if(uuidPlainRe.test(s)){
+                    // 8-4-4-4-12 formatına çevir
+                    return (s.substr(0,8)+'-'+s.substr(8,4)+'-'+s.substr(12,4)+'-'+s.substr(16,4)+'-'+s.substr(20));
+                }
+                return v;
             }
-        }
+            function isValidUUID(v){ return uuidHyphenRe.test(v) || uuidPlainRe.test(v); }
+
+            // Alanları kontrol et ve butonları yönet
+            function fieldsValid(){
+                var raw = $('#GibPortalCancelUUID').val().trim();
+                var v = formatUUIDIfPlain(raw);
+                var app = $('#GibCancelAppType').val();
+                var chk = $('#uyariyiOkudumGibIptalchk').is(':checked');
+
+                // Görsel geri bildirim
+                var valid = isValidUUID(v);
+                $('#GibPortalCancelUUID').toggleClass('is-invalid', !valid && raw.length>0);
+                $('#uuidHelp').text(valid ? '' : (raw ? 'Geçerli bir UUID/ETTN girin.' : ''));
+
+                var enable = valid && !!app && chk;
+                $('#iptalEtGibBtn, #iptalKaldirGibBtn').prop('disabled', !enable);
+                return { valid:enable, uuid:v, appType:app };
+            }
+
+            // Input eventleri
+            $('#GibPortalCancelUUID').on('input blur', function(){
+                // Blur'da otomatik formatla (32 hane ise tirele)
+                if(event.type==='blur'){
+                    var f = formatUUIDIfPlain($(this).val().trim());
+                    $(this).val(f.toUpperCase());
+                }
+                fieldsValid();
+            });
+            $('#GibCancelAppType, #uyariyiOkudumGibIptalchk').on('change', fieldsValid);
+
+            // Enter ile gönder (uygunsa "İşaretle" butonu)
+            $('#btnAramaYapEnter').on('keypress','input,select',function(e){
+                if(e.which===13){
+                    e.preventDefault();
+                    if(!$('#iptalEtGibBtn').prop('disabled')) $('#iptalEtGibBtn').click();
+                }
+            });
+
+            // Kapat: modal varsa kapat; yoksa geri
+            $('#btnClose').on('click', function(){
+                var $m = $(this).closest('.modal');
+                if($m.length){ $m.modal('hide'); } else { window.history.back(); }
+            });
+
+            // Global fonksiyon (HTML'de çağrılıyor)
+            window.uyariyiOkudumClick = fieldsValid;
+
+            // Tek uçtan hem işaretle hem kaldır
+            window.invoiceCancelGibSend = function(flag){
+                var st = fieldsValid();
+                if(!st.valid){ return err('Zorunlu alanları doldurun.'); }
+
+                var payload = {
+                    uuid: st.uuid.toUpperCase(),
+                    appType: parseInt(st.appType,10), // 1:Gelen 2:Giden
+                    flag: flag === 1 // true: işaretle, false: kaldır
+                };
+
+                // Çift tıklamayı engelle
+                var $btns = $('#iptalEtGibBtn, #iptalKaldirGibBtn');
+                $btns.prop('disabled', true);
+                var $btn = flag===1 ? $('#iptalEtGibBtn') : $('#iptalKaldirGibBtn');
+                var originalHtml = $btn.html();
+                $btn.html('<i class="fa fa-spinner fa-spin"></i> İşleniyor...');
+
+                $.ajax({
+                    url: '/api/efatura/gib/portal-flag',   // <- Backend uç noktanıza göre güncelleyin
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    timeout: 30000
+                }).done(function(res){
+                    ok(flag===1 ? 'Belge GİB Portalında iptal/itiraz edildi olarak işaretlendi.' :
+                                  'Belgenin GİB Portalı iptal/itiraz işareti kaldırıldı.');
+                    // Formu temizle
+                    $('#GibPortalCancelUUID').val('');
+                    $('#GibCancelAppType').val('');
+                    $('#uyariyiOkudumGibIptalchk').prop('checked', false);
+                }).fail(function(x){
+                    var m = (x && (x.responseJSON && x.responseJSON.message || x.responseText)) || 'İşlem sırasında hata oluştu.';
+                    err(m);
+                }).always(function(){
+                    $btn.html(originalHtml);
+                    fieldsValid(); // butonları yeniden değerlendir
+                });
+            };
+
+            // İlk odak
+            $('#GibPortalCancelUUID').focus();
+        })();
     </script>
 }
+

@@ -6,18 +6,63 @@
 @inject IOptions<TurkSoft.GIBWebUI.AppSettings.ApiSettings> ApiSettings
 
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="sidebar-mini skin-red" style="height:auto; min-height:100%;">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="api-base" content="@ApiSettings.Value.BaseUrl" />
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport" />
     <script>
         // Fallback: JS tarafından API base URL erişimi
         window.__API_BASE = "@ApiSettings.Value.BaseUrl";
         console.log("API Base (Layout):", window.__API_BASE);
     </script>
 
-    <title>@ViewData["Title"] - Nox Bilişim</title>
+    <title>@ViewData["Title"] - Nox Yazılım</title>
+
+    <!-- Inline essentials carried over from the uploaded HTML (spinner/overlay resets) -->
+    <style>
+        /* Chrome, Safari, Edge, Opera */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* Firefox */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        #overlay, #overlayManuel {
+            position: fixed;
+            top: 0;
+            z-index: 100;
+            width: 100%;
+            height: 100%;
+            display: none;
+            background: rgba(0,0,0,0.6);
+        }
+
+        .cv-spinner {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px #ddd solid;
+            border-top: 4px #2e93e6 solid;
+            border-radius: 50%;
+            animation: sp-anime 0.8s infinite linear;
+        }        
+
+        .is-hide {
+            display: none;
+        }
+    </style>
 
     <!-- Temel -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" />
@@ -38,45 +83,140 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-footable/3.1.6/footable.bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css" />
     <link href="~/css/noxcss.css" rel="stylesheet" />
 </head>
 
-<body class="hold-transition skin-red sidebar-mini" id="MainBody">
-    <div class="wrapper">
-        <header class="main-header">
-            <a asp-controller="Home" asp-action="Index" class="logo">
-                <span class="logo-mini"><b>NO</b>X</span><span class="logo-lg"><b>Nox</b> Bilişim</span>
+<body id="MainBody" class="sidebar-mini skin-red" style="height:auto; min-height:100%;">
+    @RenderSection("Styles", required: false)
+    <!-- Manual overlay/spinner -->
+    <div id="overlayManuel">
+        <div class="cv-spinner">
+            <span class="spinner"></span>
+        </div>
+    </div>
+
+    <div class="wrapper" style="height:auto; min-height:100%;">
+        <header class="main-header" id="mainHeader">
+            <!-- Logo -->
+            <a href="/Home/Index" id="mainLogo" class="logo">
+                <span class="logo-mini"><img src="/PortalSettings/minilogo.png" alt="Nox Yazılım mini logo" /></span>
+                <span class="logo-lg"><img src="/PortalSettings/homelogo.png" alt="Nox Yazılım logo" /></span>
             </a>
+            <!-- Navbar -->
             <nav class="navbar navbar-static-top">
-                <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button"><span class="sr-only">Menü</span></a>
+                <a href="#" id="menuackapat" class="sidebar-toggle" data-toggle="push-menu" role="button">
+                    <span class="sr-only">Menü Aç / Kapat</span>
+                </a>
                 <div class="navbar-custom-menu">
                     <ul class="nav navbar-nav">
-                        <li><a href="#" target="_blank">Yardımcı Videolar</a></li>
-                        <li><a href="#" data-toggle="modal" data-target="#messageModal"><i class="fa fa-envelope-o"></i></a></li>
-                        <li><a href="#" data-toggle="modal" data-target="#downloadExcelModal"><i class="fa fa-download"></i></a></li>
+                        <!-- Notifications (hidden default) -->
+                        <li class="dropdown notifications-menu hidden" id="bell">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                <i class="fa fa-bell-o"></i>
+                                <span class="label label-warning hidden" id="bellgreen"><span id="notCount"></span></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><ul class="menu" id="notMenu"></ul></li>
+                                <li class="footer"><a href="/AdminPanel/Notifications">Tümü</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item dropdown" id="downloadRequestButton">
+                            <a href="#" target="_blank" title="Yardımcı Videolar">Yardımcı Videolar</a>
+                        </li>
+
+                        <li class="dropdown messages-menu">
+                            <a href="#" onclick="messageModal()">
+                                <i class="fa fa-envelope-o"></i>
+                                <span class="label label-danger"></span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a href="#" onclick="downloadTopluExcelModal()" data-toggle="tooltip" rel="tooltip" title="Bekleyen İndirmeler" id="downloadRequests">
+                                <i class="fa fa-download"></i>
+                            </a>
+                        </li>
+
+                        <!-- Theme chooser -->
+                        <li class="dropdown tasks-menu">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                <i class="fa fa-eye"></i>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li class="header">Tema Seçiniz</li>
+                                <li>
+                                    <ul class="menu">
+                                        <li><a href="javascript:cT('blue-light');"><h3>Blue-Light</h3><div class="progress xs"><div class="progress-bar progress-bar-blue pull-right" style="width:75%"></div></div></a></li>
+                                        <li><a href="javascript:cT('blue');"><h3>Blue</h3><div class="progress xs"><div class="progress-bar progress-bar-blue pull-right" style="width:100%"></div></div></a></li>
+                                        <li><a href="javascript:cT('green-light');"><h3>Green-Light</h3><div class="progress xs"><div class="progress-bar progress-bar-green pull-right" style="width:75%"></div></div></a></li>
+                                        <li><a href="javascript:cT('green');"><h3>Green</h3><div class="progress xs"><div class="progress-bar progress-bar-green pull-right" style="width:100%"></div></div></a></li>
+                                        <li><a href="javascript:cT('yellow-light');"><h3>Yellow-Light</h3><div class="progress xs"><div class="progress-bar progress-bar-yellow pull-right" style="width:75%"></div></div></a></li>
+                                        <li><a href="javascript:cT('yellow');"><h3>Yellow</h3><div class="progress xs"><div class="progress-bar progress-bar-yellow pull-right" style="width:100%"></div></div></a></li>
+                                        <li><a href="javascript:cT('red-light');"><h3>Red-Light</h3><div class="progress xs"><div class="progress-bar progress-bar-red pull-right" style="width:75%"></div></div></a></li>
+                                        <li><a href="javascript:cT('red');"><h3>Red</h3><div class="progress xs"><div class="progress-bar progress-bar-red pull-right" style="width:100%"></div></div></a></li>
+                                    </ul>
+                                </li>
+                                <li class="footer"><span></span></li>
+                            </ul>
+                        </li>
+
+                        <!-- User -->
+                        <li class="dropdown user user-menu">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                <img src="/hizlicss/dist/img/user2-160x160.jpg" class="user-image" alt="Kullanıcı" />
+                                <span class="hidden-xs">@ViewBag.CompanyName ?? "Şirket"</span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li class="user-header skin-red">
+                                    <img src="/hizlicss/dist/img/user2-160x160.jpg" class="img-circle" alt="Kullanıcı" />
+                                    <br />
+                                    <p>
+                                        @ViewBag.VknTckn
+                                        <small>Son Giriş:@ViewBag.LastLogin</small>
+                                    </p>
+                                </li>
+                                <li class="user-footer">
+                                    <div class="col-lg-pull-4 col-xs-pull-4">
+                                        <a href="/Settings/CompanyInformations" id="firmaBilgileri" class="btn btn-default btn-flat logbt">Firma<br />Bilgileri</a>
+                                    </div>
+                                    <div class="col-lg-pull-4 col-xs-pull-4">
+                                        <a id="btn_firmaiDegis" href="/User/CompanyList" class="btn btn-default btn-flat logbt">Firma<br />Değiştir</a>
+                                    </div>
+                                    <div class="col-lg-pull-4 col-xs-pull-4">
+                                        <a id="btn_cikis" href="/User/Logout" class="btn btn-default btn-flat logbt">Oturumu<br />Kapat</a>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
                     </ul>
                 </div>
             </nav>
         </header>
 
+        <!-- Sidebar -->
         @await Html.PartialAsync("_Sidebar")
 
-        <div class="content-wrapper">
+        <!-- Content Wrapper -->
+        <div class="content-wrapper" style="min-height:calc(100vh - 50px);">
             <section class="content-header">
                 <h1>@ViewData["Title"] <small>@ViewData["Subtitle"]</small></h1>
-                <ol class="breadcrumb">
-                    <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
+                <ol class="breadcrumb" id="breadcrumb">
+                    <li><a href="/Home/Index"><i class="fa fa-home"></i></a> @ViewData["Title"]</li>
                     <li class="active">@ViewData["Title"]</li>
                 </ol>
             </section>
-            <section class="content">@RenderBody()</section>
+            <section class="content">
+                @RenderBody()
+            </section>
         </div>
-
-        <footer class="main-footer">
-            <div class="pull-right hidden-xs"><b>Version</b> 2024.05</div>
-            <strong>© @DateTime.Now.Year Nox Bilişim Teknolojileri A.Ş.</strong> Tüm Hakları Saklıdır
-        </footer>
     </div>
+
+    <!-- Global Modals -->
+    @await Html.PartialAsync("_Modals")
+  
 
     <!-- JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -105,8 +245,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
-    @await Html.PartialAsync("_Modals")
+    <script>
+        // // Keep same function name used by the uploaded HTML (for iframe relogin modal)
+        // function sessionReLoginOnLoad() {
+        //     var iframa = document.getElementById("session-login-iframe");
+        //     try {
+        //         if (iframa && iframa.contentWindow && iframa.contentWindow.location.href.indexOf('/Home/Index') > -1) {
+        //             document.getElementById("session-login-iframe").src = "about:blank";
+        //             $('#modal-session-login').modal('hide');
+        //         }
+        //     } catch (e) { /* cross-origin safe-guard */ }
+        // }
+
+        // Stable hooks to open global modals from anywhere
+        $(function () {
+            $('#createInvoice').on('click', function (e) {
+                e.preventDefault();
+                $('#faturaOlustur').modal('show');
+            });
+            $('#envelopeCheckModalCol').on('click', function (e) {
+                e.preventDefault();
+                $('#modal-envelope').modal('show');
+            });
+            // bootstrap tooltips
+            $('[data-toggle=\"tooltip\"]').tooltip();
+        });
+    </script>
+
     @RenderSection("Scripts", required: false)
 </body>
 </html>

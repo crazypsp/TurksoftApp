@@ -3,14 +3,57 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+@section Styles {
+    <style>
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 240px;
+        }
+
+        .dt-head-center thead th {
+            text-align: center;
+        }
+
+        .table-vertical {
+            overflow-x: auto;
+        }
+
+        .box {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+
+        .box-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .box-footer {
+            padding: 10px 15px;
+            background: #fbfbfb;
+            border-top: 1px solid #eee;
+        }
+
+        .btn + .btn {
+            margin-left: 6px;
+        }
+
+        .label {
+            display: inline-block;
+            min-width: 84px;
+        }
+    </style>
+}
 
 <section class="content">
     <div class="panel panel-sky">
-        <div class="panel-body" style="overflow: scroll;">
+        <div class="panel-body" style="overflow:auto;">
+
             <div class="box box-default">
                 <div class="box-header with-border">
                     <h3 class="box-title">Rapor Gönderme Talebi</h3>
                 </div>
+
                 <div class="box-footer">
                     <div class="input-group input-group-md pull-left" style="padding: 3px 6px;">
                         <button type="button" id="generateNewArchiveReport" class="btn btn-info">
@@ -20,10 +63,9 @@
                 </div>
             </div>
 
-            <!-- DataTable -->
             <div class="body-inner">
                 <div class="table-vertical">
-                    <table id="reportDatatable" class="table table-bordered table-hover dataTable dt-head-center">
+                    <table id="reportDatatable" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
                         <thead>
                             <tr>
                                 <th>Rapor Oluşturma İsteği Tarihi</th>
@@ -31,59 +73,188 @@
                                 <th>Durum</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr><td>22.09.2025</td><td>202509</td><td>Başarılı</td></tr>
-                            <tr><td>05.09.2025</td><td>202509</td><td>Başarılı</td></tr>
-                            <tr><td>03.09.2025</td><td>202509</td><td>Başarılı</td></tr>
-                            <tr><td>02.09.2025</td><td>202509</td><td>Başarılı</td></tr>
-                            <tr><td>27.08.2025</td><td>202508</td><td>Başarılı</td></tr>
-                            <tr><td>20.08.2025</td><td>202508</td><td>Başarılı</td></tr>
-                            <tr><td>18.08.2025</td><td>202508</td><td>Başarılı</td></tr>
-                            <tr><td>06.08.2025</td><td>202508</td><td>Başarılı</td></tr>
-                            <tr><td>04.08.2025</td><td>202508</td><td>Başarılı</td></tr>
-                            <tr><td>30.07.2025</td><td>202507</td><td>Başarılı</td></tr>
-                            <tr><td>25.07.2025</td><td>202507</td><td>Başarılı</td></tr>
-                            <tr><td>16.07.2025</td><td>202507</td><td>Başarılı</td></tr>
-                            <tr><td>14.07.2025</td><td>202507</td><td>Başarılı</td></tr>
-                            <tr><td>11.07.2025</td><td>202507</td><td>Başarılı</td></tr>
-                            <tr><td>04.07.2025</td><td>202507</td><td>Başarılı</td></tr>
-                            <tr><td>01.07.2025</td><td>202507</td><td>Başarılı</td></tr>
-                            <tr><td>27.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>26.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>25.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>24.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>23.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>20.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>18.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>16.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                            <tr><td>13.06.2025</td><td>202506</td><td>Başarılı</td></tr>
-                        </tbody>
+                        <tbody><!-- JS ile doldurulacak --></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Modal: Yeni Rapor Talebi -->
-            <div class="modal fade" id="newReportModal" role="dialog">
-                <div class="modal-dialog modal-md">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                            <h3 class="modal-title">Yeni Rapor Talebi</h3>
-                        </div>
-                        <div class="modal-body">
-                            <p>Yeni Rapor Talebi Oluşturmak istiyor musunuz?</p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
-                            <button type="button" class="btn btn-success" onclick="reportSend()" id="ReportConfirm">Oluştur</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+           
         </div>
     </div>
 </section>
 
 @section Scripts {
-    <script src="/hizlicss/jsv643136158/Archive/archiveReportSendingRequest.js"></script>
+    <script>
+        (function(){
+            // ===== API uçları (varsayım) =====
+            var API = {
+                list:   '/api/report-requests',        // DataTables server-side beklenir (POST)
+                create: '/api/report-requests/create'  // Yeni talep oluştur (POST)
+            };
+
+            // ===== Fallback örnek veri =====
+            var sampleRows = [
+                { RequestTime:'2025-11-01T10:21:00Z', Period:'2025-10', Status:'GÖNDERİLECEK' },
+                { RequestTime:'2025-10-15T07:03:11Z', Period:'2025-09', Status:'GÖNDERİLDİ'   },
+                { RequestTime:'2025-09-02T16:40:05Z', Period:'2025-08', Status:'HATA'         },
+                { RequestTime:'2025-08-01T08:15:22Z', Period:'2025-07', Status:'GÖNDERİLDİ'   }
+            ];
+
+            var grid, serverMode = true;
+
+            $(function(){
+                initGridServer();
+                bindEvents();
+                // İlk yükleme DataTables tarafından tetiklenir
+            });
+
+            // == DataTable - Server Side dene ==
+            function initGridServer(){
+                grid = $('#reportDatatable').DataTable({
+                    serverSide: true,
+                    processing: true,
+                    searching: false,
+                    order: [[0,'desc']], // isteğin tarihi
+                    pageLength: 25,
+                    lengthMenu: [[10,25,50,100],[10,25,50,100]],
+                    ajax: function (data, callback) {
+                        var payload = {
+                            draw: data.draw,
+                            start: data.start,
+                            length: data.length,
+                            order: data.order
+                        };
+
+                        $.ajax({
+                            url: API.list,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(payload),
+                            timeout: 15000
+                        }).done(function(resp){
+                            serverMode = true;
+                            callback(resp);
+                        }).fail(function(){
+                            switchToClientMode();
+                        });
+                    },
+                    columns: [
+                        { data: 'RequestTime', render: function(v){ return fmtDate(v); } },
+                        { data: 'Period' },
+                        { data: 'Status', render: renderStatus }
+                    ],
+                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+                    stateSave: true,
+                    deferRender: true
+                });
+            }
+
+            // == Client Mode (fallback) ==
+            function switchToClientMode(){
+                serverMode = false;
+                if ($.fn.DataTable.isDataTable('#reportDatatable')) {
+                    $('#reportDatatable').DataTable().destroy();
+                }
+                grid = $('#reportDatatable').DataTable({
+                    data: sampleRows.slice(),
+                    processing: false, serverSide: false, searching: false,
+                    order: [[0,'desc']],
+                    pageLength: 25,
+                    lengthMenu: [[10,25,50,100],[10,25,50,100]],
+                    columns: [
+                        { data: 'RequestTime', render: function(v){ return fmtDate(v); } },
+                        { data: 'Period' },
+                        { data: 'Status', render: renderStatus }
+                    ],
+                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+                    stateSave: true,
+                    deferRender: true
+                });
+            }
+
+            // == Eventler ==
+            function bindEvents(){
+                $('#generateNewArchiveReport').on('click', function(){
+                    $('#newReportModal').modal('show');
+                });
+
+                // Modal kapandığında buton durumunu sıfırla
+                $('#newReportModal').on('hidden.bs.modal', function(){
+                    var $btn = $('#ReportConfirm');
+                    $btn.prop('disabled', false).data('busy', false).text('Oluştur');
+                });
+            }
+
+            // == Yeni Talep Oluştur ==
+            window.reportSend = function(){
+                var $btn = $('#ReportConfirm');
+                if ($btn.data('busy')) return;
+                $btn.data('busy', true).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Oluşturuluyor...');
+
+                $.ajax({
+                    url: API.create,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ /* ihtiyaca göre ek alanlar */}),
+                    timeout: 20000
+                }).done(function(resp){
+                    // Başarılı: modalı kapat, grid'i yenile
+                    $('#newReportModal').modal('hide');
+
+                    if (serverMode){
+                        grid.ajax.reload(null, false);
+                    } else {
+                        // Fallback: ekrana sahte yeni kayıt ekle
+                        var nowIso = new Date().toISOString();
+                        var periodGuess = guessPeriodFromNow();
+                        sampleRows.push({ RequestTime: nowIso, Period: periodGuess, Status: 'OLUŞTURULDU' });
+                        grid.row.add({ RequestTime: nowIso, Period: periodGuess, Status: 'OLUŞTURULDU' }).draw(false);
+                    }
+
+                    // Basit bildirim
+                    setTimeout(function(){ alert('Yeni rapor talebi oluşturuldu.'); }, 100);
+                }).fail(function(xhr){
+                    var msg = 'İşlem başarısız.';
+                    try { if (xhr && xhr.responseText) msg += '\n' + xhr.responseText; } catch(e){}
+                    alert(msg);
+                    $btn.data('busy', false).prop('disabled', false).text('Oluştur');
+                });
+            };
+
+            // == Yardımcılar ==
+            function renderStatus(s){
+                s = (s || '').toUpperCase();
+                var cls = 'label-default';
+                if (s === 'GÖNDERİLDİ') cls = 'label-success';
+                else if (s === 'GÖNDERİLECEK' || s === 'OLUŞTURULDU') cls = 'label-primary';
+                else if (s === 'HATA') cls = 'label-danger';
+                return '<span class="label ' + cls + '">' + html(s) + '</span>';
+            }
+
+            function fmtDate(v){
+                if (!v) return '';
+                try {
+                    // ISO veya "YYYY-MM-DD HH:mm:ss" türlerini destekle
+                    var d = (typeof v === 'string' && v.indexOf('T') < 0 && v.indexOf(':') > -1)
+                        ? new Date(v.replace(' ', 'T') + 'Z') : new Date(v);
+                    if (isNaN(d.getTime())) return html(v);
+                    // TR formatı
+                    return d.toLocaleString('tr-TR');
+                } catch(e){ return html(v); }
+            }
+
+            function guessPeriodFromNow(){
+                var d = new Date();
+                var y = d.getFullYear();
+                var m = (d.getMonth()+1).toString().padStart(2,'0');
+                return y + '-' + m;
+            }
+
+            function html(s){
+                return String(s==null?'':s)
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            }
+        })();
+    </script>
 }

@@ -1,46 +1,70 @@
-﻿@* @{
+﻿@{
     ViewData["Title"] = "Anasayfa";
-    ViewData["Subtitle"] = "Anasayfa";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<!-- Dashboard Kutuları -->
-<div class="row" id="faturadiv" visible="false">
+@section Styles {
+    <style>
+        /* Sayfaya özgü ufak düzenlemeler */
+        .small-box .icon {
+            top: 5px;
+        }
+
+        .box .box-title {
+            font-weight: 600;
+        }
+
+        .dovizContainer {
+            margin: 4px 0;
+        }
+
+        .dovizUstBaslik, .dovizYanBaslik {
+            text-align: center;
+        }
+
+        .dovizIcerikAlis, .dovizIcerikSatis {
+            text-align: right;
+        }
+
+        canvas#myChart {
+            max-width: 100%;
+            height: 260px;
+        }
+    </style>
+}
+
+<!-- Small boxes (Stat box) -->
+<div class="row" id="faturadiv" hidden>
     <div class="col-lg-3 col-xs-6">
         <div class="small-box bg-aqua">
             <div class="inner">
-                <h3 id="inboxCount">337</h3>
+                <h3 id="inboxCount">0</h3>
                 <p>Gelen e-Faturalar</p>
             </div>
             <div class="icon"><i class="ion-ios-filing"></i></div>
-            <a href="/EInvoice/InboxInvoice" class="small-box-footer">
-                Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i>
-            </a>
+            <a href="/EInvoice/InboxInvoice" class="small-box-footer">Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i></a>
         </div>
     </div>
 
     <div class="col-lg-3 col-xs-6">
         <div class="small-box bg-green">
             <div class="inner">
-                <h3 id="outboxCount">427</h3>
+                <h3 id="outboxCount">0</h3>
                 <p>Giden e-Faturalar</p>
             </div>
             <div class="icon"><i class="ion-ios-paperplane"></i></div>
-            <a href="/EInvoice/OutboxInvoice" class="small-box-footer">
-                Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i>
-            </a>
+            <a href="/EInvoice/OutboxInvoice" class="small-box-footer">Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i></a>
         </div>
     </div>
 
     <div class="col-lg-3 col-xs-6">
         <div class="small-box bg-yellow">
             <div class="inner">
-                <h3 id="archiveCount">179</h3>
+                <h3 id="archiveCount">0</h3>
                 <p>Giden e-Arşiv Faturalar</p>
             </div>
             <div class="icon"><i class="ion-ios-paperplane"></i></div>
-            <a href="/EArchive/OutboxEarchiveInvoice" class="small-box-footer">
-                Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i>
-            </a>
+            <a href="/EArchive/OutboxEarchiveInvoice" class="small-box-footer">Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i></a>
         </div>
     </div>
 
@@ -51,14 +75,11 @@
                 <p>Belge Sayıları 2 saat ara ile güncellenmektedir.</p>
             </div>
             <div class="icon"><i class="ion-ios-filing"></i></div>
-            <a href="/Settings/DocumentStates" class="small-box-footer">
-                Hatalı belge sayfasına gitmek için tıklayınız <i class="fa fa-arrow-circle-right"></i>
-            </a>
+            <a href="/Settings/DocumentStates" class="small-box-footer">Hatalı belge sayfasına gitmek için tıklayınız <i class="fa fa-arrow-circle-right"></i></a>
         </div>
     </div>
 </div>
 
-<!-- Grafik ve İçerik -->
 <div class="row">
     <div class="col-md-9">
         <section class="connectedSortable">
@@ -75,6 +96,10 @@
                                     <option value="2023">2023</option>
                                     <option value="2022">2022</option>
                                     <option value="2021">2021</option>
+                                    <option value="2020">2020</option>
+                                    <option value="2019">2019</option>
+                                    <option value="2018">2018</option>
+                                    <option value="2017">2017</option>
                                 </select>
                             </div>
                         </div>
@@ -94,416 +119,242 @@
                     <h3 class="box-title">Yeni Web Sayfamız Yayında</h3>
                 </div>
                 <div class="box-body">
-                    <a href="https://www.hizliteknoloji.com.tr/" target="_blank">
-                        <img src="/hizlicss/Images/hbtwebsitepage.jpeg"
-                             title="Web sayfasına gitmek için tıklayınız"
-                             style="width:100%; height:80%;">
+                    <a href="#" target="_blank">
+                        <img src="#" title="Web sayfasına gitmek için tıklayınız" style="width:100%; height:80%;">
                     </a>
                 </div>
             </div>
         </section>
     </div>
 
-    <!-- Sağ taraf -->
     <div class="col-md-3">
         <div class="box box-default">
             <div class="box-header with-border">
                 <h3 class="box-title"><b>KALAN BAKİYENİZ</b></h3>
             </div>
             <div class="box-body form-horizontal">
+
+                <div class="form-group">
+                    <div class="col-sm-10"><label>Kontör Durumu</label></div>
+                    <div class="col-sm-10"><span> Yüklenen Kontör: <span id="creditTotal">1.000</span> </span></div>
+                    <div class="col-sm-10"><span> Harcanan Kontör: <span id="creditStatus">0</span> </span></div>
+                    <div class="col-sm-10" id="kalanKontor"><span> Kalan Kontör: <span id="creditRemainder">1.000</span> </span></div>
+                    <div hidden class="col-sm-10" id="kampanyaStatus"><span> Kampanya Durumu: <span id="kampanyaStatusText"></span> </span></div>
+                </div>
+
+                <div hidden id="transferdiv" class="form-group">
+                    <hr class="solid">
+                    <div class="col-sm-10"><label>Transfer Durumu(Ücretsiz)</label></div>
+                    <div class="col-sm-10"><span> Harcanan  Kontör: <span id="transferStatus"></span> </span></div>
+                </div>
+
+                <div hidden id="kasadiv">
+                    <hr class="solid">
+                    <div class="form-group">
+                        <div class="col-sm-10"><label>Kasa Durumu</label></div>
+                        <div class="col-sm-10"><span> Yüklenen  Kontör: <span id="caseTotal"></span> </span></div>
+                        <div class="col-sm-10"><span> Harcanan  Kontör: <span id="caseStatus"></span> </span></div>
+                        <div class="col-sm-10" id="kalanKontorKasa"><span>Kalan  Kontör: <span id="caseRemainder"></span> </span></div>
+                    </div>
+                </div>
+
+                <div hidden id="edefterPaketdiv">
+                    <hr class="solid">
+                    <div class="form-group">
+                        <div class="col-sm-10"><label>EDefter Paket Durumu</label></div>
+                        <div class="col-sm-10"><span> Yüklenen  Kontör: <span id="edefterPaketTotal"></span> </span></div>
+                        <div class="col-sm-10"><span> Harcanan  Kontör: <span id="edefterPaketStatus"></span> </span></div>
+                        <div class="col-sm-10"><span>Kalan  Kontör: <span id="edefterPaketRemainder"></span> </span></div>
+                    </div>
+                </div>
+
+                <div hidden id="ebelgePaketDiv">
+                    <hr class="solid">
+                    <div class="form-group">
+                        <div class="col-sm-10"><label>EBelge Paket Durumu</label></div>
+                        <div class="col-sm-10"><span> Yüklenen  Kontör: <span id="ebelgePaketTotal"></span> </span></div>
+                        <div class="col-sm-10"><span> Harcanan  Kontör: <span id="ebelgePaketStatus"></span> </span></div>
+                        <div class="col-sm-10"><span>Kalan  Kontör: <span id="ebelgePaketRemainder"></span> </span></div>
+                    </div>
+                </div>
+
+                <div hidden id="bayiKontorDiv">
+                    <div class="form-group">
+                        <div class="col-sm-10"><label>Bayi Kontör Raporu</label></div>
+                        <table id="bayiKontorList" class="table table-bordered table-hover dataTable" style="width:100%">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div hidden id="debitdiv">
+                    <hr class="solid">
+                    <div class="form-group">
+                        <div class="col-sm-10"><span>Güncel Cari Bakiyeniz: <span id="debit"></span> TL (Borç)</span></div>
+                        <div class="col-sm-10"><a target="_blank" href="#">Online Ödeme için tıklayınız</a></div>
+                    </div>
+                </div>
+
+                <hr class="solid">
+
                 <div class="form-group">
                     <div class="col-sm-10">
-                        <label>Kontör Durumu</label>
-                    </div>
-                    <div class="col-sm-10">
-                        <span> Yüklenen Kontör: <span id="creditTotal">805.100</span> </span>
-                    </div>
-                    <div class="col-sm-10">
-                        <span> Harcanan Kontör: <span id="creditStatus">804.341</span> </span>
-                    </div>
-                    <div class="col-sm-10" id="kalanKontor">
-                        <span> Kalan Kontör: <span id="creditRemainder">759</span> </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="box box-default">
-            <div class="box-header with-border">
-                <h3 class="box-title"><b>TCMB Döviz Kurları</b></h3>
-            </div>
-            <div class="box-body form-horizontal">
-                <div class="col-12 row dovizContainer">
-                    <div class="col-4">USD</div>
-                    <div id="usdAlis" class="col-4">41.50</div>
-                    <div id="usdSatis" class="col-4">41.58</div>
-                </div>
-                <div class="col-12 row dovizContainer">
-                    <div class="col-4">EUR</div>
-                    <div id="eurAlis" class="col-4">48.75</div>
-                    <div id="eurSatis" class="col-4">48.83</div>
-                </div>
-                <div class="col-12 row dovizContainer">
-                    <div class="col-4">GBP</div>
-                    <div id="gbpAlis" class="col-4">55.70</div>
-                    <div id="gbpSatis" class="col-4">55.99</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script src="/hizlicss/plugins/chart.js"></script>
-    <script src="/hizlicss/jsv643136158/dashboard.js"></script>
-}
- *@
-
-@{
-    ViewData["Title"] = "Anasayfa";
-    ViewData["Subtitle"] = "Genel Bakış";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-}
-
-
-<section class="content">
-
-    <!-- Stat Boxes -->
-    <div class="row" id="faturadiv">
-        <div class="col-lg-3 col-xs-6">
-            <div class="small-box bg-aqua">
-                <div class="inner">
-                    <h3 id="inboxCount">337</h3>
-                    <p>Gelen e-Faturalar</p>
-                </div>
-                <div class="icon"><i class="ion-ios-filing"></i></div>
-                <a href="/EInvoice/InboxInvoice" class="small-box-footer">Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i></a>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-xs-6">
-            <div class="small-box bg-green">
-                <div class="inner">
-                    <h3 id="outboxCount">427</h3>
-                    <p>Giden e-Faturalar</p>
-                </div>
-                <div class="icon"><i class="ion-ios-paperplane"></i></div>
-                <a href="/EInvoice/OutboxInvoice" class="small-box-footer">Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i></a>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-xs-6">
-            <div class="small-box bg-yellow">
-                <div class="inner">
-                    <h3 id="archiveCount">179</h3>
-                    <p>Giden e-Arşiv Faturalar</p>
-                </div>
-                <div class="icon"><i class="ion-ios-paperplane"></i></div>
-                <a href="/EArchive/OutboxEarchiveInvoice" class="small-box-footer">Daha Fazla Bilgi <i class="fa fa-arrow-circle-right"></i></a>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-xs-6">
-            <div class="small-box bg-aqua">
-                <div class="inner">
-                    <h3>!</h3>
-                    <p>Belge Sayıları 2 saat ara ile güncellenmektedir.</p>
-                </div>
-                <div class="icon"><i class="ion-ios-filing"></i></div>
-                <a href="/Settings/DocumentStates" class="small-box-footer">Hatalı belge sayfasına gitmek için tıklayınız <i class="fa fa-arrow-circle-right"></i></a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart and Image Section -->
-    <div class="row">
-        <div class="col-md-9">
-            <section class="connectedSortable">
-                <div class="box box-default">
-                    <div class="box-header with-border">
-                        <h3 class="box-title">Aylık Tutarlar</h3>
-                        <div class="input-group input-group-md pull-right">
-                            <div class="col-sm-12">
-                                <label class="control-label col-sm-3">Yıl</label>
-                                <div class="col-sm-9">
-                                    <select id="IntegrationYear" class="form-control" onchange="setYear()">
-                                        <option value="2025">2025</option>
-                                        <option value="2024">2024</option>
-                                        <option value="2023">2023</option>
-                                        <option value="2022">2022</option>
-                                        <option value="2021">2021</option>
-                                        <option value="2020">2020</option>
-                                        <option value="2019">2019</option>
-                                        <option value="2018">2018</option>
-                                        <option value="2017">2017</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="box-body">
-                        <div class="chart">
-                            <canvas id="myChart" style="height: 176px; width: 778px;"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="connectedSortable">
-                <div class="box box-default">
-                    <div class="box-header with-border">
-                        <h3 class="box-title">Yeni Web Sayfamız Yayında</h3>
-                    </div>
-                    <div class="box-body">
-                        <a href="https://portal.noxmusavir.com/" target="_blank">
-                            <img src="#" title="Web sayfasına gitmek için tıklayınız" style="width:100%; height:80%;">
-                        </a>
-                    </div>
-                </div>
-            </section>
-        </div>
-        <div class="col-md-3">
-            <!-- Kalan Bakiye -->
-            <div class="box box-default">
-                <div class="box-header with-border">
-                    <h3 class="box-title"><b>KALAN BAKİYENİZ</b></h3>
-                </div>
-                <div class="box-body form-horizontal">
-                    <div class="form-group">
-                        <div class="col-sm-10">
-                            <label>Kontör Durumu</label>
-                        </div>
-                        <div class="col-sm-10">
-                            <span>Yüklenen Kontör: <span id="creditTotal">805.100</span></span>
-                        </div>
-                        <div class="col-sm-10">
-                            <span>Harcanan Kontör: <span id="creditStatus">803.841 (Diğer Düşümler: 797723)</span></span>
-                        </div>
-                        <div class="col-sm-10" id="kalanKontor">
-                            <span>Kalan Kontör: <span id="creditRemainder">1.259</span></span>
-                        </div>
-                    </div>
-
-                    <div id="edefterPaketdiv" style="display: block;">
-                        <hr class="solid" />
-                        <div class="form-group">
-                            <div class="col-sm-10">
-                                <label>EDefter Paket Durumu</label>
-                            </div>
-                            <div class="col-sm-10">
-                                <span>Yüklenen: <span id="edefterPaketTotal">78</span></span>
-                            </div>
-                            <div class="col-sm-10">
-                                <span>Harcanan: <span id="edefterPaketStatus">75</span></span>
-                            </div>
-                            <div class="col-sm-10">
-                                <span>Kalan: <span id="edefterPaketRemainder">3</span></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr class="solid" />
-                    <div id="debitdiv" style="display:block;">
-                        <div class="form-group">
-                            <div class="col-sm-10">
-                                <span>Güncel Cari Bakiyeniz: <span id="debit">69.009,99</span> TL (Borç)</span>
-                            </div>
-                            <div class="col-sm-10">
-                                <a target="_blank" href="https://sanalpos.hizliteknoloji.com.tr/">Online Ödeme için tıklayınız</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr class="solid" />
-                    <div class="form-group">
-                        <div class="col-sm-10">
-                            <div class="col-md-12">
-                                <button type="button" onclick="kontorModal()" class="btn btn-primary" style="margin-bottom:10px">
-                                    Kontör Geçmişi
-                                </button>
-                                <button type="button" onclick="cariHesapHareketModal()" class="btn btn-primary" style="margin-bottom:10px">
-                                    Cari Hesap Hareketleri
-                                </button>
-                            </div>
-                            <button type="button" class="btn btn-danger" style="margin-bottom:10px; margin-left:14px;">
-                                <a style="color:white" target="_blank" href="/Home/KontorSatinAlma">Kontör Satın Almak için tıklayınız</a>
+                        <div class="col-md-12">
+                            <button type="button" onclick="kontorModal('','')" id="btn_copy" class="btn btn-primary" style="margin-bottom:10px">
+                                Kontör Geçmişi
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Döviz Kurları -->
-            <div class="box box-default">
-                <div class="box-header with-border">
-                    <h3 class="box-title"><b>TCMB Döviz Kurları</b></h3>
-                </div>
-                <div class="box-body form-horizontal">
-                    <img src="/hizlicss/Images/0x0-1640150083204.jpg" style="width:100%;" />
-                </div>
-
-                <div class="box-body form-horizontal">
-                    <div class="row">
-                        <div class="col-xs-4"><b></b></div>
-                        <div class="col-xs-4 text-center"><b>ALIŞ</b></div>
-                        <div class="col-xs-4 text-center"><b>SATIŞ</b></div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xs-4">USD</div>
-                        <div id="usdAlis" class="col-xs-4 text-center">41.5068</div>
-                        <div id="usdSatis" class="col-xs-4 text-center">41.5816</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xs-4">EUR</div>
-                        <div id="eurAlis" class="col-xs-4 text-center">48.7512</div>
-                        <div id="eurSatis" class="col-xs-4 text-center">48.8390</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xs-4">GBP</div>
-                        <div id="gbpAlis" class="col-xs-4 text-center">55.7010</div>
-                        <div id="gbpSatis" class="col-xs-4 text-center">55.9914</div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
-</section>
 
-<!-- Kontör Modal -->
-<div class="modal fade" id="kontor_modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" style="width:fit-content;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">Kontör İşlemleri</h4>
+    <div class="col-md-3">
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title"><b>TCMB Döviz Kurları</b></h3>
             </div>
-            <div class="modal-body">
-                <table id="kontorTable" class="table table-bordered table-hover dataTable">
-                    <thead>
-                        <tr>
-                            <th>Kontör No</th>
-                            <th>Birim Türü</th>
-                            <th>İşlem Türü</th>
-                            <th>Birim Miktar</th>
-                            <th>Satın Alma Tarihi</th>
-                            <th>Kullanım Başlangıç Tarihi</th>
-                            <th>Kullanım Bitiş Tarihi</th>
-                            <th>Açıklama</th>
-                            <th>VKN/TCKN</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td colspan="9" class="text-center">Tabloda herhangi bir veri mevcut değil</td></tr>
-                    </tbody>
-                </table>
+            <div class="box-body form-horizontal">
+                <img src="#" style="padding-top:0; width:100%; height:100%;">
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Cari Hesap Hareketleri Modal -->
-<div class="modal fade" id="carihesaphareket_modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">Cari Hesap Hareketleri</h4>
-            </div>
-            <div class="modal-body">
-                <table id="cariHesapTableList" class="table table-bordered table-hover dataTable">
-                    <thead>
-                        <tr>
-                            <th>Tarih</th>
-                            <th>Fiş No</th>
-                            <th>Fiş Türü</th>
-                            <th>Açıklama</th>
-                            <th>Tutar</th>
-                            <th>Para Birimi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td colspan="6" class="text-center">Tabloda herhangi bir veri mevcut değil</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Kapat</button>
+            <div class="box-body form-horizontal">
+                <div class="col-12 col-sm-12 row dovizContainer">
+                    <div class="col-4 col-sm-4"></div>
+                    <div class="col-4 col-sm-4 dovizUstBaslik"><b>ALIŞ</b></div>
+                    <div class="col-4 col-sm-4 dovizUstBaslik"><b>SATIŞ</b></div>
+                </div>
+                <div class="col-12 col-sm-12 row dovizContainer">
+                    <div class="col-4 col-sm-4 dovizYanBaslik">USD</div>
+                    <div id="usdAlis" class="col-4 col-sm-4 dovizIcerikAlis">42.0490</div>
+                    <div id="usdSatis" class="col-4 col-sm-4 dovizIcerikSatis">42.1248</div>
+                </div>
+                <div class="col-12 col-sm-12 row dovizContainer">
+                    <div class="col-4 col-sm-4 dovizYanBaslik">EUR</div>
+                    <div id="eurAlis" class="col-4 col-sm-4 dovizIcerikAlis">48.5281</div>
+                    <div id="eurSatis" class="col-4 col-sm-4 dovizIcerikSatis">48.6155</div>
+                </div>
+                <div class="col-12 col-sm-12 row dovizContainer">
+                    <div class="col-4 col-sm-4 dovizYanBaslik">GBP</div>
+                    <div id="gbpAlis" class="col-4 col-sm-4 dovizIcerikAlis">55.0398</div>
+                    <div id="gbpSatis" class="col-4 col-sm-4 dovizIcerikSatis">55.3268</div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Aylık Tutarlar Grafiği
-        document.addEventListener("DOMContentLoaded", function () {
-            const ctx = document.getElementById('myChart');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'],
-                    datasets: [{
-                        label: 'Toplam Tutar (₺)',
-                        data: [12000, 15000, 18000, 20000, 25000, 30000, 28000, 31000, 27000, 33000, 35000, 40000],
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'top' },
-                        title: {
-                            display: true,
-                            text: 'Aylık Toplam Tutarlar'
+        // Sayfa kapsamı değişkenleri
+        window.TarifeTur = null;
+
+        // Güvenli script yükleme
+        function ensureScriptLoaded(test, url, cb) {
+            if (test()) { cb && cb(); return; }
+            var s = document.createElement('script'); s.src = url; s.onload = cb; document.head.appendChild(s);
+        }
+
+        // Aylık grafik
+        function buildChart() {
+            var c = document.getElementById('myChart');
+            if (!c || typeof Chart === 'undefined') return;
+
+            var year = document.getElementById('IntegrationYear') ? document.getElementById('IntegrationYear').value : (new Date()).getFullYear();
+            var labels = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+            var data = [0,0,0,0,0,0,0,0,0,0,0,0];
+
+            // İsteğe bağlı: sunucudan veri çek
+            $.getJSON('/Home/GetMonthlyTotals', { year: year })
+                .done(function (res) {
+                    if (Array.isArray(res) && res.length === 12) data = res;
+                })
+                .always(function () {
+                    if (window.myDashChart) window.myDashChart.destroy();
+                    window.myDashChart = new Chart(c.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: year + ' Aylık Tutarlar',
+                                data: data,
+                                borderWidth: 2,
+                                borderColor: 'rgba(36,87,230,1)',
+                                backgroundColor: 'rgba(36,87,230,0.12)',
+                                pointRadius: 2,
+                                fill: true,
+                                lineTension: 0.2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                yAxes: [{ ticks: { beginAtZero: true } }],
+                                xAxes: [{ gridLines: { display: false } }]
+                            },
+                            legend: { display: true }
                         }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        });
-
-        // Kontör Modal Fonksiyonu
-        function kontorModal() {
-            $('#kontor_modal').modal('show');
+                    });
+                });
         }
 
-        // Cari Hesap Modal Fonksiyonu
-        function cariHesapHareketModal() {
-            $('#carihesaphareket_modal').modal('show');
+        function setYear() { buildChart(); }
+
+        // Kontör modal aç
+        function kontorModal() { $('#kontor_modal').modal('show'); }
+
+        // Talep gönder (örnek)
+        function sendTalep() {
+            var payload = {
+                konuTipId: $('#konutipid').val(),
+                konu: $('#konutxt').val(),
+                aciklama: $('#aciklama').val(),
+                phone: $('#phoneNum').val(),
+                email: $('#email').val()
+            };
+            $.ajax({ url: '/Home/SendTalep', method: 'POST', data: payload })
+                .done(function(){ if (window.toastr) toastr.success('Talebiniz alındı'); })
+                .fail(function(){ if (window.toastr) toastr.error('Talep gönderilemedi'); });
         }
 
-        // Bildirim Örneği
-        function showNotification(message, type) {
-            Swal.fire({
-                icon: type,
-                title: 'Bilgilendirme',
-                text: message,
-                confirmButtonText: 'Tamam'
-            });
+        // Sayaç ve bakiyeler (örnek)
+        function loadDashboard() {
+            $.getJSON('/Home/GetDashboardCounts')
+                .done(function (r) {
+                    if (!r) return;
+                    $('#inboxCount').text(r.inbox || 0);
+                    $('#outboxCount').text(r.outbox || 0);
+                    $('#archiveCount').text(r.archive || 0);
+                    $('#faturadiv').prop('hidden', false);
+                }).fail(function () {
+                    // varsayılan göster
+                    $('#faturadiv').prop('hidden', false);
+                });
+
+            $.getJSON('/Home/GetCredits')
+                .done(function (r) {
+                    if (!r) return;
+                    $('#creditTotal').text(r.total || '0');
+                    $('#creditStatus').text(r.used || '0');
+                    $('#creditRemainder').text(r.remain || '0');
+                });
         }
 
-        // DataTables Başlatma
         $(function () {
-            $('#kontorTable, #cariHesapTableList').DataTable({
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json"
-                },
-                "pageLength": 10,
-                "ordering": false
-            });
-        });
+            // Gerekli eklenteleri başlat
+            if ($.fn.select2) $('#konutipid').select2({ width: '100%' });
+            if ($.fn.dataTable) {
+                $('#kontorTable').DataTable({ responsive: true, language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' } });
+                $('#cariHesapTableList').DataTable({ responsive: true, language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' } });
+            }
 
-        // Sayfa Yüklenince Genel Bilgiler
-        $(document).ready(function () {
-            console.log("Anasayfa yükleme tamamlandı ✅");
+            // Chart.js yoksa CDN'den yükle, sonra grafiği çiz
+            ensureScriptLoaded(function () { return !!window.Chart; }, 'https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.bundle.min.js', buildChart);
+
+            loadDashboard();
         });
     </script>
 }

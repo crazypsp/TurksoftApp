@@ -4,83 +4,112 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content-header">
-    <h1>Listeler <small>İhraç Kayıtlı Kod Listesi</small></h1>
-</section>
+@section Styles {
+    <style>
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 220px;
+        }
+
+        .box.box-primary {
+            border-top-color: #3c8dbc;
+        }
+
+        .dt-head-center thead th {
+            text-align: center;
+        }
+
+        td pre {
+            white-space: pre-wrap;
+            margin: 0;
+            font-family: inherit;
+        }
+    </style>
+}
 
 <section class="content">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <button id="btnNewExport" class="btn btn-success btn-sm pull-right">
-                <i class="fa fa-plus"></i> Yeni İhraç Kayıtlı Kod Ekle
-            </button>
-        </div>
+    <h2>İhraç Kayıtlı Kod Listesi</h2>
+
+    <div class="box box-primary" ng-app="myApp" ng-controller="ihracKayitliController">
         <div class="box-body">
-            <table id="grid_Export" class="table table-bordered table-hover dataTable">
+            <table id="grid_Export" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
                 <thead>
                     <tr>
-                        <th>İhraç Kayıtlı Kodu</th>
-                        <th>İhraç Kayıtlı Adı</th>
-                        <th>İşlemler</th>
+                        <th style="width:20%">İhraç Kayıtlı Kodu</th>
+                        <th style="width:80%">İhraç Kayıtlı Adı</th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody>
+                    <tr ng-repeat="r in rows" on-finish-render>
+                        <td><pre>{{r.code}}</pre></td>
+                        <td><pre>{{r.name}}</pre></td>
+                    </tr>
+                    <tr ng-if="!rows || rows.length===0">
+                        <td colspan="2" class="text-center">Kayıt bulunamadı.</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </div>
 </section>
 
-<!-- İhraç Kayıtlı Kod Modal -->
-<div class="modal fade" id="mdlExport" tabindex="-1" role="dialog" aria-labelledby="mdlExportLabel">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content">
-            <form id="frmExport">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <h4 class="modal-title" id="mdlExportLabel">İhraç Kayıtlı Kod Bilgisi</h4>
-                </div>
-
-                <div class="modal-body">
-                    <input type="hidden" id="expId" />
-
-                    <div class="form-group">
-                        <label for="expCode">İhraç Kayıtlı Kodu</label>
-                        <input type="text" class="form-control" id="expCode" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="expTitle">İhraç Kayıtlı Adı</label>
-                        <input type="text" class="form-control" id="expTitle" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="expSolution">Açıklama / Çözüm 1</label>
-                        <textarea class="form-control" id="expSolution" rows="2"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="expSolution2">Açıklama / Çözüm 2</label>
-                        <textarea class="form-control" id="expSolution2" rows="2"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="expType">Tür</label>
-                        <input type="text" class="form-control" id="expType" value="Export" readonly />
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
 @section Scripts {
-    <script type="module" src="~/apps/exportregisteredcodes.js"></script>
+    <script>
+        (function () {
+            var app;
+            try { app = angular.module('myApp'); }
+            catch (e) { app = angular.module('myApp', []); }
+
+            // ng-repeat tamamlandıktan sonra DataTables'i başlatmak için
+            app.directive('onFinishRender', function ($timeout) {
+                return {
+                    restrict: 'A',
+                    link: function (scope) {
+                        if (scope.$last === true) {
+                            $timeout(function () { scope.$emit('ngRepeatFinished'); }, 0);
+                        }
+                    }
+                };
+            });
+
+            app.controller('ihracKayitliController', ['$scope', '$http', function ($scope, $http) {
+                $scope.rows = [];
+
+                // (Opsiyonel) API uç noktası: /api/ihrac-kayitli-kodlari -> [{code, name}]
+                $http.get('/api/ihrac-kayitli-kodlari').then(function (res) {
+                    if (Array.isArray(res.data) && res.data.length > 0) {
+                        $scope.rows = res.data;
+                    } else {
+                        $scope.rows = fallbackExportCodes;
+                    }
+                }).catch(function () {
+                    $scope.rows = fallbackExportCodes;
+                });
+
+                function initDataTable() {
+                    var $tbl = $('#grid_Export');
+                    if ($.fn.DataTable.isDataTable($tbl)) {
+                        $tbl.DataTable().destroy();
+                    }
+                    $tbl.DataTable({
+                        pageLength: 25,
+                        order: [[0, 'asc']],
+                        columnDefs: [{ targets: 0, type: 'num' }],
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+                    });
+                }
+
+                $scope.$on('ngRepeatFinished', function () {
+                    initDataTable();
+                });
+            }]);
+
+            // Verdiğiniz 4 satırlık liste (fallback)
+            var fallbackExportCodes = [
+                { code: 701, name: "3065 s. KDV Kanununun 11/1-c md. Kapsamındaki İhraç Kayıtlı Satış" },
+                { code: 704, name: "3065 sayılı KDV Kanununun (11/1-c) maddesi ve 4760 s. ÖTV Kanununun 8/2. md. kapsamındaki İhraç Kayıtlı Satış" },
+                { code: 703, name: "4760 s. ÖTV Kanununun 8/2 md. kapsamındaki İhraç Kayıtlı Satış" },
+                { code: 702, name: "DİİB ve Geçici Kabul Rejimi kapsamındaki satışlar" }
+            ];
+        })();
+    </script>
 }

@@ -4,21 +4,37 @@
 }
 
 
+@section Styles {
+    <style>
+        .dt-head-center thead th {
+            text-align: center;
+        }
+
+        .table td.text-center {
+            text-align: center;
+        }
+
+        .btn-group .btn {
+            margin-right: 4px;
+        }
+    </style>
+}
+
 <section class="content">
+    @Html.AntiForgeryToken()
+
     <div ng-app="myApp" ng-controller="myControllerDocumentStatus" class="ng-scope">
         <div id="documentStatus" class="tab-pane fade in active">
-
-            <!-- Tarih aralık butonları -->
             <div class="row">
-                <div class="btn-group" role="group" aria-label="Yıllar" style="margin-bottom:10px; margin-left:18px;">
+                <div class="btn-group" role="group" aria-label="Yıllar" style="margin-bottom:10px;margin-left:18px;">
                     <button type="button" ng-click="documentRangeDate(1)" class="btn btn-primary">Bugün</button>
                     <button type="button" ng-click="documentRangeDate(2)" class="btn btn-primary">Son 7 Gün</button>
                     <button type="button" ng-click="documentRangeDate(3)" class="btn btn-primary">Son 30 Gün</button>
                 </div>
             </div>
 
-            <!-- e-Fatura -->
             <div class="row">
+                <!-- e-Fatura -->
                 <div class="col-md-6">
                     <div class="box box-default">
                         <div class="box-header with-border">
@@ -35,16 +51,31 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Backend’den gelen e-Fatura verileri burada listelenecek -->
+                                    <tr ng-repeat="x in outboxInvoice">
+                                        <td>{{x.Code}}</td>
+                                        <td>{{x.Status}}</td>
+                                        <td class="text-center">{{x.Count}}</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-xs btn-primary" title="Listele" ng-click="viewList(2, x.Code)">
+                                                Listele
+                                            </button>
+                                            <button class="btn btn-xs btn-danger" title="Hatalı Müşteriler"
+                                                    ng-if="x.Code==='ERR' || x.HasErrors"
+                                                    ng-click="openCustomerModal(x, 2)">
+                                                Hatalı Müşteriler
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr ng-if="!outboxInvoice || outboxInvoice.length===0">
+                                        <td colspan="4" class="text-center">Kayıt bulunamadı.</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- e-Arşiv -->
-            <div class="row">
+                <!-- e-Arşiv -->
                 <div class="col-md-6">
                     <div class="box box-default">
                         <div class="box-header with-border">
@@ -61,7 +92,24 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Backend’den gelen e-Arşiv verileri burada listelenecek -->
+                                    <tr ng-repeat="x in outboxArchive">
+                                        <td>{{x.Code}}</td>
+                                        <td>{{x.Status}}</td>
+                                        <td class="text-center">{{x.Count}}</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-xs btn-primary" title="Listele" ng-click="viewList(3, x.Code)">
+                                                Listele
+                                            </button>
+                                            <button class="btn btn-xs btn-danger" title="Hatalı Müşteriler"
+                                                    ng-if="x.Code==='ERR' || x.HasErrors"
+                                                    ng-click="openCustomerModal(x, 3)">
+                                                Hatalı Müşteriler
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr ng-if="!outboxArchive || outboxArchive.length===0">
+                                        <td colspan="4" class="text-center">Kayıt bulunamadı.</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -69,40 +117,113 @@
                 </div>
             </div>
 
-            <!-- Müşteri Listesi Modal -->
-            <div class="modal fade" id="modal-errorDocumentCustomer" tabindex="-1" role="dialog">
-                <div class="modal-dialog modal-lg" role="document">
-                    <div class="modal-content">
-                        <div class="box-body form-horizontal">
-                            <div class="modal-header">
-                                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                                <h4 class="modal-title">Müşteri Listesi</h4>
-                            </div>
-                            <div class="modal-body" style="overflow-y:scroll; height:500px;">
-                                <table class="table table-bordered table-hover dataTable dt-head-center">
-                                    <thead>
-                                        <tr>
-                                            <th>VergiNo / TCKimlikNo</th>
-                                            <th>Unvan</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Backend’den gelen müşteri listesi burada listelenecek -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+           
         </div>
     </div>
 </section>
 
 @section Scripts {
-    <script src="/hizlicss/jsv643136158/settings.js"></script>
+   
+    <script>
+        (function () {
+            // mevcut 'myApp' varsa onu kullan, yoksa oluştur
+            var app;
+            try { app = angular.module('myApp'); }
+            catch (e) { app = angular.module('myApp', []); }
+
+            app.controller('myControllerDocumentStatus', ['$scope', '$http', '$window',
+                function ($scope, $http, $window) {
+
+                    // --- Anti-forgery
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $http.defaults.headers.common['RequestVerificationToken'] = token;
+
+                    // --- Tarih aralığı yardımcıları
+                    function startOfDay(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+                    function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+                    function fmt(d) { return d.toISOString(); } // ISO format (server tarafında parse edin)
+
+                    // varsayılan: Son 7 gün
+                    var now = new Date();
+                    $scope.dateRange = {
+                        start: fmt(addDays(startOfDay(now), -7)),
+                        end: fmt(now)
+                    };
+
+                    $scope.outboxInvoice = [];
+                    $scope.outboxArchive = [];
+                    $scope.errorCustomerList = [];
+
+                    // Kısayol butonları
+                    $scope.documentRangeDate = function (opt) {
+                        var now = new Date();
+                        if (opt === 1) { // bugün
+                            $scope.dateRange.start = fmt(startOfDay(now));
+                            $scope.dateRange.end = fmt(now);
+                        } else if (opt === 2) { // son 7
+                            $scope.dateRange.start = fmt(addDays(startOfDay(now), -7));
+                            $scope.dateRange.end = fmt(now);
+                        } else { // son 30
+                            $scope.dateRange.start = fmt(addDays(startOfDay(now), -30));
+                            $scope.dateRange.end = fmt(now);
+                        }
+                        // iki tabloyu da tazele
+                        $scope.getDocumentStatusList(2);
+                        $scope.getDocumentStatusList(3);
+                    };
+
+                    // Liste getir (serviceType: 2=e-Fatura, 3=e-Arşiv)
+                    $scope.getDocumentStatusList = function (serviceType) {
+                        var url = '/api/document-status?serviceType=' + serviceType
+                            + '&startDate=' + encodeURIComponent($scope.dateRange.start)
+                            + '&endDate=' + encodeURIComponent($scope.dateRange.end);
+
+                        $http.get(url).then(function (res) {
+                            var list = res.data || [];
+                            if (serviceType === 2) $scope.outboxInvoice = list;
+                            else if (serviceType === 3) $scope.outboxArchive = list;
+                        }).catch(function () {
+                            // DEMO verileri (API yoksa)
+                            var demo = [
+                                { Code: 'OK', Status: 'Başarılı', Count: 42, HasErrors: false },
+                                { Code: 'ERR', Status: 'Hatalı', Count: 3, HasErrors: true },
+                                { Code: 'SENT', Status: 'Gönderildi', Count: 11, HasErrors: false }
+                            ];
+                            if (serviceType === 2) $scope.outboxInvoice = demo;
+                            else if (serviceType === 3) $scope.outboxArchive = demo;
+                        });
+                    };
+
+                    // Müşteri modalını aç
+                    $scope.openCustomerModal = function (row, serviceType) {
+                        var url = '/api/document-status/error-customers?serviceType=' + serviceType
+                            + '&statusCode=' + encodeURIComponent(row.Code)
+                            + '&startDate=' + encodeURIComponent($scope.dateRange.start)
+                            + '&endDate=' + encodeURIComponent($scope.dateRange.end);
+
+                        $http.get(url).then(function (res) {
+                            $scope.errorCustomerList = res.data || [];
+                            $('#modal-errorDocumentCustomer').modal('show');
+                        }).catch(function () {
+                            // DEMO kayıtları (API yoksa)
+                            $scope.errorCustomerList = [
+                                { TaxOrId: '11111111111', Title: 'DEMO A.Ş.' },
+                                { TaxOrId: '22222222222', Title: 'ÖRNEK LTD. ŞTİ.' }
+                            ];
+                            $('#modal-errorDocumentCustomer').modal('show');
+                        });
+                    };
+
+                    // Detay liste sayfasına yönlendir
+                    $scope.viewList = function (serviceType, statusCode) {
+                        var q = '?serviceType=' + serviceType
+                            + '&statusCode=' + encodeURIComponent(statusCode)
+                            + '&startDate=' + encodeURIComponent($scope.dateRange.start)
+                            + '&endDate=' + encodeURIComponent($scope.dateRange.end);
+                        $window.location.href = '/Documents/List' + q; // kendi route’unuza göre güncelleyin
+                    };
+                }
+            ]);
+        })();
+    </script>
 }

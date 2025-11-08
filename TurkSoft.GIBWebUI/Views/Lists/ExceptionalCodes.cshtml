@@ -4,86 +4,173 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content-header">
-    <h1>Listeler <small>İstisna Kodları</small></h1>
-</section>
 
-<section class="content">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <button id="btnNewExceptional" class="btn btn-success btn-sm pull-right">
-                <i class="fa fa-plus"></i> Yeni İstisna Ekle
-            </button>
+
+@section Styles{
+        <style>
+            .dataTables_wrapper .dataTables_filter input {
+                min-width: 220px;
+            }
+
+            .box.box-primary {
+                border-top-color: #3c8dbc;
+            }
+
+            .dt-head-center thead th {
+                text-align: center;
+            }
+
+            td pre {
+                white-space: pre-wrap;
+                margin: 0;
+                font-family: inherit;
+            }
+        </style>
+}
+
+    <section class="content">
+        <h2>İstisna Kod Listesi</h2>
+
+        <div class="box box-primary">
+            <div class="box-body">
+                <table id="grid_exceptional" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
+                    <thead>
+                        <tr>
+                            <th style="width:20%">İstisna Kodu</th>
+                            <th style="width:80%">İstisna Adı</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var r in Model)
+                            {
+                                <tr>
+                                    <td><pre>@(r.Code)</pre></td>
+                                    <td><pre>@(r.Name)</pre></td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <!-- JS ile doldurulacak -->
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="box-body">
-            <table id="grid_exceptional" class="table table-bordered table-hover dataTable">
-                <thead>
-                    <tr>
-                        <th>İstisna Kodu</th>
-                        <th>İstisna Adı</th>
-                        <th>Tür</th>
-                        <th>İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-</section>
+    </section>
 
-<!-- İstisna Modal -->
-<div class="modal fade" id="mdlExceptional" tabindex="-1" role="dialog" aria-labelledby="mdlExceptionalLabel">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content">
-            <form id="frmExceptional">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="mdlExceptionalLabel">İstisna Kod Bilgisi</h4>
-                </div>
+@section Scripts{
 
-                <div class="modal-body">
-                    <input type="hidden" id="excId" />
+        <script>
+            (function () {
+                // API başarısız olursa kullanılacak fallback liste (paylaştığınız içerikten)
+                var fallbackExemptions = [
+                    { code: 302, name: "11/1-a Hizmet ihracatı" },
+                    { code: 301, name: "11/1-a Mal ihracatı" },
+                    { code: 303, name: "11/1-a Roaming hizmetleri" },
+                    { code: 316, name: "11/1-a Serbest Bölgelerdeki Müşteriler İçin Yapılan Fason Hizmetler" },
+                    { code: 322, name: "11/1-a Türkiye'de İkamet Etmeyenlere Özel Fatura ile Yapılan Teslimler (Bavul Ticareti)" },
+                    { code: 304, name: "13/a Deniz hava ve demiryolu taşıma araçlarının teslimi ile inşa, tadil, bakım ve onarımları" },
+                    { code: 305, name: "13/b Deniz ve hava taşıma araçları için liman ve hava meydanlarında yapılan hizmetler" },
+                    { code: 307, name: "13/c Kıymetli madenlerin arama, zenginleştirme ve rafinaj faaliyetleri" },
+                    { code: 306, name: "13/c Petrol aramaları" },
+                    { code: 308, name: "13/d Teşvikli yatırım mallarının teslimi" },
+                    { code: 309, name: "13/e Liman ve hava meydanlarının inşası, yenilenmesi ve genişletilmesi" },
+                    { code: 310, name: "13/f Ulusal güvenlik amaçlı teslim ve hizmetler" },
+                    { code: 319, name: "13/g Başbakanlık Merkez Teşkilatına Yapılan Araç Teslimleri" },
+                    { code: 324, name: "13/h Türkiye Kızılay Derneğine Yapılan Teslim ve Hizmetler ile Türkiye Kızılay Derneğinin Teslim ve Hizmetleri" },
+                    { code: 328, name: "13/i Konut veya İşyeri Teslimleri" },
+                    { code: 344, name: "13/o Milli Savunma ve İç Güvenlik İhtiyaçlarında Kullanılmak Üzere Taşıt Teslimi" },
+                    { code: 323, name: "13/ğ 5300 Sayılı Kanuna Göre Düzenlenen Ürün Senetlerinin İhtisas/Ticaret Borsaları Aracılığıyla İlk Teslimi" },
+                    { code: 327, name: "13/ı ... Hammaddelerin Gübre Üreticilerine Teslimi" },
+                    { code: 326, name: "13/ı Gıda, Tarım ve Hayvancılık Bakanlığı Tarafından Tescil Edilmiş Gübrelerin Teslimi" },
+                    { code: 325, name: "13/ı Yem Teslimleri" },
+                    { code: 311, name: "14/1 Uluslararası taşımacılık" },
+                    { code: 315, name: "14/3 İhraç Konusu Eşyayı Taşıyan Kamyon, Çekici ve Yarı Romorklara Yapılan Motorin Teslimleri" },
+                    { code: 312, name: "15/a Diplomatik organ ve misyonlara yapılan teslim ve hizmetler" },
+                    { code: 313, name: "15/b Uluslararası kuruluşlara yapılan teslim ve hizmetler" },
+                    { code: 235, name: "16/1-c Transit ve Gümrük Antrepo Rejimleri ... Malların Teslimi" },
+                    { code: 201, name: "17/1 Kültür ve eğitim amacı taşıyan işlemler" },
+                    { code: 202, name: "17/2-a Sağlık, çevre ve sosyal yardım amaçlı işlemler" },
+                    { code: 229, name: "17/2-b Gıda Bankacılığı ... bağışlanan gıda, temizlik, giyecek ve yakacak maddeleri" },
+                    { code: 227, name: "17/2-b Kanunların Gösterdiği Gerek Üzerine Bedelsiz Teslim ve Hizmetler" },
+                    { code: 228, name: "17/2-b (17/1) kapsamındaki kurumlara bedelsiz teslimler" },
+                    { code: 226, name: "17/2-b Özel okullar, üniversite ve yüksekokulların bedelsiz eğitim-öğretim hizmetleri" },
+                    { code: 204, name: "17/2-c Yabancı diplomatik organ ve hayır kurumlarının bağışlarıyla ilgili alımlar" },
+                    { code: 205, name: "17/2-d Taşınmaz kültür varlıklarına ilişkin teslimler ve mimarlık hizmetleri" },
+                    { code: 206, name: "17/2-e Mesleki kuruluşların işlemleri" },
+                    { code: 207, name: "17/3 Askeri fabrika" },
+                    { code: 218, name: "17/4-0 Gümrük antrepoları, geçici depolama, gümrüklü sahalar ve duty-free hizmetleri" },
+                    { code: 208, name: "17/4-c Birleşme, devir, dönüşüm ve bölünme işlemleri" },
+                    { code: 209, name: "17/4-e BSMV kapsamına giren işlemler" },
+                    { code: 232, name: "17/4-g Döviz, para, damga pulu, değerli kağıtlar, hisse senedi ve tahvil teslimleri" },
+                    { code: 230, name: "17/4-g Külçe altın, külçe gümüş ve kıymetli taşlar teslimi" },
+                    { code: 231, name: "17/4-g Metal, plastik, lastik, kauçuk, kağıt, cam hurda ve atık teslimleri" },
+                    { code: 211, name: "17/4-h Zirai amaçlı veya köy tüzel kişiliklerince yapılan içme suyu teslimleri" },
+                    { code: 213, name: "17/4-j Boru hattı ile yapılan petrol ve gaz taşımacılığı" },
+                    { code: 214, name: "17/4-k OSB arsa/işyeri teslimleri ve kooperatiflerin konut teslimleri" },
+                    { code: 215, name: "17/4-l Varlık yönetim şirketlerinin işlemleri" },
+                    { code: 216, name: "17/4-m Tasarruf mevduatı sigorta fonunun işlemleri" },
+                    { code: 217, name: "17/4-n Basın-Yayın ve Enformasyon GM'ye verilen haber hizmetleri" },
+                    { code: 219, name: "17/4-p Hazine ve Arsa Ofisi GM işlemleri" },
+                    { code: 220, name: "17/4-r İki tam yıl elde tutulan taşınmaz ve iştirak hisseleri satışları" },
+                    { code: 317, name: "17/4-s Engellilere ilişkin araç-gereç ve bilgisayar programları" }
+                ];
 
-                    <div class="form-group">
-                        <label for="excCode">İstisna Kodu</label>
-                        <input type="text" class="form-control" id="excCode" required />
-                    </div>
+                function renderRows(rows) {
+                    var $tbody = $('#grid_exceptional tbody');
+                    $tbody.empty();
+                    rows.forEach(function (r) {
+                        var tr = '<tr>'
+                            + '<td><pre>' + (r.code ?? r.Code) + '</pre></td>'
+                            + '<td><pre>' + (r.name ?? r.Name) + '</pre></td>'
+                            + '</tr>';
+                        $tbody.append(tr);
+                    });
+                }
 
-                    <div class="form-group">
-                        <label for="excTitle">İstisna Adı</label>
-                        <input type="text" class="form-control" id="excTitle" required />
-                    </div>
+                function initDataTable() {
+                    var $tbl = $('#grid_exceptional');
+                    if ($.fn.DataTable.isDataTable($tbl)) {
+                        $tbl.DataTable().destroy();
+                    }
+                    $tbl.DataTable({
+                        pageLength: 25,
+                        order: [[0, 'asc']],
+                        columnDefs: [{ targets: 0, type: 'num' }],
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+                    });
+                }
 
-                    <div class="form-group">
-                        <label for="excSolution">Açıklama / Çözüm 1</label>
-                        <textarea class="form-control" id="excSolution" rows="2"></textarea>
-                    </div>
+                $(function () {
+                    var hasServerRows = $('#grid_exceptional tbody tr').length > 0;
 
-                    <div class="form-group">
-                        <label for="excSolution2">Açıklama / Çözüm 2</label>
-                        <textarea class="form-control" id="excSolution2" rows="2"></textarea>
-                    </div>
+                    if (hasServerRows) {
+                        initDataTable();
+                        return;
+                    }
 
-                    <div class="form-group">
-                        <label for="excType">Tür</label>
-                        <select class="form-control" id="excType">
-                            <option value="">Seçiniz</option>
-                            <option value="KDV">KDV</option>
-                            <option value="Muafiyet">Muafiyet</option>
-                            <option value="İstisna">İstisna</option>
-                            <option value="Tevkifat">Tevkifat</option>
-                        </select>
-                    </div>
-                </div>
+                    // Önce API'den dene; olmazsa fallback'i kullan
+                    $.ajax({
+                        url: '/api/istisna-kodlari', // beklenen çıktı: [{ code, name }]
+                        method: 'GET',
+                        dataType: 'json',
+                        timeout: 10000
+                    }).done(function (data) {
+                        if (Array.isArray(data) && data.length > 0) {
+                            renderRows(data);
+                        } else {
+                            renderRows(fallbackExemptions);
+                        }
+                    }).fail(function () {
+                        renderRows(fallbackExemptions);
+                    }).always(function () {
+                        initDataTable();
+                    });
+                });
 
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@section Scripts {
-    <script type="module" src="~/apps/exceptionalcodes.js"></script>
+            })();
+        </script>
 }

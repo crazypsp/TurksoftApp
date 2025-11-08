@@ -4,115 +4,977 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content-header">
-    <h1>Ayarlar</h1>
-    <ol class="breadcrumb">
-        <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Anasayfa</a></li>
-        <li class="active">Ayarlar</li>
-    </ol>
-</section>
-
 <section class="content">
-    <div class="panel panel-sky">
-        <div class="panel-body">
+    <style>
+        h3.highlight {
+            font-weight: bold;
+            color: red;
+            font-size: 24px;
+            text-align: center; /* 'position:center' hatalıydı */
+        }
 
-            <!-- 🔧 Firma Bilgileri -->
-            <div class="box box-default">
-                <div class="box-header with-border">
-                    <h3 class="box-title"><i class="fa fa-building"></i> Firma Bilgileri</h3>
-                </div>
-                <div class="box-body form-horizontal">
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Firma Adı</label>
-                        <div class="col-sm-6"><input type="text" class="form-control" id="CompanyName" /></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">VKN/TCKN</label>
-                        <div class="col-sm-6"><input type="text" class="form-control" id="VknTckn" maxlength="11" /></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Adres</label>
-                        <div class="col-sm-6"><textarea class="form-control" id="Address"></textarea></div>
-                    </div>
-                </div>
-            </div>
+        .hidden {
+            display: none;
+        }
 
-            <!-- 👤 Kullanıcı Ayarları -->
-            <div class="box box-default">
-                <div class="box-header with-border">
-                    <h3 class="box-title"><i class="fa fa-user"></i> Kullanıcı Bilgileri</h3>
-                </div>
-                <div class="box-body form-horizontal">
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Ad Soyad</label>
-                        <div class="col-sm-6"><input type="text" class="form-control" id="FullName" /></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">E-Posta</label>
-                        <div class="col-sm-6"><input type="email" class="form-control" id="Email" /></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Telefon</label>
-                        <div class="col-sm-6"><input type="tel" class="form-control" id="Phone" /></div>
-                    </div>
-                </div>
-            </div>
+        .inputPadding {
+            padding-left: 0;
+            padding-right: 0;
+        }
+    </style>
 
-            <!-- ⚙️ Genel Ayarlar -->
-            <div class="box box-default">
-                <div class="box-header with-border">
-                    <h3 class="box-title"><i class="fa fa-cog"></i> Genel Ayarlar</h3>
-                </div>
-                <div class="box-body form-horizontal">
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Tema</label>
-                        <div class="col-sm-6">
-                            <select id="Theme" class="form-control">
-                                <option value="red">Kırmızı</option>
-                                <option value="blue">Mavi</option>
-                                <option value="green">Yeşil</option>
-                            </select>
+    <!-- NOT: Bu sayfada inline <script> kullanılmıyor; tüm JS, /js/settings-page.js dosyasına taşındı. -->
+    <!-- Başlangıç: Üst sekmeler -->
+    <ul class="nav nav-tabs">
+        <li><a data-toggle="tab" href="#VeritabaniAyarlari">Veri Tabanı Ayarları</a></li>
+        <li><a data-toggle="tab" href="#XsltTasarim">Fatura Tasarımı</a></li>
+        <li><a data-toggle="tab" href="#KullanicilarYetkiler">Kullanıcılar ve Yetkileri</a></li>
+        <li><a data-toggle="tab" href="#FtNoEmailAyarları">E-Mail Ayarları</a></li>
+        <li class="active"><a data-toggle="tab" href="#FaturaNoAyarlari">Fatura No Ayarları</a></li>
+        <li><a data-toggle="tab" href="#BildirimAyarlari">Bildirim Ayarları</a></li>
+        <li><a data-toggle="tab" href="#KullaniciBazliGelen">Kullanıcı Bazlı Gelen Fatura Ayarları</a></li>
+        <li><a data-toggle="tab" href="#ParametreAyarlari">Parametre Ayarları</a></li>
+        <li><a data-toggle="tab" href="#CihazAyarlari">Kullanıcı Doğrulama Cihaz Ayarları</a></li>
+        <li><a data-toggle="tab" href="#OzelAyarlar">Özel Ayarlar</a></li>
+    </ul>
+    <br />
+
+    <div class="tab-content">
+        <!-- ===================== VERİTABANI AYARLARI ===================== -->
+        <div id="VeritabaniAyarlari" class="tab-pane fade">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="box box-default">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Veri Tabanı Ayarları</h3>
+                        </div>
+                        <div class="box-body form-horizontal">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Veritabanı Ayar Tipi</label>
+                                <div class="col-sm-10">
+                                    <select class="form-control" id="ddlveritabaniayartipi" name="ddlveritabaniayartipi">
+                                        <option value="1" selected>Fatura</option>
+                                        <option value="2">Defter</option>
+                                        <option value="3">İrsaliye</option>
+                                        <option value="4">Müstahsil</option>
+                                        <option value="5">Smm</option>
+                                        <option value="6">Banka</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Veritabanı Tipi</label>
+                                <div class="col-sm-10">
+                                    <select class="form-control" id="ddlveritabanitipi" name="ddlveritabanitipi">
+                                        <option value="1" selected>Sql Server</option>
+                                        <option value="2">Fribird</option>
+                                        <option value="3">Oracle</option>
+                                        <option value="4">ODBC</option>
+                                        <option value="5">OLEDB (dBASE IV,ACCESS)</option>
+                                        <option value="6">Paradox 5.x</option>
+                                        <option value="7">Pervasive SQL 2000</option>
+                                        <option value="8">MySql</option>
+                                        <option value="9">IBM DB2</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Kısa alanlar -->
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Firma No</label>
+                                <div class="col-sm-10">
+                                    <input id="txtFirmaNo" name="txtFirmaNo" type="text" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Dönem No</label>
+                                <div class="col-sm-10">
+                                    <input id="txtDonemNo" name="txtDonemNo" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Server Adı</label>
+                                <div class="col-sm-10">
+                                    <input id="txtServerAdi" name="txtServerAdi" type="text" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Port</label>
+                                <div class="col-sm-10">
+                                    <input id="txtPort" name="txtPort" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">DB Kullanıcı Adı</label>
+                                <div class="col-sm-10">
+                                    <input id="txtDbKullanici" name="txtDbKullanici" type="text" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">DB Şifresi</label>
+                                <div class="col-sm-10">
+                                    <input id="txtDbSifre" name="txtDbSifre" placeholder="yeni db şifrenizi giriniz" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Veritabanı Adı</label>
+                                <div class="col-sm-10">
+                                    <input id="txtVeritabaniAdi" name="txtVeritabaniAdi" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Entegrator Adı</label>
+                                <div class="col-sm-10">
+                                    <select disabled name="ddlEntegrator" id="ddlEntegrator" class="form-control" style="width:100%">
+                                        <option value="1">Medyasoft</option>
+                                        <option value="2">İsis Bilişim</option>
+                                        <option value="3">Fit Solutions</option>
+                                        <option value="4">Hizli Teknoloji</option>
+                                        <option value="5">Zirve Donusum</option>
+                                        <option value="6">Kolaysoft Teknoloji</option>
+                                        <option value="7">Smart Dönüşüm</option>
+                                        <option value="8">İng Bank</option>
+                                        <option value="9">Finans Bank</option>
+                                        <option value="10">Uni-dox</option>
+                                        <option value="11">TürkKep</option>
+                                        <option value="12">Logo Yazılım</option>
+                                        <option value="13">Edm Bilişim</option>
+                                        <option value="14">4C Teknoloji</option>
+                                        <option value="15">Digital Planet</option>
+                                        <option value="16">Uyumsoft</option>
+                                        <option value="17">İzibiz</option>
+                                        <option value="18">Mikro</option>
+                                        <option value="19">Gib Portal</option>
+                                        <option value="20">Hizli Teknoloji 20</option>
+                                        <option value="21">Edoksis.Net</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- NOT: Çok uzun "Sorgu Eşleme" select’ini olduğu gibi bırakıyoruz -->
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Sorgu Eşleme</label>
+                                <div class="col-sm-10">
+                                    <!-- Buraya senin verdiğin uzun seçenekler aynen gelebilir -->
+                                    <select name="ddlSorguEsleme" id="ddlSorguEsleme" class="form-control select2" style="width: 100%">
+                                        <option value="1">ETA SORGUSU</option>
+                                        <option value="2">WINNER SORGUSU</option>
+                                        <!-- … (uzun listeyi projendeki sürümle doldur) … -->
+                                    </select>
+
+                                    <div id="lucaModalDiv" hidden>
+                                        <button type="button" onclick="LucaModal()" class="btn btn-info pull-right col-sm-5">
+                                            <i class="fa fa-user-o"></i> Luca Ayar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">DBase Database Yolu</label>
+                                <div class="col-sm-10">
+                                    <input id="txtDbase" name="txtDbase" type="text" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Firebird Database Yolu</label>
+                                <div class="col-sm-10">
+                                    <input id="txtFirebird" name="txtFirebird" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Sabit Senaryo</label>
+                                <div class="col-sm-10">
+                                    <select name="ddlSabitSenaryo" id="ddlSabitSenaryo" class="form-control" style="width:100%">
+                                        <option value="">Seçiniz</option>
+                                        <option value="TICARIFATURA">TICARIFATURA</option>
+                                        <option value="TEMELFATURA">TEMELFATURA</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">WS Kullanıcı Adı</label>
+                                <div class="col-sm-10">
+                                    <input id="EntegratorUsername" disabled name="EntegratorUsername" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Ws Şifre</label>
+                                <div class="col-sm-10">
+                                    <input id="EntegratorPassword" name="EntegratorPassword" placeholder="yeni ws şifrenizi giriniz" type="text" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label class="col-sm-2 control-label"></label>
+                                <div class="col-sm-5">
+                                    <button type="button" id="veriTabaniTest" class="btn btn-warning">
+                                        <i class="fa fa-send"></i> Veri Tabanı Bağlantısını Test Et
+                                    </button>
+                                </div>
+                                <div class="col-sm-5">
+                                    <button type="button" id="veriTabaniKaydet" class="btn btn-success pull-right col-sm-5">
+                                        <i class="fa fa-save"></i> Kaydet
+                                    </button>
+                                </div>
+                            </div>
+                        </div> <!-- /.box-body -->
+                    </div> <!-- /.box -->
+                </div> <!-- /.col -->
+            </div> <!-- /.row -->
+        </div>
+
+        <!-- ===================== XSLT TASARIM ===================== -->
+        <div id="XsltTasarim" class="tab-pane fade">
+            <div class="row">
+                <div class="col-md-4" id="xsltLeftCol">
+                    <div class="box box-default">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">XSLT Bilgileri</h3>
+                        </div>
+                        <div class="box-body">
+                            <div class="form-group">
+                                <label class="col-sm-4 col-form-label">XSLT Türü </label>
+                                <div class="col-sm-10">
+                                    <select class="form-control" id="xsltServiceType">
+                                        <option value="-1">Seçiniz</option>
+                                        <option value="0">e-Arşiv Fatura</option>
+                                        <option value="1" selected>e-Fatura</option>
+                                        <option value="5">e-İrsaliye</option>
+                                        <option value="6">e-Serbest Meslek Makbuzu</option>
+                                        <option value="7">e-Müstahsil Makbuzu</option>
+                                        <option value="14">e-Döviz</option>
+                                        <option value="16">e-Adisyon</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-4 col-form-label">XSLT Adı</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="XsltName" />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Dil</label>
-                        <div class="col-sm-6">
-                            <select id="Language" class="form-control">
-                                <option value="tr">Türkçe</option>
-                                <option value="en">İngilizce</option>
-                            </select>
+
+                    <!-- Firma Bilgileri -->
+                    <div class="box box-default" id="firmaInfoDiv">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Firma Bilgileri</h3>
+                        </div>
+                        <div class="box-body">
+                            <div class="form-group">
+                                <label class="col-sm-4 col-form-label">Logo </label>
+                                <div class="col-sm-10">
+                                    <input type="file" class="form-control" accept=".png,.bmp,.jpg" id="FileFirmaLogo" />
+                                </div>
+                                <div class="cell colspan">
+                                    <div class="col-sm-5">
+                                        Genişlik (1-255): <input type="text" class="form-control" id="Width_Logo" value="200" />
+                                    </div>
+                                    <div class="col-sm-5">
+                                        Yükseklik (1-255): <input type="text" class="form-control" id="Height_Logo" value="100" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-4 col-form-label">Kaşe/İmza</label>
+                                <div class="col-sm-10">
+                                    <input type="file" class="form-control" accept=".png,.bmp,.jpg" id="FileFirmaKaseImza" />
+                                </div>
+                                <div class="cell colspan">
+                                    <div class="col-sm-5">
+                                        Genişlik (1-255): <input type="text" class="form-control" id="Width_Imza" value="200" />
+                                    </div>
+                                    <div class="col-sm-5">
+                                        Yükseklik (1-255): <input type="text" class="form-control" id="Height_Imza" value="100" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-4 col-form-label">Tasarım Renk</label>
+                                <div class="col-sm-10">
+                                    <input type="color" id="colorinput" class="form-control" value="#000000" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Banka Bilgileri -->
+                    <div class="box box-default" id="BankaInfoDiv">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Banka Bilgileri</h3>
+                        </div>
+                        <div class="box-body form-horizontal">
+                            <div class="form-group">
+                                <div class="col-sm-12">
+                                    <table id="tableXsltBank" class="table table-bordered table-hover dataTable" style="width:100%">
+                                        <caption>
+                                            <div class="btn btn-success btn-xs btn-labeled" style="float:right" id="btnBankEkle">
+                                                <i class="fa fa-plus"></i> Yeni Banka Ekle
+                                            </div>
+                                        </caption>
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align:center;width:5px!important">Banka Adı</th>
+                                                <th style="text-align:center;">Para Birimi</th>
+                                                <th style="text-align:center;">Iban</th>
+                                                <th style="text-align:center;">İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sabit Notlar -->
+                    <div class="box box-default" id="SabitInfoDiv">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Sabit Notlar</h3>
+                        </div>
+                        <div class="box-body form-horizontal">
+                            <div class="form-group">
+                                <div class="col-sm-12">
+                                    <table id="tableXsltNote" class="table table-bordered table-hover dataTable" style="width:100%">
+                                        <caption>
+                                            <div class="btn btn-success btn-xs btn-labeled" style="float:right" id="btnNoteEkle">
+                                                <i class="fa fa-plus"></i> Yeni Not Ekle
+                                            </div>
+                                        </caption>
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align:center;width:80%!important">Not</th>
+                                                <th style="text-align:center;width:20%!important">İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody style="word-break:break-all"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- XSLT Yükle butonları -->
+                    <div class="box box-default">
+                        <div class="box-body">
+                            <button id="btnYeniXslt" class="btn btn-success">Yeni XSLT Tasarım Oluştur</button>
+                            <button id="btnManuelXslt" class="btn btn-danger">Yeni Özel XSLT Tasarım Yükle</button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 📑 Belge Durumu -->
-            <div class="box box-default">
-                <div class="box-header with-border">
-                    <h3 class="box-title"><i class="fa fa-file-text-o"></i> Belge Durumu</h3>
+                <div class="col-md-8">
+                    <iframe id="xsltpreview-iframe" src="" style="width: 100%; min-height: 750px;"></iframe>
+                    <div class="mt-2">
+                        <button type="button" id="btnXsltOnizle" class="btn btn-instagram btn-lg">
+                            <i class="fa fa-search"></i> ÖNİZLE
+                        </button>
+                        <button type="button" id="btnXsltKaydet" class="btn btn-success btn-lg">
+                            <i class="fa fa-save"></i> KAYDET
+                        </button>
+                    </div>
                 </div>
-                <div class="box-body">
-                    <table class="table table-bordered table-hover" id="tblDocumentStatus">
+            </div>
+        </div>
+
+        <!-- ===================== KULLANICILAR & YETKİLER ===================== -->
+        <div id="KullanicilarYetkiler" class="tab-pane fade">
+            <ul class="nav nav-tabs" id="tabs">
+                <li class="active"><a href="#Kullanicilar" data-toggle="tab">Kullanıcılar - Roller</a></li>
+                <li><a href="#Roller" data-toggle="tab">Roller - Yetkiler</a></li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane active" id="Kullanicilar">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="box box-default">
+                                <div class="box-header with-border">
+                                    <h3 class="box-title">Kullanıcılar</h3>
+                                </div>
+                                <div class="box-body form-horizontal">
+                                    <button id="btnUserAddMdl" class="btn btn-success pull-left">Kullanıcı Ekle</button>
+                                    <table id="grid_kullanici" class="table table-bordered table-hover dataTable">
+                                        <thead><tr><th>Kullanıcı Adı</th></tr></thead>
+                                        <tbody>
+                                            <tr><td>14177961286</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="box box-default">
+                                <div class="box-header with-border">
+                                    <h3 class="box-title">Kullanıcının Rolleri</h3>
+                                </div>
+                                <div class="box-body form-horizontal">
+                                    <button id="btnRolEkle" class="btn btn-success pull-left">Yeni Rol Ekle</button>
+                                    <button id="btnDegisiklikleriKaydet" class="btn btn-default pull-right hidden">Değişiklikleri Kaydet</button>
+                                </div>
+                                <div class="box-body form-horizontal">
+                                    <div id="accordioninpanel" class="accordion-group">
+                                        <table id="gridRol" class="table table-bordered table-hover dataTable" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th>Seçiniz</th>
+                                                    <th>Rol Adı</th>
+                                                    <th>Rol Açıklama</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- /col -->
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="Roller">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="box box-default">
+                                <div class="box-header with-border">
+                                    <h3 class="box-title">Roller</h3>
+                                </div>
+                                <div class="box-body form-horizontal">
+                                    <button id="btnYeniRolEkle" class="btn btn-success pull-left">Yeni Rol Ekle</button>
+                                </div>
+                                <div class="box-body form-horizontal">
+                                    <div class="accordion-group">
+                                        <table class="table table-bordered table-hover dataTable" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th></th>
+                                                    <th>Rol Adı</th>
+                                                    <th>Rol Açıklama</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="box box-default">
+                                <div class="box-header with-border">
+                                    <h3 class="box-title">Rollerin Yetkileri</h3>
+                                </div>
+                                <div class="box-body form-horizontal">
+                                    <label class="col-md-1 control-label pull-left">Arama</label>
+                                    <input type="text" id="txtYetkiAra" class="col-md-2 pull-left" />
+                                    <button id="btnRolYetkiKaydet" class="btn btn-default pull-right hidden">Değişiklikleri Kaydet</button>
+                                </div>
+                                <div class="box-body form-horizontal">
+                                    <div id="accordioninpanel2" class="accordion-group">
+                                        <table class="table table-bordered table-hover dataTable" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th>Seçiniz</th>
+                                                    <th>Yetki Adı</th>
+                                                    <th>Yetki Açıklama</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                        <button id="btnYetkiPrev" class="hidden" disabled>Önceki</button>
+                                        <span id="spanYetkiSayfa" class="hidden">1/0</span>
+                                        <button id="btnYetkiNext" class="hidden" disabled>Sonraki</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- /col -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== E-MAIL AYARLARI ===================== -->
+        <div id="FtNoEmailAyarları" class="tab-pane fade">
+            <div class="row">
+                <form id="EmailAyarForm">
+                    <div class="col-md-6">
+                        <div class="box box-default">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">E-Mail Ayarları</h3>
+                            </div>
+                            <div class="box-body form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">Host</label>
+                                    <div class="col-sm-6">
+                                        <input id="txtHost" name="txtHost" type="text" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">From Adresi</label>
+                                    <div class="col-sm-6">
+                                        <input id="txtFormAdres" name="txtFormAdres" type="text" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">Bcc(Gizli cc)</label>
+                                    <div class="col-sm-6">
+                                        <input id="txtBcc" name="txtBcc" type="text" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">Smtp Kullanıcı Adı</label>
+                                    <div class="col-sm-6">
+                                        <input id="txtSmptKullaniciAdi" name="txtSmptKullaniciAdi" type="text" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">Smtp Şifre</label>
+                                    <div class="col-sm-6">
+                                        <input id="txtSmptSifre" name="txtSmptSifre" type="password" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">Smtp Port</label>
+                                    <div class="col-sm-6">
+                                        <input id="txtSmptPort" name="txtSmptPort" type="text" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">Ssl</label>
+                                    <div class="col-sm-6">
+                                        <input type="checkbox" id="sslChk" />
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-10">
+                                    <button type="button" id="emailAyarSilBtn" class="btn btn-secondary col-sm-2">
+                                        <i class="fa fa-remove"></i> Sil
+                                    </button>
+                                    <button type="button" id="emailAyarKaydetBtn" class="btn btn-success col-sm-2">
+                                        <i class="fa fa-save"></i> Kaydet
+                                    </button>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">Test Mail Adresi</label>
+                                    <div class="col-sm-6">
+                                        <input id="txtTestMailAdresId" name="txtTestMailAdres" type="text" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-2 control-label"></label>
+                                    <div class="col-sm-10">
+                                        <button type="button" id="btnTestMailGonder" class="btn btn-success col-sm-3">
+                                            <i class="fa fa-envelope"></i> Test E-Mail Gönder
+                                        </button>
+                                    </div>
+                                </div>
+                            </div> <!-- /.box-body -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ===================== FATURA NO AYARLARI ===================== -->
+        <div id="FaturaNoAyarlari" class="tab-pane fade in active">
+            <div id="PrefixBilgileri" class="tab-pane fade in active">
+                <div class="form-group">
+                    <div class="panel panel-sky">
+                        <div class="panel-body">
+                            <div class="box box-default">
+                                <div class="box-header with-border">
+                                    <h3 class="box-title">Fatura No Arama Seçenekleri</h3>
+                                </div>
+                                <div class="box-body" id="btnAramaYapEnter">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-horizontal row">
+                                                <label class="control-label col-sm-6">Şube Adı</label>
+                                                <div class="col-sm-6 inputPadding">
+                                                    <input id="SubeAdi" type="text" class="form-control" />
+                                                </div>
+                                            </div>
+                                            <div class="form-horizontal row">
+                                                <label class="control-label col-sm-6">Belge Türü</label>
+                                                <div class="col-sm-6 inputPadding">
+                                                    <select id="BelgeTur" class="form-control">
+                                                        <option value="">Seçiniz</option>
+                                                        <option value="1">E-Fatura</option>
+                                                        <option value="2">E-Arşiv</option>
+                                                        <option value="3">E-Arşiv İnternet Satışı</option>
+                                                        <option value="4">E-İrsaliye</option>
+                                                        <option value="5">E-SMM</option>
+                                                        <option value="6">E-Müstahsil</option>
+                                                        <option value="7">E-İrsaliye Yaniti</option>
+                                                        <option value="8">E-Gider Pusulası</option>
+                                                        <option value="9">E-Döviz Alım</option>
+                                                        <option value="10">E-Döviz Satış</option>
+                                                        <option value="11">E-Adisyon</option>
+                                                        <option value="12">E-Kıymetli Maden Alım</option>
+                                                        <option value="13">E-Kıymetli Maden Satış</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <div class="form-horizontal row">
+                                                <label class="control-label col-sm-6">Belge Ön Eki</label>
+                                                <div class="col-sm-6 inputPadding">
+                                                    <input id="BelgeOnEki" type="text" class="form-control" />
+                                                </div>
+                                            </div>
+                                            <div class="form-horizontal row">
+                                                <label class="control-label col-sm-6">Yıl</label>
+                                                <div class="col-sm-6 inputPadding">
+                                                    <input id="filterYil" type="text" class="form-control" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <div class="form-horizontal row">
+                                                <label class="control-label col-sm-6">Son Belge Sayısı</label>
+                                                <div class="col-sm-6 inputPadding">
+                                                    <input id="SonBelgeSayisi" type="text" class="form-control" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-header">
+                                        <div class="input-group input-group-md pull-left" style="padding:3px 6px;">
+                                            <button type="button" id="PrefixOlustur" class="btn btn-success">
+                                                Yeni Oluştur <span class="btn-label"><i class="glyphicon glyphicon-plus"></i></span>
+                                            </button>
+                                        </div>
+                                        <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                                            <button type="button" id="btnAramaYap" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+                                        </div>
+                                        <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                                            <button type="button" id="btnTemizle" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table id="gridPrefixCode" class="table table-bordered table-hover dataTable" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center">Şube Adı</th>
+                                                    <th class="text-center">Belge Türü</th>
+                                                    <th class="text-center">Belge Ön Eki</th>
+                                                    <th class="text-center">Yıl</th>
+                                                    <th class="text-center">Son Belge Sayısı</th>
+                                                    <th class="text-center">Öncelik Durumu</th>
+                                                    <th class="text-center">İşlemler</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td class="text-center">MURAT ÖZCAN</td>
+                                                    <td class="text-center">e-Fatura</td>
+                                                    <td class="text-center">MRT</td>
+                                                    <td class="text-center">2025</td>
+                                                    <td class="text-center">0</td>
+                                                    <td class="text-center"><span class="label label-success">Öncelikli</span></td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-warning" title="Düzenle" onclick="PrefixCodeEdit(331939,57918)"><i class="fa fa-edit"></i></button>
+                                                        <button class="btn btn-danger" title="Sil" onclick="PrefixCodeDelete(331939,57918)"><i class="fa fa-remove"></i></button>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center">MURAT ÖZCAN</td>
+                                                    <td class="text-center">e-Arşiv Fatura</td>
+                                                    <td class="text-center">MUT</td>
+                                                    <td class="text-center">2025</td>
+                                                    <td class="text-center">0</td>
+                                                    <td class="text-center"><span class="label label-success">Öncelikli</span></td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-warning" title="Düzenle" onclick="PrefixCodeEdit(331940,57918)"><i class="fa fa-edit"></i></button>
+                                                        <button class="btn btn-danger" title="Sil" onclick="PrefixCodeDelete(331940,57918)"><i class="fa fa-remove"></i></button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div> <!-- /.box-body -->
+                            </div> <!-- /.box -->
+                        </div> <!-- /.panel-body -->
+                    </div> <!-- /.panel -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== BİLDİRİM AYARLARI ===================== -->
+        <div id="BildirimAyarlari" class="tab-pane fade">
+            <form id="Rules">
+                <div class="panel panel-sky">
+                    <div class="panel-body">
+                        <div class="box box-default">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Gelen Fatura Uyarı Bilgileri</h3>
+                            </div>
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-horizontal row">
+                                            <label class="control-label col-sm-6">Tüm Müşteriler İçin:</label>
+                                            <div class="col-sm-6 inputPadding">
+                                                <input id="allCustomer" type="checkbox" />
+                                            </div>
+                                        </div>
+                                        <div class="form-horizontal row">
+                                            <label class="control-label col-sm-6">Gönderici VKN:</label>
+                                            <div class="col-sm-6 inputPadding">
+                                                <input id="senderVKN" type="text" class="form-control" />
+                                            </div>
+                                        </div>
+                                        <div class="form-horizontal row">
+                                            <label class="control-label col-sm-6">Uyarı Türü:</label>
+                                            <div class="col-sm-6 inputPadding">
+                                                <select id="alertType" class="form-control select2" style="width:100%">
+                                                    <option value="EPOSTA" selected>E-Posta</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-horizontal row">
+                                            <label class="control-label col-sm-6">Hizmet Türü:</label>
+                                            <div class="col-sm-6 inputPadding">
+                                                <select id="servType" class="form-control select2" style="width:100%">
+                                                    <option value=""></option>
+                                                    <option value="1">E-Fatura</option>
+                                                    <option value="4">E-İrsaliye</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-horizontal row">
+                                            <label class="control-label col-sm-6">E-Posta:</label>
+                                            <div class="col-sm-6 inputPadding">
+                                                <input id="ePosta" type="email" class="form-control" />
+                                            </div>
+                                        </div>
+                                    </div> <!-- /.col -->
+                                </div>
+                            </div>
+                            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                                <button type="button" id="btnNotRuleEkle" class="btn btn-success">Ekle <i class="fa fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="body-inner">
+                            <div class="table-vertical">
+                                <table id="alertInformationGrid" class="table table-bordered table-hover dataTable" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th>Gönderici VKN/TCKN</th>
+                                            <th>Uyarı Türü</th>
+                                            <th>Eposta</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div> <!-- /.panel-body -->
+                </div>
+            </form>
+        </div>
+
+        <!-- ===================== KULLANICI BAZLI GELEN ===================== -->
+        <div id="KullaniciBazliGelen" class="tab-pane fade">
+            <div class="panel panel-sky">
+                <div class="panel-body">
+                    <div class="box box-default">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Kullanıcı Bazlı Gelen Fatura Bilgileri</h3>
+                        </div>
+                        <div class="box-body" id="btnAramaYapEnter2">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-horizontal row">
+                                        <label class="control-label col-sm-6">Gönderici VKN:</label>
+                                        <div class="col-sm-6 inputPadding">
+                                            <input id="gondericiVKN" maxlength="11" type="number" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="form-horizontal row">
+                                        <label class="control-label col-sm-6">Kullanıcı Seçiniz:</label>
+                                        <div class="col-sm-6 inputPadding">
+                                            <select id="kullaniciBazliSelect" class="form-control select2" style="width:100%">
+                                                <option value="64103">14177961286</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div> <!-- /.col -->
+                            </div>
+                        </div>
+                        <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                            <button type="button" id="btnInboxAdd" class="btn btn-success">Ekle <i class="fa fa-plus"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="body-inner">
+                        <div class="table-vertical">
+                            <table id="alertInformationGrid2" class="table table-bordered table-hover dataTable" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Alıcı VKN/TCKN</th>
+                                        <th>Kullanıcı</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div> <!-- /.panel-body -->
+            </div>
+        </div>
+
+        <!-- ===================== PARAMETRE AYARLARI ===================== -->
+        <div id="ParametreAyarlari" class="tab-pane fade">
+            <form id="Rules2">
+                <div class="panel panel-sky">
+                    <div class="panel-body">
+                        <div class="box box-default">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Parametre Bilgileri</h3>
+                            </div>
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-horizontal row">
+                                            <a style="color:red" target="_blank" href="/Gerekliler/Parametreler.txt">Parametre detaylı doküman için tıklayınız</a>
+                                            <br />
+                                            <label class="control-label col-sm-6">Parametre Adı:</label>
+                                            <div class="col-sm-6 inputPadding">
+                                                <input id="parametreAdi" list="params" type="text" class="form-control" />
+                                                <datalist id="params">
+                                                    <option value="TURMOB MENSUP KEY">TURMOB MENSUP KEY</option>
+                                                    <option value="Trendyol_Api">Trendyol_Api</option>
+                                                    <option value="Hepsiburada_Api">Hepsiburada_Api</option>
+                                                    <option value="SapFirmaId">SapFirmaId</option>
+                                                    <!-- … gerektiği kadar ekleyebilirsin … -->
+                                                </datalist>
+                                            </div>
+                                        </div>
+                                        <button type="button" id="btnDegerEkle" class="btn btn-success">Değer Ekle <i class="fa fa-plus"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                                <button type="button" id="btnParametreEkle" class="btn btn-success">Parametre Ekle <i class="fa fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="body-inner">
+                            <div class="table-vertical">
+                                <table id="alertParametreGrid" class="table table-bordered table-hover dataTable" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th>Parametre Adı</th>
+                                            <th>Değer1</th>
+                                            <th>Değer2</th>
+                                            <th>Değer3</th>
+                                            <th>Değer4</th>
+                                            <th>Değer5</th>
+                                            <th>Değer6</th>
+                                            <th>Değer7</th>
+                                            <th>Değer8</th>
+                                            <th>Değer9</th>
+                                            <th>Değer10</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div> <!-- /.panel-body -->
+                </div>
+            </form>
+        </div>
+
+        <!-- ===================== CİHAZ AYARLARI ===================== -->
+        <div id="CihazAyarlari" class="tab-pane fade">
+            <form id="Devices">
+                <div class="panel panel-sky">
+                    <div class="panel-body">
+                        <button id="btnBulkDelete" class="btn btn-danger btn-sm mb-3">
+                            <i class="fa fa-trash"></i> Seçilileri Sil
+                        </button>
+                        <div class="table-vertical">
+                            <table id="alertDeviceGrid" class="table table-bordered table-hover dataTable" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="chkSelectAll" /></th>
+                                        <th></th>
+                                        <th>Kullanıcı Adı</th>
+                                        <th>Doğrulama Tipi</th>
+                                        <th>IP Bilgisi</th>
+                                        <th>Cihaz Bilgisi</th>
+                                        <th>Doğrulama Durumu</th>
+                                        <th>Kayıt Tarihi</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div> <!-- /.panel-body -->
+                </div>
+            </form>
+        </div>
+
+        <!-- ===================== ÖZEL AYARLAR ===================== -->
+        <div id="OzelAyarlar" class="tab-pane fade">
+            <div class="body-inner">
+                <div class="table-vertical">
+                    <table id="ozelAyarGrid" class="table table-bordered table-hover dataTable" style="width:100%">
                         <thead>
                             <tr>
-                                <th>Belge</th>
-                                <th>Durum</th>
-                                <th>Tarih</th>
+                                <th>Yetki Adı</th>
+                                <th>Aktif Pasif Durumu</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td>e-Fatura</td><td>Aktif</td><td>02.10.2025</td></tr>
-                            <tr><td>e-Arşiv</td><td>Aktif</td><td>01.10.2025</td></tr>
-                            <tr><td>e-Defter</td><td>Pasif</td><td>30.09.2025</td></tr>
+                            <tr>
+                                <td>Gibe Gönderildi Olarak İşaretle Aktif</td>
+                                <td><input type="checkbox" onchange="TanimliAlanKaydet(this)" /></td>
+                            </tr>
+                            <tr>
+                                <td>Firma Dönem LocalId Aktif</td>
+                                <td><input type="checkbox" onchange="TanimliAlanKaydet(this)" /></td>
+                            </tr>
+                            <!-- … gerekirse devam … -->
                         </tbody>
                     </table>
                 </div>
             </div>
-
         </div>
-    </div>
+    </div> <!-- /.tab-content -->
+    <!-- ===================== MODALLAR ===================== -->
+
 </section>
 
 @section Scripts {
-    <script type="module" src="~/js/pages/Settings/Settings.js"></script>
+    
+    <script type="module" src="~/apps/settings.js"></script>
 }

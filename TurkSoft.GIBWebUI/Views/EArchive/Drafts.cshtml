@@ -5,106 +5,182 @@
 
 
 <section class="content">
+    <style>
+        .box {
+            border: 1px solid #ddd;
+            margin-bottom: 15px
+        }
+
+        .box-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa
+        }
+
+        .box-body {
+            padding: 15px
+        }
+
+        .dt-head-center thead th {
+            text-align: center
+        }
+
+        .inputPadding {
+            padding-left: 0
+        }
+
+        .myCollapseIcon {
+            transition: transform .2s
+        }
+
+        .rotate-45 {
+            transform: rotate(45deg)
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 220px
+        }
+
+        .select2-container--default .select2-selection--single,
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ccc;
+            min-height: 34px
+        }
+
+        .text-right {
+            text-align: right
+        }
+
+        .text-center {
+            text-align: center
+        }
+    </style>
+
     <div class="panel panel-sky">
         <div class="panel-body">
 
-            <!-- 🔍 Arama Seçenekleri -->
             <div class="box box-default">
                 <div class="box-header with-border">
-                    <h3 class="box-title">Taslak e-Arşiv Fatura Arama Seçenekleri</h3>
+                    <h3 class="box-title">Taslak e-Fatura Arama Seçenekleri</h3>
+                    <div class="box-tools pull-right">
+                        <button type="button" id="btnDetayliArama" class="btn btn-box-tool box-title" style="color:black;" data-toggle="collapse" href=".myCollapseExample">
+                            Detaylı Arama <i class="fa fa-plus myCollapseIcon"></i>
+                        </button>
+                    </div>
                 </div>
+
                 <div class="box-body" id="btnAramaYapEnter">
                     <div class="row">
+                        <!-- Kolon 1 -->
                         <div class="col-md-4">
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-6">Fatura Tarihi (Başlangıç)</label>
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="IssueDateStart" type="text" class="form-control datepicker">
+                                        <input id="IssueDateStart" type="text" class="form-control datepicker" autocomplete="off">
                                     </div>
                                 </div>
                             </div>
+
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-6">İşlem Tarihi (Başlangıç)</label>
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="CreatedDateStart" type="text" class="form-control datepicker">
+                                        <input id="CreatedDateStart" type="text" class="form-control datepicker" autocomplete="off">
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Kolon 2 -->
                         <div class="col-md-4">
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-6">Fatura Tarihi (Bitiş)</label>
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="IssueDateStartEnd" type="text" class="form-control datepicker">
+                                        <input id="IssueDateEnd" type="text" class="form-control datepicker" autocomplete="off">
                                     </div>
                                 </div>
                             </div>
+
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-6">İşlem Tarihi (Bitiş)</label>
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="CreatedDateEnd" type="text" class="form-control datepicker">
+                                        <input id="CreatedDateEnd" type="text" class="form-control datepicker" autocomplete="off">
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Kolon 3 -->
                         <div class="col-md-4">
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-6">Alıcı VKN/TCKN</label>
                                 <div class="col-sm-6 inputPadding">
-                                    <input id="TargetIdentifier" type="text" maxlength="11" class="form-control">
+                                    <input id="TargetIdentifier" type="text" maxlength="11" class="form-control" autocomplete="off" placeholder="11 hane">
                                 </div>
                             </div>
                             <div class="form-horizontal row">
-                                <label class="control-label col-sm-6">Alıcı Ünvan</label>
+                                <label class="control-label col-sm-6">Alıcı Unvan</label>
                                 <div class="col-sm-6 inputPadding">
-                                    <input id="TargetTitle" type="text" class="form-control">
+                                    <input id="TargetTitle" type="text" class="form-control" autocomplete="off">
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Detaylı (gerekirse alan ekleyebilirsin) -->
+                    <div class="collapse myCollapseExample">
+                        <!-- Şimdilik boş -->
+                    </div>
                 </div>
-                <!-- Butonlar -->
+
                 <div class="box-footer">
-                    <div class="input-group input-group-md pull-left">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                            Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a href="#" onclick="createNewDraftArsiv()"><i class="fa fa-plus-circle"></i> Yeni Oluştur</a></li>
-                            <li><a href="#" onclick="sendAllDraft()"><i class="fa fa-send"></i> Seçilileri Gönder</a></li>
-                            <li><a href="#" onclick="deleteAllDraft()"><i class="fa fa-remove"></i> Seçilileri Sil</a></li>
-                            <li><a href="#" onclick="excelDraftModalOpen()"><i class="fa fa-file-excel-o"></i> Excel'den Taslağa Kaydet</a></li>
-                        </ul>
-                    </div>
-                    <div class="input-group input-group-md pull-left">
-                        <select id="subeler" class="form-control select2" multiple data-placeholder="Şube Seçiniz" style="width:100%;">
-                            <option selected value="1">NOX YAZILIM HİZMETLERİ LİMİTED ŞİRKETİ</option>
-                        </select>
-                    </div>
-                    <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
-                        <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
-                    </div>
-                    <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
-                        <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+                    <div>
+                        <!-- Toplu İşlemler -->
+                        <div class="input-group input-group-md pull-left" style="margin-right:10px;">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                Toplu İşlem Seçiniz <span class="fa fa-caret-down"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" onclick="createNewDraft()"><i class="fa fa-plus-circle"></i> Yeni Oluştur</a></li>
+                                <li><a href="#" onclick="sendAllDraft()"><i class="fa fa-send"></i> Seçilenleri Gönder</a></li>
+                                <li><a href="#" onclick="deleteAllDraft()"><i class="fa fa-remove"></i> Seçilenleri Sil</a></li>
+                                <li class="divider"></li>
+                                <li><a href="#" onclick="excelDraftModalOpen()"><i class="fa fa-file-excel-o"></i> Excel'den Taslağa Kaydet</a></li>
+                            </ul>
+                        </div>
+
+                        <!-- Şube seçimi -->
+                        <div class="input-group input-group-md pull-left" style="margin-right:10px;min-width:260px;">
+                            <select id="subeler" class="form-control" multiple data-placeholder="Şube Seçiniz" style="width:100%;">
+                                <option selected value="1">MURAT ÖZCAN</option>
+                            </select>
+                        </div>
+
+                        <!-- Aksiyon butonları -->
+                        <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                            <button onclick="gridSearch()" type="button" class="btn btn-success">Arama Yap <i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                        <div class="input-group input-group-md pull-right" style="padding:3px 6px;">
+                            <button onclick="clearSearchInputs()" type="button" class="btn btn-danger">Temizle <i class="glyphicon glyphicon-remove-circle"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 📋 DataTable -->
+            <!-- GRID -->
             <div class="body-inner">
                 <div class="table-vertical">
-                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center">
+                    <table id="myDataTable" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
                         <thead>
                             <tr>
-                                <th><input type="checkbox" /></th>
+                                <th style="width:18px;"><input type="checkbox" id="chkAll" /></th>
                                 <th>Fatura No</th>
                                 <th>Firma Adı</th>
                                 <th>Vergi Kimlik No</th>
@@ -115,75 +191,496 @@
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr><td colspan="9" class="text-center">Tabloda herhangi bir veri mevcut değil</td></tr>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Excel'den Taslağa Modal -->
+    <div class="modal fade in bs-example-modal-lg" id="excelDraftModal" role="dialog" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="box-body form-horizontal">
+                    <div class="col-md-12">
+
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                            <h3 class="modal-title">Excel'den Taslağa Kaydet</h3>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="form-group">
+                                        <label for="excel_sube" class="control-label col-sm-3">Şube</label>
+                                        <div class="col-md-5">
+                                            <select id="excel_sube" class="form-control" onchange="setPrefixExcelList()" data-placeholder="Şube Seçiniz" style="width:100%;">
+                                                <option selected value="1">MURAT ÖZCAN</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="excel_gbetiket" class="control-label col-sm-3">Gönderici Etiket</label>
+                                        <div class="col-md-5">
+                                            <select id="excel_gbetiket" class="form-control" style="width:100%;">
+                                                <option selected value="urn:mail:defaultgb@icloud.com">urn:mail:defaultgb@icloud.com</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="excel_onek" class="control-label col-sm-3">e-Fatura Ön Ek</label>
+                                        <div class="col-md-5">
+                                            <select id="excel_onek" class="form-control" style="width:100%;"></select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="excel_onek_earsiv" class="control-label col-sm-3">e-Arşiv Ön Ek</label>
+                                        <div class="col-md-5">
+                                            <select id="excel_onek_earsiv" class="form-control" style="width:100%;"></select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="excel_onek_earsiv_internet" class="control-label col-sm-3">e-Arşiv İnternet Ön Ek</label>
+                                        <div class="col-md-5">
+                                            <select id="excel_onek_earsiv_internet" class="form-control" style="width:100%;"></select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="excel_efatura_xslt" class="control-label col-sm-3">e-Fatura XSLT</label>
+                                        <div class="col-md-5">
+                                            <select id="excel_efatura_xslt" class="form-control" style="width:100%;"></select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="excel_earsiv_xslt" class="control-label col-sm-3">e-Arşiv XSLT</label>
+                                        <div class="col-md-5">
+                                            <select id="excel_earsiv_xslt" class="form-control" style="width:100%;"></select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="col-md-4">
+                                            <input class="btn btn-default" type="file" id="FileExcel" name="FileExcel" onchange="excelFileUpload(true)" accept=".xlsx">
+                                        </div>
+                                        <div class="input-group col-md-4">
+                                            <a class="btn btn-success" href="/EInvoice/DownloadExcelPattern">Desen İndir</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <table id="gridExcelDraft" class="table table-bordered table-hover" width="100%">
+                                    <thead>
+                                        <tr>
+                                            <th>ETTN</th>
+                                            <th>Unvan</th>
+                                            <th>TCKN/VKN</th>
+                                            <th>Ödenecek Tutar</th>
+                                            <th>Senaryo</th>
+                                            <th>Durum</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+
+                                <input class="btn btn-success" type="button" id="excel" name="excel" style="float:right" onclick="excelFileUpload(false)" value="Taslak Kaydet">
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 📑 Excel'den Taslak Kaydet Modal -->
-    <div class="modal fade" id="excelDraftModal" role="dialog">
+    <!-- İmzalama Modal -->
+    <div class="modal fade in bs-example-modal-lg" id="signDraftModal" role="dialog" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title">Excel'den Taslağa Kaydet</h3>
-                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                </div>
-                <div class="modal-body">
-                    <form class="form-horizontal">
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Şube</label>
-                            <div class="col-sm-5">
-                                <select id="excel_sube" class="form-control">
-                                    <option selected value="1">NOX YAZILIM HİZMETLERİ LİMİTED ŞİRKETİ</option>
-                                </select>
-                            </div>
+                <div class="box-body form-horizontal">
+                    <div class="col-md-12">
+
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                            <h3 class="modal-title">Belgeyi İmzalama</h3>
                         </div>
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Gönderici Etiket</label>
-                            <div class="col-sm-5">
-                                <select id="excel_gbetiket" class="form-control">
-                                    <option selected value="urn:mail:defaultgb@hotmail.com">urn:mail:defaultgb@hotmail.com</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group"><label class="col-sm-3 control-label">e-Fatura Ön Ek</label><div class="col-sm-5"><select id="excel_onek" class="form-control"></select></div></div>
-                        <div class="form-group"><label class="col-sm-3 control-label">e-Arşiv Ön Ek</label><div class="col-sm-5"><select id="excel_onek_earsiv" class="form-control"></select></div></div>
-                        <div class="form-group"><label class="col-sm-3 control-label">e-Arşiv İnternet Satış Ön Ek</label><div class="col-sm-5"><select id="excel_onek_earsiv_internet" class="form-control"></select></div></div>
-                        <div class="form-group"><label class="col-sm-3 control-label">e-Fatura Görüntü Dosya (Xslt)</label><div class="col-sm-5"><select id="excel_efatura_xslt" class="form-control"></select></div></div>
-                        <div class="form-group"><label class="col-sm-3 control-label">e-Arşiv Görüntü Dosya (Xslt)</label><div class="col-sm-5"><select id="excel_earsiv_xslt" class="form-control"></select></div></div>
-                        <div class="form-group"><label class="col-sm-3 control-label">Excel Dosyası</label><div class="col-sm-5"><input type="file" id="FileExcel" class="form-control" accept=".xlsx" /></div></div>
-                    </form>
-                    <table id="gridExcelDraft" class="table table-bordered table-hover">
-                        <thead><tr><th>ETTN</th><th>Unvan</th><th>TCKN</th><th>Ödenecek Tutar</th><th>Senaryo</th><th>Status</th></tr></thead>
-                        <tbody><tr><td></td><td></td><td></td><td>0</td><td></td><td></td></tr></tbody>
-                    </table>
-                    <button type="button" class="btn btn-success pull-right" onclick="excelFileUpload(false)">Taslak Kaydet</button>
+
+                        <div class="modal-body">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="alert alert-info" role="alert">
+                                            Akıllı kartınızı takın, sertifikayı seçin ve PIN girerek imzalayın.
+                                        </div>
+
+                                        <div class="container">
+                                            <div class="row">
+                                                <div class="col-sm-4">
+                                                    <label>Akıllı kart markası</label>
+                                                    <select id="karttip" class="form-control">
+                                                        <option value="akis">Akis</option>
+                                                        <option value="gemsafe">GemSafe</option>
+                                                        <option value="seimens">Seimens</option>
+                                                        <option value="starcos">StarCOS</option>
+                                                        <option value="aladdin">Aladdin</option>
+                                                        <option value="NETID">NETID</option>
+                                                        <option value="SAFESIGN">SAFESIGN</option>
+                                                        <option value="UNKNOWN">UNKNOWN</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-sm-4">
+                                                    <label>&nbsp;</label>
+                                                    <button type="button" onclick="sertifikaGetir()" class="btn btn-primary btn-block">Sertifikaları Getir</button>
+                                                </div>
+                                            </div>
+
+                                            <div class="row" id="sertifikalar" style="margin-top:15px;" hidden>
+                                                <div class="col-sm-12">
+                                                    <select id="sertifikaList" onchange="sertifikaChange()" class="form-control" style="width:70%"></select>
+                                                </div>
+                                                <div class="col-sm-12" style="margin-top:10px;">
+                                                    <div class="row">
+                                                        <div class="col-md-4"><label>Ortak ad</label></div>
+                                                        <div class="col-md-8" id="ortakAd"></div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-4"><label>Seri no</label></div>
+                                                        <div class="col-md-8" id="seriNo"></div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-4"><label>Geçerlilik başlangıcı</label></div>
+                                                        <div class="col-md-8" id="gecerlilikBaslangicTarih"></div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-4"><label>Geçerlilik sonu</label></div>
+                                                        <div class="col-md-8" id="gecerlilikBitisTarih"></div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-4"><label>PIN</label></div>
+                                                        <div class="col-md-8">
+                                                            <div class="row">
+                                                                <div class="col-sm-6">
+                                                                    <input id="kartPin" maxlength="20" type="password" class="form-control" onkeyup="kartPinKeyUp()">
+                                                                </div>
+                                                                <div class="col-sm-6">
+                                                                    <button type="button" class="btn btn-success" onclick="documentSignature()" id="btnImzala" disabled>İmzala</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div><!--/container-->
+                                    </div>
+                                </div>
+                            </div><!--/box-body-->
+                        </div><!--/modal-body-->
+
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 🖋️ İmzalama Modal -->
-    <div class="modal fade" id="signDraftModal" role="dialog">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header"><h3 class="modal-title">Belgeyi İmzalama</h3></div>
-                <div class="modal-body">
-                    <div class="alert alert-info">Akıllı kartınızı takınız ve uygulamayı indirip imzalayınız.</div>
-                    <div class="form-group"><label>Akıllı kart markası</label><select id="karttip" class="form-control"><option value="akis">Akis</option><option value="gemsafe">GemSafe</option></select></div>
-                    <div class="form-group"><label>Sertifikalar</label><select id="sertifikaList" class="form-control"></select></div>
-                    <div class="form-group"><label>Pin</label><input type="password" id="kartPin" class="form-control" /></div>
-                </div>
-                <div class="modal-footer"><button type="button" class="btn btn-success">İmzala</button><button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button></div>
-            </div>
-        </div>
-    </div>
+    <script>
+        (function(){
+            // =================== Utils ===================
+            var TR_DATE = {
+                closeText:"Kapat",prevText:"Önceki",nextText:"Sonraki",currentText:"Bugün",
+                monthNames:["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"],
+                monthNamesShort:["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
+                dayNames:["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"],
+                dayNamesShort:["Paz","Pts","Sal","Çar","Per","Cum","Cts"],
+                dayNamesMin:["Pz","Pt","Sa","Ça","Pe","Cu","Ct"],
+                dateFormat:"dd.mm.yy", firstDay:1, isRTL:false
+            };
+            function toApiDate(str){ if(!str) return ""; var p=str.split("."); if(p.length!==3) return ""; return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0"); }
+            function num(v){ v=(v==null?0:v); var n=+v; return isNaN(n)?0:n; }
+            function fmtMoney(n,c,d,t){ c=isNaN(c=Math.abs(c))?2:c; d=(d===undefined)?",":d; t=(t===undefined)?".":t;
+                var s=n<0?"-":"", i=String(parseInt(Math.abs(Number(n)||0).toFixed(c))), j=(j=i.length)>3?j%3:0;
+                return s+(j?i.substr(0,j)+t:"")+i.substr(j).replace(/(\d{3})(?=\d)/g,"$1"+t)+(c?d+Math.abs(n-i).toFixed(c).slice(2):""); }
+            function notifyOk(m){ if(window.toastr&&toastr.success) toastr.success(m); else alert(m); }
+            function notifyErr(m){ if(window.toastr&&toastr.error) toastr.error(m); else alert(m); }
+
+            // =================== Datepicker / Select2 ===================
+            function initPickers(){
+                if($.fn.datepicker){
+                    $.datepicker.setDefaults(TR_DATE);
+                    $('.datepicker').datepicker({ changeMonth:true, changeYear:true, showAnim:"fadeIn" });
+                } else {
+                    $('.datepicker').attr('placeholder','gg.aa.yyyy');
+                }
+            }
+            initPickers();
+
+            if($.fn.select2){
+                $('#subeler').select2({ width:'100%', placeholder: $('#subeler').data('placeholder') || 'Şube Seçiniz' });
+            }
+
+            function linkRange($start, $end){
+                if(!$.fn.datepicker) return;
+                $start.on("change", function(){ var d=$start.datepicker("getDate"); if(d) $end.datepicker("option","minDate",d); });
+                $end.on("change", function(){ var d=$end.datepicker("getDate"); if(d) $start.datepicker("option","maxDate",d); });
+            }
+            linkRange($('#IssueDateStart'), $('#IssueDateEnd'));
+            linkRange($('#CreatedDateStart'), $('#CreatedDateEnd'));
+
+            // Detaylı arama ikon
+            $('#btnDetayliArama').on('click', function(){
+                var $i=$(this).find('.myCollapseIcon'); setTimeout(function(){ $i.toggleClass('fa-plus fa-minus'); },150);
+            });
+
+            // =================== DataTable ===================
+            var table;
+            function buildFilters(){
+                return {
+                    IssueDateStart: toApiDate($('#IssueDateStart').val()),
+                    IssueDateEnd:   toApiDate($('#IssueDateEnd').val()),
+                    CreatedDateStart: toApiDate($('#CreatedDateStart').val()),
+                    CreatedDateEnd:   toApiDate($('#CreatedDateEnd').val()),
+                    TargetIdentifier: $('#TargetIdentifier').val(),
+                    TargetTitle: $('#TargetTitle').val(),
+                    BranchIds: $('#subeler').val() || []
+                };
+            }
+
+            function initTable(){
+                if($.fn.DataTable.isDataTable('#myDataTable')){ table.destroy(); $('#myDataTable tbody').empty(); }
+                table = $('#myDataTable').DataTable({
+                    processing:true, serverSide:true, deferRender:true,
+                    order:[[5,'desc']], // Fatura Tarihi
+                    pageLength:25,
+                    lengthMenu:[[25,50,75,100,250,500,1000],[25,50,75,100,250,500,"1.000"]],
+                    language:{ url:'//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+                    ajax:{
+                        url:'/api/efatura/draft/search',
+                        type:'POST',
+                        contentType:'application/json',
+                        data:function(d){ return JSON.stringify({ dt:d, filters: buildFilters() }); },
+                        dataSrc:function(res){ return (res && res.data) ? res.data : []; },
+                        error:function(){ notifyErr('Liste alınamadı.'); }
+                    },
+                    columns:[
+                        { data:null, orderable:false, searchable:false,
+                          render:function(d,t,r){ var id=(r.Id||r.UUID||''); return '<input type="checkbox" class="rowchk" data-id="'+id+'">'; } },
+                        { data:'DocumentId', defaultContent:'' },
+                        { data:null, render:function(d){ return d.TargetTitle||d.ReceiverTitle||''; } },
+                        { data:null, render:function(d){ return d.TargetIdentifier||d.ReceiverIdentifier||''; } },
+                        { data:null, render:function(d){ var it=d.InvoiceTypeCode||''; var pr=d.ProfileId||''; return it+(pr?('/'+pr):''); } },
+                        { data:'IssueDate', render:function(v){ return v?String(v).substr(0,10):''; } },
+                        { data:'PayableAmount', className:'text-right', render:function(v){ return fmtMoney(num(v),2,",","."); } },
+                        { data:'Status', defaultContent:'', className:'text-center' },
+                        { data:null, orderable:false, searchable:false, className:'text-center',
+                          render:function(d){
+                            var id=(d.Id||d.UUID||'');
+                            return ''+
+                              '<div class="btn-group btn-group-xs">'+
+                                '<button class="btn btn-default" title="Düzenle" onclick="editDraft(\''+id+'\')"><i class="fa fa-pencil"></i></button>'+
+                                '<button class="btn btn-success" title="Gönder" onclick="sendDraft(\''+id+'\')"><i class="fa fa-paper-plane"></i></button>'+
+                                '<button class="btn btn-warning" title="İmzala" onclick="openSignDraft(\''+id+'\')"><i class="fa fa-certificate"></i></button>'+
+                                '<button class="btn btn-danger" title="Sil" onclick="deleteDraft(\''+id+'\')"><i class="fa fa-trash"></i></button>'+
+                              '</div>';
+                          } }
+                    ],
+                    drawCallback:function(){ $('#chkAll').prop('checked', false); }
+                });
+
+                // header select all
+                $('#myDataTable').on('change', '#chkAll', function(){
+                    var c=$(this).is(':checked'); $('#myDataTable .rowchk').prop('checked', c);
+                });
+            }
+            initTable();
+
+            // =================== Arama / Temizle / Enter ===================
+            window.gridSearch = function(){ if(table){ table.ajax.reload(); } };
+            window.clearSearchInputs = function(){
+                $('#IssueDateStart,#IssueDateEnd,#CreatedDateStart,#CreatedDateEnd').val('');
+                $('#TargetIdentifier,#TargetTitle').val('');
+                if($.fn.select2){ $('#subeler').val(null).trigger('change'); } else { $('#subeler').val([]); }
+                gridSearch();
+            };
+            $('#btnAramaYapEnter').on('keypress','input',function(e){ if(e.which===13){ e.preventDefault(); gridSearch(); } });
+
+            function getSelectedIds(){
+                var ids=[]; $('#myDataTable .rowchk:checked').each(function(){ ids.push($(this).data('id')); }); return ids;
+            }
+
+            // =================== İşlemler: toplu ve tekil ===================
+            window.createNewDraft = function(){
+                // İstersen direkt düzenleme sayfasına yönlendirebilirsin
+                $.ajax({ url:'/api/efatura/draft/create', method:'POST', contentType:'application/json', data: JSON.stringify({ branchId: ($('#subeler').val()||[])[0]||null }) })
+                 .done(function(resp){
+                    var id = (resp && (resp.id||resp.Id||resp.UUID)) || null;
+                    if(id){ window.location = '/EInvoice/Draft/Edit?id='+encodeURIComponent(id); }
+                    else { notifyOk('Taslak oluşturuldu.'); gridSearch(); }
+                 })
+                 .fail(function(xhr){ notifyErr('Taslak oluşturulamadı: '+(xhr.responseText||'')); });
+            };
+
+            window.sendAllDraft = function(){
+                var ids=getSelectedIds(); if(!ids.length) return notifyErr('Lütfen en az bir taslak seçin.');
+                $.ajax({ url:'/api/efatura/draft/send', method:'POST', contentType:'application/json', data: JSON.stringify({ ids: ids }) })
+                 .done(function(){ notifyOk('Seçilen taslaklar gönderildi.'); gridSearch(); })
+                 .fail(function(xhr){ notifyErr('Gönderim başarısız: '+(xhr.responseText||'')); });
+            };
+
+            window.deleteAllDraft = function(){
+                var ids=getSelectedIds(); if(!ids.length) return notifyErr('Lütfen en az bir taslak seçin.');
+                if(!confirm('Seçilen taslaklar silinsin mi?')) return;
+                $.ajax({ url:'/api/efatura/draft/delete', method:'POST', contentType:'application/json', data: JSON.stringify({ ids: ids }) })
+                 .done(function(){ notifyOk('Seçilen taslaklar silindi.'); gridSearch(); })
+                 .fail(function(xhr){ notifyErr('Silme başarısız: '+(xhr.responseText||'')); });
+            };
+
+            window.editDraft = function(id){ window.location = '/EInvoice/Draft/Edit?id='+encodeURIComponent(id); };
+            window.sendDraft = function(id){
+                $.ajax({ url:'/api/efatura/draft/send', method:'POST', contentType:'application/json', data: JSON.stringify({ ids:[id] }) })
+                 .done(function(){ notifyOk('Taslak gönderildi.'); gridSearch(); })
+                 .fail(function(xhr){ notifyErr('Gönderim başarısız: '+(xhr.responseText||'')); });
+            };
+            window.deleteDraft = function(id){
+                if(!confirm('Taslak silinsin mi?')) return;
+                $.ajax({ url:'/api/efatura/draft/delete', method:'POST', contentType:'application/json', data: JSON.stringify({ ids:[id] }) })
+                 .done(function(){ notifyOk('Taslak silindi.'); gridSearch(); })
+                 .fail(function(xhr){ notifyErr('Silme başarısız: '+(xhr.responseText||'')); });
+            };
+
+            // =================== Excel'den Taslağa ===================
+            var gridExcel;
+            function ensureExcelGrid(){
+                if($.fn.DataTable.isDataTable('#gridExcelDraft')) return;
+                gridExcel = $('#gridExcelDraft').DataTable({
+                    searching:false, paging:false, info:false,
+                    language:{ url:'//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+                    columns:[
+                        { data:'UUID', defaultContent:'' },
+                        { data:'Title', defaultContent:'' },
+                        { data:'Identifier', defaultContent:'' },
+                        { data:'PayableAmount', render:function(v){ return fmtMoney(num(v),2,",","."); }, className:'text-right' },
+                        { data:'Scenario', defaultContent:'' },
+                        { data:'Status', defaultContent:'' }
+                    ]
+                });
+            }
+
+            window.excelDraftModalOpen = function(){
+                ensureExcelGrid();
+                $('#excelDraftModal').modal('show');
+                // prefix & xslt listelerini şubeye göre doldur
+                setPrefixExcelList();
+            };
+
+            window.setPrefixExcelList = function(){
+                var branchId = $('#excel_sube').val();
+                // Örnek: prefix ve xslt listelerini doldur
+                $.ajax({ url:'/api/efatura/draft/excel/presets', data:{ branchId: branchId }, method:'GET' })
+                 .done(function(resp){
+                    function fill(sel, arr){
+                        var $s=$(sel); $s.empty();
+                        (arr||[]).forEach(function(x){ $s.append('<option value="'+x.value+'">'+x.text+'</option>'); });
+                    }
+                    fill('#excel_onek', resp && resp.invoicePrefixes);
+                    fill('#excel_onek_earsiv', resp && resp.earsivPrefixes);
+                    fill('#excel_onek_earsiv_internet', resp && resp.earsivInternetPrefixes);
+                    fill('#excel_efatura_xslt', resp && resp.efaturaXslt);
+                    fill('#excel_earsiv_xslt', resp && resp.earsivXslt);
+                 });
+            };
+
+            window.excelFileUpload = function(preview){
+                var f = $('#FileExcel')[0].files[0];
+                if(!f){ if(!preview){ notifyErr('Lütfen Excel dosyası seçin.'); } return; }
+                var fd = new FormData();
+                fd.append('file', f);
+                fd.append('branchId', $('#excel_sube').val() || '');
+                fd.append('senderAlias', $('#excel_gbetiket').val() || '');
+                fd.append('prefixEfatura', $('#excel_onek').val() || '');
+                fd.append('prefixEarsiv', $('#excel_onek_earsiv').val() || '');
+                fd.append('prefixEarsivInternet', $('#excel_onek_earsiv_internet').val() || '');
+                fd.append('xsltEfatura', $('#excel_efatura_xslt').val() || '');
+                fd.append('xsltEarsiv', $('#excel_earsiv_xslt').val() || '');
+
+                var url = preview ? '/api/efatura/draft/excel/preview' : '/api/efatura/draft/excel/commit';
+                $.ajax({
+                    url:url, method:'POST', data:fd, processData:false, contentType:false
+                }).done(function(resp){
+                    if(preview){
+                        ensureExcelGrid();
+                        gridExcel.clear();
+                        (resp && resp.rows ? resp.rows : []).forEach(function(r){ gridExcel.row.add(r); });
+                        gridExcel.draw();
+                        notifyOk('Önizleme hazır.');
+                    }else{
+                        notifyOk('Taslaklar oluşturuldu.');
+                        $('#excelDraftModal').modal('hide');
+                        gridSearch();
+                    }
+                }).fail(function(xhr){
+                    notifyErr('Excel işlemi başarısız: '+(xhr.responseText||''));
+                });
+            };
+
+            // =================== İmzalama ===================
+            var signingDraftId = null;
+            window.openSignDraft = function(id){
+                signingDraftId = id || null;
+                $('#signDraftModal').modal('show');
+                $('#sertifikalar').prop('hidden', true);
+                $('#btnImzala').prop('disabled', true);
+                $('#kartPin').val('');
+            };
+            window.sertifikaGetir = function(){
+                $.ajax({ url:'/api/efatura/draft/sign/certificates', method:'GET', data:{ card: $('#karttip').val() } })
+                 .done(function(resp){
+                    var $list = $('#sertifikaList'); $list.empty();
+                    (resp && resp.items || []).forEach(function(x){
+                        $list.append('<option value="'+(x.id||x.thumbprint||'')+'">'+(x.subject||x.name||'Sertifika')+'</option>');
+                    });
+                    $('#sertifikalar').prop('hidden', false);
+                 }).fail(function(xhr){ notifyErr('Sertifikalar getirilemedi: '+(xhr.responseText||'')); });
+            };
+            window.sertifikaChange = function(){
+                var sel = $('#sertifikaList').val();
+                // ayrıntıları doldur
+                $.ajax({ url:'/api/efatura/draft/sign/certificate-info', method:'GET', data:{ id: sel } })
+                 .done(function(x){
+                    $('#ortakAd').text(x && (x.cn||x.subject) || '');
+                    $('#seriNo').text(x && (x.serial||'') || '');
+                    $('#gecerlilikBaslangicTarih').text(x && (x.validFrom||'') || '');
+                    $('#gecerlilikBitisTarih').text(x && (x.validTo||'') || '');
+                 });
+            };
+            window.kartPinKeyUp = function(){
+                var ok = !!$('#kartPin').val();
+                $('#btnImzala').prop('disabled', !ok);
+            };
+            window.documentSignature = function(){
+                if(!signingDraftId) return notifyErr('İmzalanacak taslak bulunamadı.');
+                var dto = {
+                    draftId: signingDraftId,
+                    certificateId: $('#sertifikaList').val(),
+                    pin: $('#kartPin').val(),
+                    card: $('#karttip').val()
+                };
+                if(!dto.certificateId || !dto.pin) return notifyErr('Sertifika ve PIN zorunlu.');
+                $.ajax({ url:'/api/efatura/draft/sign', method:'POST', contentType:'application/json', data: JSON.stringify(dto) })
+                 .done(function(){ notifyOk('İmzalama tamamlandı.'); $('#signDraftModal').modal('hide'); gridSearch(); })
+                 .fail(function(xhr){ notifyErr('İmzalama başarısız: '+(xhr.responseText||'')); });
+            };
+
+        })();
+    </script>
 </section>
 
-@section Scripts {
-    <script type="module" src="~/apps/earchivedraft.js"></script>
-}
