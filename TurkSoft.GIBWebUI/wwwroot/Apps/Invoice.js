@@ -909,53 +909,76 @@ import { InvoiceApi } from '../Entites/index.js';
     // ===========================
     // DTO OLUŞTURMA
     // ===========================
+ 
     function collectInvoice() {
         const now = new Date().toISOString();
+        const USER_ID = 4;
+
+        // Tek noktadan meta şablonu
+        const baseMeta = () => ({
+            userId: USER_ID,
+            isActive: true,
+            deleteDate: null,
+            deletedByUserId: 0,
+            createdAt: now,
+            updatedAt: now,
+            createdByUserId: USER_ID,
+            updatedByUserId: USER_ID,
+            rowVersion: "1",
+            id: 0
+        });
+
         const linesSel = SEL.linesTable;
         const currency = ($(SEL.currency).val() || DEFAULTS.CURRENCY).toUpperCase();
+        const invoiceNo = ($(SEL.prefix).val() || "INV") + "-" + Date.now();
+        const invoiceDate = ($(SEL.invoiceDate).val()
+            ? new Date($(SEL.invoiceDate).val()).toISOString()
+            : now);
 
         const dto = {
-            entity: 'EInvoice',
-            invoiceNo: ($(SEL.prefix).val() || 'INV') + '-' + Date.now(),
-            invoiceDate: now,
+            ...baseMeta(),
+            customerId: Number($(SEL.custId).val() || 0),
+            invoiceNo,
+            invoiceDate,
             currency,
-            total: dec($(SEL.tGenel).val() || $(SEL.tGenel).text() || '0'),
-            createdAt: now, updatedAt: now,
+            total: dec($(SEL.tGenel).val() || $(SEL.tGenel).text() || "0"),
 
             customer: {
-                name: $(SEL.custName).val() || '',
-                surname: $(SEL.custSurname).val() || '',
-                email: $(SEL.custMail).val() || '',
-                taxNo: $(SEL.custTaxNo).val() || '',
-                taxOffice: $(SEL.custTaxOffice).val() || '',
-                createdAt: now, updatedAt: now,
-                customersGroups: [], addresses: [], invoices: []
+                ...baseMeta(),
+                name: $(SEL.custName).val() || "",
+                surname: $(SEL.custSurname).val() || "",
+                phone: $(SEL.custPhone).val() || "",
+                email: $(SEL.custMail).val() || "",
+                taxNo: $(SEL.custTaxNo).val() || "",
+                taxOffice: $(SEL.custTaxOffice).val() || "",
+                customersGroups: [],
+                addresses: [],
+                invoices: []
             },
 
             invoicesItems: [],
             invoicesTaxes: [],
             invoicesDiscounts: [],
+            tourists: [],
             sgkRecords: [],
-            invoicesPayments: [],
             servicesProviders: [],
             returns: [],
-            tourists: []
+            invoicesPayments: []
         };
 
         // Kalemler
         $(`${linesSel} tbody tr`).each(function () {
             const $r = $(this);
-            const qty = dec($r.find('.ln-qty').val());
-            const price = dec($r.find('.ln-price').val());
-            const discp = dec($r.find('.ln-discp').val());
-            const rate = dec($r.find('.ln-kdv').val()) || 0;
+            const qty = dec($r.find(".ln-qty").val());
+            const price = dec($r.find(".ln-price").val());
+            const discp = dec($r.find(".ln-discp").val());
+            const rate = dec($r.find(".ln-kdv").val()) || 0;
 
-            const unitShort = ($r.find('.ln-unit').val() || DEFAULTS.UNIT_CODE).toUpperCase();
-            const unitName = (unitShort === 'C62' ? DEFAULTS.UNIT_NAME : unitShort);
+            const unitShort = ($r.find(".ln-unit").val() || DEFAULTS.UNIT_CODE).toUpperCase();
+            const unitName = (unitShort === "C62" ? DEFAULTS.UNIT_NAME : unitShort);
 
-            // Satır toplamı: ln-total varsa onu, yoksa hesapla (DAHİL/HARİÇ desteği)
-            const gross = $r.find('.ln-total').length
-                ? dec($r.find('.ln-total').val())
+            const gross = $r.find(".ln-total").length
+                ? dec($r.find(".ln-total").val())
                 : (function () {
                     let tutar = qty * price;
                     if (getVatMode() === VAT_MODE.INCL) {
@@ -967,16 +990,36 @@ import { InvoiceApi } from '../Entites/index.js';
                 })();
 
             dto.invoicesItems.push({
+                ...baseMeta(),
+                invoiceId: 0,
+                itemId: 0,
                 quantity: qty,
                 price: price,
                 total: gross,
-                createdAt: now, updatedAt: now,
+                invoice: null,
                 item: {
-                    name: $r.find('.ln-ad').val() || 'GENEL ÜRÜN',
-                    code: 'ITEM-' + Math.floor(Math.random() * 100000),
+                    ...baseMeta(),
+                    name: $r.find(".ln-ad").val() || "GENEL ÜRÜN",
+                    code: "ITEM-" + Math.floor(Math.random() * 100000),
+                    brandId: 0,
+                    unitId: 0,
+                    price: price,
                     currency,
-                    createdAt: now, updatedAt: now,
-                    unit: { shortName: unitShort, name: unitName, createdAt: now, updatedAt: now }
+                    brand: {
+                        ...baseMeta(),
+                        name: "",
+                        country: "",
+                        items: []
+                    },
+                    unit: {
+                        ...baseMeta(),
+                        name: unitName,
+                        shortName: unitShort,
+                        items: []
+                    },
+                    itemsCategories: [],
+                    itemsDiscounts: [],
+                    identifiers: []
                 }
             });
         });
@@ -984,55 +1027,151 @@ import { InvoiceApi } from '../Entites/index.js';
         // Vergiler
         const taxes = computeTaxes(linesSel);
         Object.keys(taxes).forEach(k => {
-            dto.invoicesTaxes.push({ name: 'KDV', rate: Number(k), amount: taxes[k].amount, createdAt: now, updatedAt: now });
+            dto.invoicesTaxes.push({
+                ...baseMeta(),
+                invoiceId: 0,
+                name: "KDV",
+                rate: Number(k),
+                amount: taxes[k].amount,
+                invoice: null
+            });
         });
 
         // Genel iskonto
         let totalDisc = 0;
         $(`${linesSel} tbody tr`).each(function () {
             const $r = $(this);
-            const qty = dec($r.find('.ln-qty').val());
-            const price = dec($r.find('.ln-price').val());
-            const discp = dec($r.find('.ln-discp').val());
+            const qty = dec($r.find(".ln-qty").val());
+            const price = dec($r.find(".ln-price").val());
+            const discp = dec($r.find(".ln-discp").val());
             let tutar = qty * price;
             if (getVatMode() === VAT_MODE.INCL) {
-                const unitNet = price / (1 + (dec($r.find('.ln-kdv').val()) || 0) / 100);
+                const unitNet = price / (1 + (dec($r.find(".ln-kdv").val()) || 0) / 100);
                 tutar = qty * unitNet;
             }
             totalDisc += tutar * (discp / 100);
         });
-        dto.invoicesDiscounts.push({ name: 'Toplam İskonto', desc: 'Otomatik', base: 'Ara Toplam', rate: 0, amount: totalDisc, createdAt: now, updatedAt: now });
+        dto.invoicesDiscounts.push({
+            ...baseMeta(),
+            itemId: 0,
+            name: "Toplam İskonto",
+            desc: "Otomatik",
+            base: "Ara Toplam",
+            rate: 0,
+            amount: totalDisc
+        });
 
         // SGK
         if ($(SEL.sgkType).val()) {
             dto.sgkRecords.push({
-                type: 'SGK',
-                code: 'SGK001',
+                ...baseMeta(),
+                invoiceId: 0,
+                type: "SGK",
+                code: "SGK001",
                 name: $(SEL.sgkType).val(),
-                no: $(SEL.sgkDosya).val() || '0',
+                no: $(SEL.sgkDosya).val() || "0",
                 startDate: ($(SEL.sgkStart).val() ? new Date($(SEL.sgkStart).val()).toISOString() : now),
                 endDate: ($(SEL.sgkEnd).val() ? new Date($(SEL.sgkEnd).val()).toISOString() : now),
-                createdAt: now, updatedAt: now
+                invoice: null
             });
         }
 
-        // Ödeme
+        // Ödeme (bank -> paymentAccount.bank)
         dto.invoicesPayments.push({
-            createdAt: now, updatedAt: now,
+            ...baseMeta(),
+            invoiceId: 0,
+            paymentId: 0,
+            invoice: null,
             payment: {
-                amount: dto.total, currency, date: now, note: $(SEL.payNote).val() || '',
-                createdAt: now, updatedAt: now,
-                paymentType: { name: $(SEL.payMeans).find('option:selected').text() || '', createdAt: now, updatedAt: now },
-                paymentAccount: { name: $(SEL.payAccount).val() || '', createdAt: now, updatedAt: now },
-                bank: { name: $(SEL.bankName).val() || 'Banka', createdAt: now, updatedAt: now }
+                ...baseMeta(),
+                paymentTypeId: 0,
+                paymentAccountId: 0,
+                amount: dto.total,
+                currency,
+                date: now,
+                note: $(SEL.payNote).val() || "",
+                paymentType: {
+                    ...baseMeta(),
+                    name: $(SEL.payMeans).find("option:selected").text() || "",
+                    desc: "",
+                    payments: []
+                },
+                paymentAccount: {
+                    ...baseMeta(),
+                    name: $(SEL.payAccount).val() || "",
+                    desc: "",
+                    bankId: 0,
+                    accountNo: $(SEL.accountNo).val() || "",
+                    iban: $(SEL.iban).val() || "",
+                    currency,
+                    bank: {
+                        ...baseMeta(),
+                        name: $(SEL.bankName).val() || "Banka",
+                        swiftCode: $(SEL.swift).val() || "",
+                        country: $(SEL.bankCountry).val() || "",
+                        city: $(SEL.bankCity).val() || "",
+                        paymentAccounts: []
+                    },
+                    payments: []
+                },
+                invoicesPayments: []
             }
         });
 
         // Servis sağlayıcı
-        dto.servicesProviders.push({ no: 'SP-001', systemUser: 'UI', createdAt: now, updatedAt: now });
+        dto.servicesProviders.push({
+            ...baseMeta(),
+            no: "SP-001",
+            systemUser: "UI",
+            invoiceId: 0,
+            invoice: null
+        });
+
+        // ---------------------------
+        // --- NORMALIZATION START ---
+        // ---------------------------
+        // 1) Derin meta enjeksiyonu (eksik rowVersion/userId vs. varsa tamamlar)
+        const META = baseMeta();
+        const injectMeta = (node) => {
+            if (!node || typeof node !== "object") return;
+            if (Array.isArray(node)) { node.forEach(injectMeta); return; }
+            // Sadece eksikse doldur
+            Object.keys(META).forEach(k => {
+                if (node[k] === undefined) node[k] = META[k];
+            });
+            Object.keys(node).forEach(k => injectMeta(node[k]));
+        };
+        injectMeta(dto);
+
+        // 2) Eski kullanım kalmışsa: payment.bank -> paymentAccount.bank
+        (dto.invoicesPayments || []).forEach(ip => {
+            const pay = ip && ip.payment;
+            if (pay && pay.bank) {
+                pay.paymentAccount = pay.paymentAccount || {};
+                pay.paymentAccount.bank = pay.paymentAccount.bank || { ...pay.bank };
+                delete pay.bank;
+                injectMeta(pay.paymentAccount.bank);
+            }
+        });
+
+        // 3) Toplamı doğrula: items + taxes - discounts
+        const sum = (arr, key) => (arr || []).reduce((s, x) => s + (Number(x?.[key]) || 0), 0);
+        const itemsTotal = sum(dto.invoicesItems, "total");
+        const taxesTotal = sum(dto.invoicesTaxes, "amount");
+        const discTotal = sum(dto.invoicesDiscounts, "amount");
+        dto.total = Math.max(0, itemsTotal + taxesTotal - discTotal);
+
+        // 4) Şemada gereksiz olabilecek entity alanını temizle (ileride eklenirse)
+        delete dto.entity;
+        // ---------------------------
+        // ---  NORMALIZATION END  ---
+        // ---------------------------
 
         return dto;
     }
+
+
+
 
     // ===========================
     // TASLAĞI UYGULA

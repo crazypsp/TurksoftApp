@@ -11,6 +11,8 @@ export * as BranchApi from './Branch.js';
 export * as UsersApi from './Users.js';
 export * as SettingsApi from './Settings.js';
 export * as InvoiceApi from './Invoice.js';
-
+export * as UserApi from './User.js';
+export * as UserRolesApi from './UserRole.js';
+export * as RoleApi from './Role.js';
 
 

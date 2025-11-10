@@ -1,37 +1,84 @@
-﻿(function () {
-    function isValidEmail(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+﻿// /apps/login-glue.js
+import { signIn, getSession } from '../Service/Login.js';
+
+function ensureErrorBox() {
+    let el = document.getElementById('loginError');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'loginError';
+        el.className = 'alert alert-danger';
+        el.style.display = 'none';
+        const form = document.getElementById('loginForm');
+        form?.prepend(el);
     }
-    function setInvalid($input, message) {
-        $input.addClass('is-invalid');
-        var $fb = $input.siblings('.invalid-feedback');
-        if ($fb.length === 0) $fb = $('<div class="invalid-feedback"></div>').insertAfter($input);
-        $fb.text(message);
+    return el;
+}
+
+function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email); }
+function setInvalid($input, message) {
+    if (!$input) return;
+    $input.classList.add('is-invalid');
+    let fb = $input.nextElementSibling && $input.nextElementSibling.classList?.contains('invalid-feedback')
+        ? $input.nextElementSibling : null;
+    if (!fb) {
+        fb = document.createElement('div');
+        fb.className = 'invalid-feedback';
+        $input.insertAdjacentElement('afterend', fb);
     }
-    function clearInvalid($input) { $input.removeClass('is-invalid'); }
+    fb.textContent = message || '';
+}
+function clearInvalid($input) { if ($input) $input.classList.remove('is-invalid'); }
+function wireValidation(emailInput, passInput) {
+    const clear = (e) => { e.target.classList.remove('is-invalid'); };
+    emailInput?.addEventListener('input', clear);
+    passInput?.addEventListener('input', clear);
+}
+function showError(msg) { const box = ensureErrorBox(); box.textContent = msg || ''; box.style.display = msg ? 'block' : 'none'; }
 
-    $('#loginForm').on('submit', function (e) {
-        e.preventDefault(); // normal POST'u durdur
-        var $form = $(this);
-        var homeUrl = $form.data('home-url'); // Razor tarafından render edilen URL
-        var $emailInput = $('#Email');
-        var $passInput = $('#Password');
-        var email = $emailInput.val().trim();
-        var pass = $passInput.val().trim();
-        var ok = true;
+document.addEventListener('DOMContentLoaded', async () => {
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('Email');
+    const passwordInput = document.getElementById('Password');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    const homeUrl = form?.getAttribute('data-home-url') || '/';
 
-        if (!email) { setInvalid($emailInput, 'E-posta zorunludur.'); ok = false; }
-        else if (!isValidEmail(email)) { setInvalid($emailInput, 'Geçerli bir e-posta adresi girin.'); ok = false; }
-        else { clearInvalid($emailInput); }
+    wireValidation(emailInput, passwordInput);
+    showError('');
 
-        if (!pass) { setInvalid($passInput, 'Şifre zorunludur.'); ok = false; }
-        else { clearInvalid($passInput); }
+    try {
+        const existing = await getSession({ hydrate: true });
+        if (existing?.userId) { window.location.href = homeUrl; return; }
+    } catch { }
 
-        if (ok) {
-            // Tüm kontroller geçtiyse Home/Index'e yönlendir
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showError('');
+
+        const email = (emailInput?.value || '').trim();
+        const pass = (passwordInput?.value || '').trim();
+
+        let ok = true;
+        if (!email) { setInvalid(emailInput, 'E-posta zorunludur.'); ok = false; }
+        else if (!isValidEmail(email)) { setInvalid(emailInput, 'Geçerli bir e-posta adresi girin.'); ok = false; }
+        else { clearInvalid(emailInput); }
+
+        if (!pass) { setInvalid(passwordInput, 'Şifre zorunludur.'); ok = false; }
+        else { clearInvalid(passwordInput); }
+
+        if (!ok) return;
+
+        submitBtn?.setAttribute('disabled', 'disabled');
+        submitBtn?.classList.add('disabled');
+
+        try {
+            const res = await signIn(email, pass);
+            if (!res.success) { showError(res.message || 'Giriş başarısız.'); return; }
             window.location.href = homeUrl;
+        } catch (err) {
+            showError(err?.message || 'Beklenmeyen bir hata.');
+        } finally {
+            submitBtn?.removeAttribute('disabled');
+            submitBtn?.classList.remove('disabled');
         }
     });
-
-    $('#Email, #Password').on('input', function () { $(this).removeClass('is-invalid'); });
-})();
+});

@@ -1,6 +1,8 @@
 ﻿@{
     Layout = null;
 }
+@using Microsoft.Extensions.Options
+@inject IOptions<TurkSoft.GIBWebUI.AppSettings.ApiSettings> ApiSettings
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 <!doctype html>
 <html lang="tr">
@@ -15,11 +17,19 @@
     <link rel="stylesheet" href="@Url.Content("~/login/css/style.css")" />
 
     <title>Giriş</title>
+
+    <meta name="api-base" content="@ApiSettings.Value.BaseUrl" />
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport" />
+    <script>
+        // Fallback: JS tarafından API base URL erişimi
+        window.__API_BASE = "@ApiSettings.Value.BaseUrl";
+        console.log("API Base (Layout):", window.__API_BASE);
+    </script>
 </head>
 <body>
     <div class="d-lg-flex half">
         <div class="bg order-1 order-md-2"
-             style="background-image:url('@Url.Content("~/login/images/bg_1.jpg")');">
+             style="background-image:url('@Url.Content("~/login/images/nox_musavirim_login-02.png")');">
         </div>
 
         <div class="contents order-2 order-md-1">
@@ -39,7 +49,7 @@
                             <div class="form-group first">
                                 <label for="Email">E-posta</label>
                                 <input type="text" class="form-control" name="Email" id="Email"
-                                       placeholder="your-email@gmail.com" />
+                                       placeholder="mail@adresiniz.com" />
                             </div>
 
                             <div class="form-group last mb-3">
@@ -71,7 +81,7 @@
     <script src="@Url.Content("~/login/js/popper.min.js")"></script>
     <script src="@Url.Content("~/login/js/bootstrap.min.js")"></script>
     <script src="@Url.Content("~/login/js/main.js")"></script>
-    <script src="~/apps/login.js"></script>
+    <script type="module" src="~/apps/login.js"></script>
 
 </body>
 </html>

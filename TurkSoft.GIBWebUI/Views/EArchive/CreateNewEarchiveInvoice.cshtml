@@ -4,6 +4,45 @@
 }
 
 <section class="content">
+
+    <section class="content">
+
+        <!-- Angular bağımlılıkları kaldırıldı; jQuery ile çalışan sürüm -->
+        <style>
+            /* Yatay scroll yok; tablo sabit düzen */
+            #manuel_grid {
+                table-layout: fixed;
+                width: 100% !important;
+                border-collapse: collapse;
+            }
+
+                /* Hücreler ve başlık */
+                #manuel_grid th,
+                #manuel_grid td {
+                    box-sizing: border-box;
+                    padding: 6px 8px;
+                    vertical-align: middle;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: normal; /* Başlık ve hücre metni sarılabilir */
+                }
+
+                #manuel_grid thead th {
+                    position: sticky;
+                    top: 0;
+                    z-index: 2;
+                    background: #ebedf0; /* mevcut gri başlık */
+                }
+
+                /* Hücre içi form elemanları taşmasın */
+                #manuel_grid input,
+                #manuel_grid select,
+                #manuel_grid button {
+                    width: 100%;
+                }
+
+        </style>
+
     <script>
         var invoicemodel = {"invoiceheader":{"SignedByUser":false,"LocalReferenceId":null,"SubeKodu":1,"Prefix":null,"SourceUrn":null,"DestinationUrn":null,"UpdateDocument":false,"UUID":"EEA8EF29-8B26-4AB5-AC38-1C4A0BAF3C23","Invoice_ID":"Otomatik","ProfileID":"TICARIFATURA","InvoiceTypeCode":"SATIS","IssueDate":"30.10.2025","IssueTime":"12:32","DocumentCurrencyCode":"TRY","CalculationRate":1,"XSLT_Adi":"general","XSLT_Doc":null,"LineExtensionAmount":0,"AllowanceTotalAmount":0,"TaxInclusiveAmount":0,"ChargeTotalAmount":0,"PayableRoundingAmount":0,"PayableAmount":0,"Note":null,"Notes":null,"OrderReferenceId":null,"OrderReferenceDate":null,"EArchiveSendType":null,"IsInternetSale":false,"IsInternet_PaymentMeansCode":null,"IsInternet_PaymentDueDate":null,"IsInternet_InstructionNote":null,"IsInternet_WebsiteURI":null,"IsInternet_Delivery_TcknVkn":null,"IsInternet_Delivery_PartyName":null,"IsInternet_Delivery_FirstName":null,"IsInternet_Delivery_FamilyName":null,"IsInternet_ActualDespatchDate":null,"Sgk_AccountingCost":null,"Sgk_Period_StartDate":null,"Sgk_Period_EndDate":null,"Sgk_Mukellef_Kodu":null,"Sgk_Mukellef_Adi":null,"Sgk_DosyaNo":null,"Taxes":null,"Kdv_Statu":false,"IsCashRegister":null},"customer":{"IdentificationID":"","customerIdentificationsOther":null,"PartyName":null,"TaxSchemeName":null,"StreetName":null,"BuildingName":null,"BuildingNumber":null,"Room":null,"CitySubdivisionName":null,"CityName":null,"CountryName":null,"Telephone":null,"Telefax":null,"PostalZone":null,"ElectronicMail":null,"WebsiteURI":null,"Person_FirstName":null,"Person_FamilyName":null,"ManuelCityAndSubdivision":true},"customerAgent":null,"supplier":{"supplierParty":{"IdentificationID":"6321250052","customerIdentificationsOther":[],"PartyName":"NOX YAZILIM HİZMETLERİ  LTD. ŞTİ","TaxSchemeName":"KEMERALTI VERGİ DAİRESİ MÜDÜRLÜĞÜ","StreetName":"İSMET KAPTAN MAHALLESİ GAZİ BULVARI","BuildingName":"GÜRSEL İŞ MERKEZİ","BuildingNumber":"NO: 86","Room":"604","CitySubdivisionName":"KONAK","CityName":"İZMİR","CountryName":"TURKIYE","Telephone":"5380944969","Telefax":null,"PostalZone":null,"ElectronicMail":"info@noxyazilim.com.tr","WebsiteURI":"www.com","Person_FirstName":null,"Person_FamilyName":null,"ManuelCityAndSubdivision":false}},"supplierAgent":null,"buyerCustomer":null,"taxRepresentative":null,"invoicePeriods":null,"despatchs":null,"paymentMeans":null,"invoiceLines":null,"additionalDocumentReferences":null,"billingReferences":null,"allowanceCharges":null}
 
@@ -27,9 +66,70 @@
         var OdemeList = [{"OdemeKodu":"1","Aciklama":"Ödeme Tipi Muhtelif"},{"OdemeKodu":"10","Aciklama":"Nakit"},{"OdemeKodu":"20","Aciklama":"Çek"},{"OdemeKodu":"23","Aciklama":"Banka Çeki"},{"OdemeKodu":"42","Aciklama":"Eft/Havale"},{"OdemeKodu":"48","Aciklama":"Kredi Kartı/Banka Kartı"},{"OdemeKodu":"ZZZ","Aciklama":"Diğer"}];
         var OdemeEArsivList = [{"OdemeKodu":"1","Aciklama":"Ödeme Aracısı"},{"OdemeKodu":"10","Aciklama":"Kapıda Ödeme"},{"OdemeKodu":"30","Aciklama":"EFT/Havale"},{"OdemeKodu":"48","Aciklama":"Kredi kartı/Banka kartı"},{"OdemeKodu":"97","Aciklama":"Diğer"},{"OdemeKodu":"ZZZ","Aciklama":"Diğer"}];
         var kdvOranKontrol = true;
+
+                         (function fixManuelGridHard(){
+              var wrapper   = document.getElementById('manuel_grid_wrapper');
+              if(!wrapper) return;
+
+              var headTable = wrapper.querySelector('.dataTables_scrollHeadInner table');
+              var scrollHead= wrapper.querySelector('.dataTables_scrollHead');
+              var scrollBody= wrapper.querySelector('.dataTables_scrollBody');
+              var bodyTable = wrapper.querySelector('#manuel_grid');
+              if(!headTable || !bodyTable) return;
+
+              // 0) Eğer DataTable aktifse, bozmayalım: sadece scroll-head/body'yi iptal edip tek tablo yapacağız
+              try{
+                if (window.jQuery && jQuery.fn && jQuery.fn.dataTable &&
+                    jQuery.fn.dataTable.isDataTable('#manuel_grid')){
+                  jQuery('#manuel_grid').DataTable().destroy();
+                }
+              } catch(e){}
+
+              // 1) header'daki THEAD'i asıl tabloya taşı
+              var thead = headTable.querySelector('thead');
+              if (thead) {
+                bodyTable.insertBefore(thead, bodyTable.firstChild);
+              }
+
+              // 2) DataTables'ın eklediği inline width/min/max'ları temizle
+              bodyTable.querySelectorAll('th,td').forEach(function(el){
+                el.style.width = '';
+                el.style.minWidth = '';
+                el.style.maxWidth = '';
+              });
+
+              // 3) Sarmalayıcıları kaldırıp tek tablo bırak
+              if (scrollHead) scrollHead.remove();
+              if (scrollBody) {
+                var parent = scrollBody.parentNode;
+                parent.insertBefore(bodyTable, scrollBody);
+                scrollBody.remove();
+              }
+
+              // 4) Sabit ve esnek kolon genişlikleri — toplamı yatayı taşırmaz
+              //    2. kolon (Mal/Hizmet Adı) esnek bırakıldı.
+              var widths = ['60px','auto','100px','100px','110px','80px','110px','110px','60px','110px','100px','120px'];
+
+              // Eski colgroup varsa sil
+              var oldCg = bodyTable.querySelector('colgroup');
+              if (oldCg) oldCg.remove();
+
+              // Yeni colgroup ekle
+              var cg = document.createElement('colgroup');
+              widths.forEach(function(w){
+                var c = document.createElement('col');
+                c.style.width = w;
+                cg.appendChild(c);
+              });
+              bodyTable.prepend(cg);
+
+              // 5) Tablo düzeni
+              bodyTable.style.tableLayout = 'fixed';
+              bodyTable.style.width = '100%';
+            })();
     </script>
 
-
+ 
 
 
 
@@ -1225,281 +1325,293 @@
                     </div>
                 </div>
             </div>
-            <div class="box-body">
+               <div class="box-body">
                 <div id="manuel_grid_wrapper" class="dataTables_wrapper form-inline dt-bootstrap no-footer">
-                    <div class="row"><div class="col-sm-6"></div><div class="col-sm-6"></div></div><div class="row">
-                        <div class="col-sm-12">
-                            <div class="dataTables_scroll">
-                                <div class="dataTables_scrollHead" style="overflow: hidden; position: relative; border: 0px; width: 100%;">
-                                    <div class="dataTables_scrollHeadInner" style="box-sizing: content-box; width: 1160px; padding-right: 0px;">
-                                        <table style="width: 1160px; margin-left: 0px;" cellspacing="0" class="dataTable no-footer" role="grid">
-                                            <thead>
-                                                <tr style="background-color: rgb(235, 237, 240);" role="row"><th style="min-width: 60px; max-width: 60px; width: 60px;" class="sorting_disabled" rowspan="1" colspan="1">Sıra No</th><th style="min-width: 180px; max-width: 250px; width: 180px;" class="sorting_disabled" rowspan="1" colspan="1">Mal/Hizmet Adı *</th><th style="min-width: 100px; max-width: 100px; width: 100px;" class="sorting_disabled" rowspan="1" colspan="1">Miktar</th><th style="min-width: 100px; max-width: 100px; width: 100px;" class="sorting_disabled" rowspan="1" colspan="1">Birim *</th><th style="min-width: 100px; max-width: 100px; width: 100px;" class="sorting_disabled" rowspan="1" colspan="1">Birim Fiyat</th><th style="min-width: 80px; max-width: 80px; width: 80px;" class="sorting_disabled" rowspan="1" colspan="1">İskonto Oranı(%)</th><th style="min-width: 100px; max-width: 100px; width: 100px;" class="sorting_disabled" rowspan="1" colspan="1">İskonto Tutarı</th><th style="min-width: 100px; max-width: 100px; width: 100px;" class="sorting_disabled" rowspan="1" colspan="1">Mal/Hizmet Tutarı</th><th style="min-width: 60px; max-width: 60px; width: 60px;" class="sorting_disabled" rowspan="1" colspan="1">KDV Oranı(%)</th><th style="min-width: 100px; max-width: 100px; width: 100px;" class="sorting_disabled" rowspan="1" colspan="1">KDV Tutarı</th><th style="min-width: 80px; max-width: 80px; width: 80px;" class="sorting_disabled" rowspan="1" colspan="1">İstisna</th><th style="min-width: 100px; max-width: 100px; width: 100px;" class="sorting_disabled" rowspan="1" colspan="1">İşlem</th></tr>
-                                            </thead>
-                                        </table>
-                                    </div>
-                                </div><div class="dataTables_scrollBody" style="position: relative; overflow: auto; width: 100%;">
-                                    <table id="manuel_grid" style="width: 100%;" cellspacing="0" class="dataTable no-footer" role="grid">
-                                        <thead>
-                                            <tr style="background-color: rgb(235, 237, 240); height: 0px;" role="row"><th style="min-width: 60px; max-width: 60px; width: 60px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">Sıra No</div></th><th style="min-width: 180px; max-width: 250px; width: 180px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">Mal/Hizmet Adı *</div></th><th style="min-width: 100px; max-width: 100px; width: 100px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">Miktar</div></th><th style="min-width: 100px; max-width: 100px; width: 100px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">Birim *</div></th><th style="min-width: 100px; max-width: 100px; width: 100px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">Birim Fiyat</div></th><th style="min-width: 80px; max-width: 80px; width: 80px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">İskonto Oranı(%)</div></th><th style="min-width: 100px; max-width: 100px; width: 100px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">İskonto Tutarı</div></th><th style="min-width: 100px; max-width: 100px; width: 100px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">Mal/Hizmet Tutarı</div></th><th style="min-width: 60px; max-width: 60px; width: 60px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">KDV Oranı(%)</div></th><th style="min-width: 100px; max-width: 100px; width: 100px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">KDV Tutarı</div></th><th style="min-width: 80px; max-width: 80px; width: 80px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">İstisna</div></th><th style="min-width: 100px; max-width: 100px; width: 100px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" class="sorting_disabled" rowspan="1" colspan="1"><div class="dataTables_sizing" style="height:0;overflow:hidden;">İşlem</div></th></tr>
-                                        </thead>
+                    <table id="manuel_grid" class="dataTable no-footer" role="grid" cellspacing="0">
+                        <!-- Sabit/esnek kolonlar: 2. kolon esnek, diğerleri sabit -->
+                        <colgroup>
+                            <col style="width:60px">
+                            <col style="width:auto">
+                            <col style="width:100px">
+                            <col style="width:100px">
+                            <col style="width:100px">
+                            <col style="width:80px">
+                            <col style="width:100px">
+                            <col style="width:100px">
+                            <col style="width:60px">
+                            <col style="width:100px">
+                            <col style="width:80px">
+                            <col style="width:120px">
+                        </colgroup>
 
-                                        <!-- ngIf: invoiceLines.length > 0 -->
-                                        <tbody class="ng-scope">
+                        <thead>
+                            <tr>
+                                <th>Sıra No</th>
+                                <th>Mal/Hizmet Adı *</th>
+                                <th>Miktar</th>
+                                <th>Birim *</th>
+                                <th>Birim Fiyat</th>
+                                <th>İskonto Oranı(%)</th>
+                                <th>İskonto Tutarı</th>
+                                <th>Mal/Hizmet Tutarı</th>
+                                <th>KDV Oranı(%)</th>
+                                <th>KDV Tutarı</th>
+                                <th>İstisna</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
 
-                                            <!-- ngRepeat: line in invoiceLines -->
-                                            <tr role="row" class="odd ng-scope">
-                                                <td style="min-width: 60px;  max-width: 60px;"><input disabled="" class="form-control ng-pristine ng-untouched ng-valid ng-not-empty" name="ID" style="width:100%" type="number">  </td>
-                                                <td style="min-width: 180px; max-width: 250px;">
-                                                    <input class="form-control Item_Name ng-pristine ng-untouched ng-valid ng-empty" list="stoks" id="MalAdi" name="MalAdi" style="width:100%" type="text">
-                                                    <datalist id="stoks">
-                                                        <!-- ngRepeat: stok in allStocks -->
-                                                    </datalist>
-                                                </td>
-                                                <td style="min-width: 100px;  max-width: 100px;"><input class="form-control ng-pristine ng-untouched ng-valid ng-not-empty" name="Quantity_Amount" style="width:100%" type="number"> </td>
-                                                <td style="min-width: 100px; max-width: 100px;">
-                                                    <select class="form-control ng-pristine ng-untouched ng-valid ng-not-empty" style="width: 100%" name="Quantity_Unit_User">
-                                                        <!-- ngRepeat: x in birimList track by $index -->
-                                                        <option value="C62" class="ng-binding ng-scope" selected="selected">ADET    -    C62</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="NIU" class="ng-binding ng-scope">ADET    -    NIU</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="PR" class="ng-binding ng-scope">ADET-ÇİFT    -    PR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MON" class="ng-binding ng-scope">AY    -    MON</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KNI" class="ng-binding ng-scope">AZOTUN KİLOGRAMI    -    KNI</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="DR" class="ng-binding ng-scope">BİDON    -    DR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="T3" class="ng-binding ng-scope">BİN ADET    -    T3</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="D40" class="ng-binding ng-scope">BİN LİTRE    -    D40</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="R9" class="ng-binding ng-scope">BİN METRE KÜP    -    R9</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CL" class="ng-binding ng-scope">BOBİN    -    CL</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="D30" class="ng-binding ng-scope">BRÜT KALORİ DEĞERİ    -    D30</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="5H" class="ng-binding ng-scope">C.BOXES    -    5H</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CMQ" class="ng-binding ng-scope">CM3    -    CMQ</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="SA" class="ng-binding ng-scope">ÇUVAL    -    SA</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MIN" class="ng-binding ng-scope">DAKİKA    -    MIN</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="DMK" class="ng-binding ng-scope">DESİMETRE KARE    -    DMK</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KFO" class="ng-binding ng-scope">DİFOSFOR PENTAOKSİT KİLOGRAMI    -    KFO</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="E27" class="ng-binding ng-scope">DOZ    -    E27</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="ACR" class="ng-binding ng-scope">DÖNÜM    -    ACR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="DZN" class="ng-binding ng-scope">DÜZİNE    -    DZN</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="DPR" class="ng-binding ng-scope">DÜZİNE ÇİFT    -    DPR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="DPC" class="ng-binding ng-scope">DÜZİNE PARÇA    -    DPC</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="EA" class="ng-binding ng-scope">EA    -    EA</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="GFI" class="ng-binding ng-scope">FISSILE İZOTOP GRAMI    -    GFI</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="GLL" class="ng-binding ng-scope">GALON    -    GLL</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="GWH" class="ng-binding ng-scope">GİGAWATT SAAT    -    GWH</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="GRM" class="ng-binding ng-scope">GRAM    -    GRM</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="GT" class="ng-binding ng-scope">GROSS TON    -    GT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="DAY" class="ng-binding ng-scope">GÜN    -    DAY</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="WEE" class="ng-binding ng-scope">HAFTA    -    WEE</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="HAR" class="ng-binding ng-scope">HEKTAR    -    HAR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KHY" class="ng-binding ng-scope">HİDROJEN PEROKSİT KİLOGRAMI    -    KHY</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="NCL" class="ng-binding ng-scope">HÜCRE ADEDİ    -    NCL</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="TC" class="ng-binding ng-scope">KAMYON    -    TC</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CTM" class="ng-binding ng-scope">KARAT    -    CTM</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CT" class="ng-binding ng-scope">KARTON    -    CT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KPH" class="ng-binding ng-scope">KG POTASYUM OKSİD    -    KPH</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="B32" class="ng-binding ng-scope">KG-METRE KARE    -    B32</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KF" class="ng-binding ng-scope">KİLO PAKET    -    KF</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KGM" class="ng-binding ng-scope">KİLOGRAM    -    KGM</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KPO" class="ng-binding ng-scope">KİLOGRAM POTASYUM OKSİT    -    KPO</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="3I" class="ng-binding ng-scope">KİLOGRAM-ADET    -    3I</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KTM" class="ng-binding ng-scope">KİLOMETRE    -    KTM</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KWT" class="ng-binding ng-scope">KİLOWATT    -    KWT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KWH" class="ng-binding ng-scope">KİLOWATT SAAT    -    KWH</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="PK" class="ng-binding ng-scope">KOLİ(PK) / PAKET(PA)    -    PK</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CH" class="ng-binding ng-scope">KONTEYNIR    -    CH</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="BJ" class="ng-binding ng-scope">KOVA    -    BJ</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KSD" class="ng-binding ng-scope">KURU ÜRÜN KİLOGRAMI %90     -    KSD</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MND" class="ng-binding ng-scope">KURUTULMUŞ NET AĞIRLIKLI KİLOGRAMI    -    MND</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="BX" class="ng-binding ng-scope">KUTU    -    BX</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="LTR" class="ng-binding ng-scope">LİTRE    -    LTR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MAW" class="ng-binding ng-scope">MEGAWATT    -    MAW</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MWH" class="ng-binding ng-scope">MEGAWATT SAAT    -    MWH</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MWH" class="ng-binding ng-scope">MEGAWATT SAAT (1000 kW.h)    -    MWH</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KMA" class="ng-binding ng-scope">METİL AMİNLERİN KİLOGRAMI    -    KMA</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MTR" class="ng-binding ng-scope">METRE    -    MTR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MTK" class="ng-binding ng-scope">METRE KARE    -    MTK</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MTQ" class="ng-binding ng-scope">METRE KÜP    -    MTQ</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MLT" class="ng-binding ng-scope">MİLİLİTRE    -    MLT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MMT" class="ng-binding ng-scope">MM    -    MMT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="MGM" class="ng-binding ng-scope">MW    -    MGM</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="EC" class="ng-binding ng-scope">P.BAG    -    EC</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="4H" class="ng-binding ng-scope">P.CASES     -    4H</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="PA" class="ng-binding ng-scope">PAKET    -    PA</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="SL" class="ng-binding ng-scope">PALET    -    SL</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="PG" class="ng-binding ng-scope">PLAKA    -    PG</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="C68" class="ng-binding ng-scope">PUNNET    -    C68</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="DRL" class="ng-binding ng-scope">RULO    -    DRL</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="HUR" class="ng-binding ng-scope">SAAT          -    HUR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="LPA" class="ng-binding ng-scope">SAF ALKOL LİTRESİ    -    LPA</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CR" class="ng-binding ng-scope">SANDIK    -    CR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="D62" class="ng-binding ng-scope">SANİYE        -    D62</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CMT" class="ng-binding ng-scope">SANTİMETRE    -    CMT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CMK" class="ng-binding ng-scope">SANTİMETRE KARE    -    CMK</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="SET" class="ng-binding ng-scope">SET (TAKIM)    -    SET</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KSH" class="ng-binding ng-scope">SODYUM HİDROKSİT KİLOGRAMI    -    KSH</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="SM3" class="ng-binding ng-scope">STANDART METREKÜP    -    SM3</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="G26" class="ng-binding ng-scope">STER    -    G26</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="BO" class="ng-binding ng-scope">ŞİŞE    -    BO</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="LR" class="ng-binding ng-scope">TABAKA    -    LR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="ST" class="ng-binding ng-scope">TBK    -    ST</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="TN" class="ng-binding ng-scope">TENEKE    -    TN</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="D32" class="ng-binding ng-scope">TERAWATT SAAT    -    D32</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="TL" class="ng-binding ng-scope">TL    -    TL</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="26" class="ng-binding ng-scope">TON    -    26</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="TNE" class="ng-binding ng-scope">TON    -    TNE</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CCT" class="ng-binding ng-scope">TON BAŞINA TAŞIMA KAPASİTESİ    -    CCT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="1J" class="ng-binding ng-scope">TON MİLE    -    1J</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="BG" class="ng-binding ng-scope">TORBA    -    BG</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="KUR" class="ng-binding ng-scope">URANYUM KİLOGRAMI    -    KUR</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="JOU" class="ng-binding ng-scope">VARDİYA       -    JOU</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="J57" class="ng-binding ng-scope">VARİL    -    J57</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="BFT" class="ng-binding ng-scope">W.CASES    -    BFT</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="ANN" class="ng-binding ng-scope">YIL    -    ANN</option><!-- end ngRepeat: x in birimList track by $index -->
-                                                        <option value="CEN
-" class="ng-binding ng-scope">
-                                                            YÜZ ADET    -    CEN
-                                                        </option><!-- end ngRepeat: x in birimList track by $index -->
-                                                    </select>
-                                                </td>
-                                                <td style="min-width: 100px;  max-width: 100px;"><input class="form-control ng-pristine ng-untouched ng-valid ng-not-empty" name="Price_Amount" style="width:100%" type="number"> </td>
+                        <!-- ngIf: invoiceLines.length > 0 -->
+                        <tbody class="ng-scope">
 
-                                                <td style="min-width: 80px;  max-width: 80px;">  <input class="form-control ng-pristine ng-untouched ng-valid ng-not-empty" name="Allowance_Percent" style="width:100%" type="number"> </td>
-                                                <td style="min-width: 100px;  max-width: 100px;"><input class="form-control ng-pristine ng-untouched ng-valid ng-not-empty" name="Allowance_Amount" style="width:100%" type="number"> </td>
+                            <!-- ngRepeat: line in invoiceLines -->
+                            <tr role="row" class="odd">
+                                <td style="min-width: 60px;  max-width: 60px;"><input disabled="" class="form-control" name="ID" style="width:100%" type="number">  </td>
+                                <td style="min-width: 180px; max-width: 250px;">
+                                    <input class="form-control Item_Name" list="stoks" id="MalAdi" name="MalAdi" style="width:100%" type="text">
+                                    <datalist id="stoks">
+                                        <!-- ngRepeat: stok in allStocks -->
+                                    </datalist>
+                                </td>
+                                <td style="min-width: 100px;  max-width: 100px;"><input class="form-control" name="Quantity_Amount" style="width:100%" type="number"> </td>
+                                <td style="min-width: 100px; max-width: 100px;">
+                                    <select class="form-control" style="width: 100%" name="Quantity_Unit_User">
+                                        <!-- ngRepeat: x in birimList track by $index -->
+                                        <option value="C62" class="ng-binding" selected="selected">ADET    -    C62</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="NIU" class="ng-binding">ADET    -    NIU</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="PR" class="ng-binding">ADET-ÇİFT    -    PR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MON" class="ng-binding">AY    -    MON</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KNI" class="ng-binding">AZOTUN KİLOGRAMI    -    KNI</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="DR" class="ng-binding">BİDON    -    DR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="T3" class="ng-binding">BİN ADET    -    T3</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="D40" class="ng-binding">BİN LİTRE    -    D40</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="R9" class="ng-binding">BİN METRE KÜP    -    R9</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CL" class="ng-binding">BOBİN    -    CL</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="D30" class="ng-binding">BRÜT KALORİ DEĞERİ    -    D30</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="5H" class="ng-binding">C.BOXES    -    5H</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CMQ" class="ng-binding">CM3    -    CMQ</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="SA" class="ng-binding">ÇUVAL    -    SA</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MIN" class="ng-binding">DAKİKA    -    MIN</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="DMK" class="ng-binding">DESİMETRE KARE    -    DMK</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KFO" class="ng-binding">DİFOSFOR PENTAOKSİT KİLOGRAMI    -    KFO</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="E27" class="ng-binding">DOZ    -    E27</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="ACR" class="ng-binding">DÖNÜM    -    ACR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="DZN" class="ng-binding">DÜZİNE    -    DZN</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="DPR" class="ng-binding">DÜZİNE ÇİFT    -    DPR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="DPC" class="ng-binding">DÜZİNE PARÇA    -    DPC</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="EA" class="ng-binding">EA    -    EA</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="GFI" class="ng-binding">FISSILE İZOTOP GRAMI    -    GFI</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="GLL" class="ng-binding">GALON    -    GLL</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="GWH" class="ng-binding">GİGAWATT SAAT    -    GWH</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="GRM" class="ng-binding">GRAM    -    GRM</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="GT" class="ng-binding">GROSS TON    -    GT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="DAY" class="ng-binding">GÜN    -    DAY</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="WEE" class="ng-binding">HAFTA    -    WEE</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="HAR" class="ng-binding">HEKTAR    -    HAR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KHY" class="ng-binding">HİDROJEN PEROKSİT KİLOGRAMI    -    KHY</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="NCL" class="ng-binding">HÜCRE ADEDİ    -    NCL</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="TC" class="ng-binding">KAMYON    -    TC</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CTM" class="ng-binding">KARAT    -    CTM</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CT" class="ng-binding">KARTON    -    CT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KPH" class="ng-binding">KG POTASYUM OKSİD    -    KPH</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="B32" class="ng-binding">KG-METRE KARE    -    B32</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KF" class="ng-binding">KİLO PAKET    -    KF</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KGM" class="ng-binding">KİLOGRAM    -    KGM</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KPO" class="ng-binding">KİLOGRAM POTASYUM OKSİT    -    KPO</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="3I" class="ng-binding">KİLOGRAM-ADET    -    3I</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KTM" class="ng-binding">KİLOMETRE    -    KTM</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KWT" class="ng-binding">KİLOWATT    -    KWT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KWH" class="ng-binding">KİLOWATT SAAT    -    KWH</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="PK" class="ng-binding">KOLİ(PK) / PAKET(PA)    -    PK</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CH" class="ng-binding">KONTEYNIR    -    CH</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="BJ" class="ng-binding">KOVA    -    BJ</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KSD" class="ng-binding">KURU ÜRÜN KİLOGRAMI %90     -    KSD</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MND" class="ng-binding">KURUTULMUŞ NET AĞIRLIKLI KİLOGRAMI    -    MND</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="BX" class="ng-binding">KUTU    -    BX</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="LTR" class="ng-binding">LİTRE    -    LTR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MAW" class="ng-binding">MEGAWATT    -    MAW</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MWH" class="ng-binding">MEGAWATT SAAT    -    MWH</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MWH" class="ng-binding">MEGAWATT SAAT (1000 kW.h)    -    MWH</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KMA" class="ng-binding">METİL AMİNLERİN KİLOGRAMI    -    KMA</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MTR" class="ng-binding">METRE    -    MTR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MTK" class="ng-binding">METRE KARE    -    MTK</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MTQ" class="ng-binding">METRE KÜP    -    MTQ</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MLT" class="ng-binding">MİLİLİTRE    -    MLT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MMT" class="ng-binding">MM    -    MMT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="MGM" class="ng-binding">MW    -    MGM</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="EC" class="ng-binding">P.BAG    -    EC</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="4H" class="ng-binding">P.CASES     -    4H</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="PA" class="ng-binding">PAKET    -    PA</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="SL" class="ng-binding">PALET    -    SL</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="PG" class="ng-binding">PLAKA    -    PG</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="C68" class="ng-binding">PUNNET    -    C68</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="DRL" class="ng-binding">RULO    -    DRL</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="HUR" class="ng-binding">SAAT          -    HUR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="LPA" class="ng-binding">SAF ALKOL LİTRESİ    -    LPA</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CR" class="ng-binding">SANDIK    -    CR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="D62" class="ng-binding">SANİYE        -    D62</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CMT" class="ng-binding">SANTİMETRE    -    CMT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CMK" class="ng-binding">SANTİMETRE KARE    -    CMK</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="SET" class="ng-binding">SET (TAKIM)    -    SET</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KSH" class="ng-binding">SODYUM HİDROKSİT KİLOGRAMI    -    KSH</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="SM3" class="ng-binding">STANDART METREKÜP    -    SM3</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="G26" class="ng-binding">STER    -    G26</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="BO" class="ng-binding">ŞİŞE    -    BO</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="LR" class="ng-binding">TABAKA    -    LR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="ST" class="ng-binding">TBK    -    ST</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="TN" class="ng-binding">TENEKE    -    TN</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="D32" class="ng-binding">TERAWATT SAAT    -    D32</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="TL" class="ng-binding">TL    -    TL</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="26" class="ng-binding">TON    -    26</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="TNE" class="ng-binding">TON    -    TNE</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CCT" class="ng-binding">TON BAŞINA TAŞIMA KAPASİTESİ    -    CCT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="1J" class="ng-binding">TON MİLE    -    1J</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="BG" class="ng-binding">TORBA    -    BG</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="KUR" class="ng-binding">URANYUM KİLOGRAMI    -    KUR</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="JOU" class="ng-binding">VARDİYA       -    JOU</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="J57" class="ng-binding">VARİL    -    J57</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="BFT" class="ng-binding">W.CASES    -    BFT</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="ANN" class="ng-binding">YIL    -    ANN</option><!-- end ngRepeat: x in birimList track by $index -->
+                                        <option value="CEN
+" class="ng-binding">
+                                            YÜZ ADET    -    CEN
+                                        </option><!-- end ngRepeat: x in birimList track by $index -->
+                                    </select>
+                                </td>
+                                <td style="min-width: 100px;  max-width: 100px;"><input class="form-control" name="Price_Amount" style="width:100%" type="number"> </td>
 
-                                                <td style="min-width: 100px;  max-width: 100px;"><input disabled="" class="form-control" name="Price_Total" value="1,00" style="width:100%" type="text"> </td>
+                                <td style="min-width: 80px;  max-width: 80px;">  <input class="form-control" name="Allowance_Percent" style="width:100%" type="number"> </td>
+                                <td style="min-width: 100px;  max-width: 100px;"><input class="form-control" name="Allowance_Amount" style="width:100%" type="number"> </td>
 
-                                                <td style="min-width: 60px; max-width: 60px;">
-                                                    <!-- ngIf: !kdvOranKontrol -->
-                                                    <!-- ngIf: kdvOranKontrol --><select class="form-control Tax_Perc0015 ng-pristine ng-untouched ng-valid ng-scope ng-not-empty" style="width: 100%" convert-to-number="" id="Tax_Perc0015" name="Tax_Perc0015">
-                                                        <!-- ngRepeat: x in kdvOranlar -->
-                                                        <option value="0" class="ng-binding ng-scope">0</option><!-- end ngRepeat: x in kdvOranlar -->
-                                                        <option value="1" class="ng-binding ng-scope">1</option><!-- end ngRepeat: x in kdvOranlar -->
-                                                        <option value="8" class="ng-binding ng-scope">8</option><!-- end ngRepeat: x in kdvOranlar -->
-                                                        <option value="10" class="ng-binding ng-scope">10</option><!-- end ngRepeat: x in kdvOranlar -->
-                                                        <option value="18" class="ng-binding ng-scope">18</option><!-- end ngRepeat: x in kdvOranlar -->
-                                                        <option value="20" class="ng-binding ng-scope" selected="selected">20</option><!-- end ngRepeat: x in kdvOranlar -->
-                                                    </select><!-- end ngIf: kdvOranKontrol -->
-                                                </td>
+                                <td style="min-width: 100px;  max-width: 100px;"><input disabled="" class="form-control" name="Price_Total" value="1,00" style="width:100%" type="text"> </td>
 
-                                                <td style="min-width: 100px;  max-width: 100px;"><input disabled="" class="form-control medulaField ng-pristine ng-untouched ng-valid ng-not-empty" name="Tax_Amnt0015" style="width:100%" type="number"> </td>
+                                <td style="min-width: 60px; max-width: 60px;">
+                                    <!-- ngIf: !kdvOranKontrol -->
+                                    <!-- ngIf: kdvOranKontrol --><select class="form-control Tax_Perc0015" style="width: 100%" convert-to-number="" id="Tax_Perc0015" name="Tax_Perc0015">
+                                        <!-- ngRepeat: x in kdvOranlar -->
+                                        <option value="0" class="ng-binding" selected="selected">0</option><!-- end ngRepeat: x in kdvOranlar -->
+                                        <option value="1" class="ng-binding">1</option><!-- end ngRepeat: x in kdvOranlar -->
+                                        <option value="8" class="ng-binding">8</option><!-- end ngRepeat: x in kdvOranlar -->
+                                        <option value="10" class="ng-binding">10</option><!-- end ngRepeat: x in kdvOranlar -->
+                                        <option value="18" class="ng-binding">18</option><!-- end ngRepeat: x in kdvOranlar -->
+                                        <option value="20" class="ng-binding">20</option><!-- end ngRepeat: x in kdvOranlar -->
+                                    </select><!-- end ngIf: kdvOranKontrol -->
+                                </td>
 
-                                                <td style="min-width: 80px;  max-width: 80px;border-bottom:1px solid rgb(235, 237, 240);">
-                                                    <select class="form-control ng-pristine ng-untouched ng-valid ng-empty" name="istisnaListname" style="width: 100%; display:none;">
-                                                        <option value="? string: ?" selected="selected"></option>
-                                                        <!-- ngRepeat: x in istisnaList -->
-                                                        <option value="101" class="ng-binding ng-scope">101-ÖTV-İhracat İstisnası</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="102" class="ng-binding ng-scope">102-ÖTV-Diplomatik İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="103" class="ng-binding ng-scope">103-ÖTV-Askeri Amaçlı İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="104" class="ng-binding ng-scope">104-ÖTV-Petrol Arama Faaliyetlerinde Bulunanlara Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="105" class="ng-binding ng-scope">105-ÖTV-Uluslararası Anlaşmadan Doğan İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="106" class="ng-binding ng-scope">106-ÖTV-Diğer İstisnalar</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="107" class="ng-binding ng-scope">107-ÖTV-7/a Maddesi Kapsamında Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="108" class="ng-binding ng-scope">108-ÖTV-Geçici 5. Madde Kapsamında Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="151" class="ng-binding ng-scope">151-ÖTV- İstisna Olmayan Diğer</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="201" class="ng-binding ng-scope">201-17/1 Kültür ve eğitim amacı taşıyan işlemler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="202" class="ng-binding ng-scope">202-17/2-a Sağlık, çevre ve sosyal yardım amaçlı işlemler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="204" class="ng-binding ng-scope">204-17/2-c Yabancı diplomatik organ ve hayır kurumlarının bağışlarıyla ilgili mal ve hizmet alışları</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="205" class="ng-binding ng-scope">205-17/2-d Taşınmaz kültür varlıklarına ilişkin teslimler ve mimarlık hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="206" class="ng-binding ng-scope">206-17/2-e Mesleki kuruluşların işlemleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="207" class="ng-binding ng-scope">207-17/3 Askeri fabrika</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="208" class="ng-binding ng-scope">208-17/4-c Birleşme, devir, dönüşüm ve bölünme işlemleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="209" class="ng-binding ng-scope">209-17/4-e Banka ve sigorta muameleleri vergisi kapsamına giren işlemler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="211" class="ng-binding ng-scope">211-17/4-h Zirai amaçlı veya köy tüzel kişiliklerince yapılan içme suyu teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="212" class="ng-binding ng-scope">212-17/4-ı Serbest bölgelerde verilen hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="213" class="ng-binding ng-scope">213-17/4-j Boru hattı ile yapılan petrol ve gaz taşımacılığı</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="214" class="ng-binding ng-scope">214-17/4-k Sanayi bölgelerindeki arsa ve işyeri teslimleri ile konut yapı kooperatiflerinin üyelerine konut teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="215" class="ng-binding ng-scope">215-17/4-l Varlık yönetim şirketlerinin işlemleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="216" class="ng-binding ng-scope">216-17/4-m Tasarruf mevduatı sigorta fonunun işlemleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="217" class="ng-binding ng-scope">217-17/4-n Basın-Yayın ve Enformasyon Genel Müdürlüğüne verilen haber hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="218" class="ng-binding ng-scope">218-17/4-0 Gümrük antrepoları, geçici depolama yerleri, gümrüklü sahalar ve vergisiz satış yapılan mağazalarla ilgili hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="219" class="ng-binding ng-scope">219-17/4-p Hazine ve Arsa Ofisi Genel Müdürlüğünün işlemleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="221" class="ng-binding ng-scope">221-Geçici 15 Konut yapı kooperatifleri, belediyeler ve sosyal güvenlik kuruluşlarına verilen inşaat taahhüt hizmeti</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="223" class="ng-binding ng-scope">223-Geçici 20/1 Teknoloji geliştirme bölgelerinde yapılan işlemler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="225" class="ng-binding ng-scope">225-Geçici 23 Milli Eğitim Bakanlığına yapılan bilgisayar bağışları ile ilgili teslimler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="226" class="ng-binding ng-scope">226-17/2-b Özel Okulları, Üniversite ve Yüksekokullar Tarafından Verilen Bedelsiz Eğitim Ve Öğretim Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="227" class="ng-binding ng-scope">227-17/2-b Kanunların Gösterdiği Gerek Üzerine Bedelsiz Olarak Yapılan Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="228" class="ng-binding ng-scope">228-17/2-b Kanunun (17/1) Maddesinde Sayılan Kurum ve Kuruluşlara Bedelsiz Olarak Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="229" class="ng-binding ng-scope">229-17/2-b Gıda Bankacılığı Faaliyetinde Bulunan Dernek ve Vakıflara Bağışlanan Gıda, Temizlik, Giyecek ve Yakacak Maddeleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="230" class="ng-binding ng-scope">230-17/4-g Külçe Altın, Külçe Gümüş Ve Kiymetli Taşlarin Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="231" class="ng-binding ng-scope">231-17/4-g Metal Plastik, Lastik, Kauçuk, Kağit, Cam Hurda Ve Atıkların Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="232" class="ng-binding ng-scope">232-17/4-g Döviz, Para, Damga Pulu, Değerli Kağıtlar, Hisse Senedi ve Tahvil Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="234" class="ng-binding ng-scope">234-17/4-ş Konut Finansmanı Amacıyla Teminat Gösterilen ve İpotek Konulan Konutların Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="235" class="ng-binding ng-scope">235-16/1-c Transit ve Gümrük Antrepo Rejimleri İle Geçici Depolama ve Serbest Bölge Hükümlerinin Uygulandığiı Malların Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="236" class="ng-binding ng-scope">236-19/2 Usulüne Göre Yürürlüğe Girmiş Uluslararası Anlaşmalar Kapsamındaki İstisnalar (İade Hakkı Tanınmayan)</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="237" class="ng-binding ng-scope">237-17/4-t 5300 Sayılı Kanuna Göre Düzenlenen Ürün Senetlerinin İhtisas/Ticaret Borsaları Aracılığıyla İlk Teslimlerinden Sonraki Teslim</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="238" class="ng-binding ng-scope">238-17/4-u Varlıkların Varlık Kiralama Şirketlerine Devri İle Bu Varlıkların Varlık Kiralama Şirketlerince Kiralanması ve Devralınan Kuruma Devri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="239" class="ng-binding ng-scope">239-17/4-y Taşınmazların Finansal Kiralama Şirketlerine Devri, Finansal Kiralama Şirketi Tarafından Devredene Kiralanması ve Devri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="240" class="ng-binding ng-scope">240-17/4-z Patentli Veya Faydalı Model Belgeli Buluşa İlişkin Gayri Maddi Hakların Kiralanması, Devri ve Satış</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="250" class="ng-binding ng-scope">250-Diğerleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="301" class="ng-binding ng-scope">301-11/1-a Mal ihracatı</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="302" class="ng-binding ng-scope">302-11/1-a Hizmet ihracatı</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="303" class="ng-binding ng-scope">303-11/1-a Roaming hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="304" class="ng-binding ng-scope">304-13/a Deniz hava ve demiryolu taşıma araçlarının teslimi ile inşa, tadil, bakım ve onarımları</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="305" class="ng-binding ng-scope">305-13/b Deniz ve hava taşıma araçları için liman ve hava meydanlarında yapılan hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="306" class="ng-binding ng-scope">306-13/c Petrol aramaları</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="307" class="ng-binding ng-scope">307-13/c Kıymetli madenlerin arama, zenginleştirme ve rafinaj faaliyetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="308" class="ng-binding ng-scope">308-13/d Teşvikli yatırım mallarının teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="309" class="ng-binding ng-scope">309-13/e Liman ve hava meydanlarının inşası, yenilenmesi ve genişletilmesi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="310" class="ng-binding ng-scope">310-13/f Ulusal güvenlik amaçlı teslim ve hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="311" class="ng-binding ng-scope">311-14/1 Uluslararası taşımacılık</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="312" class="ng-binding ng-scope">312-15/a Diplomatik organ ve misyonlara yapılan teslim ve hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="313" class="ng-binding ng-scope">313-15/b Uluslararası kuruluşlara yapılan teslim ve hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="314" class="ng-binding ng-scope">314-19/2 Usulüne Göre Yürürlüğe Girmiş Uluslar Arası Anlaşmalar Kapsamındaki İstisnalar</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="315" class="ng-binding ng-scope">315-14/3 İhraç Konusu Eşyayı Taşıyan Kamyon, Çekici ve Yarı Romorklara Yapılan Motorin Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="316" class="ng-binding ng-scope">316- 11/1-a Serbest Bölgelerdeki Müşteriler İçin Yapılan Fason Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="317" class="ng-binding ng-scope">317-17/4-s Engellilerin Eğitimleri, Meslekleri ve Günlük Yaşamlarına İlişkin Araç-Gereç ve Bilgisayar Programları</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="318" class="ng-binding ng-scope">318-Geçici 29 Yap-İşlet-Devret modeli projeler, kiralama karş. yapt. sağlık tesis.projeler, kiralama karş. yapt. eğitim öğretim tesis. tes. hiz.</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="319" class="ng-binding ng-scope">319-13/g Başbakanlık Merkez Teşkilatına Yapılan Araç Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="320" class="ng-binding ng-scope">320-Geçici 16 (6111 sayılı K.) İSMEP Kapsamında İstanbul İl Özel İdaresi'ne Bağlı Olarak Faaliyet Gösteren İstanbul Proje Koordinasyon Birimi'ne Yapılacak Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="321" class="ng-binding ng-scope">321-Geçici 26 BM, NATO(temsilcilikleri, bağlı program, fon, özel ihtisas), OECD resmi kullanımları için yapılacak mal tes. hiz. ifaları</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="322" class="ng-binding ng-scope">322-11/1-a Türkiye'de İkamet Etmeyenlere Özel Fatura ile Yapılan Teslimler (Bavul Ticareti)</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="323" class="ng-binding ng-scope">323-13/ğ 5300 Sayılı Kanuna Göre Düzenlenen Ürün Senetlerinin İhtisas/Ticaret Borsaları Aracılığıyla İlk Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="350" class="ng-binding ng-scope">350-Diğerleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="351" class="ng-binding ng-scope">351-KDV - İstisna Olmayan Diğer</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="326" class="ng-binding ng-scope">326-13/ı Gıda, Tarım ve Hayvancılık Bakanlığı Tarafından Tescil Edilmiş Gübrelerin Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="324" class="ng-binding ng-scope">324-13/h Türkiye Kızılay Derneğine Yapılan Teslim ve Hizmetler ile Türkiye Kızılay Derneğinin Teslim ve Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="327" class="ng-binding ng-scope">327-13/ı Gıda, Tarım ve Hayvancılık Bakanlığı Tarafından Tescil Edilmiş Gübrelerin İçeriğinde Bulunan Hammaddelerin Gübre Üreticilerine Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="220" class="ng-binding ng-scope">220-17/4-r İki Tam Yıl Süreyle Sahip Olunan Taşınmaz ve İştirak Hisseleri Satışları</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="325" class="ng-binding ng-scope">325-13/ı Yem Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="241" class="ng-binding ng-scope">241-TürkAkım Gaz Boru Hattı Projesine İlişkin Anlaşmanın (9/b) Maddesinde Yer Alan Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="328" class="ng-binding ng-scope">328-13/i Konut veya İşyeri Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="330" class="ng-binding ng-scope">330-KDV 13/j md. Organize Sanayi Bölgeleri ile Küçük Sanayi Sitelerinin İnşasına İlişkin Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="331" class="ng-binding ng-scope">331-KDV 13/m md. Ar-Ge, Yenilik ve Tasarım Faaliyetlerinde Kullanılmak Üzere Yapılan Yeni Makina ve Teçhizat Teslimlerinde İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="332" class="ng-binding ng-scope">332-KDV Geçici 39. Md. İmalat Sanayiinde Kullanılmak Üzere Yapılan Yeni Makina ve Teçhizat Teslimlerinde İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="242" class="ng-binding ng-scope">242-KDV 17/4-ö md. Gümrük Antrepoları, Geçici Depolama Yerleri ile Gümrüklü Sahalarda, İthalat ve İhracat İşlemlerine konu mallar ile transit rejim kapsamında işlem gören mallar için verilen ardiye, depolama ve terminal hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="333" class="ng-binding ng-scope">333-KDV 13/k md. Kapsamında Genel ve Özel Bütçeli Kamu İdarelerine, İl Özel İdarelerine, Belediyelere ve Köylere bağışlanan Tesislerin İnşasına İlişkin İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="334" class="ng-binding ng-scope">334-KDV 13/l md. Kapsamında Yabancılara Verilen Sağlık Hizmetlerinde İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="335" class="ng-binding ng-scope">335-KDV 13/n Basılı Kitap ve Süreli Yayınların Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="336" class="ng-binding ng-scope">336-Geçici 40 UEFA Müsabakaları Kapsamında Yapılacak Teslim ve Hizmetler </option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="337" class="ng-binding ng-scope">337-Türk Akım Gaz Boru Hattı Projesine İlişkin Anlaşmanın (9/h) Maddesi Kapsamındaki Gaz Taşıma Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="338" class="ng-binding ng-scope">338-İmalatçıların Mal İhracatları</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="339" class="ng-binding ng-scope">339-İmalat Sanayii ile Turizme Yönelik Yatırım Teşvik Belgesi Kapsamındaki İnşaat İşlerine İlişkin Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="001" class="ng-binding ng-scope">001-Diplomatik İstisna</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="340" class="ng-binding ng-scope">340-Elektrik Motorlu Taşıt Araçlarının Geliştirilmesine Yönelik Mühendislik Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="342" class="ng-binding ng-scope">
-                                                            342-Genel Bütçeli Kamu İdarelerine Bağışlanacak Taşınmazların İnşasına
-                                                            İlişkin İstisna
-                                                        </option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="343" class="ng-binding ng-scope">
-                                                            343-Genel Bütçeli Kamu İdarelerine Bağışlanacak Konutların Yabancı Devlet
-                                                            Kurum ve Kuruluşlarına Teslimine İlişkin İstisna
-                                                        </option><!-- end ngRepeat: x in istisnaList -->
-                                                        <option value="344" class="ng-binding ng-scope">344-13/o Milli Savunma ve İç Güvenlik İhtiyaçlarında Kullanılmak Üzere Taşıt Teslimi</option><!-- end ngRepeat: x in istisnaList -->
-                                                    </select>
-                                                </td>
+                                <td style="min-width: 100px;  max-width: 100px;"><input disabled="" class="form-control medulaField" name="Tax_Amnt0015" style="width:100%" type="number"> </td>
 
-                                                <td style="min-width: 100px;  max-width: 100px;">
-                                                    <button class="btn btn-sm btn-success greenhoverclass satirekle"><i class="fa fa-plus"></i></button>
-                                                    <button class="btn btn-sm btn-warning orangehoverclass"><i class="fa fa-edit"></i></button>
-                                                    <button class="btn btn-sm btn-danger redhoverclass"><i class="fa fa-remove"></i></button>
-                                                </td>
-                                            </tr><!-- end ngRepeat: line in invoiceLines -->
-                                        </tbody><!-- end ngIf: invoiceLines.length > 0 -->
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div><div class="row"><div class="col-sm-5"></div><div class="col-sm-7"></div></div>
+                                <td style="min-width: 80px;  max-width: 80px;border-bottom:1px solid rgb(235, 237, 240);">
+                                    <select class="form-control" name="istisnaListname" style="width: 100%; display:block;">
+                                        <!-- ngRepeat: x in istisnaList -->
+                                        <option value="101" class="ng-binding">101-ÖTV-İhracat İstisnası</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="102" class="ng-binding">102-ÖTV-Diplomatik İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="103" class="ng-binding">103-ÖTV-Askeri Amaçlı İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="104" class="ng-binding">104-ÖTV-Petrol Arama Faaliyetlerinde Bulunanlara Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="105" class="ng-binding">105-ÖTV-Uluslararası Anlaşmadan Doğan İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="106" class="ng-binding">106-ÖTV-Diğer İstisnalar</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="107" class="ng-binding">107-ÖTV-7/a Maddesi Kapsamında Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="108" class="ng-binding">108-ÖTV-Geçici 5. Madde Kapsamında Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="151" class="ng-binding">151-ÖTV- İstisna Olmayan Diğer</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="201" class="ng-binding">201-17/1 Kültür ve eğitim amacı taşıyan işlemler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="202" class="ng-binding">202-17/2-a Sağlık, çevre ve sosyal yardım amaçlı işlemler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="204" class="ng-binding">204-17/2-c Yabancı diplomatik organ ve hayır kurumlarının bağışlarıyla ilgili mal ve hizmet alışları</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="205" class="ng-binding">205-17/2-d Taşınmaz kültür varlıklarına ilişkin teslimler ve mimarlık hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="206" class="ng-binding">206-17/2-e Mesleki kuruluşların işlemleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="207" class="ng-binding">207-17/3 Askeri fabrika</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="208" class="ng-binding">208-17/4-c Birleşme, devir, dönüşüm ve bölünme işlemleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="209" class="ng-binding">209-17/4-e Banka ve sigorta muameleleri vergisi kapsamına giren işlemler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="211" class="ng-binding">211-17/4-h Zirai amaçlı veya köy tüzel kişiliklerince yapılan içme suyu teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="212" class="ng-binding">212-17/4-ı Serbest bölgelerde verilen hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="213" class="ng-binding">213-17/4-j Boru hattı ile yapılan petrol ve gaz taşımacılığı</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="214" class="ng-binding">214-17/4-k Sanayi bölgelerindeki arsa ve işyeri teslimleri ile konut yapı kooperatiflerinin üyelerine konut teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="215" class="ng-binding">215-17/4-l Varlık yönetim şirketlerinin işlemleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="216" class="ng-binding">216-17/4-m Tasarruf mevduatı sigorta fonunun işlemleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="217" class="ng-binding">217-17/4-n Basın-Yayın ve Enformasyon Genel Müdürlüğüne verilen haber hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="218" class="ng-binding">218-17/4-0 Gümrük antrepoları, geçici depolama yerleri, gümrüklü sahalar ve vergisiz satış yapılan mağazalarla ilgili hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="219" class="ng-binding">219-17/4-p Hazine ve Arsa Ofisi Genel Müdürlüğünün işlemleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="221" class="ng-binding">221-Geçici 15 Konut yapı kooperatifleri, belediyeler ve sosyal güvenlik kuruluşlarına verilen inşaat taahhüt hizmeti</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="223" class="ng-binding">223-Geçici 20/1 Teknoloji geliştirme bölgelerinde yapılan işlemler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="225" class="ng-binding">225-Geçici 23 Milli Eğitim Bakanlığına yapılan bilgisayar bağışları ile ilgili teslimler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="226" class="ng-binding">226-17/2-b Özel Okulları, Üniversite ve Yüksekokullar Tarafından Verilen Bedelsiz Eğitim Ve Öğretim Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="227" class="ng-binding">227-17/2-b Kanunların Gösterdiği Gerek Üzerine Bedelsiz Olarak Yapılan Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="228" class="ng-binding">228-17/2-b Kanunun (17/1) Maddesinde Sayılan Kurum ve Kuruluşlara Bedelsiz Olarak Yapılan Teslimler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="229" class="ng-binding">229-17/2-b Gıda Bankacılığı Faaliyetinde Bulunan Dernek ve Vakıflara Bağışlanan Gıda, Temizlik, Giyecek ve Yakacak Maddeleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="230" class="ng-binding">230-17/4-g Külçe Altın, Külçe Gümüş Ve Kiymetli Taşlarin Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="231" class="ng-binding">231-17/4-g Metal Plastik, Lastik, Kauçuk, Kağit, Cam Hurda Ve Atıkların Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="232" class="ng-binding">232-17/4-g Döviz, Para, Damga Pulu, Değerli Kağıtlar, Hisse Senedi ve Tahvil Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="234" class="ng-binding">234-17/4-ş Konut Finansmanı Amacıyla Teminat Gösterilen ve İpotek Konulan Konutların Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="235" class="ng-binding">235-16/1-c Transit ve Gümrük Antrepo Rejimleri İle Geçici Depolama ve Serbest Bölge Hükümlerinin Uygulandığiı Malların Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="236" class="ng-binding">236-19/2 Usulüne Göre Yürürlüğe Girmiş Uluslararası Anlaşmalar Kapsamındaki İstisnalar (İade Hakkı Tanınmayan)</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="237" class="ng-binding">237-17/4-t 5300 Sayılı Kanuna Göre Düzenlenen Ürün Senetlerinin İhtisas/Ticaret Borsaları Aracılığıyla İlk Teslimlerinden Sonraki Teslim</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="238" class="ng-binding">238-17/4-u Varlıkların Varlık Kiralama Şirketlerine Devri İle Bu Varlıkların Varlık Kiralama Şirketlerince Kiralanması ve Devralınan Kuruma Devri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="239" class="ng-binding">239-17/4-y Taşınmazların Finansal Kiralama Şirketlerine Devri, Finansal Kiralama Şirketi Tarafından Devredene Kiralanması ve Devri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="240" class="ng-binding">240-17/4-z Patentli Veya Faydalı Model Belgeli Buluşa İlişkin Gayri Maddi Hakların Kiralanması, Devri ve Satış</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="250" class="ng-binding">250-Diğerleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="301" class="ng-binding" selected="selected">301-11/1-a Mal ihracatı</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="302" class="ng-binding">302-11/1-a Hizmet ihracatı</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="303" class="ng-binding">303-11/1-a Roaming hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="304" class="ng-binding">304-13/a Deniz hava ve demiryolu taşıma araçlarının teslimi ile inşa, tadil, bakım ve onarımları</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="305" class="ng-binding">305-13/b Deniz ve hava taşıma araçları için liman ve hava meydanlarında yapılan hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="306" class="ng-binding">306-13/c Petrol aramaları</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="307" class="ng-binding">307-13/c Kıymetli madenlerin arama, zenginleştirme ve rafinaj faaliyetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="308" class="ng-binding">308-13/d Teşvikli yatırım mallarının teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="309" class="ng-binding">309-13/e Liman ve hava meydanlarının inşası, yenilenmesi ve genişletilmesi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="310" class="ng-binding">310-13/f Ulusal güvenlik amaçlı teslim ve hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="311" class="ng-binding">311-14/1 Uluslararası taşımacılık</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="312" class="ng-binding">312-15/a Diplomatik organ ve misyonlara yapılan teslim ve hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="313" class="ng-binding">313-15/b Uluslararası kuruluşlara yapılan teslim ve hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="314" class="ng-binding">314-19/2 Usulüne Göre Yürürlüğe Girmiş Uluslar Arası Anlaşmalar Kapsamındaki İstisnalar</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="315" class="ng-binding">315-14/3 İhraç Konusu Eşyayı Taşıyan Kamyon, Çekici ve Yarı Romorklara Yapılan Motorin Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="316" class="ng-binding">316- 11/1-a Serbest Bölgelerdeki Müşteriler İçin Yapılan Fason Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="317" class="ng-binding">317-17/4-s Engellilerin Eğitimleri, Meslekleri ve Günlük Yaşamlarına İlişkin Araç-Gereç ve Bilgisayar Programları</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="318" class="ng-binding">318-Geçici 29 Yap-İşlet-Devret modeli projeler, kiralama karş. yapt. sağlık tesis.projeler, kiralama karş. yapt. eğitim öğretim tesis. tes. hiz.</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="319" class="ng-binding">319-13/g Başbakanlık Merkez Teşkilatına Yapılan Araç Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="320" class="ng-binding">320-Geçici 16 (6111 sayılı K.) İSMEP Kapsamında İstanbul İl Özel İdaresi'ne Bağlı Olarak Faaliyet Gösteren İstanbul Proje Koordinasyon Birimi'ne Yapılacak Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="321" class="ng-binding">321-Geçici 26 BM, NATO(temsilcilikleri, bağlı program, fon, özel ihtisas), OECD resmi kullanımları için yapılacak mal tes. hiz. ifaları</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="322" class="ng-binding">322-11/1-a Türkiye'de İkamet Etmeyenlere Özel Fatura ile Yapılan Teslimler (Bavul Ticareti)</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="323" class="ng-binding">323-13/ğ 5300 Sayılı Kanuna Göre Düzenlenen Ürün Senetlerinin İhtisas/Ticaret Borsaları Aracılığıyla İlk Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="350" class="ng-binding">350-Diğerleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="351" class="ng-binding">351-KDV - İstisna Olmayan Diğer</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="326" class="ng-binding">326-13/ı Gıda, Tarım ve Hayvancılık Bakanlığı Tarafından Tescil Edilmiş Gübrelerin Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="324" class="ng-binding">324-13/h Türkiye Kızılay Derneğine Yapılan Teslim ve Hizmetler ile Türkiye Kızılay Derneğinin Teslim ve Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="327" class="ng-binding">327-13/ı Gıda, Tarım ve Hayvancılık Bakanlığı Tarafından Tescil Edilmiş Gübrelerin İçeriğinde Bulunan Hammaddelerin Gübre Üreticilerine Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="220" class="ng-binding">220-17/4-r İki Tam Yıl Süreyle Sahip Olunan Taşınmaz ve İştirak Hisseleri Satışları</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="325" class="ng-binding">325-13/ı Yem Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="241" class="ng-binding">241-TürkAkım Gaz Boru Hattı Projesine İlişkin Anlaşmanın (9/b) Maddesinde Yer Alan Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="328" class="ng-binding">328-13/i Konut veya İşyeri Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="330" class="ng-binding">330-KDV 13/j md. Organize Sanayi Bölgeleri ile Küçük Sanayi Sitelerinin İnşasına İlişkin Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="331" class="ng-binding">331-KDV 13/m md. Ar-Ge, Yenilik ve Tasarım Faaliyetlerinde Kullanılmak Üzere Yapılan Yeni Makina ve Teçhizat Teslimlerinde İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="332" class="ng-binding">332-KDV Geçici 39. Md. İmalat Sanayiinde Kullanılmak Üzere Yapılan Yeni Makina ve Teçhizat Teslimlerinde İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="242" class="ng-binding">242-KDV 17/4-ö md. Gümrük Antrepoları, Geçici Depolama Yerleri ile Gümrüklü Sahalarda, İthalat ve İhracat İşlemlerine konu mallar ile transit rejim kapsamında işlem gören mallar için verilen ardiye, depolama ve terminal hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="333" class="ng-binding">333-KDV 13/k md. Kapsamında Genel ve Özel Bütçeli Kamu İdarelerine, İl Özel İdarelerine, Belediyelere ve Köylere bağışlanan Tesislerin İnşasına İlişkin İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="334" class="ng-binding">334-KDV 13/l md. Kapsamında Yabancılara Verilen Sağlık Hizmetlerinde İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="335" class="ng-binding">335-KDV 13/n Basılı Kitap ve Süreli Yayınların Teslimleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="336" class="ng-binding">336-Geçici 40 UEFA Müsabakaları Kapsamında Yapılacak Teslim ve Hizmetler </option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="337" class="ng-binding">337-Türk Akım Gaz Boru Hattı Projesine İlişkin Anlaşmanın (9/h) Maddesi Kapsamındaki Gaz Taşıma Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="338" class="ng-binding">338-İmalatçıların Mal İhracatları</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="339" class="ng-binding">339-İmalat Sanayii ile Turizme Yönelik Yatırım Teşvik Belgesi Kapsamındaki İnşaat İşlerine İlişkin Teslim ve Hizmetler</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="001" class="ng-binding">001-Diplomatik İstisna</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="340" class="ng-binding">340-Elektrik Motorlu Taşıt Araçlarının Geliştirilmesine Yönelik Mühendislik Hizmetleri</option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="342" class="ng-binding">
+                                            342-Genel Bütçeli Kamu İdarelerine Bağışlanacak Taşınmazların İnşasına
+                                            İlişkin İstisna
+                                        </option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="343" class="ng-binding">
+                                            343-Genel Bütçeli Kamu İdarelerine Bağışlanacak Konutların Yabancı Devlet
+                                            Kurum ve Kuruluşlarına Teslimine İlişkin İstisna
+                                        </option><!-- end ngRepeat: x in istisnaList -->
+                                        <option value="344" class="ng-binding">344-13/o Milli Savunma ve İç Güvenlik İhtiyaçlarında Kullanılmak Üzere Taşıt Teslimi</option><!-- end ngRepeat: x in istisnaList -->
+                                    </select>
+                                </td>
+
+                                <td style="min-width: 100px;  max-width: 100px;">
+                                    <button class="btn btn-sm btn-success greenhoverclass satirekle"><i class="fa fa-plus"></i></button>
+                                    <button class="btn btn-sm btn-warning orangehoverclass"><i class="fa fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-danger redhoverclass"><i class="fa fa-remove"></i></button>
+                                </td>
+                            </tr><!-- end ngRepeat: line in invoiceLines -->
+                        </tbody><!-- end ngIf: invoiceLines.length > 0 -->
+                    </table>
                 </div>
             </div>
         </div>
@@ -2651,6 +2763,5 @@
 </section>
 
 @section Scripts {
-    <script type="module" src="~/base/efatura.module.js"></script>
-    <script src="~/apps/EArchiveInvoice.js"></script>
+    <script type="module" src="~/apps/EArchiveInvoice.js"></script>
 }
