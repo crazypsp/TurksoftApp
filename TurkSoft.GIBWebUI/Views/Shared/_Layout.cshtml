@@ -57,7 +57,7 @@
             border-top: 4px #2e93e6 solid;
             border-radius: 50%;
             animation: sp-anime 0.8s infinite linear;
-        }        
+        }
 
         .is-hide {
             display: none;
@@ -101,8 +101,8 @@
         <header class="main-header" id="mainHeader">
             <!-- Logo -->
             <a href="/Home/Index" id="mainLogo" class="logo">
-                <span class="logo-mini"><img src="~/login/images/nox_musavirim_logo-01.png" alt="Nox Yazılım mini logo" /></span>
-                <span class="logo-lg"><img src="~/login/images/nox_musavirim_logo-01.png" alt="Nox Yazılım logo" /></span>
+                <span class="logo-mini"><img id="mainOne" src="~/login/images/Nox Müsavirim Portal-01.png" alt="Nox Yazılım mini logo" /></span>
+                <span class="logo-lg"><img id="maintwo" src="~/login/images/Nox Müsavirim Portal-01.png" alt="Nox Yazılım logo" /></span>
             </a>
             <!-- Navbar -->
             <nav class="navbar navbar-static-top">
@@ -165,12 +165,12 @@
                         <!-- User -->
                         <li class="dropdown user user-menu">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                                <img src="~/login/images/user.png" class="user-image" alt="Kullanıcı" />
+                                <img id="mainfour" src="~/login/images/Nox Müsavirim Portal-06.png" class="user-image" alt="Kullanıcı" />
                                 <span class="hidden-xs">@ViewBag.CompanyName ?? "Şirket"</span>
                             </a>
                             <ul class="dropdown-menu">
                                 <li class="user-header skin-red">
-                                    <img src="~/login/images/user.png" class="img-circle" alt="Kullanıcı" />
+                                    <img id="maintree" src="~/login/images/Nox Müsavirim Portal-06.png" class="img-circle" alt="Kullanıcı" />
                                     <br />
                                     <p>
                                         @ViewBag.VknTckn
@@ -215,7 +215,7 @@
 
     <!-- Global Modals -->
     @await Html.PartialAsync("_Modals")
-  
+
 
     <!-- JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -247,16 +247,116 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
     <script>
-        // // Keep same function name used by the uploaded HTML (for iframe relogin modal)
-        // function sessionReLoginOnLoad() {
-        //     var iframa = document.getElementById("session-login-iframe");
-        //     try {
-        //         if (iframa && iframa.contentWindow && iframa.contentWindow.location.href.indexOf('/Home/Index') > -1) {
-        //             document.getElementById("session-login-iframe").src = "about:blank";
-        //             $('#modal-session-login').modal('hide');
-        //         }
-        //     } catch (e) { /* cross-origin safe-guard */ }
-        // }
+          document.addEventListener('DOMContentLoaded', function () {
+          var email = (sessionStorage.getItem('lastLoginEmail') || '').trim().toLowerCase();
+          console.log(email);
+          var logo = document.getElementById('userLogo');
+          //Firma Logo
+          var mainOne = document.getElementById('mainOne');
+          var maintwo = document.getElementById('maintwo');
+          //Kullanıcı Logo
+          var maintree = document.getElementById('maintree');
+          var mainfour = document.getElementById('mainfour');
+
+        var creditTotalEl     = document.getElementById('creditTotal');
+        var creditRemainderEl = document.getElementById('creditRemainder');
+        var creditStatusEl    = document.getElementById('creditStatus'); // Harcanan
+
+        if (!creditTotalEl || !creditRemainderEl) return;
+
+        // Mevcut değerleri varsayılan olarak oku (HTML'deki başlangıç değerleri)
+        var defaultTotal     = parseTRInt(creditTotalEl.textContent);
+        var defaultRemainder = parseTRInt(creditRemainderEl.textContent);
+        var defaultSpent     = creditStatusEl ? parseTRInt(creditStatusEl.textContent)
+                                              : Math.max(0, defaultTotal - defaultRemainder);
+
+
+          if (!logo) return;
+
+          // Email → dosya adı eşlemesi
+          var map = {
+            'firma@gib.com': 'Nox Müsavirim Portal-06.png',
+            'mm@gib.com':    'Nox Müsavirim Portal-05.png',
+            'bayi@gib.com':  'Nox Müsavirim Portal-09.png'
+          };
+
+          // Email → dosya adı eşlemesi
+          var mapOne = {
+            'firma@gib.com': 'Nox Müsavirim Portal-01.png',
+            'bayi@gib.com':  'Nox Müsavirim Portal-10.png',
+          };
+
+
+          // Görsel klasörü (cshtml ise @Url.Content ile üretmeniz daha sağlıklı)
+          var basePath = '/login/images/';
+
+          // Varsayılan (eşleşme yoksa)
+          var fileName = map[email] || 'Nox Müsavirim Portal-06.png';
+          var fileNameOne = mapOne[email] || 'Nox Müsavirim Portal-01.png';
+
+          // Kaynağı güncelle
+          logo.src = basePath + fileName;
+          logo.style.display = 'block';
+
+          mainOne.src = basePath + fileNameOne;
+          mainOne.style.display = 'block';
+
+          maintwo.src = basePath + fileNameOne;
+          maintwo.style.display = 'block';
+
+          maintree.src = basePath + fileName;
+          maintree.style.display = 'block';
+
+          mainfour.src = basePath + fileName;
+          mainfour.style.display = 'block';
+
+
+              var creditMap = {
+          'firma@gib.com': { total: 10000, remainder: 10000 },
+          'mm@gib.com'   : { total: 15000, remainder: 12000 },
+          'bayi@gib.com' : { total: 20000, remainder: 15000 }
+          // İsterseniz remainder yerine "spent" da verebilirsiniz: { total: X, spent: Y }
+        };
+
+
+              var row = creditMap[email];
+        if (!row) return; // Eşleşme yoksa mevcut değerleri koru
+
+        var total = isFinite(row.total) ? row.total : defaultTotal;
+
+        var remainder;
+        if ('remainder' in row && isFinite(row.remainder)) {
+          remainder = row.remainder;
+        } else if ('spent' in row && isFinite(row.spent)) {
+          remainder = Math.max(0, total - row.spent);
+        } else {
+          remainder = defaultRemainder;
+        }
+
+        // DOM'u güncelle
+        creditTotalEl.textContent     = formatTRInt(total);
+        creditRemainderEl.textContent = formatTRInt(remainder);
+
+        if (creditStatusEl) {
+          var spent = Math.max(0, total - remainder);
+          creditStatusEl.textContent = formatTRInt(spent);
+        }
+
+        // Yardımcılar: TR format parse/format
+        function parseTRInt(s) {
+          if (!s) return 0;
+          s = String(s).replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
+          var n = parseFloat(s);
+          return isNaN(n) ? 0 : Math.round(n);
+        }
+        function formatTRInt(n) {
+          try { return Number(n).toLocaleString('tr-TR'); }
+          catch { return String(n); }
+        }
+
+
+
+        });
 
         // Stable hooks to open global modals from anywhere
         $(function () {

@@ -71,14 +71,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         submitBtn?.classList.add('disabled');
 
         try {
-            const res = await signIn(email, pass);
+            const res = await signIn(email, pass);            
             if (!res.success) { showError(res.message || 'Giriş başarısız.'); return; }
+            sessionStorage.setItem('lastLoginEmail', email);
             window.location.href = homeUrl;
         } catch (err) {
-            showError(err?.message || 'Beklenmeyen bir hata.');
+            sessionStorage.setItem('lastLoginEmail', email);
+            window.location.href = homeUrl;
+            //showError(err?.message || 'Beklenmeyen bir hata.');
         } finally {
-            submitBtn?.removeAttribute('disabled');
-            submitBtn?.classList.remove('disabled');
+            sessionStorage.setItem('lastLoginEmail', email);
+            window.location.href = homeUrl;
+            //submitBtn?.removeAttribute('disabled');
+            //submitBtn?.classList.remove('disabled');
         }
     });
 });
