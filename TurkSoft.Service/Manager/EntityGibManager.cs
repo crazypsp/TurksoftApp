@@ -74,8 +74,18 @@ namespace TurkSoft.Service.Manager
                         NormalizeCustomer(inv.Customer);
                 }
 
-                await _set.AddAsync(entity, ct);
-                await _db.SaveChangesAsync(ct);
+                try
+                {
+                    await _set.AddAsync(entity, ct);
+                    await _db.SaveChangesAsync(ct);
+                }
+                catch (Exception ex)
+                {
+
+                    throw;
+                }
+
+                
                 return entity;
             }
             catch (DbUpdateException due) when (IsUniqueViolation(due))
