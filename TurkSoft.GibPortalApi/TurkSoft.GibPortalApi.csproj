@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
     <ProjectReference Include="..\TurkSoft.Service\TurkSoft.Service.csproj" />
   </ItemGroup>
 
