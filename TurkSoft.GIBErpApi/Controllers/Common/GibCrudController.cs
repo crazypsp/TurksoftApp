@@ -32,8 +32,8 @@ namespace TurkSoft.GIBErpApi.Controllers.Common
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public virtual async Task<IActionResult> Create([FromBody] T entity, CancellationToken ct = default)
-            => Ok(await _service.AddAsync(entity, ct));
+        public virtual async Task<IActionResult> Create([FromBody] T entity)
+            => Ok(await _service.AddAsync(entity));
 
         [HttpPut]
         [ProducesResponseType(StatusCodes.Status200OK)]
