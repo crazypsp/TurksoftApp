@@ -248,113 +248,281 @@
 
 @section Scripts {
     <script>
-        // Sayfa kapsamı değişkenleri
-        window.TarifeTur = null;
+        (function (window, $) {
+            'use strict';
 
-        // Güvenli script yükleme
-        function ensureScriptLoaded(test, url, cb) {
-            if (test()) { cb && cb(); return; }
-            var s = document.createElement('script'); s.src = url; s.onload = cb; document.head.appendChild(s);
-        }
+            // Sayfa kapsamı değişkenleri
+            window.TarifeTur = window.TarifeTur || null;
 
-        // Aylık grafik
-        function buildChart() {
-            var c = document.getElementById('myChart');
-            if (!c || typeof Chart === 'undefined') return;
+            /***********************************************************
+             *  SAHTE HOME API (Test Verileri)
+             *  - Backend endpointleri yoksa bile sorun çıkarmasın diye
+             ***********************************************************/
+            const HomeApi = {
+                /**
+                 * Aylık toplamlar (12 elemanlı dizi döner)
+                 */
+                getMonthlyTotals: async function (year) {
+                    console.log('[HomeApi] getMonthlyTotals year =', year);
 
-            var year = document.getElementById('IntegrationYear') ? document.getElementById('IntegrationYear').value : (new Date()).getFullYear();
-            var labels = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-            var data = [0,0,0,0,0,0,0,0,0,0,0,0];
+                    // Örnek/test verisi (Ocak–Aralık)
+                    const base = 1000;
+                    const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => i * base);
 
-            // İsteğe bağlı: sunucudan veri çek
-            $.getJSON('/Home/GetMonthlyTotals', { year: year })
-                .done(function (res) {
-                    if (Array.isArray(res) && res.length === 12) data = res;
-                })
-                .always(function () {
-                    if (window.myDashChart) window.myDashChart.destroy();
-                    window.myDashChart = new Chart(c.getContext('2d'), {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: year + ' Aylık Tutarlar',
-                                data: data,
-                                borderWidth: 2,
-                                borderColor: 'rgba(36,87,230,1)',
-                                backgroundColor: 'rgba(36,87,230,0.12)',
-                                pointRadius: 2,
-                                fill: true,
-                                lineTension: 0.2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                yAxes: [{ ticks: { beginAtZero: true } }],
-                                xAxes: [{ gridLines: { display: false } }]
-                            },
-                            legend: { display: true }
-                        }
-                    });
-                });
-        }
+                    // İleride burayı gerçek API çağrısına dönüştürebilirsin
+                    // örn: return ApiClient.get('/dashboard/monthlyTotals', { year });
 
-        function setYear() { buildChart(); }
+                    // Küçük bir yapay gecikme
+                    await new Promise(r => setTimeout(r, 150));
+                    return data;
+                },
 
-        // Kontör modal aç
-        function kontorModal() { $('#kontor_modal').modal('show'); }
+                /**
+                 * Talep gönder (Konu / Açıklama / Telefon / Email)
+                 */
+                sendTalep: async function (payload) {
+                    console.log('[HomeApi] sendTalep payload =', payload);
 
-        // Talep gönder (örnek)
-        function sendTalep() {
-            var payload = {
-                konuTipId: $('#konutipid').val(),
-                konu: $('#konutxt').val(),
-                aciklama: $('#aciklama').val(),
-                phone: $('#phoneNum').val(),
-                email: $('#email').val()
+                    // Burada normalde gerçek API:
+                    // await ApiClient.post('/support/talep', payload);
+
+                    await new Promise(r => setTimeout(r, 300));
+
+                    // Test yanıtı
+                    return {
+                        success: true,
+                        id: Math.floor(Math.random() * 100000),
+                        message: 'Talebiniz alındı.'
+                    };
+                },
+
+                /**
+                 * Dashboard sayaçları: gelen / giden / arşiv
+                 */
+                getDashboardCounts: async function () {
+                    console.log('[HomeApi] getDashboardCounts');
+
+                    await new Promise(r => setTimeout(r, 200));
+
+                    // Test verisi
+                    return {
+                        inbox: 12,
+                        outbox: 8,
+                        archive: 34
+                    };
+                },
+
+                /**
+                 * Kontör/credit bilgileri
+                 */
+                getCredits: async function () {
+                    console.log('[HomeApi] getCredits');
+
+                    await new Promise(r => setTimeout(r, 200));
+
+                    // Test verisi
+                    return {
+                        total: 1000,
+                        used: 250,
+                        remain: 750
+                    };
+                }
             };
-            $.ajax({ url: '/Home/SendTalep', method: 'POST', data: payload })
-                .done(function(){ if (window.toastr) toastr.success('Talebiniz alındı'); })
-                .fail(function(){ if (window.toastr) toastr.error('Talep gönderilemedi'); });
-        }
 
-        // Sayaç ve bakiyeler (örnek)
-        function loadDashboard() {
-            $.getJSON('/Home/GetDashboardCounts')
-                .done(function (r) {
-                    if (!r) return;
-                    $('#inboxCount').text(r.inbox || 0);
-                    $('#outboxCount').text(r.outbox || 0);
-                    $('#archiveCount').text(r.archive || 0);
-                    $('#faturadiv').prop('hidden', false);
-                }).fail(function () {
-                    // varsayılan göster
-                    $('#faturadiv').prop('hidden', false);
-                });
+            // Dışarıdan da erişmek istersen:
+            window.HomeApi = HomeApi;
 
-            $.getJSON('/Home/GetCredits')
-                .done(function (r) {
-                    if (!r) return;
-                    $('#creditTotal').text(r.total || '0');
-                    $('#creditStatus').text(r.used || '0');
-                    $('#creditRemainder').text(r.remain || '0');
-                });
-        }
-
-        $(function () {
-            // Gerekli eklenteleri başlat
-            if ($.fn.select2) $('#konutipid').select2({ width: '100%' });
-            if ($.fn.dataTable) {
-                $('#kontorTable').DataTable({ responsive: true, language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' } });
-                $('#cariHesapTableList').DataTable({ responsive: true, language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' } });
+            /***********************************************************
+             *  Güvenli script yükleme (Chart.js için)
+             ***********************************************************/
+            function ensureScriptLoaded(test, url, cb) {
+                if (test()) {
+                    cb && cb();
+                    return;
+                }
+                var s = document.createElement('script');
+                s.src = url;
+                s.onload = cb;
+                document.head.appendChild(s);
             }
 
-            // Chart.js yoksa CDN'den yükle, sonra grafiği çiz
-            ensureScriptLoaded(function () { return !!window.Chart; }, 'https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.bundle.min.js', buildChart);
+            /***********************************************************
+             *  Aylık grafik (Chart.js)
+             ***********************************************************/
+            function buildChart() {
+                var c = document.getElementById('myChart');
+                if (!c || typeof Chart === 'undefined') return;
 
-            loadDashboard();
-        });
+                var yearInput = document.getElementById('IntegrationYear');
+                var year = yearInput ? yearInput.value : (new Date()).getFullYear();
+
+                var labels = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+                var data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+                // Eski: /Home/GetMonthlyTotals yerine HomeApi kullanıyoruz
+                HomeApi.getMonthlyTotals(year)
+                    .then(function (res) {
+                        if (Array.isArray(res) && res.length === 12) {
+                            data = res;
+                        } else {
+                            console.warn('HomeApi.getMonthlyTotals beklenen formatta data döndürmedi:', res);
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error('HomeApi.getMonthlyTotals error:', err);
+                    })
+                    .finally(function () {
+                        try {
+                            if (window.myDashChart) {
+                                window.myDashChart.destroy();
+                            }
+
+                            window.myDashChart = new Chart(c.getContext('2d'), {
+                                type: 'line',
+                                data: {
+                                    labels: labels,
+                                    datasets: [{
+                                        label: year + ' Aylık Tutarlar',
+                                        data: data,
+                                        borderWidth: 2,
+                                        borderColor: 'rgba(36,87,230,1)',
+                                        backgroundColor: 'rgba(36,87,230,0.12)',
+                                        pointRadius: 2,
+                                        fill: true,
+                                        lineTension: 0.2
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        yAxes: [{
+                                            ticks: { beginAtZero: true }
+                                        }],
+                                        xAxes: [{
+                                            gridLines: { display: false }
+                                        }]
+                                    },
+                                    legend: { display: true }
+                                }
+                            });
+                        } catch (err) {
+                            console.error('Chart çizilirken hata:', err);
+                        }
+                    });
+            }
+
+            // Yıl değişince grafiği güncelle
+            function setYear() {
+                buildChart();
+            }
+            window.setYear = setYear; // Razor tarafında onchange vs. çağırabil
+
+            /***********************************************************
+             *  Kontör modal
+             ***********************************************************/
+            function kontorModal() {
+                $('#kontor_modal').modal('show');
+            }
+            window.kontorModal = kontorModal;
+
+            /***********************************************************
+             *  Talep gönder
+             ***********************************************************/
+            function sendTalep() {
+                var payload = {
+                    konuTipId: $('#konutipid').val(),
+                    konu: $('#konutxt').val(),
+                    aciklama: $('#aciklama').val(),
+                    phone: $('#phoneNum').val(),
+                    email: $('#email').val()
+                };
+
+                HomeApi.sendTalep(payload)
+                    .then(function (res) {
+                        if (res && res.success) {
+                            if (window.toastr) {
+                                var msg = res.message || 'Talebiniz alındı.';
+                                if (res.id) msg += ' (Talep No: ' + res.id + ')';
+                                toastr.success(msg);
+                            }
+                        } else {
+                            if (window.toastr) toastr.error('Talep gönderilemedi.');
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error('HomeApi.sendTalep error:', err);
+                        if (window.toastr) toastr.error('Talep gönderilemedi.');
+                    });
+            }
+            window.sendTalep = sendTalep;
+
+            /***********************************************************
+             *  Sayaçlar & krediler
+             ***********************************************************/
+            function loadDashboard() {
+                // Eski: /Home/GetDashboardCounts yerine HomeApi
+                HomeApi.getDashboardCounts()
+                    .then(function (r) {
+                        if (!r) return;
+                        $('#inboxCount').text(r.inbox || 0);
+                        $('#outboxCount').text(r.outbox || 0);
+                        $('#archiveCount').text(r.archive || 0);
+                        $('#faturadiv').prop('hidden', false);
+                    })
+                    .catch(function (err) {
+                        console.error('HomeApi.getDashboardCounts error:', err);
+                        $('#faturadiv').prop('hidden', false);
+                    });
+
+                // Eski: /Home/GetCredits yerine HomeApi
+                HomeApi.getCredits()
+                    .then(function (r) {
+                        if (!r) return;
+                        $('#creditTotal').text(r.total != null ? r.total : '0');
+                        $('#creditStatus').text(r.used != null ? r.used : '0');
+                        $('#creditRemainder').text(r.remain != null ? r.remain : '0');
+                    })
+                    .catch(function (err) {
+                        console.error('HomeApi.getCredits error:', err);
+                    });
+            }
+            window.loadDashboard = loadDashboard;
+
+            /***********************************************************
+             *  DOM ready
+             ***********************************************************/
+            $(function () {
+                // Gerekli eklenteleri başlat
+                if ($.fn.select2) {
+                    $('#konutipid').select2({ width: '100%' });
+                }
+
+                if ($.fn.dataTable) {
+                    $('#kontorTable').DataTable({
+                        responsive: true,
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' }
+                    });
+                    $('#cariHesapTableList').DataTable({
+                        responsive: true,
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' }
+                    });
+                }
+
+                // Chart.js yoksa CDN'den yükle, sonra grafiği çiz
+                ensureScriptLoaded(
+                    function () { return !!window.Chart; },
+                    'https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.bundle.min.js',
+                    buildChart
+                );
+
+                // Dashboard sayaçlarını yükle
+                loadDashboard();
+            });
+
+        })(window, jQuery);
     </script>
 }
+

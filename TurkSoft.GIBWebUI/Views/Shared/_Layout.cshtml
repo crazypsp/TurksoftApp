@@ -28,6 +28,7 @@
             -webkit-appearance: none;
             margin: 0;
         }
+
         /* Firefox */
         input[type=number] {
             -moz-appearance: textfield;
@@ -246,7 +247,74 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="~/login/js/home.js"></script>
-   
+
+    <!-- Sidebar aktif / açık menü scripti -->
+    <script>
+        (function ($) {
+            'use strict';
+
+            function activateSidebarMenu() {
+                var currentPath = window.location.pathname.toLowerCase();
+                var bestMatch = null;
+
+                // Tüm menü linklerini tara
+                $('#mainMenuSidebar .sidebar-menu a').each(function () {
+                    var href = $(this).attr('href');
+
+                    if (!href ||
+                        href === '#' ||
+                        href === '' ||
+                        href.toLowerCase().indexOf('javascript:') === 0) {
+                        return;
+                    }
+
+                    var linkPath;
+                    try {
+                        // anchor elementinden gerçek path'i al
+                        linkPath = this.pathname
+                            ? this.pathname.toLowerCase()
+                            : $('<a>').attr('href', href)[0].pathname.toLowerCase();
+                    } catch (e) {
+                        return;
+                    }
+
+                    if (!linkPath) return;
+
+                    // En iyi eşleşen (en uzun path) linki bul
+                    if (currentPath === linkPath || currentPath.indexOf(linkPath + '/') === 0) {
+                        if (!bestMatch || linkPath.length > bestMatch.len) {
+                            bestMatch = {
+                                elem: this,
+                                len: linkPath.length
+                            };
+                        }
+                    }
+                });
+
+                if (bestMatch && bestMatch.elem) {
+                    var $li = $(bestMatch.elem).closest('li');
+
+                    // Asıl satırı aktif yap
+                    $li.addClass('active');
+
+                    // Tüm üst treeview'ları aktif ve açık yap (e-Fatura, Yeni Fatura, e-Arşiv, vs.)
+                    $li.parents('li.treeview').addClass('active menu-open');
+                }
+
+                // Herhangi bir aktif alt elemanı olan treeview'lar açık kalsın
+                $('#mainMenuSidebar li.treeview').each(function () {
+                    if ($(this).find('> ul.treeview-menu li.active').length > 0 ||
+                        $(this).find('> ul.treeview-menu li.treeview.active').length > 0) {
+                        $(this).addClass('active menu-open');
+                    }
+                });
+            }
+
+            $(function () {
+                activateSidebarMenu();
+            });
+        })(jQuery);
+    </script>
 
     @RenderSection("Scripts", required: false)
 </body>

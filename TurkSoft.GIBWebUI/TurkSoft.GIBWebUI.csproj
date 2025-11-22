@@ -9,6 +9,7 @@
   <ItemGroup>
     <Folder Include="wwwroot\js\" />
     <Folder Include="wwwroot\lib\" />
+    <Folder Include="wwwroot\downloads\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,6 +17,10 @@
     <None Include="wwwroot\Login\fonts\.DS_Store" />
     <None Include="wwwroot\Login\images\.DS_Store" />
     <None Include="wwwroot\Login\scss\.DS_Store" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Playwright" Version="1.56.0" />
   </ItemGroup>
 
 </Project>

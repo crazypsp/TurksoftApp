@@ -2,7 +2,7 @@
     <section class="sidebar">
 
         <div class="user-panel">
-            <div class="pull-left image">               
+            <div class="pull-left image">
                 <img id="userLogo" src="~/login/images/Nox Müsavirim Portal-06.png" class="img-circle" alt="User Image" />
             </div>
             <div class="pull-left info">
@@ -13,88 +13,279 @@
 
         <!-- Menü -->
         <ul class="sidebar-menu tree" data-widget="tree">
-            <li><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i><span>Anasayfa</span></a></li>
-            <li><a href="#" id="createInvoice"><i class="fa fa-envelope"></i><span>Fatura Oluştur</span></a></li>
-            <li><a href="#" id="envelopeCheckModalCol"><i class="fa fa-search"></i><span>Zarf Sorgula</span></a></li>
+            <li>
+                <a asp-controller="Home" asp-action="Index">
+                    <i class="fa fa-home"></i>
+                    <span>Anasayfa</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="#" id="createInvoice">
+                    <i class="fa fa-envelope"></i>
+                    <span>Fatura Oluştur</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="#" id="envelopeCheckModalCol">
+                    <i class="fa fa-search"></i>
+                    <span>Zarf Sorgula</span>
+                </a>
+            </li>
 
             <!-- e-Fatura -->
             <li class="treeview">
-                <a href="#"><i class="fa fa-envelope"></i><span>e-Fatura</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <a href="#">
+                    <i class="fa fa-envelope"></i>
+                    <span>e-Fatura</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
                 <ul class="treeview-menu">
+                    <!-- e-Fatura -> Yeni Fatura -->
                     <li class="treeview">
-                        <a href="#"><i class="fa fa-plus"></i>Yeni Fatura<span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                        <a href="#">
+                            <i class="fa fa-plus"></i>
+                            Yeni Fatura
+                            <span class="pull-right-container">
+                                <i class="fa fa-angle-left pull-right"></i>
+                            </span>
+                        </a>
                         <ul class="treeview-menu">
-                            <li><a asp-controller="EInvoice" asp-action="CreateNewInvoice"><i class="fa fa-plus"></i> e-Fatura Oluştur</a></li>
-                            <li><a asp-controller="EInvoice" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-Fatura</a></li>
-                            <li><a asp-controller="EInvoice" asp-action="CreateExportInvoice"><i class="fa fa-plus"></i> e-İhracat Oluştur</a></li>
+                            <li>
+                                <a asp-controller="EInvoice" asp-action="CreateNewInvoice">
+                                    <i class="fa fa-plus"></i> e-Fatura Oluştur
+                                </a>
+                            </li>
+                            <li>
+                                <a asp-controller="EInvoice" asp-action="Drafts">
+                                    <i class="fa fa-edit"></i> Taslak e-Fatura
+                                </a>
+                            </li>
+                            <li>
+                                <a asp-controller="EInvoice" asp-action="CreateExportInvoice">
+                                    <i class="fa fa-plus"></i> e-İhracat Oluştur
+                                </a>
+                            </li>
                         </ul>
                     </li>
-                    <li><a asp-controller="EInvoice" asp-action="InboxInvoice"><i class="fa fa-inbox"></i> Gelen Faturalar</a></li>
-                    <li><a asp-controller="EInvoice" asp-action="OutboxInvoice"><i class="fa fa-inbox"></i> Giden Faturalar</a></li>
-                    <li><a asp-controller="EInvoice" asp-action="UploadTransferInvoice"><i class="fa fa-upload"></i> e-Fatura Transfer Yükle</a></li>
-                    <li><a asp-controller="EInvoice" asp-action="GibPortalCancelledOrObjected"><i class="fa fa-list"></i> Gib Portal İptal/İtiraz</a></li>
+
+                    <li>
+                        <a asp-controller="EInvoice" asp-action="InboxInvoice">
+                            <i class="fa fa-inbox"></i> Gelen Faturalar
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EInvoice" asp-action="OutboxInvoice">
+                            <i class="fa fa-inbox"></i> Giden Faturalar
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EInvoice" asp-action="UploadTransferInvoice">
+                            <i class="fa fa-upload"></i> e-Fatura Transfer Yükle
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EInvoice" asp-action="GibPortalCancelledOrObjected">
+                            <i class="fa fa-list"></i> Gib Portal İptal/İtiraz
+                        </a>
+                    </li>
                 </ul>
             </li>
 
             <!-- e-Arşiv -->
             <li class="treeview">
-                <a href="#"><i class="fa fa-inbox"></i><span>e-Arşiv</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <a href="#">
+                    <i class="fa fa-inbox"></i>
+                    <span>e-Arşiv</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
                 <ul class="treeview-menu">
+                    <!-- e-Arşiv -> Yeni Fatura -->
                     <li class="treeview">
-                        <a href="#"><i class="fa fa-plus"></i>Yeni Fatura<span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                        <a href="#">
+                            <i class="fa fa-plus"></i>
+                            Yeni Fatura
+                            <span class="pull-right-container">
+                                <i class="fa fa-angle-left pull-right"></i>
+                            </span>
+                        </a>
                         <ul class="treeview-menu">
-                            <li><a asp-controller="EArchive" asp-action="CreateNewEarchiveInvoice"><i class="fa fa-plus"></i> e-Arşiv Oluştur</a></li>
-                            <li><a asp-controller="EArchive" asp-action="Drafts"><i class="fa fa-edit"></i> Taslak e-Arşiv</a></li>
+                            <li>
+                                <a asp-controller="EArchive" asp-action="CreateNewEarchiveInvoice">
+                                    <i class="fa fa-plus"></i> e-Arşiv Oluştur
+                                </a>
+                            </li>
+                            <li>
+                                <a asp-controller="EArchive" asp-action="Drafts">
+                                    <i class="fa fa-edit"></i> Taslak e-Arşiv
+                                </a>
+                            </li>
                         </ul>
                     </li>
-                    <li><a asp-controller="EArchive" asp-action="InboxEarchiveInvoice"><i class="fa fa-inbox"></i> Gelen Arşiv Faturalar/İnteraktif</a></li>
-                    <li><a asp-controller="EArchive" asp-action="OutboxEarchiveInvoice"><i class="fa fa-inbox"></i> Giden e-Arşiv Faturalar</a></li>
-                    <li><a asp-controller="EArchive" asp-action="UploadTransferEarchiveInvoice"><i class="fa fa-upload"></i> e-Arşiv Transfer Yükle</a></li>
-                    <li><a asp-controller="EArchive" asp-action="ReportSendingRequest"><i class="fa fa-files-o"></i> Rapor Gönderme Talebi</a></li>
-                    <li><a asp-controller="EArchive" asp-action="SendingReports"><i class="fa fa-files-o"></i> Gönderilmiş Raporlar</a></li>
-                    <li><a asp-controller="EArchive" asp-action="EArchiveEmailStatusTrack"><i class="fa fa-envelope"></i> E-mail Durum Takibi</a></li>
+
+                    <li>
+                        <a asp-controller="EArchive" asp-action="InboxEarchiveInvoice">
+                            <i class="fa fa-inbox"></i> Gelen Arşiv Faturalar/İnteraktif
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EArchive" asp-action="OutboxEarchiveInvoice">
+                            <i class="fa fa-inbox"></i> Giden e-Arşiv Faturalar
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EArchive" asp-action="UploadTransferEarchiveInvoice">
+                            <i class="fa fa-upload"></i> e-Arşiv Transfer Yükle
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EArchive" asp-action="ReportSendingRequest">
+                            <i class="fa fa-files-o"></i> Rapor Gönderme Talebi
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EArchive" asp-action="SendingReports">
+                            <i class="fa fa-files-o"></i> Gönderilmiş Raporlar
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="EArchive" asp-action="EArchiveEmailStatusTrack">
+                            <i class="fa fa-envelope"></i> E-mail Durum Takibi
+                        </a>
+                    </li>
                 </ul>
             </li>
 
             <!-- Listeler -->
             <li class="treeview">
-                <a href="#"><i class="fa fa-list"></i><span>Listeler</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <a href="#">
+                    <i class="fa fa-list"></i>
+                    <span>Listeler</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
                 <ul class="treeview-menu">
-                    <li><a asp-controller="Lists" asp-action="MukellefList"><i class="fa fa-users"></i> Mükellef Listesi</a></li>
-                    <li><a asp-controller="Lists" asp-action="MalzemeHizmetList"><i class="fa fa-list"></i> Malzeme/Hizmet Listesi</a></li>
-                    <li><a asp-controller="Lists" asp-action="MusteriCariList"><i class="fa fa-list"></i> Müşteri Listesi</a></li>
-                    <li><a asp-controller="Lists" asp-action="TaxList"><i class="fa fa-list-ul"></i> Vergi Listesi</a></li>
-                    <li><a asp-controller="Lists" asp-action="ExceptionalCodes"><i class="fa fa-list-ul"></i> İstisna Kodları</a></li>
-                    <li><a asp-controller="Lists" asp-action="TevkifatCodes"><i class="fa fa-list-ul"></i> Tevkifat Kodları</a></li>
-                    <li><a asp-controller="Lists" asp-action="ExportRegisteredCodes"><i class="fa fa-list-ul"></i> İhraç Kayıtlı Kodları</a></li>
-                    <li><a asp-controller="Lists" asp-action="SpecialBaseCodes"><i class="fa fa-list-ul"></i> Özel Matrah Kodları</a></li>
-                    <li><a asp-controller="Lists" asp-action="DurumKod"><i class="fa fa-list-ul"></i> GİB Durum Kodları</a></li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="MukellefList">
+                            <i class="fa fa-users"></i> Mükellef Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="MalzemeHizmetList">
+                            <i class="fa fa-list"></i> Malzeme/Hizmet Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="MusteriCariList">
+                            <i class="fa fa-list"></i> Müşteri Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="TaxList">
+                            <i class="fa fa-list-ul"></i> Vergi Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="ExceptionalCodes">
+                            <i class="fa fa-list-ul"></i> İstisna Kodları
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="TevkifatCodes">
+                            <i class="fa fa-list-ul"></i> Tevkifat Kodları
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="ExportRegisteredCodes">
+                            <i class="fa fa-list-ul"></i> İhraç Kayıtlı Kodları
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="SpecialBaseCodes">
+                            <i class="fa fa-list-ul"></i> Özel Matrah Kodları
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Lists" asp-action="DurumKod">
+                            <i class="fa fa-list-ul"></i> GİB Durum Kodları
+                        </a>
+                    </li>
                 </ul>
             </li>
 
             <!-- Ayarlar -->
             <li class="treeview">
-                <a href="#"><i class="fa fa-cog"></i><span>Ayarlar</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <a href="#">
+                    <i class="fa fa-cog"></i>
+                    <span>Ayarlar</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
                 <ul class="treeview-menu">
-                    <li><a asp-controller="Settings" asp-action="CompanyInformations"><i class="fa fa-building"></i> Firma Bilgileri</a></li>
-                    <li><a asp-controller="Settings" asp-action="UserSettings"><i class="fa fa-user"></i> Kullanıcı Ayarları</a></li>
-                    <li><a asp-controller="Settings" asp-action="Settings"><i class="fa fa-cog"></i> Ayarlar</a></li>
-                    <li><a asp-controller="Settings" asp-action="DocumentStates"><i class="fa fa-list"></i> Belge Durumu</a></li>
+                    <li>
+                        <a asp-controller="Settings" asp-action="CompanyInformations">
+                            <i class="fa fa-building"></i> Firma Bilgileri
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Settings" asp-action="UserSettings">
+                            <i class="fa fa-user"></i> Kullanıcı Ayarları
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Settings" asp-action="Settings">
+                            <i class="fa fa-cog"></i> Ayarlar
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Settings" asp-action="DocumentStates">
+                            <i class="fa fa-list"></i> Belge Durumu
+                        </a>
+                    </li>
                 </ul>
             </li>
-
-            
 
             <!-- Raporlar -->
             <li class="treeview">
-                <a href="#"><i class="fa fa-files-o"></i><span>Raporlar</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                <a href="#">
+                    <i class="fa fa-files-o"></i>
+                    <span>Raporlar</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
                 <ul class="treeview-menu">
-                    <li><a asp-controller="Report" asp-action="ReportCustomize"><i class="fa fa-files-o"></i> Rapor Özelleştir</a></li>
-                    <li><a asp-controller="Report" asp-action="GeneralReport"><i class="fa fa-files-o"></i> Genel Raporlar</a></li>
-                    <li><a asp-controller="AdminPanel" asp-action="CreditReport"><i class="fa fa-files-o"></i> Kontör Raporu</a></li>
+                    <li>
+                        <a asp-controller="Report" asp-action="ReportCustomize">
+                            <i class="fa fa-files-o"></i> Rapor Özelleştir
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Report" asp-action="GeneralReport">
+                            <i class="fa fa-files-o"></i> Genel Raporlar
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="AdminPanel" asp-action="CreditReport">
+                            <i class="fa fa-files-o"></i> Kontör Raporu
+                        </a>
+                    </li>
                 </ul>
             </li>
-            <li><a asp-controller="Lists" asp-action="TransferList" target="_blank"><i class="fa fa-envelope"></i><span>Transfer Belge Yükle</span></a></li>
+
+            <li>
+                <a asp-controller="Lists" asp-action="TransferList" target="_blank">
+                    <i class="fa fa-envelope"></i>
+                    <span>Transfer Belge Yükle</span>
+                </a>
+            </li>
         </ul>
     </section>
 </aside>

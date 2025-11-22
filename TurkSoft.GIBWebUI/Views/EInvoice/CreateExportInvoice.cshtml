@@ -1,2575 +1,833 @@
 ﻿@{
-    ViewData["Title"] = "e-İhracat Faturası";
-    ViewData["Subtitle"] = "Yeni Fatura Oluştur";
+    ViewData["Title"] = "e-Fatura";
+    ViewData["Subtitle"] = "Yeni İhracat Faturası Oluştur";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="content" id="section-content">
-
-
-
-<form class="ng-pristine" id="faturaformu" novalidate="novalidate">
-<div class="box box-default" id="div-box-box-default">
-<div class="box-header with-border" id="div-box-header-with-border">
-<div class="row align-items-center" id="div-row-align-items-center">
-<div class="col-12 col-md-4 col-lg-4" id="div-col-12-col-md-4">
-
-<h4 class="mb-0" id="h3ftbil" style="margin-top:0px !important">Fatura Bilgileri</h4>
-</div>
-<div class="col-12 col-md-8 col-lg-8" id="div-col-12-col-md-8">
-
-<div class="d-flex justify-content-end justify-content-lg-start" id="div-d-flex-justify-content-end">
-
-<div class="col-0 col-md-2 col-lg-2 mb-2 px-1" id="div-col-0-col-md-2">
-
-</div>
-<div class="col-6 col-md-2 col-lg-2 mb-2 px-1" id="div-col-6-col-md-2">
-<button class="btn btn-danger btn-block text-sm text-md text-lg" id="btn-fatura-pdf-indir" type="button">
-                                        Fatura PDF İndir  <span class="btn-label" id="span-btn-label"><i class="fa fa-download"></i></span>
-</button>
-</div>
-<div class="col-6 col-md-2 col-lg-2 mb-2 px-1" id="div-col-6-col-md-2-2">
-<button class="btn btn-danger btn-block text-sm text-md text-lg" id="btn-fatura-xml-indir" type="button">
-                                        Fatura XML İndir  <span class="btn-label" id="span-btn-label-2"><i class="fa fa-download"></i></span>
-</button>
-</div>
-<div class="col-6 col-md-2 col-lg-2 mb-2 px-1" id="div-col-6-col-md-2-3">
-<button class="btn btn-info btn-block text-sm text-md text-lg" id="btn-fatura-onizle" type="button">
-                                        Fatura Önizle  <span class="btn-label" id="span-btn-label-3"><i class="glyphicon glyphicon-zoom-in"></i></span>
-</button>
-</div>
-<div class="col-6 col-md-2 col-lg-2 mb-2 px-1" id="div-col-6-col-md-2-4">
-<button class="btn btn-primary btn-block text-sm text-md text-lg" id="btn_taslak" name="btn_taslak" type="button">
-                                        Taslak Kaydet  <span class="btn-label" id="span-btn-label-4"><i class="glyphicon glyphicon-tasks"></i></span>
-</button>
-</div>
-<div class="col-6 col-md-2 col-lg-2 mb-2 px-1" id="div-col-6-col-md-2-5">
-<button class="btn btn-success btn-block text-sm text-md text-lg" id="btn_gonder" name="btn_gonder" type="button">
-                                        Gib'e Gönder  <span class="btn-label" id="span-btn-label-5"><i class="glyphicon glyphicon-send"></i></span>
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="box-body" id="div-box-body">
-<div class="row" id="div-row">
-<div class="col-md-4" id="div-col-md-4">
-<div class="form-horizontal row" id="div-form-horizontal-row">
-<label class="control-label col-sm-3" for="select-subekodu" id="subeKodu">Şube</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding">
-<select class="form-control" convert-to-number="" id="select-subekodu" name="subeKodu" style="width: 100%"><option value="">Seçiniz</option>
-
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-2">
-<label class="control-label col-sm-3" for="SourceUrn" id="lblSourceUrn">Gönderici Etiketi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-2">
-<select class="form-control" id="SourceUrn" name="SourceUrn" style="width: 100%"><option value="">Seçiniz</option>
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-3">
-<label class="control-label col-sm-3" for="txtUUID" id="ettn">ETTN</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-3">
-<input class="form-control" disabled="" id="txtUUID" name="txtUUID" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-4">
-<label class="control-label col-sm-3" for="txtInvoice_Prefix" id="lblFaturaID">Fatura Ön Eki</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-4">
-<select class="form-control" id="txtInvoice_Prefix" name="txtInvoice_Prefix" style="width: 100%"><option value="">Seçiniz</option>
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-5">
-<label class="control-label col-sm-3" for="ddlsenaryo" id="lbl-senaryo">Senaryo</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-5">
-<select class="form-control" id="ddlsenaryo" name="ddlsenaryo"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-</div>
-</div>
-<div class="col-md-4" id="div-col-md-4-2">
-<div class="form-horizontal row" id="div-form-horizontal-row-6">
-<label class="control-label col-sm-3" for="ddlfaturatip" id="lbl-fatura-tipi">Fatura Tipi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-6">
-<select class="form-control" id="ddlfaturatip" name="ddlfaturatip"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-7">
-<label class="control-label col-sm-3" for="txtIssueDate" id="lblIssueDate">Fatura Tarihi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-7">
-<input class="form-control withlastDate" id="txtIssueDate" name="txtIssueDate" type="text" value="4.11.2025"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-8">
-<label class="control-label col-sm-3" for="txtIssueTime" id="lblIssueTime">Fatura Saati</label>
-<div class="col-sm-9 inputPadding bootstrap-timepicker timepicker" id="div-col-sm-9-inputpadding-8">
-<div class="bootstrap-timepicker-widget dropdown-menu" id="div-bootstrap-timepicker-widget-dropdown-menu"><table id="table-1"><tbody id="tbody-1"><tr id="tr-1"><td id="td-1"><a data-action="incrementHour" href="#" id="link-x"><i class="glyphicon glyphicon-chevron-up"></i></a></td><td class="separator" id="td-separator"> </td><td id="td-2"><a data-action="incrementMinute" href="#" id="link-x-2"><i class="glyphicon glyphicon-chevron-up"></i></a></td><td class="separator" id="td-separator-2"> </td><td id="td-3"><a data-action="incrementSecond" href="#" id="link-x-3"><i class="glyphicon glyphicon-chevron-up"></i></a></td></tr><tr id="tr-2"><td id="td-4"><span class="bootstrap-timepicker-hour" id="span-bootstrap-timepicker-hour">00</span></td> <td class="separator" id="td-separator-3">:</td><td id="td-5"><span class="bootstrap-timepicker-minute" id="span-bootstrap-timepicker-minute">00</span></td> <td class="separator" id="td-separator-4">:</td><td id="td-6"><span class="bootstrap-timepicker-second" id="span-bootstrap-timepicker-second">00</span></td></tr><tr id="tr-3"><td id="td-7"><a data-action="decrementHour" href="#" id="link-x-4"><i class="glyphicon glyphicon-chevron-down"></i></a></td><td class="separator" id="td-separator-5"></td><td id="td-8"><a data-action="decrementMinute" href="#" id="link-x-5"><i class="glyphicon glyphicon-chevron-down"></i></a></td><td class="separator" id="td-separator-6"> </td><td id="td-9"><a data-action="decrementSecond" href="#" id="link-x-6"><i class="glyphicon glyphicon-chevron-down"></i></a></td></tr></tbody></table></div>
-<input class="form-control timepicker" id="txtIssueTime" name="txtIssueTime" type="text" value="11:04"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-9">
-<label class="control-label col-sm-3" for="DocumentCurrencyCode" id="lblParaBirimi">Para Birimi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-9">
-<select class="form-control" id="DocumentCurrencyCode" name="DocumentCurrencyCode" style="width: 100%"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-</div>
-</div>
-<div class="col-md-4" id="div-col-md-4-3">
-<div class="form-horizontal row" id="div-form-horizontal-row-10">
-<label class="control-label col-sm-3" for="txtSiparisNo" id="lbl-siparis-no">Sipariş No </label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-10">
-<input class="form-control" id="txtSiparisNo" name="txtSiparisNo" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-11">
-<label class="control-label col-sm-3" for="txtSiparisTarih" id="lbl-siparis-tarihi">Sipariş Tarihi</label>
-<div class="col-sm-9 inputPadding bootstrap-timepicker timepicker" id="div-col-sm-9-inputpadding-11">
-<input class="form-control withlastDate" id="txtSiparisTarih" name="txtSiparisTarih" type="text" value=""/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-12">
-<label class="control-label col-sm-3" for="ddlxsltdosyasi" id="lbl-goruntu-dosyasi">Görüntü Dosyası</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-12">
-<select class="form-control" id="ddlxsltdosyasi" name="ddlxsltdosyasi"><option value="">Seçiniz</option>
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-13">
-<label class="control-label col-sm-3" for="txtKurBilgisi" id="lblKurBilgisi">Döviz-TL Kur</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-13">
-<input class="form-control" id="txtKurBilgisi" name="txtKurBilgisi" type="number"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-14">
-<label class="control-label col-sm-3" for="ddlalissatiskur" id="lbl-tcbm-kur">TCBM Kur</label>
-<div class="col-sm-6 inputPadding" id="div-col-sm-6-inputpadding" style="padding-right:0px">
-<select class="form-control" id="ddlalissatiskur" name="ddlalissatis"><option value="">Seçiniz</option>
-
-
-</select>
-</div>
-<div class="col-sm-3 inputPadding" id="div-col-sm-3-inputpadding" style="padding-left:0px;">
-<div class="btn btn-primary btn-md btn-labeled" id="div-btn-btn-primary" style="float:right">
-                                        Getir
+<form id="faturaformu">
+    <!--ÜST BİLGİLER-->
+    <div class="box box-default">
+        <div class="box-header with-border">
+            <div class="row align-items-center">
+                <div class="col-12 col-md-4 col-lg-4">
+                    <h4 id="h3ftbil" style="margin-top:0px !important" class="mb-0">Fatura Bilgileri</h4>
+                </div>
+
+                <div class="col-12 col-md-8 col-lg-8">
+                    <div class="d-flex justify-content-end justify-content-lg-start">
+                        <div class="col-0 col-md-2 col-lg-2 mb-2 px-1"></div>
+
+                        <div class="col-6 col-md-2 col-lg-2 mb-2 px-1">
+                            <button type="button" class="btn btn-danger btn-block text-sm text-md text-lg" id="btnDownloadPDF">
+                                Fatura PDF İndir &nbsp;<span class="btn-label"><i class="fa fa-download"></i></span>
+                            </button>
+                        </div>
+
+                        <div class="col-6 col-md-2 col-lg-2 mb-2 px-1">
+                            <button type="button" class="btn btn-danger btn-block text-sm text-md text-lg" id="btnDownloadXML">
+                                Fatura XML İndir &nbsp;<span class="btn-label"><i class="fa fa-download"></i></span>
+                            </button>
+                        </div>
+
+                        <div class="col-6 col-md-2 col-lg-2 mb-2 px-1">
+                            <button type="button" class="btn btn-info btn-block text-sm text-md text-lg" id="btnPreviewInvoice">
+                                Fatura Önizle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-zoom-in"></i></span>
+                            </button>
+                        </div>
+
+                        <div class="col-6 col-md-2 col-lg-2 mb-2 px-1">
+                            <button type="button" id="btnDraftSave" class="btn btn-primary btn-block text-sm text-md text-lg">
+                                Taslak Kaydet &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-tasks"></i></span>
+                            </button>
+                        </div>
+
+                        <div class="col-6 col-md-2 col-lg-2 mb-2 px-1">
+                            <button type="button" id="btnSendToGib" class="btn btn-success btn-block text-sm text-md text-lg">
+                                Gib'e Gönder &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-send"></i></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box-body">
+            <div class="row">
+
+                <!-- 1. Sütun -->
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Şube</label>
+                        <div class="col-sm-9 inputPadding">
+                            <select id="ddlSubeKodu" class="form-control">
+                                <option value="0">Seçiniz</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Gönderici Etiketi</label>
+                        <div class="col-sm-9 inputPadding">
+                            <select id="ddlSourceUrn" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">ETTN</label>
+                        <div class="col-sm-9 inputPadding">
+                            <input type="text" id="txtUUID" class="form-control" disabled />
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Fatura Ön Eki</label>
+                        <div class="col-sm-9 inputPadding">
+                            <select id="ddlInvoicePrefix" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Senaryo</label>
+                        <div class="col-sm-9 inputPadding">
+                            <select id="ddlSenaryo" class="form-control">
+                                <option value="TEMELFATURA">TEMEL FATURA</option>
+                                <option value="TICARIFATURA">TİCARİ FATURA</option>
+                                <option value="IHRACAT" selected>İHRACAT FATURA</option>
+                                <option value="YOLCUBERABERFATURA">YOLCU BERABER FATURA</option>
+                                <option value="KAMU">KAMU FATURA</option>
+                                <option value="HKS">HAL KAYIT SİSTEMİ</option>
+                                <option value="ILAC_TIBBICIHAZ">İLAÇ TIBBİCİHAZ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Sütun -->
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Fatura Tipi</label>
+                        <div class="col-sm-9 inputPadding">
+                            <select id="ddlFaturaTipi" class="form-control">
+                                <option value="ISTISNA">İSTİSNA</option>
+                                <option value="KONAKLAMAVERGISI">KONAKLAMAVERGISI</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Fatura Tarihi</label>
+                        <div class="col-sm-9 inputPadding">
+                            <input type="date" id="txtIssueDate" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Fatura Saati</label>
+                        <div class="col-sm-9 inputPadding">
+                            <input type="time" id="txtIssueTime" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Para Birimi</label>
+                        <div class="col-sm-9 inputPadding">
+                            <select id="ddlParaBirimi" class="form-control"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Sütun -->
+                <div class="col-md-4">
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Sipariş No</label>
+                        <div class="col-sm-9 inputPadding">
+                            <input type="text" id="txtSiparisNo" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Sipariş Tarihi</label>
+                        <div class="col-sm-9 inputPadding">
+                            <input type="date" id="txtSiparisTarih" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Görüntü Dosyası</label>
+                        <div class="col-sm-9 inputPadding">
+                            <select id="ddlGoruntuDosyasi" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">Döviz-TL Kur</label>
+                        <div class="col-sm-9 inputPadding">
+                            <input type="number" id="txtKurBilgisi" class="form-control" step="0.0001" />
+                        </div>
+                    </div>
+
+                    <div class="form-horizontal row">
+                        <label class="control-label col-sm-3">TCBM Kur</label>
+                        <div class="col-sm-6 inputPadding" style="padding-right:0px">
+                            <select id="ddlKurTipi" class="form-control">
+                                <option value="satiskur">Satış Kur</option>
+                                <option value="aliskur">Alış Kur</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-3 inputPadding" style="padding-left:0px;">
+                            <button id="btnKurGetir" type="button" class="btn btn-primary btn-md btn-labeled">Getir</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEKMELER -->
+    <div class="box box-default">
+        <ul class="nav nav-tabs" id="mytabs">
+            <li class="active"><a data-toggle="tab" href="#alicibilgileri">Alıcı Bilgileri</a></li>
+            <li><a data-toggle="tab" href="#irsaliyebilgileri">İrsaliye Bilgileri</a></li>
+            <li><a data-toggle="tab" href="#odeme">Ödeme</a></li>
+            <li><a data-toggle="tab" href="#ekalicisatici">Alıcı-Satıcı Ek Alanlar</a></li>
+            <li><a data-toggle="tab" href="#ekalan">Ek Alan</a></li>
+        </ul>
+        <div class="tab-content tab-validate">
+            <!-- Alıcı Bilgileri -->
+            <div class="tab-pane active" id="alicibilgileri">
+                <div class="box-body">
+                    <div class="row">
+
+                        <!-- SOL SÜTUN -->
+                        <div class="col-md-4">
+                            <!-- Ara / Müşteri Seç -->
+                            <div class="form-horizontal row" id="araDiv">
+                                <label class="control-label col-sm-3">Ara</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <select id="ddlMusteriAra" class="form-control select2" style="width:100%">
+                                        <option value="">Seçiniz</option>
+                                        @* Müşteri listesi List.js veya backend'den doldurulacak *@
+                                    </select>
+                                </div>
+                            </div>
+
+                            <br>
+
+                            <!-- VKN/TCKN -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">VKN/TCKN *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtIdentificationID" maxlength="11" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Alıcı Etiketi -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Alıcı Etiketi</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <select id="ddlAliciEtiketi" class="form-control" style="width:100%">
+                                        <option value="">Seçiniz</option>
+                                        @* aliciEtiketList List.js'den *@
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Firma Adı -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Firma Adı *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtPartyName" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Adı -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Adı *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtPersonFirstName" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Soyadı -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Soyadı *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtPersonLastName" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ORTA SÜTUN -->
+                        <div class="col-md-4">
+
+                            <!-- Vergi Dairesi -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Vergi Dairesi</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtTaxSchemeName" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Ülke -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Ülke *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <div id="divUlkeSelect">
+                                        <select id="ddlUlke" class="form-control select2" style="width:100%">
+                                            <option value="">Seçiniz</option>
+                                            @* ulkeList List.js'den doldurulacak *@
+                                        </select>
                                     </div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="box box-default" id="div-box-box-default-2">
-<ul class="nav nav-tabs" id="mytabs">
-<li class="active" id="li-active">
-<a data-toggle="tab" href="#alicibilgileri" id="link-alicibilgileri">
-<div class="ng-scope" id="div-ng-scope-2">Alıcı Bilgileri</div>
-
-</a>
-</li>
-
-<li class="ng-scope" id="li-ng-scope"><a data-toggle="tab" href="#irsaliyebilgileri" id="link-irsaliyebilgileri">İrsaliye Bilgileri</a></li>
-<li id="li-1"><a data-toggle="tab" href="#odeme" id="link-odeme"><div class="ng-scope" id="div-ng-scope-3">Ödeme</div> </a></li>
-
-<li class="ng-scope" id="li-ng-scope-2"><a data-toggle="tab" href="#ekdosyasube" id="link-ekdosyasube">Ek Alanlar / Ek Dosya / Şube Kodları</a></li>
-
-</ul>
-<div class="tab-content tab-validate" id="div-tab-content-tab-validate">
-<div class="tab-pane active" id="alicibilgileri">
-<div class="box-body" id="div-box-body-2">
-<div class="row" id="div-row-2">
-<div class="col-md-4" id="div-col-md-4-4">
-<div class="form-horizontal row" id="araDiv">
-<label class="control-label col-sm-3" for="select-firmasearch" id="lbl-ara">Ara</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-14">
-<select aria-hidden="true" class="form-control select2 col-sm-12 select2-hidden-accessible" id="select-firmasearch" name="firmaSearch" style="width: 100%;" tabindex="-1"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-</select><span class="select2 select2-container select2-container--default" dir="ltr" id="span-select2-select2-container" style="width: 100%;"><span class="selection" id="span-selection"><span aria-expanded="false" aria-haspopup="true" aria-labelledby="select2-firmaSearch-7o-container" class="select2-selection select2-selection--single" id="span-select2-selection-select2-selection-single" role="combobox" tabindex="0"><span class="select2-selection__rendered" id="select2-firmaSearch-7o-container" title=""></span><span class="select2-selection__arrow" id="span-select2-selection-arrow" role="presentation"><b role="presentation"></b></span></span></span><span aria-hidden="true" class="dropdown-wrapper" id="span-dropdown-wrapper"></span></span>
-</div>
-</div>
-<div class="control-label" id="div-control-label"></div>
-<br/>
-<div class="form-horizontal row" id="div-form-horizontal-row-15">
-<label class="control-label col-sm-3" for="txtIdentificationID" id="lbl-vkn-tckn">VKN/TCKN *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-15">
-<input class="form-control" id="txtIdentificationID" maxlength="11" name="txtIdentificationID" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-16">
-<label class="control-label col-sm-3" for="DestinationUrn" id="lblSourceUrn-2">Alıcı Etiketi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-16">
-<select class="form-control" id="DestinationUrn" name="DestinationUrn" style="width: 100%"><option value="">Seçiniz</option>
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-17">
-<label class="control-label col-sm-3" for="txtPartyName" id="lbl-firma-adi">Firma Adı *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-17">
-<input class="form-control" id="txtPartyName" name="txtPartyName" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-18">
-<label class="control-label col-sm-3" for="txtPerson_FirstName" id="lbl-adi">Adı *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-18">
-<input class="form-control" id="txtPerson_FirstName" name="txtPerson_FirstName" type="text"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-19">
-<label class="control-label col-sm-3" for="txtPerson_FamilyName" id="lbl-soyadi">Soyadı *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-19">
-<input class="form-control" id="txtPerson_FamilyName" name="txtPerson_FamilyName" type="text"/>
-</div>
-</div>
-
-
-
-</div>
-<div class="col-md-4" id="div-col-md-4-5">
-<div class="form-horizontal row" id="div-form-horizontal-row-20">
-<label class="control-label col-sm-3" for="txtTaxSchemeName" id="lbl-vergi-dairesi">Vergi Dairesi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-20">
-<input class="form-control" id="txtTaxSchemeName" name="txtTaxSchemeName" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-21">
-<label class="control-label col-sm-3" for="selulke" id="lbl-ulke">Ülke *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-21">
-<div class="ng-hide" id="div-ng-hide">
-<select aria-hidden="true" class="form-control select2 select2-hidden-accessible" id="selulke" name="selulke" style="width: 100%" tabindex="-1"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select><span class="select2 select2-container select2-container--default" dir="ltr" id="span-select2-select2-container-2" style="width: 100%;"><span class="selection" id="span-selection-2"><span aria-expanded="false" aria-haspopup="true" aria-labelledby="select2-selulke-container" class="select2-selection select2-selection--single" id="span-select2-selection-select2-selection-single-2" role="combobox" tabindex="0"><span class="select2-selection__rendered" id="select2-selulke-container" title="Türkiye">Türkiye</span><span class="select2-selection__arrow" id="span-select2-selection-arrow-2" role="presentation"><b role="presentation"></b></span></span></span><span aria-hidden="true" class="dropdown-wrapper" id="span-dropdown-wrapper-2"></span></span>
-</div>
-<div class="" id="div-1">
-<input class="form-control" id="txtulke" name="txtulke" type="text"/>
-</div>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-22">
-<label class="control-label col-sm-3" for="input-manuelsehir" id="lbl-il">İl *<input class="ng-pristine" id="input-manuelsehir" name="manuelSehir" title="İl ve ilçe manuel giriş" type="checkbox"/> </label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-22">
-<div class="ng-hide" id="div-ng-hide-2">
-<select aria-hidden="true" class="form-control select2 select2-hidden-accessible" id="selIl" name="selIl" style="width: 100%" tabindex="-1"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select><span class="select2 select2-container select2-container--default" dir="ltr" id="span-select2-select2-container-3" style="width: 100%;"><span class="selection" id="span-selection-3"><span aria-expanded="false" aria-haspopup="true" aria-labelledby="select2-selIl-container" class="select2-selection select2-selection--single" id="span-select2-selection-select2-selection-single-3" role="combobox" tabindex="0"><span class="select2-selection__rendered" id="select2-selIl-container" title="Seçiniz">Seçiniz</span><span class="select2-selection__arrow" id="span-select2-selection-arrow-3" role="presentation"><b role="presentation"></b></span></span></span><span aria-hidden="true" class="dropdown-wrapper" id="span-dropdown-wrapper-3"></span></span>
-</div>
-<div class="" id="div-2">
-<input class="form-control" id="txtIl" name="txtIl" type="text"/>
-</div>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-23">
-<label class="control-label col-sm-3" for="selIlce" id="lbl-ilce">İlçe *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-23">
-<div class="ng-hide" id="div-ng-hide-3">
-<select aria-hidden="true" class="form-control select2 select2-hidden-accessible" id="selIlce" name="selIlce" style="width: 100%" tabindex="-1"><option value="">Seçiniz</option>
-
-
-</select><span class="select2 select2-container select2-container--default" dir="ltr" id="span-select2-select2-container-4" style="width: 100%;"><span class="selection" id="span-selection-4"><span aria-expanded="false" aria-haspopup="true" aria-labelledby="select2-selIlce-container" class="select2-selection select2-selection--single" id="span-select2-selection-select2-selection-single-4" role="combobox" tabindex="0"><span class="select2-selection__rendered" id="select2-selIlce-container" title="Seçiniz">Seçiniz</span><span class="select2-selection__arrow" id="span-select2-selection-arrow-4" role="presentation"><b role="presentation"></b></span></span></span><span aria-hidden="true" class="dropdown-wrapper" id="span-dropdown-wrapper-4"></span></span>
-</div>
-<div class="" id="div-3">
-<input class="form-control" id="txtIlce" name="txtIlce" type="text"/>
-</div>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-24">
-<label class="control-label col-sm-3" for="txtStreetName" id="lbl-adres">Adres</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-24">
-<input class="form-control" id="txtStreetName" name="txtStreetName" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-25">
-<label class="control-label col-sm-3" for="txtElectronicMail" id="lbl-e-mail">E-Mail</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-25">
-<input class="form-control" id="txtElectronicMail" name="txtElectronicMail" type="email"/>
-</div>
-</div>
-</div>
-<div class="col-md-4" id="div-col-md-4-6">
-<div class="form-horizontal row" id="div-form-horizontal-row-26">
-<label class="control-label col-sm-3" for="txtPostalZone" id="lbl-posta-kodu">Posta Kodu</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-26">
-<input class="form-control" id="txtPostalZone" maxlength="5" name="txtPostalZone" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-27">
-<label class="control-label col-sm-3" for="txtWebsiteURI" id="lbl-web-sitesi">Web Sitesi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-27">
-<input class="form-control" id="txtWebsiteURI" name="txtWebsiteURI" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-28">
-<label class="control-label col-sm-3" for="txtTelephone" id="lbl-telefon">Telefon</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-28">
-<input class="form-control" id="txtTelephone" maxlength="11" name="txtTelephone" type="tel"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-29">
-<label class="control-label col-sm-3" for="txtTelefax" id="lbl-fax">Fax</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-29">
-<input class="form-control" id="txtTelefax" name="txtTelefax" type="text"/>
-</div>
-</div>
-</div>
-
-</div>
-</div>
-</div>
-<div class="tab-pane" id="irsaliyebilgileri">
-<div class="box-body" id="div-box-body-3">
-<table id="irsaliye_grid" style="border:0.5px solid #cccccc">
-<caption id="caption-1">
-<div class="btn btn-primary btn-sm btn-labeled" id="div-btn-btn-primary-2" style="float:right">
-<i class="fa fa-plus"></i>
-                                        Yeni İrsaliye Ekle
+                                    <div id="divUlkeText" class="d-none">
+                                        <input type="text" id="txtUlke" class="form-control" />
                                     </div>
-</caption>
-<thead id="thead-1">
-<tr id="tr-4">
-<th id="th-1" style="min-width: 180px; max-width: 250px;text-align:center;">İrsaliye No</th>
-<th id="th-2" style="min-width: 180px; max-width: 250px;text-align:center;">İrsaliye Tarihi</th>
-<th id="th-3" style="min-width: 60px; max-width: 60px;text-align:center;">İşlem</th>
-</tr>
-</thead>
-<tbody id="tbody-2">
-
-</tbody>
-</table>
-</div>
-</div>
-<div class="tab-pane" id="earsivek">
-<div class="box-body" id="div-box-body-4">
-<div class="row" id="div-row-3">
-<div class="col-md-6" id="div-col-md-6">
-<div class="form-horizontal row" id="div-form-horizontal-row-30">
-<label class="control-label col-sm-3" for="EArchiveSendType" id="lbl-gonderi-tipi">Gönderi Tipi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-30">
-<select class="form-control" id="EArchiveSendType" name="EArchiveSendType"><option value="">Seçiniz</option>
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-31">
-<label class="control-label col-sm-3" id="lbl-label"> </label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-31">
-                                             
-                                        </div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-32">
-<label class="control-label col-sm-3" for="IsInternet_WebsiteURI" id="lbl-internet-sitesi">İnternet Sitesi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-32">
-<input class="form-control" id="IsInternet_WebsiteURI" name="IsInternet_WebsiteURI" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-33">
-<label class="control-label col-sm-3" for="IsInternetSale" id="lbl-internet-satisi">İnternet Satışı</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-33">
-<input class="ng-pristine" id="IsInternetSale" name="IsInternetSale" type="checkbox"/> Evet/Hayır
-                                        </div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-34">
-<label class="control-label col-sm-3" for="IsInternet_ActualDespatchDate" id="lblSendingDate">Gönderim Tarihi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-34">
-<input class="form-control datepicker" id="IsInternet_ActualDespatchDate" name="IsInternet_ActualDespatchDate" type="text" value="04.11.2025"/>
-</div>
-</div>
-</div>
-<div class="col-md-6" id="div-col-md-6-2">
-<div class="form-horizontal row" id="div-form-horizontal-row-35">
-<label class="control-label col-sm-3" for="IsInternet_Delivery_TcknVkn" id="lbl-tasiyici-vkn-tckn">Taşıyıcı VKN/TCKN</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-35">
-<input class="form-control" id="IsInternet_Delivery_TcknVkn" maxlength="11" name="IsInternet_Delivery_TcknVkn" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-36">
-<label class="control-label col-sm-3" for="IsInternet_Delivery_PartyName" id="lbl-tasiyici-unvan">Taşıyıcı Unvan</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-36">
-<input class="form-control" id="IsInternet_Delivery_PartyName" name="IsInternet_Delivery_PartyName" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-37">
-<label class="control-label col-sm-3" for="IsInternet_Delivery_FirstName" id="lbl-tasiyici-adi">Taşıyıcı Adı</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-37">
-<input class="form-control" id="IsInternet_Delivery_FirstName" name="IsInternet_Delivery_FirstName" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-38">
-<label class="control-label col-sm-3" for="IsInternet_Delivery_FamilyName" id="lbl-tasiyici-soyadi">Taşıyıcı Soyadı</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-38">
-<input class="form-control" id="IsInternet_Delivery_FamilyName" name="IsInternet_Delivery_FamilyName" type="text"/>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="tab-pane" id="odeme">
-<div class="box-body" id="div-box-body-5">
-<div class="row" id="div-row-4">
-<div class="col-md-6" id="div-col-md-6-3">
-<div class="form-horizontal row" id="div-form-horizontal-row-39">
-<label class="control-label col-sm-3" for="PaymentMeansCode" id="lbl-odeme-sekli">Ödeme Şekli *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-39">
-<select class="form-control" id="PaymentMeansCode" name="PaymentMeansCode"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-40">
-<label class="control-label col-sm-3" for="input-paymentduedate" id="lblSendingDate-2">Ödeme Tarihi *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-40">
-<input class="form-control datepicker" id="input-paymentduedate" name="PaymentDueDate" type="text" value=""/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-41">
-<label class="control-label col-sm-3" for="input-instructionnote" id="lbl-odeme-notu">Ödeme Notu</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-41">
-<input class="form-control" id="input-instructionnote" name="InstructionNote" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-42">
-<label class="control-label col-sm-3" for="select-paymentchannelcode" id="lbl-odeme-kanali">Ödeme Kanalı</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-42">
-<select class="form-control" id="select-paymentchannelcode" name="PaymentChannelCode"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-43">
-<label class="control-label col-sm-3" for="PayeeFinancialAccount" id="lbl-hesap-no-iban">Hesap No / Iban</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-43">
-<input class="form-control" id="PayeeFinancialAccount" name="PayeeFinancialAccount" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-44">
-<label class="control-label col-sm-3" for="select-payeefinancialcurrencycode" id="lbl-hesap-para-birimi">Hesap Para Birimi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-44">
-<select class="form-control" id="select-payeefinancialcurrencycode" name="PayeeFinancialCurrencyCode" style="width: 100%"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-</div>
-</div>
-<div class="col-md-6" id="div-col-md-6-4">
-<div class="box-header with-border" id="div-box-header-with-border-2">
-<h3 class="box-title" id="h3-kamu-kurumu-odeme-yapacak-alici-bilgileri">Kamu Kurumu Ödeme Yapacak Alıcı Bilgileri</h3>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-45">
-<label class="control-label col-sm-3" for="txtKamuVkn" id="lbl-vkn">VKN *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-45">
-<input class="form-control" id="txtKamuVkn" maxlength="11" name="txtKamuVkn" type="text"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-46">
-<label class="control-label col-sm-3" for="txtKamuUnvan" id="lbl-unvan">Unvan *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-46">
-<input class="form-control" id="txtKamuUnvan" name="txtKamuUnvan" type="text"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-47">
-<label class="control-label col-sm-3" for="txtKamuUlke" id="lbl-ulke-2">Ülke *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-47">
-<input class="form-control" id="txtKamuUlke" name="txtKamuUlke" type="text"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-48">
-<label class="control-label col-sm-3" for="IlbuyerCustomer" id="lbl-il-2">İl *</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-48">
-<input class="form-control" id="IlbuyerCustomer" name="IlbuyerCustomer" type="text"/>
-</div>
-</div>
-
-
-<div class="box-tools pull-right" id="div-box-tools-pull-right">
-<button class="btn btn-default btn-sm btn-labeled" id="btn-alici-bilgilerinden-kopyala" type="button">
-                                            Alıcı Bilgilerinden Kopyala
+                                </div>
+                            </div>
+
+                            <!-- İl -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">
+                                    İl *
+                                    <input type="checkbox" id="chkManuelSehir" title="İl ve ilçe manuel giriş">
+                                </label>
+                                <div class="col-sm-9 inputPadding">
+                                    <div id="divIlSelect">
+                                        <select id="ddlIl" class="form-control select2" style="width:100%">
+                                            <option value="">Seçiniz</option>
+                                            @* ilList List.js'den doldurulacak *@
+                                        </select>
+                                    </div>
+                                    <div id="divIlText" class="d-none">
+                                        <input type="text" id="txtIl" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- İlçe -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">İlçe *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <div id="divIlceSelect">
+                                        <select id="ddlIlce" class="form-control select2" style="width:100%">
+                                            <option value="">Seçiniz</option>
+                                            @* ilceList, seçilen il'e göre JS'de doldurulacak *@
+                                        </select>
+                                    </div>
+                                    <div id="divIlceText" class="d-none">
+                                        <input type="text" id="txtIlce" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Adres -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Adres</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtStreetName" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- E-Mail -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">E-Mail</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="email" id="txtEmail" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SAĞ SÜTUN -->
+                        <div class="col-md-4">
+
+                            <!-- Posta Kodu -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Posta Kodu</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtPostalCode" maxlength="5" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Web Sitesi -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Web Sitesi</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtWebsite" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Telefon -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Telefon</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="tel" id="txtTelephone" maxlength="11" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Fax -->
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Fax</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtFax" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Türmob Müşteri Sorgulama -->
+                            <div class="form-horizontal row" style="margin:15px 10px">
+                                <button id="btnTurmobSorgula" class="btn btn-primary btn-md btn-labeled" style="float:right">
+                                    Türmob Müşteri Sorgula
+                                </button>
+                            </div>
+
+                            <div style="float:right; color:red; font-size:15px; font-weight:bold;">
+                                Türmob'tan sorgulama başına 1 adet kontör düşümü yapılmaktadır!
+                            </div>
+
+                            <div style="float:right; margin-top:5px;">
+                                <a href="/Gerekliler/TurmobSorgula.pdf" target="_blank">
+                                    <b>Türmob Müşteri Sorgula Dokümantasyonu</b>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- İrsaliye Bilgileri -->
+            <div class="tab-pane" id="irsaliyebilgileri">
+                <div class="box-body">
+                    <div class="col-6 col-md-4">
+                        <table id="irsaliye_grid" style="border:0.5px solid #cccccc; width:100%;">
+                            <caption>
+                                <button id="btnYeniIrsaliyeEkle" type="button" class="btn btn-primary btn-sm">
+                                    <i class="fa fa-plus"></i> Yeni İrsaliye Ekle
+                                </button>
+                            </caption>
+
+                            <thead>
+                                <tr>
+                                    <th style="min-width:180px; max-width:250px; text-align:center;">İrsaliye No</th>
+                                    <th style="min-width:180px; max-width:250px; text-align:center;">İrsaliye Tarihi</th>
+                                    <th style="min-width:60px; max-width:60px; text-align:center;">İşlem</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="tblIrsaliyeBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+           
+            <!-- Ödeme -->
+            <div class="tab-pane" id="odeme">
+                <div class="box-body">
+                    <div class="row">
+                        <!-- ÖDEME BİLGİLERİ SOL TARAF -->
+                        <div class="col-md-6">
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Ödeme Şekli *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <select id="PaymentMeansCode" name="PaymentMeansCode" class="form-control">
+                                        <option value="">Seçiniz</option>
+                                        <!-- OdemeList verileri List.js üzerinden dinamik doldurulacak -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Ödeme Tarihi *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="date" id="PaymentDueDate" name="PaymentDueDate" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Ödeme Notu</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="InstructionNote" name="InstructionNote" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Ödeme Kanalı</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <select id="PaymentChannelCode" name="PaymentChannelCode" class="form-control">
+                                        <option value="">Seçiniz</option>
+                                        <!-- OdemeKanalList verileri List.js üzerinden dinamik doldurulacak -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Hesap No / IBAN</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="PayeeFinancialAccount" name="PayeeFinancialAccount" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Hesap Para Birimi</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <select id="PayeeFinancialCurrencyCode" name="PayeeFinancialCurrencyCode" class="form-control">
+                                        <option value="">Seçiniz</option>
+                                        <!-- parabirimList verileri List.js üzerinden dinamik doldurulacak -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KAMU KURUMU ÖDEME YAPACAK ALICI BİLGİLERİ SAĞ TARAF -->
+                        <div class="col-md-6">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Kamu Kurumu Ödeme Yapacak Alıcı Bilgileri</h3>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">VKN *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtKamuVkn" name="txtKamuVkn" maxlength="11" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Unvan *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtKamuUnvan" name="txtKamuUnvan" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">Ülke *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtKamuUlke" name="txtKamuUlke" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-horizontal row">
+                                <label class="control-label col-sm-3">İl *</label>
+                                <div class="col-sm-9 inputPadding">
+                                    <input type="text" id="txtKamuIl" name="txtKamuIl" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="box-tools pull-right mt-2">
+                                <button type="button" id="btnAliciBilgilerindenKopyala" class="btn btn-default btn-sm btn-labeled">
+                                    Alıcı Bilgilerinden Kopyala
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!--Alıcı - Satıcı Ek Alanlar -->
+            <div class="tab-pane" id="ekalicisatici">
+                <div class="box-body row">
+
+                    <!-- SATIJI EK ALANLAR -->
+                    <div class="col-6 col-md-4">
+                        <div class="box box-default">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Satıcı Ek Alanlar</h3>
+                            </div>
+                            <div class="box-body">
+                                <table id="saticiekalan_grid" style="border:0.5px solid #cccccc; width:100%;">
+                                    <caption>
+                                        <button type="button" id="btnAddSaticiEk" class="btn btn-primary btn-sm btn-labeled" style="float:right">
+                                            <i class="fa fa-plus"></i> Yeni Satır Ekle
                                         </button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="tab-pane" id="sgkek">
-<div class="box-body" id="div-box-body-6">
-<div class="row" id="div-row-5">
-<div class="col-md-6" id="div-col-md-6-5">
-<div class="form-horizontal row" id="div-form-horizontal-row-49">
-<label class="control-label col-sm-3" for="ddlilaveFaturaTipi" id="lbl-ilave-fatura-tipi">İlave Fatura Tipi</label>
-<div class="col-sm-9 inputPadding" id="div-col-sm-9-inputpadding-49">
-<select class="form-control" id="ddlilaveFaturaTipi" name="ddlilaveFaturaTipi"><option value="">Seçiniz</option>
+                                    </caption>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:33%">Tanıtıcı Kod</th>
+                                            <th style="width:34%">Tanıtıcı Değer</th>
+                                            <th style="width:10%">Sil</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodySaticiEk"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- SATIJI ŞUBE EK ALANLAR -->
+                    <div class="col-6 col-md-4">
+                        <div class="box box-default">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Satıcı Şube Ek Alanlar</h3>
+                            </div>
+                            <div class="box-body">
+                                <table id="saticiAgentekalan_grid" style="border:0.5px solid #cccccc; width:100%;">
+                                    <caption>
+                                        <button type="button" id="btnAddSaticiSubeEk" class="btn btn-primary btn-sm btn-labeled" style="float:right">
+                                            <i class="fa fa-plus"></i> Yeni Satır Ekle
+                                        </button>
+                                    </caption>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:33%">Tanıtıcı Kod</th>
+                                            <th style="width:34%">Tanıtıcı Değer</th>
+                                            <th style="width:10%">Sil</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodySaticiSubeEk"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- ALICI EK ALANLAR -->
+                    <div class="col-6 col-md-4">
+                        <div class="box box-default">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Alıcı Ek Alanlar</h3>
+                            </div>
+                            <div class="box-body">
+                                <table id="aliciekalan_grid" style="border:0.5px solid #cccccc; width:100%;">
+                                    <caption>
+                                        <button type="button" id="btnAddAliciEk" class="btn btn-primary btn-sm btn-labeled" style="float:right">
+                                            <i class="fa fa-plus"></i> Yeni Satır Ekle
+                                        </button>
+                                    </caption>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:33%">Tanıtıcı Kod</th>
+                                            <th style="width:34%">Tanıtıcı Değer</th>
+                                            <th style="width:10%">Sil</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyAliciEk"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
 
+                </div>
 
+            </div>
+            <!-- Ek Alan Bilgileri -->
+            <div class="tab-pane" id="ekalan">
+                <div class="box-body">
+                    <div class="col-6 col-md-4">
+                        <div class="box-body">
+                            <table id="ekalan_grid" style="border:0.5px solid #cccccc; width: 100%; border-collapse: collapse;">
+                                <caption>
+                                    <button type="button" id="btnAddEkalani" class="btn btn-primary btn-sm btn-labeled" style="float:right; margin: 8px 0;">
+                                        <i class="fa fa-plus"></i>
+                                        Yeni Satır Ekle
+                                    </button>
+                                </caption>
 
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 20%; text-align: center; vertical-align: middle; padding: 12px;">
+                                            KOBI/EYDEP
+                                        </th>
+                                        <th style="width: 22%; text-align: center; vertical-align: middle; padding: 12px;">
+                                            EVET/HAYIR
+                                        </th>
+                                        <th style="width: 22%; text-align: center; vertical-align: middle; padding: 12px;">
+                                            KOBI/EYDEP BİLGİ
+                                        </th>
+                                        <th style="width: 26%; text-align: center; vertical-align: middle; padding: 12px;">
+                                            Tarih
+                                        </th>
+                                        <th style="width: 10%; text-align: center; vertical-align: middle; padding: 12px;">
+                                            Sil
+                                        </th>
+                                    </tr>
+                                </thead>
 
+                                <tbody id="tbodyEkalani"></tbody>
+                            </table>
+                        </div>
+                    </div>
 
-
-</select>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-50">
-<label class="control-label col-sm-3" for="mukellefkodu" id="mukkodack">Mükellef kodu</label>
-<div class="col-sm-4 inputPadding" id="div-col-sm-4-inputpadding">
-<input class="form-control" id="mukellefkodu" name="mukellefkodu" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-51">
-<label class="control-label col-sm-3" for="mukelefadi" id="mukadiack">Mükellef Adı</label>
-<div class="col-sm-4 inputPadding" id="div-col-sm-4-inputpadding-2">
-<input class="form-control" id="mukelefadi" name="mukelefadi" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-52">
-<label class="control-label col-sm-3" for="dosyano" id="dosyaack">Dosya Numarası</label>
-<div class="col-sm-4 inputPadding" id="div-col-sm-4-inputpadding-3">
-<input class="form-control" id="dosyano" name="dosyano" type="text"/>
-</div>
-</div>
-<div class="form-horizontal row" id="div-form-horizontal-row-53">
-<label class="control-label col-sm-3" for="txtSendingDateBaslangic" id="lblSendingDate-3">Gönderim Tarihi</label>
-<div class="col-sm-5 inputPadding" id="div-col-sm-5-inputpadding">
-<input class="form-control datepicker" id="txtSendingDateBaslangic" name="txtSendingDateBaslangic" placeholder="Başlangıç Tarihi" type="text"/>
-</div>
-<div class="col-sm-4 inputPadding" id="div-col-sm-4-inputpadding-4">
-<input class="form-control datepicker" id="txtSendingDateBitis" name="txtSendingDateBitis" placeholder="Bitiş Tarihi" type="text"/>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="tab-pane" id="ekdosyasube">
-<div class="box-body" id="div-box-body-7">
-<div class="col-6 col-md-4" id="div-col-6-col-md-4">
-<div class="box box-default" id="div-box-box-default-3">
-<div class="box-header with-border" id="div-box-header-with-border-3">
-<h3 class="box-title" id="h3-satici-ek-alanlar">Satıcı Ek Alanlar</h3>
-</div>
-<div class="box-body" id="div-box-body-8">
-<table id="saticiekalan_grid" style="border:0.5px solid #cccccc; width: 100%;">
-<caption id="caption-2">
-<div class="btn btn-primary btn-sm btn-labeled" id="div-btn-btn-primary-3" style="float:right">
-<i class="fa fa-plus"></i>
-                                                    Yeni Satır Ekle
-                                                </div>
-</caption>
-<thead id="thead-2">
-<tr id="tr-5">
-<th id="th-4" style="width:33%">Tanıtıcı Kod</th>
-<th id="th-5" style="width:34%">Tanıtıcı Değer</th>
-<th id="th-6" style="width:10%">Sil</th>
-</tr>
-</thead>
-<tbody id="tbody-3">
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="col-6 col-md-4" id="div-col-6-col-md-4-2">
-<div class="box box-default" id="div-box-box-default-4">
-<div class="box-header with-border" id="div-box-header-with-border-4">
-<h3 class="box-title" id="h3-satici-sube-ek-alanlar">Satıcı Şube Ek Alanlar</h3>
-</div>
-<div class="box-body" id="div-box-body-9">
-<table id="saticiAgentekalan_grid" style="border:0.5px solid #cccccc; width: 100%;">
-<caption id="caption-3">
-<div class="btn btn-primary btn-sm btn-labeled" id="div-btn-btn-primary-4" style="float:right">
-<i class="fa fa-plus"></i>
-                                                    Yeni Satır Ekle
-                                                </div>
-</caption>
-<thead id="thead-3">
-<tr id="tr-6">
-<th id="th-7" style="width:33%">Tanıtıcı Kod</th>
-<th id="th-8" style="width:34%">Tanıtıcı Değer</th>
-<th id="th-9" style="width:10%">Sil</th>
-</tr>
-</thead>
-<tbody id="tbody-4">
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="col-6 col-md-4" id="div-col-6-col-md-4-3">
-<div class="box box-default" id="div-box-box-default-5">
-<div class="box-header with-border" id="div-box-header-with-border-5">
-<h3 class="box-title" id="h3-alici-ek-alanlar">Alıcı Ek Alanlar</h3>
-</div>
-<div class="box-body" id="div-box-body-10">
-<table id="aliciekalan_grid" style="border:0.5px solid #cccccc; width: 100%;">
-<caption id="caption-4">
-<div class="btn btn-primary btn-sm btn-labeled" id="div-btn-btn-primary-5" style="float:right">
-<i class="fa fa-plus"></i>
-                                                    Yeni Satır Ekle
-                                                </div>
-</caption>
-<thead id="thead-4">
-<tr id="tr-7">
-<th id="th-10" style="width:33%">Tanıtıcı Kod</th>
-<th id="th-11" style="width:34%">Tanıtıcı Değer</th>
-<th id="th-12" style="width:10%">Sil</th>
-</tr>
-</thead>
-<tbody id="tbody-5">
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</div>
-
-</div>
-</div>
+                </div>
+            </div>
+        </div> <!-- /tab-content -->
+    </div> <!-- /box -->
 </form>
-<div class="box box-default" id="div-box-box-default-6">
-<div class="box-header" id="div-box-header">
-<h2 class="box-title" id="h2-fatura-kalemleri">Fatura Kalemleri</h2>
-<div id="div-4">
-<div class="box-tools pull-right" id="div-box-tools-pull-right-2">
-<div class="input-group input-group-md pull-left" id="div-input-group-input-group-md">
-<select class="form-control" id="kdvStatu" name="kdvstatu"><option value="">Seçiniz</option>
 
-
-</select>
-</div>
-<button class="btn btn-default btn-md btn-labeled" id="btn-medula-dan-aktar" type="button">
-<i class="fa fa-inbox"></i>
-                            Medula'dan Aktar
-                        </button>
-<button class="btn btn-default btn-md btn-labeled" id="btn-cezaevi-aktar" type="button">
-<i class="fa fa-inbox"></i>
-                            Cezaevi Aktar
-                        </button>
-<div class="input-group input-group-md pull-left" id="div-input-group-input-group-md-2">
-<button aria-expanded="false" class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="btn-excel" type="button">
-                                Excel
-                                <span class="fa fa-caret-down" id="span-fa-fa-caret-down"></span>
-</button>
-<ul class="dropdown-menu" id="ul-dropdown-menu">
-<li id="li-2"><a href="#" id="link-x-7"> <i class="fa fa-file-excel-o"></i> Excel'den Yükle</a></li>
-<li id="li-3"><a href="#" id="link-x-8"> <i class="fa fa-share"></i> Excel'e Aktar</a></li>
-</ul>
-</div>
-<button class="btn btn-default btn-md btn-labeled" id="btn-toplu-indirim-arttirim-ekle" type="button">
-<i class="fa fa-plus"></i>
-                            Toplu İndirim/Arttırım Ekle
-                        </button>
-<button class="btn btn-default btn-md btn-labeled" id="btn-toplu-vergi-ekle" type="button">
-<i class="fa fa-plus"></i>
-                            Toplu Vergi Ekle
-                        </button>
-<button class="btn btn-primary btn-md btn-labeled" id="btn-yeni-satir-ekle" type="button">
-<i class="fa fa-plus"></i>
-                            Yeni Satır Ekle
-                        </button>
-</div>
-</div>
-</div>
-<div class="box-body" id="div-box-body-11">
-<div class="dataTables_wrapper form-inline dt-bootstrap no-footer" id="manuel_grid_wrapper">
-<table cellspacing="0" class="dataTable no-footer" id="manuel_grid" role="grid">
-
-<colgroup>
-<col style="width:60px"/>
-<col style="width:auto"/>
-<col style="width:100px"/>
-<col style="width:100px"/>
-<col style="width:100px"/>
-<col style="width:80px"/>
-<col style="width:100px"/>
-<col style="width:100px"/>
-<col style="width:60px"/>
-<col style="width:100px"/>
-<col style="width:80px"/>
-<col style="width:120px"/>
-</colgroup>
-<thead id="thead-5">
-<tr id="tr-8">
-<th id="th-13">Sıra No</th>
-<th id="th-14">Mal/Hizmet Adı *</th>
-<th id="th-15">Miktar</th>
-<th id="th-16">Birim *</th>
-<th id="th-17">Birim Fiyat</th>
-<th id="th-18">İskonto Oranı(%)</th>
-<th id="th-19">İskonto Tutarı</th>
-<th id="th-20">Mal/Hizmet Tutarı</th>
-<th id="th-21">KDV Oranı(%)</th>
-<th id="th-22">KDV Tutarı</th>
-<th id="th-23">İstisna</th>
-<th id="th-24">İşlem</th>
-</tr>
-</thead>
-
-<tbody class="ng-scope" id="tbody-ng-scope">
-
-<tr class="odd" id="tr-odd" role="row">
-<td id="td-10" style="min-width: 60px;  max-width: 60px;"><input class="form-control" disabled="" id="input-id" name="ID" style="width:100%" type="number"/> </td>
-<td id="td-11" style="min-width: 180px; max-width: 250px;">
-<input class="form-control Item_Name" id="MalAdi" list="stoks" name="MalAdi" style="width:100%" type="text"/>
-<datalist id="stoks">
-
-</datalist>
-</td>
-<td id="td-12" style="min-width: 100px;  max-width: 100px;"><input class="form-control" id="input-quantity-amount" name="Quantity_Amount" style="width:100%" type="number"/> </td>
-<td id="td-13" style="min-width: 100px; max-width: 100px;">
-<select class="form-control" id="select-quantity-unit-user" name="Quantity_Unit_User" style="width: 100%"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</td>
-<td id="td-14" style="min-width: 100px;  max-width: 100px;"><input class="form-control" id="input-price-amount" name="Price_Amount" style="width:100%" type="number"/> </td>
-<td id="td-15" style="min-width: 80px;  max-width: 80px;"> <input class="form-control" id="input-allowance-percent" name="Allowance_Percent" style="width:100%" type="number"/> </td>
-<td id="td-16" style="min-width: 100px;  max-width: 100px;"><input class="form-control" id="input-allowance-amount" name="Allowance_Amount" style="width:100%" type="number"/> </td>
-<td id="td-17" style="min-width: 100px;  max-width: 100px;"><input class="form-control" disabled="" id="input-price-total" name="Price_Total" style="width:100%" type="text" value="1,00"/> </td>
-<td id="td-18" style="min-width: 60px; max-width: 60px;">
-
-<select class="form-control Tax_Perc0015" convert-to-number="" id="Tax_Perc0015" name="Tax_Perc0015" style="width: 100%"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-</select>
-</td>
-<td id="td-19" style="min-width: 100px;  max-width: 100px;"><input class="form-control medulaField" disabled="" id="input-tax-amnt0015" name="Tax_Amnt0015" style="width:100%" type="number"/> </td>
-<td id="td-20" style="min-width: 80px;  max-width: 80px;border-bottom:1px solid rgb(235, 237, 240);">
-<select class="form-control" id="select-istisnalistname" name="istisnaListname" style="width: 100%; display:block;"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</td>
-<td id="td-21" style="min-width: 100px;  max-width: 100px;">
-<button class="btn btn-sm btn-success greenhoverclass satirekle" id="btn-button"><i class="fa fa-plus"></i></button>
-<button class="btn btn-sm btn-warning orangehoverclass" id="btn-button-2"><i class="fa fa-edit"></i></button>
-<button class="btn btn-sm btn-danger redhoverclass" id="btn-button-3"><i class="fa fa-remove"></i></button>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="row" id="div-row-6"><div class="col-sm-5" id="div-col-sm-5"></div><div class="col-sm-7" id="div-col-sm-7"></div></div>
-<div class="row" id="div-row-7">
-<div class="col-md-6" id="div-col-md-6-6">
-<div class="box box-default" id="div-box-box-default-7">
-<div class="box-header with-border" id="div-box-header-with-border-6">
-<h3 class="box-title" id="h3-aciklama-notlar">Açıklama / Notlar</h3>
-</div>
-<div class="box-body" id="div-box-body-12">
-<div class="form-group form-group-sm" id="div-form-group-form-group-sm" style="padding: 0px;">
-<textarea autocomplete="off" class="form-control" id="Note" name="Note" placeholder="Açıklama..." rows="8"></textarea>
-</div>
-</div>
-</div>
-</div>
-<div class="col-md-6" id="div-col-md-6-7">
-<div class="box box-default" id="div-box-box-default-8">
-<div class="box-header with-border" id="div-box-header-with-border-7">
-<h3 class="box-title" id="h3-toplam-bilgileri">Toplam Bilgileri</h3>
-<div class="box-tools pull-right" id="div-box-tools-pull-right-3">
-<div class="input-group input-group-md pull-left" id="div-input-group-input-group-md-3">
-<select class="form-control" id="manuelToplam" name="manuelToplam"><option value="">Seçiniz</option>
-
-
-</select>
-</div>
-</div>
-</div>
-<div class="box-body" id="div-box-body-13">
-<div class="form-horizontal row" id="div-form-horizontal-row-54">
-<label class="control-label col-sm-6" for="input-form-control" id="lbl-mal-hizmet-toplam-tutari">Mal/Hizmet Toplam Tutarı</label>
-<div class="col-sm-5 inputPadding" id="div-col-sm-5-inputpadding-2">
-<input class="form-control" disabled="" id="input-form-control" type="text" value="1,00 TL"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-55">
-<label class="control-label col-sm-6" for="input-form-control-2" id="lbl-toplam-iskonto-tutari">Toplam İskonto Tutarı</label>
-
-<div class="col-sm-5 inputPadding" id="div-col-sm-5-inputpadding-3">
-<input class="form-control" disabled="" id="input-form-control-2" type="text" value="0,00 TL"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-56">
-<label class="control-label col-sm-6" for="input-form-control-3" id="lbl-hesaplanan-kdv-matrah-0">Hesaplanan KDV Matrah (0)</label>
-<div class="col-sm-5 inputPadding" id="div-col-sm-5-inputpadding-4">
-<input class="form-control" disabled="" id="input-form-control-3" type="text" value="0,00 TL"/>
-</div>
-<label class="control-label col-sm-6" for="input-form-control-3" id="lbl-hesaplanan-kdv-0">Hesaplanan KDV (0)</label>
-<div class="col-sm-5 inputPadding" id="div-col-sm-5-inputpadding-5">
-<input class="form-control" disabled="" id="input-form-control-4" type="text" value="0,00 TL"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-57">
-<label class="control-label col-sm-6" for="input-form-control-5" id="lbl-vergiler-dahil-toplam-tutar">Vergiler Dahil Toplam Tutar</label>
-<div class="col-sm-5 inputPadding" id="div-col-sm-5-inputpadding-6">
-<input class="form-control" disabled="" id="input-form-control-5" type="text" value="1,00 TL"/>
-</div>
-</div>
-
-<div class="form-horizontal row" id="div-form-horizontal-row-58">
-<label class="control-label col-sm-6" for="input-form-control-6" id="lbl-odenecek-toplam-tutar">Ödenecek Toplam Tutar</label>
-<div class="col-sm-5 inputPadding" id="div-col-sm-5-inputpadding-7">
-<input class="form-control" disabled="" id="input-form-control-6" type="text" value="1,00  TL"/>
-</div>
-</div>
-
-</div>
-
-</div>
-</div>
-</div>
-<div aria-hidden="false" aria-labelledby="myModalLabel" class="modal fade" id="modal-Ceza" role="dialog">
-<div class="modal-dialog modal-lg" id="div-modal-dialog-modal-lg" role="document">
-<div class="modal-content" id="div-modal-content">
-<div class="modal-header text-center" id="div-modal-header-text-center">
-<h3 class="modal-title w-100 font-weight-bold" id="h3-cezaevi-fatura-eczane-dokum-aktarimi"><b>Cezaevi Fatura Eczane Döküm Aktarımı</b></h3>
-<button aria-label="Close" class="close" data-dismiss="modal" id="btn-button-4" type="button">
-<span aria-hidden="true" id="span-1">×</span>
-</button>
-</div>
-<div class="modal-body" id="div-modal-body">
-<ul class="nav nav-tabs" id="ul-nav-nav-tabs">
-<li class="active" id="li-active-2"><a data-toggle="tab" href="#frompdfCeza" id="pdfAktarimCeza">PDF'ten Aktarım</a></li>
-<li id="li-4"><a data-toggle="tab" href="#manuelCeza" id="manuelGirisCeza">Manuel Giriş</a></li>
-</ul>
-<div class="tab-content tab-validate" id="div-tab-content-tab-validate-2">
-<div class="tab-pane active" id="frompdf">
-<div class="form-group files color" id="div-form-group-files">
-<label id="lbl-cezaevi-fatura-dokum-pdf-ini-buraya-surukleyiniz">Cezaevi Fatura Döküm PDF'ini buraya sürükleyiniz.</label>
-<input accept=".pdf" autocomplete="off" id="cezaFile" name="cezaFile" type="file"/>
-</div>
-<div class="modal-footer" id="div-modal-footer">
-<button class="btn btn-success" id="btn-yukle" style="padding-left: 16px; width: 100px;" type="button">YÜKLE</button>
-</div>
-</div>
-<div class="tab-pane" id="manuelCeza">
-<div class="box-body" id="div-box-body-14">
-<div class="row" id="div-row-8">
-<div class="col-md-6" id="div-col-md-6-8">
-<div class="md-form mb-5" id="div-md-form-mb-5">
-<label data-error="wrong" data-success="right" id="lbl-recete-sayisi">Reçete Sayısı: *</label>
-<input class="form-control validate" id="input-form-control-validate" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-2">
-<label data-error="wrong" data-success="right" id="lbl-kamu-kurum-iskontosu-toplami">Kamu Kurum İskontosu Toplamı: *</label>
-<input class="form-control validate" id="input-form-control-validate-2" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-3">
-<label data-error="wrong" data-success="right" id="lbl-ilac-fark-toplami">İlaç Fark Toplamı: *</label>
-<input class="form-control validate" id="input-form-control-validate-3" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-4">
-<label data-error="wrong" data-success="right" id="lbl-10-20-katilim-paylari-toplami">%10-20 Katılım Payları Toplamı: *</label>
-<input class="form-control validate" id="input-form-control-validate-4" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-5">
-<label data-error="wrong" data-success="right" id="lbl-odenecek-tutar">Ödenecek Tutar: *</label>
-<input class="form-control validate" id="input-form-control-validate-5" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-6">
-<label data-error="wrong" data-success="right" id="lbl-eczane-hizmet-bedeli-kdv-18">Eczane Hizmet Bedeli KDV (%18): *</label>
-<input class="form-control validate" id="input-form-control-validate-6" type="number" value="0"/>
-</div>
-</div>
-<div class="col-md-6" id="div-col-md-6-9">
-<div class="md-form mb-5" id="div-md-form-mb-5-7">
-<label data-error="wrong" data-success="right" id="lbl-recete-psf-toplami">Reçete Psf Toplamı: *</label>
-<input class="form-control validate" id="input-form-control-validate-7" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-8">
-<label data-error="wrong" data-success="right" id="lbl-kamu-fiyatlari-toplami">Kamu Fiyatları Toplamı: *</label>
-<input class="form-control validate" id="input-form-control-validate-8" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-9">
-<label data-error="wrong" data-success="right" id="lbl-iskonto-tutari">İskonto Tutarı: *</label>
-<input class="form-control validate" id="input-form-control-validate-9" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-10">
-<label data-error="wrong" data-success="right" id="lbl-kdv-8">KDV %8: *</label>
-<input class="form-control validate" id="input-form-control-validate-10" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-11">
-<label data-error="wrong" data-success="right" id="lbl-eczane-hizmet-bedeli">Eczane Hizmet Bedeli: *</label>
-<input class="form-control validate" id="input-form-control-validate-11" type="number" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-12">
-<label data-error="wrong" data-success="right" id="lbl-toplam-odenecek-tutar">Toplam Ödenecek Tutar: *</label>
-<input class="form-control validate" id="input-form-control-validate-12" type="number" value="0"/>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="modal-footer" id="div-modal-footer-2">
-<button class="btn btn-danger" data-dismiss="modal" id="btn-iptal-ve-kapat" type="button"><i class="fa fa-close"></i> İptal ve Kapat</button>
-<button class="btn btn-success" data-dismiss="modal" id="btnAddCeza" name="btnAddCeza" type="button"><i class="fa fa-save"></i> Uygula ve Kapat</button>
-</div>
-</div>
-</div>
-</div>
-<div aria-hidden="false" aria-labelledby="myModalLabel" class="modal fade" id="modal-Medula" role="dialog">
-<div class="modal-dialog modal-lg" id="div-modal-dialog-modal-lg-2" role="document">
-<div class="modal-content" id="div-modal-content-2">
-<div class="modal-header text-center" id="div-modal-header-text-center-2">
-<h3 class="modal-title w-100 font-weight-bold" id="h3-medula-dokum-aktarimi"><b>Medula Döküm Aktarımı</b></h3>
-<button aria-label="Close" class="close" data-dismiss="modal" id="btn-button-5" type="button">
-<span aria-hidden="true" id="span-2">×</span>
-</button>
-</div>
-<div class="modal-body" id="div-modal-body-2">
-<ul class="nav nav-tabs" id="ul-nav-nav-tabs-2">
-<li class="active" id="li-active-3"><a data-toggle="tab" href="#frompdf" id="pdfAktarim">PDF'ten Aktarım</a></li>
-<li id="li-5"><a data-toggle="tab" href="#manuel" id="manuelGiris">Manuel Giriş</a></li>
-</ul>
-<div class="tab-content tab-validate" id="div-tab-content-tab-validate-3">
-<div class="tab-pane active" id="frompdf-2">
-<div class="form-group files color" id="div-form-group-files-2">
-<label id="lbl-medula-dokum-pdf-ini-buraya-surukleyiniz">Medula Döküm PDF'ini buraya sürükleyiniz.</label>
-<input accept=".pdf" autocomplete="off" id="medulaFile" name="medulaFile" type="file"/>
-</div>
-<div class="modal-footer" id="div-modal-footer-3">
-<button class="btn btn-success" id="btn-yukle-2" style="padding-left: 16px; width: 100px;" type="button">YÜKLE</button>
-</div>
-</div>
-
-</div>
-</div>
-<div class="modal-footer" id="div-modal-footer-4">
-<button class="btn btn-danger" data-dismiss="modal" id="btn-iptal-ve-kapat-2" type="button"><i class="fa fa-close"></i> İptal ve Kapat</button>
-<button class="btn btn-success" id="btnAddMedula" name="btnAddMedula" type="button"><i class="fa fa-save"></i> Uygula ve Kapat</button>
-</div>
-</div>
-</div>
-</div>
-<div aria-hidden="false" aria-labelledby="myModalLabel" class="modal fade" id="modal-ekAlanlar" role="dialog">
-<div class="modal-dialog modal-lg" id="div-modal-dialog-modal-lg-3" role="document">
-<div class="modal-content" id="div-modal-content-3">
-<div class="modal-header text-center" id="div-modal-header-text-center-3">
-<h3 class="modal-title w-100 font-weight-bold" id="h3-satirin-ek-alanlari"><b class="ng-binding" id="modalEkAlanAciklama">.Satırın Ek Alanları</b></h3>
-<h3 class="modal-title w-100 font-weight-bold" id="h3-h3"><b class="ng-binding" id="modalEkAlanAciklamaMalzeme"></b></h3>
-<button aria-label="Close" class="close" data-dismiss="modal" id="btn-button-6" type="button">
-<span aria-hidden="true" id="span-3">×</span>
-</button>
-</div>
-<div class="modal-body" id="div-modal-body-3">
-<ul class="nav nav-tabs" id="ul-nav-nav-tabs-3">
-<li class="active" id="li-active-4"><a data-toggle="tab" href="#genelbilgiler" id="link-genelbilgiler">Genel Bilgiler</a></li>
-<li id="li-6"><a data-toggle="tab" href="#vergibilgileri" id="link-vergibilgileri">Vergi Bilgileri</a></li>
-<li id="li-7"><a data-toggle="tab" href="#indartbilgileri" id="link-indartbilgileri">İndirim/Artırım Bilgileri</a></li>
-<li id="li-8"><a data-toggle="tab" href="#ihracat" id="link-ihracat">İhracat Bilgileri</a></li>
-
-<li id="li-9"><a data-toggle="tab" href="#hksbilgileri" id="link-hksbilgileri">Tanımlayıcı Alan/Satır İrsaliye ve Sipariş Bigileri</a></li>
-</ul>
-<div class="tab-content tab-validate" id="div-tab-content-tab-validate-4">
-<div class="tab-pane active" id="genelbilgiler">
-<div class="box-body" id="div-box-body-15">
-<div class="row form-group" id="div-row-form-group">
-<label class="col-sm-4 col-form-label" for="txtItem_ID_Seller" id="lbl-satici-urun-kodu">Satıcı Ürün Kodu</label>
-<div class="col-sm-8" id="div-col-sm-8">
-<input class="form-control" id="txtItem_ID_Seller" name="txtItem_ID_Seller" type="text"/>
-</div>
-</div>
-<div class="row form-group" id="div-row-form-group-2">
-<label class="col-sm-4 col-form-label" for="txtItem_ID_Buyer" id="lbl-alici-urun-kodu">Alıcı Ürün Kodu </label>
-<div class="col-sm-8" id="div-col-sm-8-2">
-<input class="form-control" id="txtItem_ID_Buyer" name="txtItem_ID_Buyer" type="text"/>
-</div>
-</div>
-<div class="row form-group" id="div-row-form-group-3">
-<label class="col-sm-4 col-form-label" for="txtItem_Description" id="lbl-aciklama">Açıklama </label>
-<div class="col-sm-8" id="div-col-sm-8-3">
-<input class="form-control" id="txtItem_Description" name="txtItem_Description" type="text"/>
-</div>
-</div>
-<div class="row form-group" id="div-row-form-group-4">
-<label class="col-sm-4 col-form-label" for="txtItem_Description" id="lbl-satir-notu">Satır Notu </label>
-<div class="col-sm-8" id="div-col-sm-8-4">
-<input class="form-control" id="txtItem_Note" list="SatırNotList" name="txtItem_Note" type="text"/>
-</div>
-<datalist id="SatırNotList">
-<option value="#SS_Satir_NO=">#SS_Satir_NO=</option>
-</datalist>
-</div>
-<div class="row form-group" id="div-row-form-group-5">
-<label class="col-sm-4 col-form-label" for="txtItem_Classification" id="lbl-urun-sinifi">Ürün Sınıfı </label>
-<div class="col-sm-8" id="div-col-sm-8-5">
-<input class="form-control" id="txtItem_Classification" name="txtItem_Classification" type="text"/>
-</div>
-</div>
-<div class="row form-group" id="div-row-form-group-6">
-<label class="col-sm-4 col-form-label" for="txtManufacturers_ItemIdentification" id="lbl-gumruk-takip-no">Gümrük Takip No </label>
-<div class="col-sm-8" id="div-col-sm-8-6">
-<input class="form-control" id="txtManufacturers_ItemIdentification" name="txtManufacturers_ItemIdentification" type="text"/>
-</div>
-</div>
-<div class="row form-group" id="div-row-form-group-7">
-<label class="col-sm-4 col-form-label" for="txtItem_Brand" id="lbl-marka">Marka </label>
-<div class="col-sm-8" id="div-col-sm-8-7">
-<input class="form-control" id="txtItem_Brand" name="txtItem_Brand" type="text"/>
-</div>
-</div>
-<div class="row form-group" id="div-row-form-group-8">
-<label class="col-sm-4 col-form-label" for="txtItem_Model" id="lbl-model">Model </label>
-<div class="col-sm-8" id="div-col-sm-8-8">
-<input class="form-control" id="txtItem_Model" name="txtItem_Model" type="text"/>
-</div>
-</div>
-</div>
-</div>
-<div class="tab-pane" id="vergibilgileri">
-<div class="box-body" id="div-box-body-16">
-<div class="row form-group" id="div-row-form-group-9">
-<table class="table table-bordered table-hover dataTable" id="tableKalemVergi">
-<caption id="caption-5">
-<div class="btn btn-success btn-labeled" id="div-btn-btn-success" style="float:right">
-<i class="fa fa-plus"></i>Yeni Vergi Ekle
-                                            </div>
-</caption>
-<tbody id="tbody-6">
-<tr id="tr-9">
-<th id="th-25">Vergi Seçiniz</th>
-<th id="th-26">Vergi Matrahı</th>
-<th id="th-27">Vergi Oranı</th>
-<th id="th-28">Vergi Tutarı</th>
-<th id="th-29" style="min-width: 80px;  max-width: 80px;">İstisna</th>
-
-<th id="th-30">İşlem</th>
-</tr>
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="tab-pane" id="indartbilgileri">
-<div class="box-body" id="div-box-body-17">
-<div class="row form-group" id="div-row-form-group-10">
-<table class="table table-bordered table-hover dataTable" id="tableKalemInc">
-<caption id="caption-6">
-<div class="btn btn-success btn-labeled" id="div-btn-btn-success-2" style="float:right">
-<i class="fa fa-plus"></i>Yeni İndirim/Artırım Ekle
-                                            </div>
-</caption>
-<tbody id="tbody-7">
-<tr id="tr-10">
-<th id="th-31">Tür Seçiniz</th>
-<th id="th-32">Açıklama</th>
-<th id="th-33">Matrah</th>
-<th id="th-34">Oran</th>
-<th id="th-35">Tutar</th>
-<th id="th-36">İşlem</th>
-</tr>
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="tab-pane" id="ihracat">
-<div class="box-body" id="div-box-body-18">
-<div class="row" id="div-row-9">
-<div class="col-md-6" id="div-col-md-6-10">
-<div class="md-form mb-5" id="div-md-form-mb-5-13">
-<label data-error="wrong" data-success="right" id="lbl-teslimat-firma-adi">Teslimat Firma Adi</label>
-<input class="form-control validate" id="txtTeslimatPartName" name="txtTeslimatPartName" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-14">
-<label data-error="wrong" data-success="right" id="lbl-teslimat-ulke">Teslimat Ülke *</label>
-<input class="form-control validate" id="txtTeslimatCountry" name="txtTeslimatCountry" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-15">
-<label data-error="wrong" data-success="right" id="lbl-teslimat-il">Teslimat İl *</label>
-<input class="form-control validate" id="txtTeslimatCityName" name="txtTeslimatCityName" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-16">
-<label data-error="wrong" data-success="right" id="lbl-teslimat-ilce">Teslimat İlçe *</label>
-<input class="form-control validate" id="txtTeslimatCitySubdivisionName" name="txtTeslimatCitySubdivisionName" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-17">
-<label data-error="wrong" data-success="right" id="lbl-teslimat-adres">Teslimat Adres</label>
-<input class="form-control validate" id="txtTeslimatStreetName" name="txtTeslimatStreetName" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-18">
-<label data-error="wrong" data-success="right" id="lbl-teslim-sarti">Teslim Şartı *</label>
-<select class="form-control" id="select-form-control" style="width: 100%;"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-19">
-<label data-error="wrong" data-success="right" id="lbl-teslim-yeri">Teslim Yeri</label>
-<input class="form-control validate" id="txtDeliveryTermsSpecialTerms" name="txtDeliveryTermsSpecialTerms" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-20">
-<label data-error="wrong" data-success="right" id="lbl-gtip-no">Gtip No *</label>
-<input class="form-control" id="txtRequiredCustomsID" maxlength="12" name="txtRequiredCustomsID" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-21">
-<label data-error="wrong" data-success="right" id="lbl-satir-kod-numarasi">Satır Kod Numarası</label>
-<input class="form-control" id="txtDibSatirKod" maxlength="11" name="txtDibSatirKod" type="text"/>
-</div>
-</div>
-<div class="col-md-6" id="div-col-md-6-11">
-<div class="md-form mb-5" id="div-md-form-mb-5-22">
-<label data-error="wrong" data-success="right" id="lbl-kap-no">Kap No</label>
-<input class="form-control validate" id="txtActualPackageID" name="txtActualPackageID" type="text" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-23">
-<label data-error="wrong" data-success="right" id="lbl-kap-adedi">Kap Adedi</label>
-<input class="form-control validate" id="txtActualPackageQuantity" name="txtActualPackageQuantity" type="text" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-24">
-<label data-error="wrong" data-success="right" id="lbl-kap-cinsi">Kap Cinsi</label>
-<select class="form-control" id="ActualPackagePackagingTypeCode" name="ActualPackagePackagingTypeCode" select2="" style="width: 100%;"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-25">
-<label data-error="wrong" data-success="right" id="lbl-esya-gonderim-sekli">Eşya Gönderim Şekli *</label>
-<select class="form-control" id="select-form-control-2" style="width: 100%;"><option value="">Seçiniz</option>
-
-
-
-
-
-
-
-
-
-
-
-
-</select>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-26">
-<label data-error="wrong" data-success="right" id="lbl-esya-gonderim-detayi">Eşya Gönderim Detayı</label>
-<input class="form-control validate" id="txtShipmentTransportDetail" name="txtShipmentTransportDetail" type="text"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-27">
-<label data-error="wrong" data-success="right" id="lbl-brut-kg">Brüt Kg</label>
-<input class="form-control validate" id="txtGrossWeightMeasure" name="txtGrossWeightMeasure" type="text" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-28">
-<label data-error="wrong" data-success="right" id="lbl-net-kg">Net Kg</label>
-<input class="form-control validate" id="NetWeightMeasure" name="NetWeightMeasure" type="text" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-29">
-<label data-error="wrong" data-success="right" id="lbl-navlun-bedeli">Navlun Bedeli</label>
-<input class="form-control validate" id="txtDeclaredForCarriageValueAmount" name="txtDeclaredForCarriageValueAmount" type="text" value="0"/>
-</div>
-<div class="md-form mb-5" id="div-md-form-mb-5-30">
-<label data-error="wrong" data-success="right" id="lbl-sigorta-bedeli">Sigorta Bedeli</label>
-<input class="form-control validate" id="txtInsuranceValueAmount" name="txtInsuranceValueAmount" type="text" value="0"/>
-</div>
-</div>
-</div>
-<button class="btn btn-primary" data-dismiss="modal" id="btn-satirlarin-tumune-uygula" style="float:right; margin-top:15px" type="button"><i class="fa fa-save"></i> Satırların Tümüne Uygula</button>
-</div>
-</div>
-<div class="tab-pane" id="tevkifatiadebilgileri">
-<div class="box-body" id="div-box-body-19">
-<div class="row form-group" id="div-row-form-group-11">
-<table class="table table-bordered table-hover dataTable" id="tableTevkifatIade">
-<caption id="caption-7">
-</caption>
-<tbody id="tbody-8">
-<tr id="tr-11">
-<th id="th-37">
-                                                    İadeye Konu
-                                                    İşlem bedeli
-                                                </th>
-<th id="th-38">
-                                                    İade Edilen
-                                                    Mal Oranı
-                                                </th>
-<th id="th-39">
-                                                    KDV
-                                                    Tutarı
-                                                </th>
-<th id="th-40">
-                                                    Tevkifatsız KDV
-                                                    Tutarı
-                                                </th>
-</tr>
-<tr id="tr-12">
-<td id="td-22"><input class="form-control" disabled="" id="input-form-control-7" type="number"/> </td>
-<td id="td-23">
-<input class="form-control" id="input-form-control-8" type="number"/>
-</td>
-<td id="td-24">
-<input class="form-control" disabled="" id="input-form-control-9" type="number"/>
-</td>
-<td id="td-25"><input class="form-control" id="input-form-control-10" type="number"/> </td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="tab-pane" id="hksbilgileri">
-<div class="box-body" id="div-box-body-20">
-<div class="row form-group" id="div-row-form-group-12" style="max-height:420px; overflow-y:auto; border:1px solid #e5e7eb;">
-<table class="table table-bordered table-hover dataTable" id="ksbilgileri">
-<caption id="caption-8">
-<div class="btn btn-success btn-labeled" id="div-btn-btn-success-3" style="float:right">
-<i class="fa fa-plus"></i>Yeni Tanımlayıcı Alan Ekle
-                                            </div>
-
-
-</caption>
-<tbody id="tbody-9">
-<tr id="tr-13">
-<th id="th-41">Açıklama </th>
-<th id="th-42">Değer</th>
-<th id="th-43">İşlem</th>
-</tr>
-
-</tbody>
-</table>
-<div id="div-5" style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid #e5e7eb; border-top:none; background:#fafafa;">
-<div class="ng-binding" id="div-ng-binding"><strong>Miktar Sayısı:</strong> 0</div>
-</div>
-</div>
-<button class="btn btn-primary" data-dismiss="modal" id="btn-satirlarin-tumune-uygula-2" style="float:right; margin-top:15px" type="button"><i class="fa fa-save"></i> Satırların Tümüne Uygula</button>
-</div>
-<div class="box-body" id="div-box-body-21">
-<div class="row form-group" id="div-row-form-group-13">
-<table class="table table-bordered table-hover dataTable" id="satirIrsaliye">
-<caption id="caption-9">
-<div class="btn btn-success btn-labeled" id="div-btn-btn-success-4" style="float:right">
-<i class="fa fa-plus"></i>Yeni Satır İrsaliye Ekle
-                                            </div>
-</caption>
-<tbody id="tbody-10">
-<tr id="tr-14">
-<th id="th-44">İrsaliye No </th>
-<th id="th-45">İrsaliye Tarihi</th>
-<th id="th-46">İşlem</th>
-</tr>
-
-</tbody>
-</table>
-</div>
-</div>
-<div class="box-body" id="div-box-body-22">
-<div class="row form-group" id="div-row-form-group-14">
-<table class="table table-bordered table-hover dataTable" id="satirSiparis">
-<caption id="caption-10">
-<div class="btn btn-success btn-labeled" id="div-btn-btn-success-5" style="float:right">
-<i class="fa fa-plus"></i>Yeni Satır Sipariş Ekle
-                                            </div>
-</caption>
-<tbody id="tbody-11">
-<tr id="tr-15">
-<th id="th-47">Sipariş No </th>
-<th id="th-48">Sipariş Tarihi </th>
-<th id="th-49">İşlem </th>
-</tr>
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="modal-footer" id="div-modal-footer-5">
-<button class="btn btn-success" data-dismiss="modal" id="btn-kaydet-ve-kapat" type="button"><i class="fa fa-save"></i> Kaydet ve Kapat</button>
-<button class="btn btn-danger" data-dismiss="modal" id="btn-iptal-ve-kapat-3" type="button"><i class="fa fa-close"></i> İptal ve Kapat</button>
-</div>
-</div>
-</div>
-</div>
-<div aria-hidden="false" aria-labelledby="myModalLabel" class="modal fade" id="modal-topluVergiEkle" role="dialog">
-<div class="modal-dialog modal-lg" id="div-modal-dialog-modal-lg-4" role="document">
-<div class="modal-content" id="div-modal-content-4">
-<div class="modal-header text-center" id="div-modal-header-text-center-4">
-<h3 class="modal-title w-100 font-weight-bold" id="h3-toplu-vergi-duzenle"><b>Toplu Vergi Düzenle</b></h3>
-<h3 class="modal-title w-100 font-weight-bold" id="h3-burada-yapilan-islemler-tum-satirlari-etkiler" style="color:firebrick"><b>Burada yapılan işlemler tüm satırları etkiler!</b></h3>
-<button aria-label="Close" class="close" data-dismiss="modal" id="btn-button-7" type="button">
-<span aria-hidden="true" id="span-4">×</span>
-</button>
-</div>
-<div class="modal-body" id="div-modal-body-4">
-<div class="box-body" id="div-box-body-23">
-<div class="row form-group" id="div-row-form-group-15">
-<table class="table table-bordered table-hover dataTable" id="tbl-yeni-vergi-ekle">
-<caption id="caption-11">
-<div class="btn btn-success btn-labeled" id="div-btn-btn-success-6" style="float:right">
-<i class="fa fa-plus"></i>Yeni Vergi Ekle
-                                    </div>
-</caption>
-<tbody id="tbody-12">
-<tr id="tr-16">
-<th id="th-50">Vergi Seçiniz</th>
-<th id="th-51">Vergi Oranı</th>
-<th id="th-52">Vergi Tutarı</th>
-<th id="th-53" style="min-width: 80px;  max-width: 80px;">İstisna</th>
-<th id="th-54">İşlem</th>
-</tr>
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="modal-footer" id="div-modal-footer-6">
-<button class="btn btn-danger" data-dismiss="modal" id="btn-iptal-ve-kapat-4" type="button"><i class="fa fa-close"></i> İptal ve Kapat</button>
-<button class="btn btn-success" id="btn-vergileri-tum-satirlara-uygula-ve-kapat" type="button"><i class="fa fa-save"></i> Vergileri Tüm Satırlara Uygula ve Kapat</button>
-</div>
-</div>
-</div>
-</div>
-<div aria-hidden="false" aria-labelledby="myModalLabel" class="modal fade" id="modal-topluIncEkle" role="dialog">
-<div class="modal-dialog modal-lg" id="div-modal-dialog-modal-lg-5" role="document">
-<div class="modal-content" id="div-modal-content-5">
-<div class="modal-header text-center" id="div-modal-header-text-center-5">
-<h3 class="modal-title w-100 font-weight-bold" id="h3-toplu-indirim-artirim-duzenle">
-<b class="ng-scope">Toplu İndirim/Artırım Düzenle</b>
-
-</h3>
-<h3 class="modal-title w-100 font-weight-bold" id="h3-burada-yapilan-islemler-tum-satirlari-etkiler-2" style="color:firebrick"><b>Burada yapılan işlemler tüm satırları etkiler!</b></h3>
-<button aria-label="Close" class="close" data-dismiss="modal" id="btn-button-8" type="button">
-<span aria-hidden="true" id="span-5">×</span>
-</button>
-</div>
-<div class="modal-body" id="div-modal-body-5">
-<div class="box-body" id="div-box-body-24">
-<div class="row form-group" id="div-row-form-group-16">
-<table class="table table-bordered table-hover dataTable" id="tbl-yeni-indirim-artirim-ekle">
-<caption id="caption-12">
-<div class="btn btn-success btn-labeled" id="div-btn-btn-success-7" style="float:right">
-<i class="fa fa-plus"></i>Yeni İndirim/Artırım Ekle
-                                    </div>
-</caption>
-<tbody id="tbody-13">
-<tr id="tr-17">
-<th id="th-55">Tür Seçiniz</th>
-<th id="th-56">Açıklama</th>
-<th id="th-57">Matrah</th>
-<th id="th-58">Oran</th>
-<th id="th-59">Tutar</th>
-<th id="th-60">İşlem</th>
-</tr>
-
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div class="modal-footer" id="div-modal-footer-7">
-<button class="btn btn-danger" data-dismiss="modal" id="btn-iptal-ve-kapat-5" type="button"><i class="fa fa-close"></i> İptal ve Kapat</button>
-<button class="btn btn-success" id="btn-indirim-artirim-tum-satirlara-uygula-ve-kapat" type="button"><i class="fa fa-save"></i> İndirim/Artırım Tüm Satırlara Uygula ve Kapat</button>
-</div>
-</div>
-</div>
-</div>
-<div class="modal fade in bs-example-modal-md" id="excelDraftModal" role="dialog">
-<div class="modal-dialog modal-md" id="div-modal-dialog-modal-md">
-<div class="modal-content" id="div-modal-content-6">
-<div class="box-body form-horizontal" id="div-box-body-form-horizontal">
-<div class="col-md-12" id="div-col-md-12">
-<div class="modal-header" id="div-modal-header">
-<button aria-label="Close" class="close" data-dismiss="modal" id="btn-button-9" type="button">
-<span aria-hidden="true" id="span-6">×</span>
-</button>
-<h3 class="modal-title" id="h3-excel-den-taslaga-kaydet">Excel'den Taslağa Kaydet</h3>
-</div>
-<div class="modal-body" id="div-modal-body-6">
-<div class="box-body" id="div-box-body-25">
-<div class="row" id="div-row-10">
-<div class="form-group" id="div-form-group">
-<div class="col-md-4" id="div-col-md-4-7">
-<input accept=".xlsx" class="btn btn-default" id="FileExcel" name="FileExcel" onchange="angular.element(this).scope().exceldenYukle()" type="file"/>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="modal fade in bs-example-modal-lg" id="modal-onizleme-fatura" role="dialog" tabindex="-1">
-<div class="modal-dialog modal-lg" id="div-modal-dialog-modal-lg-6">
-<div class="modal-content" id="div-modal-content-7">
-<div class="modal-header" id="div-modal-header-2">
-<button aria-label="Close" class="close" data-dismiss="modal" id="btn-button-10" type="button">
-<span aria-hidden="true" id="span-7">×</span>
-</button>
-<h4 class="modal-title" id="h4-onizleme">Önizleme</h4>
-</div>
-<div class="modal-body" id="div-modal-body-7">
-<iframe id="onizle-iframe-fatura" name="onizle-iframe-fatura" style="border: 0; height: 500px; width: 100%"></iframe>
-</div>
-<div class="modal-footer" id="div-modal-footer-8">
-<button class="btn btn-default pull-right" data-dismiss="modal" id="btn-kapat" type="button">Kapat</button>
-<button class="btn btn-default pull-right" id="btn-yazdir" type="button">Yazdır</button>
-<button class="btn btn-danger pull-right" id="btn-pdf-indir" type="button">Pdf İndir</button>
-<button class="btn btn-success pull-right" id="btn-gibe-gonder" type="button">Gibe Gönder</button>
-</div>
-</div>
-</div>
-</div>
-</section>
+<!-- ===================== F A T U R A  K A L E M L E R İ ===================== -->
+<div class="box box-default" id="boxKalemler">
+    <div class="box-header with-border">
+        <h3 class="box-title">Fatura Kalemleri</h3>
+        <!-- ÜST ARAÇ ÇUBUĞU -->
+        <div class="box-tools pull-right">
+            <!-- KDV Hariç/Dahil -->
+            <div class="input-group input-group-md pull-left" style="margin-right:8px">
+                <select class="form-control" id="kdvStatu" name="kdvstatu">
+                    <option value="false">KDV Hariç</option>
+                    <option value="true">KDV Dahil</option>
+                </select>
+            </div>
+            <!-- Excel drop-down -->
+            <div class="btn-group" style="margin-right:8px">
+                <button aria-expanded="false" class="btn btn-default btn-md dropdown-toggle" data-toggle="dropdown" type="button">
+                    Excel <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" id="excelLineModalOpen"><i class="fa fa-file-excel-o"></i> Excel'den Yükle</a></li>
+                    <li><a href="#" id="excelLineExport"><i class="fa fa-share"></i> Excel'e Aktar</a></li>
+                </ul>
+            </div>
+            <!-- Medula ve Cezaevi aktar -->
+            <button class="btn btn-default btn-md" id="btnMedulaAktar" style="margin-right:8px" type="button">
+                <i class="fa fa-inbox"></i> Medula'dan Aktar
+            </button>
+            <button class="btn btn-default btn-md" id="btnCezaeviAktar" style="margin-right:8px" type="button">
+                <i class="fa fa-inbox"></i> Cezaevi Aktar
+            </button>
+            <!-- Toplu işlemler -->
+            <button class="btn btn-default btn-md" id="btnTopluIndirim" style="margin-right:8px" type="button">
+                <i class="fa fa-plus"></i> Toplu İndirim/Artırım Ekle
+            </button>
+            <button class="btn btn-default btn-md" id="btnTopluVergi" style="margin-right:8px" type="button">
+                <i class="fa fa-plus"></i> Toplu Vergi Ekle
+            </button>
+            <!-- Yeni satır -->
+            <button class="btn btn-primary btn-md" id="btnLineAdd" type="button">
+                <i class="fa fa-plus"></i> Yeni Satır Ekle
+            </button>
+        </div>
+    </div>
+    <div class="box-body">
+        <div class="dataTables_scrollBody" style="overflow: auto;">
+            <table id="manuel_grid" class="dataTable no-footer" style="width: 100%;">
+                <thead style="background-color:#ebedf0;">
+                    <tr>
+                        <th style="width:60px;">Sıra No</th>
+                        <th style="width:180px;">Mal/Hizmet Adı *</th>
+                        <th style="width:100px;">Miktar</th>
+                        <th style="width:100px;">Birim *</th>
+                        <th style="width:100px;">Birim Fiyat</th>
+                        <th style="width:80px;">İskonto Oranı(%)</th>
+                        <th style="width:100px;">İskonto Tutarı</th>
+                        <th style="width:100px;">Mal/Hizmet Tutarı</th>
+                        <th style="width:60px;">KDV Oranı(%)</th>
+                        <th style="width:100px;">KDV Tutarı</th>
+                        <th style="width:80px;">İstisna</th>
+                        <th style="width:100px;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody id="invoiceBody"></tbody>
+            </table>
+        </div>
+        <!-- Ürün arama listesi (opsiyonel) -->
+        <datalist id="stoks"></datalist>
+    </div>
+</div>
+
+<!-- ======================== A Ç I K L A M A  /  T O P L A M ======================== -->
+<div class="row">
+    <!-- AÇIKLAMA -->
+    <div class="col-md-6">
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title">Açıklama / Notlar</h3>
+            </div>
+            <div class="box-body">
+                <div class="form-group form-group-sm" style="padding: 0px;">
+                    <textarea rows="8" id="Note" name="Note" autocomplete="off" placeholder="Açıklama..." class="form-control"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOPLAM BİLGİLERİ -->
+    <div class="col-md-6">
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title">Toplam Bilgileri</h3>
+                <div class="box-tools pull-right">
+                    <div class="input-group input-group-md pull-left">
+                        <select class="form-control" id="manuelToplam" name="manuelToplam">
+                            <option value="false" selected>Otomatik</option>
+                            <option value="true">Manuel</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="box-body">
+                <!-- Mal/Hizmet Toplam Tutarı -->
+                <div class="form-horizontal row">
+                    <label class="control-label col-sm-6">Mal/Hizmet Toplam Tutarı</label>
+                    <div class="col-sm-5 inputPadding">
+                        <input type="text" id="toplamMalHizmet" class="form-control" value="0,00 TL" disabled>
+                    </div>
+                </div>
+
+                <!-- Toplam İskonto Tutarı -->
+                <div class="form-horizontal row">
+                    <label class="control-label col-sm-6">Toplam İskonto Tutarı</label>
+                    <div class="col-sm-5 inputPadding">
+                        <input type="text" id="toplamIskonto" class="form-control" value="0,00 TL" disabled>
+                    </div>
+                </div>
+
+                <!-- Hesaplanan KDV -->
+                <div class="form-horizontal row">
+                    <label class="control-label col-sm-6">Hesaplanan KDV Matrah (20)</label>
+                    <div class="col-sm-5 inputPadding">
+                        <input type="text" id="kdvMatrah" class="form-control" value="0,00 TL" disabled>
+                    </div>
+
+                    <label class="control-label col-sm-6">Hesaplanan KDV (20)</label>
+                    <div class="col-sm-5 inputPadding">
+                        <input type="text" id="kdvTutar" class="form-control" value="0,00 TL" disabled>
+                    </div>
+                </div>
+
+                <!-- Vergiler Dahil Toplam -->
+                <div class="form-horizontal row">
+                    <label class="control-label col-sm-6">Vergiler Dahil Toplam Tutar</label>
+                    <div class="col-sm-5 inputPadding">
+                        <input type="text" id="vergilerDahil" class="form-control" value="0,00 TL" disabled>
+                    </div>
+                </div>
+
+                <!-- Ödenecek Toplam -->
+                <div class="form-horizontal row">
+                    <label class="control-label col-sm-6">Ödenecek Toplam Tutar</label>
+                    <div class="col-sm-5 inputPadding">
+                        <input type="text" id="odenecekToplam" class="form-control" value="0,00 TL" disabled>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== ÖNİZLEME MODALI ====================== -->
+<div class="modal fade" id="invoicePreviewModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document" style="max-width: 95% !important;">
+        <div class="modal-content">
+
+            <div class="modal-header bg-info">
+                <h4 class="modal-title">Fatura Önizleme</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    &times;
+                </button>
+            </div>
+
+            <div class="modal-body" id="invoicePreviewContent">
+                <!-- Dynamic HTML buraya gelecek -->
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .d-none {
+        display: none !important;
+    }
+</style>
+
+@section Scripts {
+    <script src="~/apps/listdata.js"></script>
+    <script src="~/apps/ExportInvoice.js"></script>
+}

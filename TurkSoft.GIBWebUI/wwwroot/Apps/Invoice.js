@@ -1,714 +1,1717 @@
-﻿/* wwwroot/apps/invoice.js (UNIFIED — jQuery only)
- * - DATA BLOĞU AYNEN KORUNUR
- * - Satır ekle/sil (#manuel_grid), canlı toplam, taslak kaydet/yükle
- * - Önizleme (modal-onizleme / onizle-iframe)
- * - API: InvoiceApi (global) / REST fallback
- */
-
-// Eğer modül import kullanıyorsan açabilirsin:
-// import { InvoiceApi } from '../Entites/index.js';
-
-
-
-
-// ----------------- yardımcılar -----------------
-// invoice.js  (type="module" olsa da global jQuery ile çalışır)
-(function ($) {
+﻿; (function (global, $) {
     "use strict";
 
-    /* ==================== GENEL AYARLAR & YARDIMCILAR ==================== */
+    /***********************************************************
+     *  UTILS
+     ***********************************************************/
+    const Utils = {
+        parseNumber: function (value) {
+            if (value === null || value === undefined) return 0;
+            let str = String(value).trim();
+            if (str === "") return 0;
+            str = str.replace(/\./g, "").replace(",", ".");
+            const n = parseFloat(str);
+            return isNaN(n) ? 0 : n;
+        },
+        formatNumber: function (value, decimals) {
+            decimals = (decimals == null) ? 2 : decimals;
+            const n = Number(value) || 0;
+            return n.toLocaleString("tr-TR", {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+    };
 
-    const DRAFT_KEY = "einvoice_draft_v1";
-    const VAT_MODE = { EXCL: "EXCL", INCL: "INCL" }; // Hariç / Dahil
-    const DEFAULT_UNIT = { code: "C62", name: "ADET" };
+    // Global ListData objesini garanti altına al
+    global.ListData = global.ListData || {};
 
-    // --- Sayı parse & format ---
-    function dec(v) {
-        if (v == null) return 0;
-        v = ("" + v).replace(" TL", "").trim();
-        v = v.replace(/\./g, "").replace(",", ".");
-        const n = parseFloat(v);
-        return Number.isFinite(n) ? n : 0;
+    function getListData() {
+
+        return global.ListData || {};
     }
-    function fmt(n) {
-        n = Math.round((n || 0) * 100) / 100;
-        let s = n.toFixed(2);         // "1234.50"
-        let [i, d] = s.split(".");
-        i = i.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        return i + "," + d;           // "1.234,50"
-    }
 
-    // --- UUID v4 ---
-    function uuidv4() {
+    function generateUUIDv4() {
+        // GİB'in ETTN formatına uygun UUID v4
         return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0;
             const v = c === "x" ? r : (r & 0x3 | 0x8);
-            return v.toString(16).toUpperCase();
-        });
+            return v.toString(16);
+        }).toUpperCase();
     }
 
-    function trySelect2($el) {
-        try {
-            if ($.fn.select2 && $el && $el.length) {
-                $el.filter("select").select2({ width: "100%" });
-            }
-        } catch { }
+    function showAlert(type, message) {
+        // type: "success" | "danger"
+        const $form = $("#faturaformu");
+        if (!$form.length) return;
+
+        $(".invoice-alert").remove();
+
+        const $alert = $(`
+            <div class="alert alert-${type} invoice-alert" role="alert" style="margin-bottom:15px;">
+                ${message}
+            </div>
+        `);
+
+        $form.prepend($alert);
+
+        setTimeout(function () {
+            $alert.fadeOut(400, function () { $(this).remove(); });
+        }, 5000);
     }
 
-    // basit select doldurma
-    function bindSelect($sel, list, valueField, textField, placeholder) {
-        if (!$sel || !$sel.length || !Array.isArray(list)) return;
+    /***********************************************************
+     *  GLOBAL STATE
+     ***********************************************************/
+    const UIState = {
+        selectedCustomerId: null
+    };
 
-        const html = [];
-        if (placeholder !== false) {
-            html.push('<option value="">' + (placeholder || "Seçiniz") + "</option>");
+    const invoiceModel = {
+        invoiceheader: {
+            Invoice_ID: null,        // ETTN
+            IssueDate: null,
+            IssueTime: null,
+            SourceUrn: null,
+            Prefix: null,
+            DocumentCurrencyCode: "TRY",
+            Currency: "TRY",
+            Note: null,
+            LineExtensionAmount: 0,
+            TaxInclusiveAmount: 0,
+            PayableAmount: 0,
+            Taxes: 0,
+            InvoiceTypeCode: null,
+            Scenario: null,
+            BranchCode: null,
+            TemplateName: null
+        },
+        customer: null,
+        invoiceLines: []
+    };
+
+    global.invoiceModel = invoiceModel;
+    global.Utils = Utils;
+    global.UIState = UIState;
+
+    /***********************************************************
+     *  TEST MÜŞTERİLER (Demo için)
+     ***********************************************************/
+    const TestCustomers = [
+        {
+            id: 1,
+            displayName: "0001 - TEST FİRMA A.Ş.",
+            identificationId: "11111111111",
+            aliciEtiketi: "urn:mail:testfirma@example.com",
+            partyName: "TEST FİRMA A.Ş.",
+            firstName: "TEST",
+            lastName: "FİRMA",
+            taxSchemeName: "İSTANBUL VERGİ DAİRESİ",
+            ulkeCode: "TR",
+            ulkeText: "Türkiye",
+            ilCode: "34",
+            ilName: "İSTANBUL",
+            ilceCode: "3401",
+            ilceName: "KADIKÖY",
+            streetName: "ÖRNEK MAH. TEST CAD. NO:1",
+            email: "info@testfirma.com",
+            postalCode: "34000",
+            website: "https://www.testfirma.com",
+            telephone: "02120000000",
+            fax: ""
+        },
+        {
+            id: 2,
+            displayName: "0002 - DENEME LTD. ŞTİ.",
+            identificationId: "22222222222",
+            aliciEtiketi: "urn:mail:deneme@example.com",
+            partyName: "DENEME LTD. ŞTİ.",
+            firstName: "DENEME",
+            lastName: "YETKİLİ",
+            taxSchemeName: "ANKARA VERGİ DAİRESİ",
+            ulkeCode: "TR",
+            ulkeText: "Türkiye",
+            ilCode: "06",
+            ilName: "ANKARA",
+            ilceCode: "0601",
+            ilceName: "ÇANKAYA",
+            streetName: "DENEME MAH. DENEME CAD. NO:2",
+            email: "info@deneme.com",
+            postalCode: "06000",
+            website: "https://www.deneme.com",
+            telephone: "03120000000",
+            fax: ""
         }
-
-        list.forEach(function (x) {
-            if (typeof x !== "object") {
-                html.push('<option value="' + x + '">' + x + "</option>");
-            } else {
-                const v = x[valueField] ?? "";
-                const t = x[textField] ?? v;
-                html.push('<option value="' + v + '">' + t + "</option>");
-            }
-        });
-
-        $sel.html(html.join(""));
-    }
-
-    /* ==================== 3) SELECTLERİ DATA BLOĞUNDAN DOLDURMA ==================== */
-
-    // Buradaki list isimlerini Data bloğundakilerle eşleştir
-    const SELECT_MAP = [
-        { selector: "#subeKodu", list: "subeList", value: "SubeKodu", text: "SubeAdi" },
-        { selector: "#SourceUrn", list: "GondericiEtiketList", value: null, text: null },
-        { selector: "#DestinationUrn", list: "KurumEtiketList", value: null, text: null },
-        { selector: "#DocumentCurrencyCode", list: "parabirimList", value: "Kodu", text: "Aciklama" },
-        { selector: "#PayeeFinancialCurrencyCode", list: "parabirimList", value: "Kodu", text: "Aciklama" },
-        { selector: 'select[name="txtCurrencyCode"]', list: "parabirimList", value: "Kodu", text: "Aciklama" },
-        { selector: "#selulke", list: "ulkeList", value: "UlkeKodu", text: "UlkeAdi" },
-        { selector: "#selIl", list: "ilList", value: "IlAdi", text: "IlAdi" },
-        { selector: "#PaymentMeansCode", list: "OdemeList", value: "OdemeKodu", text: "Aciklama" },
-        { selector: "#PaymentChannelCode", list: "OdemeKanalList", value: "OdemeKanalKodu", text: "Aciklama" },
-        { selector: "#taxRepresentativeEtiket", list: "KurumEtiketList", value: null, text: null },
-        // Satır birim / istisna seçiciler için ayrı fonksiyon var
     ];
 
-    function fillStaticSelectsFromData() {
-        SELECT_MAP.forEach(function (m) {
-            const $sel = $(m.selector);
-            if (!$sel.length) return;
-            const list = window[m.list];
-            if (!Array.isArray(list) || !list.length) return;
-            bindSelect($sel, list, m.value ?? Object.keys(list[0])[0], m.text ?? Object.keys(list[0])[1], "Seçiniz");
-            trySelect2($sel);
+    global.TestCustomers = TestCustomers;
+
+    /***********************************************************
+     *  LİSTELERİ DOLDURMA (window.ListData)
+     ***********************************************************/
+    function fillSubeDropdown() {
+        const listData = getListData();
+        const subeList = listData.subeList || [];
+        const $ddl = $("#ddlSubeKodu");
+        if (!$ddl.length) return;
+
+        $ddl.empty();
+        $ddl.append(new Option("Seçiniz", "0"));
+
+        subeList.forEach(s => {
+            const text = s.SubeAdi || ("Şube " + s.SubeKodu);
+            const opt = new Option(text, s.SubeKodu);
+            $(opt).attr("data-firmaid", s.FirmaId);
+            $ddl.append(opt);
         });
-    }
 
-    // Satırdaki birim ve istisna selectleri
-    function fillLineUnitSelect($scope) {
-        const $targets = ($scope || $("#manuel_grid")).find(".ln-unit");
-        const list = window.birimList;
-        if (!Array.isArray(list) || !$targets.length) return;
-
-        $targets.each(function () {
-            const $this = $(this);
-            const current = $this.val();
-            bindSelect($this, list, "BirimKodu", "Aciklama", "Seçiniz");
-            if (current) $this.val(current);
-            else $this.val(DEFAULT_UNIT.code);
-        });
-    }
-
-    function fillIstisnaSelect($sel) {
-        const list = window.istisnaList;
-        if (!Array.isArray(list) || !$sel.length) return;
-        bindSelect($sel, list, "Kodu", "Adi", "Seçiniz");
-    }
-
-    /* ==================== 4) UUID OLUŞTURMA & KİLİTLEME ==================== */
-
-    function initUUID() {
-        const $uuid = $("#txtUUID");
-        if (!$uuid.length) return;
-
-        const newId = uuidv4();
-        $uuid
-            .val(newId)
-            .prop("readonly", true)
-            .css("user-select", "none")
-            .on("keydown paste drop", function (e) { e.preventDefault(); })
-            .on("contextmenu", function (e) { e.preventDefault(); });
-
-        if (window.invoicemodel && invoicemodel.invoiceheader) {
-            invoicemodel.invoiceheader.UUID = newId;
+        // Liste varsa ilk şubeyi otomatik seç
+        if (subeList.length > 0) {
+            $ddl.val(subeList[0].SubeKodu).trigger("change");
         }
     }
 
-    /* ==================== 5) İSTİSNA KOLONU DAVRANIŞI ==================== */
+    function fillSourceUrnDropdown() {
+        const listData = getListData();
+        const arr = listData.GondericiEtiketList || [];
+        const $ddl = $("#ddlSourceUrn");
+        if (!$ddl.length) return;
 
-    function isIstisnaFatura() {
-        return ($("#ddlfaturatip").val() || "").toUpperCase() === "ISTISNA";
+        $ddl.empty();
+        $ddl.append(new Option("Seçiniz", ""));
+
+        arr.forEach(urn => {
+            $ddl.append(new Option(urn, urn));
+        });
+
+        // Gönderici etiketi listeden ilk değeri seç
+        if (arr.length > 0) {
+            $ddl.val(arr[0]).trigger("change");
+        }
     }
 
-    function setupIstisnaCell($row, active) {
-        // İstisna sütunu: 0-based index: 10. kolon
-        const $cell = $row.children("td").eq(10);
-        if (!$cell.length) return;
+    function fillInvoicePrefixDropdown() {
+        const listData = getListData();
+        const prefixes = listData.InvoicePrefixList || listData.invoicePrefixList || [];
+        const $ddl = $("#ddlInvoicePrefix");
+        if (!$ddl.length) return;
 
-        if (active) {
-            // select'e çevir
-            let $sel = $cell.find("select.ln-istisna");
-            if (!$sel.length) {
-                const prevVal = $cell.find("input.ln-istisna").val();
-                $cell.empty();
-                $sel = $('<select class="form-control ln-istisna"></select>');
-                $cell.append($sel);
-                fillIstisnaSelect($sel);
-                if (prevVal) $sel.val(prevVal);
-            } else {
-                fillIstisnaSelect($sel);
-            }
-            $sel.prop("disabled", false);
+        $ddl.empty();
+
+        if (!prefixes.length) {
+            // Elinde liste yoksa en azından örnek bir iki prefix ver
+            $ddl.append(new Option("FTR", "FTR"));
+            $ddl.append(new Option("IRS", "IRS"));
         } else {
-            // readonly input'a çevir
-            let $inp = $cell.find("input.ln-istisna");
-            if (!$inp.length) {
-                const val = ($cell.find("select.ln-istisna").val() || "0,00");
-                $cell.empty();
-                $inp = $('<input class="form-control ln-istisna" type="text" />');
-                $inp.val(val);
-                $cell.append($inp);
-            }
-            $inp.prop("readonly", true);
+            prefixes.forEach(p => {
+                if (typeof p === "string") {
+                    $ddl.append(new Option(p, p));
+                } else if (p && p.Kodu) {
+                    $ddl.append(new Option(p.Kodu, p.Kodu));
+                }
+            });
         }
     }
 
-    function applyFaturaTipiIstisnaMode() {
-        const active = isIstisnaFatura();
-        $("#manuel_grid tbody tr").each(function () {
-            setupIstisnaCell($(this), active);
+    function fillGoruntuDosyasiDropdown() {
+        const listData = getListData();
+        const arr = listData.GetXsltList || [];
+        const $ddl = $("#ddlGoruntuDosyasi");
+        if (!$ddl.length) return;
+
+        $ddl.empty();
+        $ddl.append(new Option("Seçiniz", ""));
+
+        arr.forEach(x => {
+            $ddl.append(new Option(x, x));
         });
     }
 
-    /* ==================== 6) MANUEL_GRID HESAPLAMA / SATIR İŞLEMLERİ ==================== */
+    function fillAliciEtiketiDropdown() {
+        const listData = getListData();
+        const arr = listData.KurumEtiketList || [];
+        const $ddl = $("#ddlAliciEtiketi");
+        if (!$ddl.length) return;
 
-    function getVatMode() {
-        // #kdvStatu : "false"=Hariç, "true"=Dahil
-        const v = $("#kdvStatu").val();
-        return v === "true" ? VAT_MODE.INCL : VAT_MODE.EXCL;
+        $ddl.empty();
+        $ddl.append(new Option("Seçiniz", ""));
+
+        arr.forEach(urn => {
+            $ddl.append(new Option(urn, urn));
+        });
+
+        // Alıcı etiketi listeden ilk değeri seç
+        if (arr.length > 0) {
+            $ddl.val(arr[0]).trigger("change");
+        }
+    }
+
+    function fillParaBirimiDropdown() {
+        const listData = getListData();
+        const paraList = listData.parabirimList || [];
+        const $ddl = $("#ddlParaBirimi");
+        if (!$ddl.length) return;
+
+        $ddl.empty();
+        $ddl.append(new Option("Seçiniz", ""));
+
+        paraList.forEach(p => {
+            $ddl.append(new Option(`${p.Kodu} - ${p.Aciklama}`, p.Kodu));
+        });
+
+        // Default TRY varsa seç
+        if (paraList.some(p => p.Kodu === "TRY")) {
+            $ddl.val("TRY");
+        }
+    }
+
+    function fillPaymentDropdowns() {
+        const listData = getListData();
+
+        // Ödeme Şekli
+        const $means = $("#PaymentMeansCode");
+        if ($means.length) {
+            $means.empty();
+            $means.append(new Option("Seçiniz", ""));
+            (listData.OdemeList || []).forEach(o => {
+                $means.append(new Option(`${o.OdemeKodu} - ${o.Aciklama}`, o.OdemeKodu));
+            });
+        }
+
+        // Ödeme Kanalı
+        const $channel = $("#PaymentChannelCode");
+        if ($channel.length) {
+            $channel.empty();
+            $channel.append(new Option("Seçiniz", ""));
+            (listData.OdemeKanalList || []).forEach(o => {
+                $channel.append(new Option(`${o.OdemeKanalKodu} - ${o.Aciklama}`, o.OdemeKanalKodu));
+            });
+        }
+
+        // Hesap Para Birimi
+        const $payeeCur = $("#PayeeFinancialCurrencyCode");
+        if ($payeeCur.length) {
+            $payeeCur.empty();
+            $payeeCur.append(new Option("Seçiniz", ""));
+            (listData.parabirimList || []).forEach(p => {
+                $payeeCur.append(new Option(`${p.Kodu} - ${p.Aciklama}`, p.Kodu));
+            });
+
+            // Default TRY varsa o seçilsin
+            if ((listData.parabirimList || []).some(p => p.Kodu === "TRY")) {
+                $payeeCur.val("TRY");
+            }
+        }
+    }
+
+    /***********************************************************
+     *  MANUEL ŞEHİR (chkManuelSehir)
+     ***********************************************************/
+    function toggleManuelSehir() {
+        const isChecked = $("#chkManuelSehir").is(":checked");
+
+        const $divUlkeSelect = $("#divUlkeSelect");
+        const $divUlkeText = $("#divUlkeText");
+        const $divIlSelect = $("#divIlSelect");
+        const $divIlText = $("#divIlText");
+        const $divIlceSelect = $("#divIlceSelect");
+        const $divIlceText = $("#divIlceText");
+
+        const $ddlUlke = $("#ddlUlke");
+        const $ddlIl = $("#ddlIl");
+        const $ddlIlce = $("#ddlIlce");
+        const $txtUlke = $("#txtUlke");
+        const $txtIl = $("#txtIl");
+        const $txtIlce = $("#txtIlce");
+
+        if (isChecked) {
+            $divUlkeSelect.addClass("d-none");
+            $divIlSelect.addClass("d-none");
+            $divIlceSelect.addClass("d-none");
+
+            $divUlkeText.removeClass("d-none");
+            $divIlText.removeClass("d-none");
+            $divIlceText.removeClass("d-none");
+
+            $ddlUlke.prop("disabled", true);
+            $ddlIl.prop("disabled", true);
+            $ddlIlce.prop("disabled", true);
+
+            $txtUlke.prop("disabled", false);
+            $txtIl.prop("disabled", false);
+            $txtIlce.prop("disabled", false);
+        } else {
+            $divUlkeSelect.removeClass("d-none");
+            $divIlSelect.removeClass("d-none");
+            $divIlceSelect.removeClass("d-none");
+
+            $divUlkeText.addClass("d-none");
+            $divIlText.addClass("d-none");
+            $divIlceText.addClass("d-none");
+
+            $ddlUlke.prop("disabled", false);
+            $ddlIl.prop("disabled", false);
+            $ddlIlce.prop("disabled", false);
+
+            $txtUlke.prop("disabled", true);
+            $txtIl.prop("disabled", true);
+            $txtIlce.prop("disabled", true);
+        }
+    }
+
+    /***********************************************************
+     *  ÖDEME TABI - Alıcı Bilgilerinden Kopyala
+     ***********************************************************/
+    function copyAliciToKamu() {
+        const identificationId = $("#txtIdentificationID").val() || "";
+        const partyName = $("#txtPartyName").val() || "";
+
+        let ulke = "";
+        let il = "";
+
+        if ($("#chkManuelSehir").is(":checked")) {
+            ulke = $("#txtUlke").val() || "";
+            il = $("#txtIl").val() || "";
+        } else {
+            ulke = $("#ddlUlke option:selected").text() || "";
+            il = $("#ddlIl option:selected").text() || "";
+        }
+
+        $("#txtKamuVkn").val(identificationId);
+        $("#txtKamuUnvan").val(partyName);
+        $("#txtKamuUlke").val(ulke);
+        $("#txtKamuIl").val(il);
+    }
+
+    /***********************************************************
+     *  TEST MÜŞTERİ LISTESİ (Ara)
+     ***********************************************************/
+    function fillMusteriAraDropdown() {
+        const $ddl = $("#ddlMusteriAra");
+        if (!$ddl.length) return;
+
+        $ddl.empty();
+        $ddl.append($("<option>", { value: "", text: "Seçiniz" }));
+
+        TestCustomers.forEach(c => {
+            $ddl.append(
+                $("<option>", {
+                    value: c.id,
+                    text: c.displayName
+                })
+            );
+        });
+    }
+
+    function fillCustomerFieldsFromTest(cust) {
+        if (!cust) return;
+
+        UIState.selectedCustomerId = cust.id;
+
+        $("#txtIdentificationID").val(cust.identificationId);
+        $("#ddlAliciEtiketi").val(cust.aliciEtiketi || "").trigger("change");
+        $("#txtPartyName").val(cust.partyName);
+
+        let firstName = cust.firstName || "";
+        let lastName = cust.lastName || "";
+
+        // Ad / Soyad boş geliyorsa Firma adından türet
+        if (!firstName && !lastName && cust.partyName) {
+            const parts = cust.partyName.trim().split(/\s+/);
+            if (parts.length === 1) {
+                firstName = parts[0];
+                lastName = ".";
+            } else {
+                lastName = parts.pop();
+                firstName = parts.join(" ");
+            }
+        }
+
+        $("#txtPersonFirstName").val(firstName);
+        $("#txtPersonLastName").val(lastName);
+
+        $("#txtTaxSchemeName").val(cust.taxSchemeName);
+        $("#ddlUlke").val(cust.ulkeCode).trigger("change");
+        $("#txtStreetName").val(cust.streetName);
+        $("#txtEmail").val(cust.email);
+        $("#txtPostalCode").val(cust.postalCode);
+        $("#txtWebsite").val(cust.website);
+        $("#txtTelephone").val(cust.telephone);
+        $("#txtFax").val(cust.fax);
+
+        setTimeout(() => { $("#ddlIl").val(cust.ilCode).trigger("change"); }, 50);
+        setTimeout(() => { $("#ddlIlce").val(cust.ilceCode).trigger("change"); }, 100);
+
+        invoiceModel.customer = {
+            customerParty: {
+                IdentificationID: cust.identificationId,
+                PartyName: cust.partyName,
+                TaxSchemeName: cust.taxSchemeName,
+                CountryName: cust.ulkeText,
+                CityName: cust.ilName,
+                CitySubdivisionName: cust.ilceName,
+                StreetName: cust.streetName,
+                PostalZone: cust.postalCode,
+                ElectronicMail: cust.email,
+                Telephone: cust.telephone,
+                WebsiteURI: cust.website,
+                Person_FirstName: firstName,
+                Person_FamilyName: lastName,
+                ManuelCityAndSubdivision: $("#chkManuelSehir").is(":checked")
+            }
+        };
+    }
+
+    /***********************************************************
+     *  HEADER INPUT BINDING
+     ***********************************************************/
+    function bindHeaderInputs() {
+        $(document).on("change", "#ddlSubeKodu", function () {
+            invoiceModel.invoiceheader.BranchCode = $(this).val();
+        });
+
+        $(document).on("change", "#ddlSourceUrn", function () {
+            invoiceModel.invoiceheader.SourceUrn = $(this).val();
+        });
+
+        $(document).on("change", "#ddlInvoicePrefix", function () {
+            invoiceModel.invoiceheader.Prefix = $(this).val();
+        });
+
+        $(document).on("change", "#ddlGoruntuDosyasi", function () {
+            invoiceModel.invoiceheader.TemplateName = $(this).val();
+        });
+
+        $(document).on("change", "#ddlParaBirimi", function () {
+            const cur = $(this).val();
+            invoiceModel.invoiceheader.DocumentCurrencyCode = cur;
+            invoiceModel.invoiceheader.Currency = cur;
+        });
+
+        $(document).on("change", "#ddlSenaryo", function () {
+            invoiceModel.invoiceheader.Scenario = $(this).val();
+        });
+
+        $(document).on("change", "#ddlFaturaTipi", function () {
+            invoiceModel.invoiceheader.InvoiceTypeCode = $(this).val();
+            toggleIstisnaOnLines();
+        });
+    }
+
+    /***********************************************************
+     *  BİRİM / İSTİSNA SELECTLERİ
+     ***********************************************************/
+    function fillBirimSelect($select) {
+        const listData = getListData();
+        const birimList = listData.birimList || [];
+        if (!$select.length || !birimList.length) return;
+
+        $select.empty();
+        $select.append($("<option>", { value: "", text: "Seçiniz" }));
+        birimList.forEach(b => {
+            $select.append(
+                $("<option>", {
+                    value: b.BirimKodu,
+                    text: `${b.BirimKodu} - ${b.Aciklama}`
+                })
+            );
+        });
+    }
+
+    function fillIstisnaSelect($select) {
+        const listData = getListData();
+        const istisnaList = listData.istisnaList || [];
+        if (!$select.length || !istisnaList.length) return;
+
+        $select.empty();
+        $select.append($("<option>", { value: "", text: "Seçiniz" }));
+        istisnaList.forEach(i => {
+            $select.append(
+                $("<option>", {
+                    value: i.Kodu,
+                    text: `${i.Kodu} - ${i.Adi}`
+                })
+            );
+        });
+    }
+
+    function toggleIstisnaOnLines() {
+        const isIstisna = $("#ddlFaturaTipi").val() === "ISTISNA";
+        $("#manuel_grid tbody tr").each(function () {
+            const $istisna = $(this).find(".js-line-istisna");
+            if (isIstisna) {
+                $istisna.prop("disabled", false);
+                if ($istisna.children().length <= 1) {
+                    fillIstisnaSelect($istisna);
+                }
+            } else {
+                $istisna.prop("disabled", true).val("");
+            }
+        });
+    }
+
+    /***********************************************************
+     *  Fatura Kalemleri – Satır Template & Ekle / Sil
+     ***********************************************************/
+    function createLineRowTemplate() {
+        return `
+        <tr>
+            <td class="text-center"><span class="js-line-index"></span></td>
+            <td>
+                <input type="text" class="form-control input-sm js-line-name" placeholder="Mal/Hizmet Adı">
+            </td>
+            <td>
+                <input type="number" step="0.0001" class="form-control input-sm js-line-qty" value="1">
+            </td>
+            <td>
+                <select class="form-control input-sm js-line-unit"></select>
+            </td>
+            <td>
+                <input type="number" step="0.0001" class="form-control input-sm js-line-price" value="0">
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control input-sm js-line-disc-rate" value="0">
+            </td>
+            <td>
+                <input type="text" class="form-control input-sm js-line-disc-amount" value="0,00" disabled>
+            </td>
+            <td>
+                <input type="text" class="form-control input-sm js-line-amount" value="0,00" disabled>
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control input-sm js-line-kdv" value="20">
+            </td>
+            <td>
+                <input type="text" class="form-control input-sm js-line-kdv-amount" value="0,00" disabled>
+            </td>
+            <td>
+                <select class="form-control input-sm js-line-istisna" disabled></select>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-danger btn-sm js-line-remove">
+                    <i class="fa fa-trash"></i>
+                </button>
+                <input type="hidden" class="js-line-total" value="0">
+            </td>
+        </tr>`;
+    }
+
+    function addNewLineRow() {
+        const $tbody = $("#invoiceBody");
+        if (!$tbody.length) return;
+
+        const $row = $(createLineRowTemplate());
+        $tbody.append($row);
+
+        fillBirimSelect($row.find(".js-line-unit"));
+        toggleIstisnaOnLines();
+
+        renumberLines();
+        calcLine($row);
     }
 
     function renumberLines() {
-        $("#manuel_grid tbody tr").each(function (i) {
-            $(this).find(".ln-ix").text(i + 1);
+        $("#invoiceBody tr").each(function (idx) {
+            $(this).find(".js-line-index").text(idx + 1);
         });
     }
 
-    function addNewLineRow(afterRow) {
-        const $tbody = $("#manuel_grid tbody");
-        let $template = $tbody.find("tr:first");
-        if (!$template.length) return;
+    /***********************************************************
+     *  SATIR HESAPLAMALARI + TOPLAMLAR
+     ***********************************************************/
+    function calculateRowValues(qty, unitPrice, discRate, kdvRate, isKdvDahil) {
+        qty = qty || 0;
+        unitPrice = unitPrice || 0;
+        discRate = discRate || 0;
+        kdvRate = kdvRate || 0;
 
-        let $new = $template.clone(true, true);
+        let indirim = 0;
+        let matrah = 0;
+        let kdv = 0;
+        let toplam = 0;
 
-        // inputları sıfırla
-        $new.find("input").each(function () {
-            const $i = $(this);
-            if ($i.hasClass("ln-name")) {
-                $i.val("");
-            } else if ($i.hasClass("ln-qty") || $i.hasClass("ln-price") || $i.hasClass("ln-discp")) {
-                $i.val(0);
-            } else if ($i.hasClass("ln-isk") || $i.hasClass("ln-net") || $i.hasClass("ln-kdvt")) {
-                $i.val("0,00");
-            } else if ($i.hasClass("ln-kdv")) {
-                $i.val(0);
-            } else if ($i.hasClass("ln-istisna")) {
-                $i.val("0,00");
-            } else {
-                // diğerleri
-                $i.val("");
-            }
-        });
-
-        // birim select doldurulmuş olsun
-        fillLineUnitSelect($new);
-
-        if (afterRow && afterRow.length) {
-            $new.insertAfter(afterRow);
+        if (!isKdvDahil) {
+            const brut = qty * unitPrice;
+            indirim = brut * (discRate / 100);
+            matrah = brut - indirim;
+            kdv = matrah * (kdvRate / 100);
+            toplam = matrah + kdv;
         } else {
-            $tbody.append($new);
+            const factor = 1 + (kdvRate / 100);
+            const netUnit = factor > 0 ? unitPrice / factor : unitPrice;
+            const brutNet = qty * netUnit;
+            indirim = brutNet * (discRate / 100);
+            matrah = brutNet - indirim;
+            kdv = matrah * (kdvRate / 100);
+            toplam = matrah + kdv;
         }
 
-        // fatura tipi -> istisna sütunu tipi
-        setupIstisnaCell($new, isIstisnaFatura());
+        return { indirim, matrah, kdv, toplam };
+    }
 
-        renumberLines();
+    function calcLine($row) {
+        const qty = Utils.parseNumber($row.find(".js-line-qty").val());
+        const unitPrice = Utils.parseNumber($row.find(".js-line-price").val());
+        const discRate = Utils.parseNumber($row.find(".js-line-disc-rate").val());
+        const kdvRate = Utils.parseNumber($row.find(".js-line-kdv").val());
+        const isKdvDahil = $("#kdvStatu").val() === "true";
+
+        const vals = calculateRowValues(qty, unitPrice, discRate, kdvRate, isKdvDahil);
+
+        $row.find(".js-line-disc-amount").val(Utils.formatNumber(vals.indirim));
+        $row.find(".js-line-amount").val(Utils.formatNumber(vals.matrah));
+        $row.find(".js-line-kdv-amount").val(Utils.formatNumber(vals.kdv));
+        $row.find(".js-line-total").val(vals.toplam);
+
         recalcTotals();
     }
 
     function recalcTotals() {
-        const mode = getVatMode();
-        const autoMode = ($("#manuelToplam").val() || "false") === "false";
+        let toplamMalHizmet = 0;
+        let toplamIskonto = 0;
+        let kdvMatrah = 0;
+        let kdvTutar = 0;
+        let vergilerDahil = 0;
 
-        let lineTotalBeforeDisc = 0;  // Mal/Hizmet toplam (iskonto öncesi)
-        let totalDisc = 0;
-        let totalNet = 0;             // Matrah
-        let totalVat = 0;
-        let totalGross = 0;
+        const isKdvDahil = $("#kdvStatu").val() === "true";
 
-        $("#manuel_grid tbody tr").each(function () {
-            const $r = $(this);
-            const qty = dec($r.find(".ln-qty").val());
-            const price = dec($r.find(".ln-price").val());
-            const discPerc = dec($r.find(".ln-discp").val());
-            const vatPerc = dec($r.find(".ln-kdv").val());
+        $("#invoiceBody tr").each(function () {
+            const $row = $(this);
+            const qty = Utils.parseNumber($row.find(".js-line-qty").val());
+            const unitPrice = Utils.parseNumber($row.find(".js-line-price").val());
+            const discRate = Utils.parseNumber($row.find(".js-line-disc-rate").val());
+            const kdvRate = Utils.parseNumber($row.find(".js-line-kdv").val());
 
-            if (qty <= 0 || price <= 0) {
-                // satır boş ise alanları temizle
-                $r.find(".ln-isk").val("0,00");
-                $r.find(".ln-net").val("0,00");
-                $r.find(".ln-kdvt").val("0,00");
-                return;
-            }
+            const vals = calculateRowValues(qty, unitPrice, discRate, kdvRate, isKdvDahil);
 
-            let lineBase; // KDV hariç, iskonto öncesi
-            if (mode === VAT_MODE.INCL) {
-                const unitNet = vatPerc > 0 ? (price / (1 + vatPerc / 100)) : price;
-                lineBase = qty * unitNet;
-            } else {
-                lineBase = qty * price;
-            }
-
-            const discAmount = lineBase * (discPerc / 100);
-            const baseAfterDisc = lineBase - discAmount;
-            const vatAmount = baseAfterDisc * (vatPerc / 100);
-            const lineGross = baseAfterDisc + vatAmount;
-
-            // satır alanlarını yaz
-            $r.find(".ln-isk").val(fmt(discAmount));
-            $r.find(".ln-net").val(fmt(baseAfterDisc));
-            $r.find(".ln-kdvt").val(fmt(vatAmount));
-
-            lineTotalBeforeDisc += lineBase;
-            totalDisc += discAmount;
-            totalNet += baseAfterDisc;
-            totalVat += vatAmount;
-            totalGross += lineGross;
+            toplamIskonto += vals.indirim;
+            toplamMalHizmet += vals.matrah;
+            kdvMatrah += vals.matrah;
+            kdvTutar += vals.kdv;
+            vergilerDahil += vals.toplam;
         });
 
-        if (autoMode) {
-            if ($("#tAra").length) $("#tAra").val(fmt(lineTotalBeforeDisc) + " TL");
-            if ($("#tIsk").length) $("#tIsk").val(fmt(totalDisc) + " TL");
-            if ($("#tMatrah20").length) $("#tMatrah20").val(fmt(totalNet) + " TL");
-            if ($("#tKdv20").length) $("#tKdv20").val(fmt(totalVat) + " TL");
-            if ($("#tVergiDahil").length) $("#tVergiDahil").val(fmt(totalGross) + " TL");
-            if ($("#tGenel").length) $("#tGenel").val(fmt(totalGross) + " TL");
+        $("#toplamMalHizmet").val(Utils.formatNumber(toplamMalHizmet) + " TL");
+        $("#toplamIskonto").val(Utils.formatNumber(toplamIskonto) + " TL");
+        $("#kdvMatrah").val(Utils.formatNumber(kdvMatrah) + " TL");
+        $("#kdvTutar").val(Utils.formatNumber(kdvTutar) + " TL");
+        $("#vergilerDahil").val(Utils.formatNumber(vergilerDahil) + " TL");
+        $("#odenecekToplam").val(Utils.formatNumber(vergilerDahil) + " TL");
 
-            // Döviz - TL kısmı (opsiyonel)
-            updateTLTotals(lineTotalBeforeDisc, totalDisc, totalNet, totalVat, totalGross);
-        }
-
-        // invoicemodel varsa istenirse buraya da yazılabilir
-        if (window.invoicemodel && invoicemodel.invoiceheader) {
-            invoicemodel.invoiceheader.LineExtensionAmount = totalNet;
-            invoicemodel.invoiceheader.AllowanceTotalAmount = totalDisc;
-            invoicemodel.invoiceheader.TaxExclusiveAmount = totalNet;
-            invoicemodel.invoiceheader.TaxInclusiveAmount = totalNet + totalVat;
-            invoicemodel.invoiceheader.PayableAmount = totalGross;
-        }
+        invoiceModel.invoiceheader.LineExtensionAmount = toplamMalHizmet;
+        invoiceModel.invoiceheader.Taxes = kdvTutar;
+        invoiceModel.invoiceheader.TaxInclusiveAmount = vergilerDahil;
+        invoiceModel.invoiceheader.PayableAmount = vergilerDahil;
     }
 
-    function updateTLTotals(ara, isk, matrah, kdv, genel) {
-        const currency = ($("#DocumentCurrencyCode").val() || "TRY").toUpperCase();
-        const kur = dec($("#txtKurBilgisi").val());
-        const showTL = currency !== "TRY" && kur > 0;
+    /***********************************************************
+     *  ÖNİZLEME MODEL / HTML
+     ***********************************************************/
+    function buildInvoiceModelFromUI() {
+        const model = JSON.parse(JSON.stringify(invoiceModel));
 
-        if (!showTL) {
-            $("#tlTotals").hide();
-            return;
-        }
-        const toTL = (x) => x * kur;
+        const ettn = $("#txtUUID").val() || null;
 
-        $("#tlTotals").show();
-        if ($("#tAraTL").length) $("#tAraTL").val(fmt(toTL(ara)) + " TL");
-        if ($("#tIskTL").length) $("#tIskTL").val(fmt(toTL(isk)) + " TL");
-        if ($("#tVergiDahilTL").length) $("#tVergiDahilTL").val(fmt(toTL(genel)) + " TL");
-        if ($("#tGenelTL").length) $("#tGenelTL").val(fmt(toTL(genel)) + " TL");
-        // İstersen matrah / KDV TL'lerini de ayrı ayrı hesaplayabilirsin
-    }
+        model.invoiceheader.Invoice_ID = ettn;
+        model.invoiceheader.IssueDate = $("#txtIssueDate").val() || null;
+        model.invoiceheader.IssueTime = $("#txtIssueTime").val() || null;
+        model.invoiceheader.Currency = $("#ddlParaBirimi").val() || model.invoiceheader.Currency;
+        model.invoiceheader.DocumentCurrencyCode = model.invoiceheader.Currency;
+        model.invoiceheader.Note = $("#Note").val() || null;
+        model.invoiceheader.InvoiceTypeCode = $("#ddlFaturaTipi").val() || model.invoiceheader.InvoiceTypeCode;
+        model.invoiceheader.Scenario = $("#ddlSenaryo").val() || model.invoiceheader.Scenario;
+        model.invoiceheader.BranchCode = $("#ddlSubeKodu").val() || null;
+        model.invoiceheader.SourceUrn = $("#ddlSourceUrn").val() || null;
+        model.invoiceheader.Prefix = $("#ddlInvoicePrefix").val() || null;
+        model.invoiceheader.TemplateName = $("#ddlGoruntuDosyasi").val() || null;
 
-    /* ==================== 2) TÜM "YENİ SATIR / YENİ İADE" BUTONLARI ==================== */
-
-    // İrsaliye satırı
-    function addDespatchRow() {
-        const $tbody = $("#irsaliye_grid tbody");
-        const $row = $(`
-            <tr>
-                <td><input type="text" class="form-control js-irs-no" /></td>
-                <td><input type="text" class="form-control datepicker js-irs-date" /></td>
-                <td style="text-align:center">
-                    <button type="button" class="btn btn-danger btn-xs js-row-del">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </td>
-            </tr>`);
-        $tbody.append($row);
-        if ($.fn.datepicker) $row.find(".datepicker").datepicker();
-    }
-
-    // İade Fatura satırı
-    function addIadeRow() {
-        const $tbody = $("#iade_grid tbody");
-        const $row = $(`
-            <tr>
-                <td><input type="text" class="form-control js-iade-no" /></td>
-                <td><input type="text" class="form-control datepicker js-iade-date" /></td>
-                <td style="text-align:center">
-                    <button type="button" class="btn btn-danger btn-xs js-row-del">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </td>
-            </tr>`);
-        $tbody.append($row);
-        if ($.fn.datepicker) $row.find(".datepicker").datepicker();
-    }
-
-    // Ek alan tabloları (tanıtıcı kod / değer)
-    function addExtraRow(tableId) {
-        const $tbody = $("#" + tableId + " tbody");
-        if (!$tbody.length) return;
-
-        const $row = $(`
-            <tr>
-                <td>
-                    <select class="form-control js-tanitici-kod"></select>
-                </td>
-                <td>
-                    <input type="text" class="form-control js-tanitici-deger" />
-                </td>
-                <td style="text-align:center">
-                    <button type="button" class="btn btn-danger btn-xs js-row-del">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </td>
-            </tr>`);
-
-        $tbody.append($row);
-
-        const list = window.taniticikodList;
-        if (Array.isArray(list)) {
-            bindSelect($row.find(".js-tanitici-kod"), list, "TaniticiKod", "TaniticiKod", "Seçiniz");
-        }
-        trySelect2($row.find(".js-tanitici-kod"));
-    }
-
-    /* ==================== 7) TOPLAM BİLGİLERİ OTOMATİK / MANUEL ==================== */
-
-    function toggleManualTotals() {
-        const v = ($("#manuelToplam").val() || "false") === "true";
-        // true => manuel açık
-        $(".man-otm[data-mode='manual']").toggle(v);
-        $(".man-otm[data-mode='auto']").toggle(!v);
-
-        if (!v) {
-            // otomatik moda geçince tekrar hesapla
-            recalcTotals();
-        }
-    }
-
-    /* ==================== 8) ALICIDAN KOPYALA ==================== */
-
-    function copyBuyerAddressToKamu() {
-        // Ülke
-        const ulke = $("#txtulke").is(":visible") && !$("#txtulke").hasClass("hidden")
-            ? $("#txtulke").val()
-            : ($("#selulke").val() || $("#selulke option:selected").text() || "");
-
-        // İl
-        const il = $("#txtIl").is(":visible") && !$("#txtIl").hasClass("hidden")
-            ? $("#txtIl").val()
-            : ($("#selIl").val() || $("#selIl option:selected").text() || "");
-
-        // İlçe
-        const ilce = $("#txtIlce").is(":visible") && !$("#txtIlce").hasClass("hidden")
-            ? $("#txtIlce").val()
-            : ($("#selIlce").val() || $("#selIlce option:selected").text() || "");
-
-        $("#txtKamuUlke").val(ulke);
-        $("#IlbuyerCustomer").val(il);
-        $("#taxRepresentativeCitySubdivisionName").val(ilce);
-    }
-
-    /* ==================== TASLAK KAYDET (LOCALSTORAGE) ==================== */
-
-    function collectDraft() {
-        const header = {
-            subeKodu: $("#subeKodu").val(),
-            SourceUrn: $("#SourceUrn").val(),
-            UUID: $("#txtUUID").val(),
-            Prefix: $("#txtInvoice_Prefix").val(),
-            Senaryo: $("#ddlsenaryo").val(),
-            FaturaTipi: $("#ddlfaturatip").val(),
-            IssueDate: $("#txtIssueDate").val(),
-            IssueTime: $("#txtIssueTime").val(),
-            Currency: $("#DocumentCurrencyCode").val(),
-            Kur: $("#txtKurBilgisi").val()
-        };
-
-        const buyer = {
-            VknTckn: $("#txtIdentificationID").val(),
-            PartyName: $("#txtPartyName").val(),
-            FirstName: $("#txtPerson_FirstName").val(),
-            FamilyName: $("#txtPerson_FamilyName").val(),
-            TaxOffice: $("#txtTaxSchemeName").val(),
-            Ulke: $("#selulke").val() || $("#txtulke").val(),
-            Il: $("#selIl").val() || $("#txtIl").val(),
-            Ilce: $("#selIlce").val() || $("#txtIlce").val(),
-            Adres: $("#txtStreetName").val(),
-            Email: $("#txtElectronicMail").val(),
-            PostaKodu: $("#txtPostalZone").val(),
-            Web: $("#txtWebsiteURI").val(),
-            Telefon: $("#txtTelephone").val()
-        };
-
-        const kamu = {
-            Vkn: $("#txtKamuVkn").val(),
-            Unvan: $("#txtKamuUnvan").val(),
-            Ulke: $("#txtKamuUlke").val(),
-            Il: $("#IlbuyerCustomer").val(),
-            Ilce: $("#taxRepresentativeCitySubdivisionName").val()
-        };
-
-        const lines = [];
-        $("#manuel_grid tbody tr").each(function () {
-            const $r = $(this);
-            lines.push({
-                name: $r.find(".ln-name").val(),
-                qty: $r.find(".ln-qty").val(),
-                unit: $r.find(".ln-unit").val(),
-                price: $r.find(".ln-price").val(),
-                discp: $r.find(".ln-discp").val(),
-                isk: $r.find(".ln-isk").val(),
-                net: $r.find(".ln-net").val(),
-                kdvPerc: $r.find(".ln-kdv").val(),
-                kdvTutar: $r.find(".ln-kdvt").val(),
-                istisna: $r.find(".ln-istisna").val()
+        model.invoiceLines = [];
+        $("#invoiceBody tr").each(function (idx) {
+            const $row = $(this);
+            model.invoiceLines.push({
+                LineNo: idx + 1,
+                ItemName: $row.find(".js-line-name").val() || "",
+                Quantity: Utils.parseNumber($row.find(".js-line-qty").val()),
+                UnitCode: $row.find(".js-line-unit").val() || "",
+                UnitText: $row.find(".js-line-unit option:selected").text() || "",
+                Price: Utils.parseNumber($row.find(".js-line-price").val()),
+                DiscountRate: Utils.parseNumber($row.find(".js-line-disc-rate").val()),
+                DiscountAmount: Utils.parseNumber($row.find(".js-line-disc-amount").val()),
+                Amount: Utils.parseNumber($row.find(".js-line-amount").val()),
+                KdvOran: Utils.parseNumber($row.find(".js-line-kdv").val()),
+                KdvTutar: Utils.parseNumber($row.find(".js-line-kdv-amount").val()),
+                LineTotal: Utils.parseNumber($row.find(".js-line-total").val()),
+                IstisnaKodu: $row.find(".js-line-istisna").val() || ""
             });
         });
 
-        const totals = {
-            manuelToplam: $("#manuelToplam").val(),
-            tAra: $("#tAra").val(),
-            tIsk: $("#tIsk").val(),
-            tMatrah20: $("#tMatrah20").val(),
-            tKdv20: $("#tKdv20").val(),
-            tVergiDahil: $("#tVergiDahil").val(),
-            tGenel: $("#tGenel").val()
+        return model;
+    }
+
+    // Fatura önizleme için PDF'e benzer stil tanımı
+    let previewStylesInjected = false;
+    function ensurePreviewStyles() {
+        if (previewStylesInjected) return;
+
+        const css = `
+#invoicePreviewModal .modal-dialog {
+    max-width: 900px;
+    width: 95%;
+}
+
+#invoicePreviewContent {
+    background: #f5f5f5;
+    padding: 10px;
+}
+
+#invoicePreviewContent .invoice-pdf {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    color: #000;
+}
+
+#invoicePreviewContent .invoice-pdf-page {
+    background: #ffffff;
+    margin: 0 auto;
+    border: 1px solid #000;
+    padding: 8px 12px 12px 12px;
+    position: relative;
+    max-width: 900px;
+    min-height: 600px;
+}
+
+#invoicePreviewContent .invoice-watermark {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: 80px;
+    font-weight: 700;
+    color: rgba(255,0,0,0.18);
+    z-index: 0;
+    pointer-events: none;
+}
+
+#invoicePreviewContent .invoice-qr {
+    width: 95px;
+    height: 95px;
+    border: 1px solid #000;
+    display: inline-block;
+    background: #fff;
+    font-size: 10px;
+    text-align: center;
+    line-height: 95px;
+}
+
+#invoicePreviewContent .invoice-logo-text {
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 15px;
+}
+
+#invoicePreviewContent .invoice-table-tight th,
+#invoicePreviewContent .invoice-table-tight td {
+    padding: 3px 4px !important;
+    border: 1px solid #000 !important;
+}
+
+#invoicePreviewContent .invoice-table-no-border th,
+#invoicePreviewContent .invoice-table-no-border td {
+    padding: 2px 4px !important;
+    border: none !important;
+}
+
+#invoicePreviewContent .invoice-separator {
+    border-top: 1px solid #000;
+    margin: 6px 0 8px 0;
+}
+
+#invoicePreviewContent .text-xs {
+    font-size: 10px;
+}
+
+#invoicePreviewContent .invoice-footer-page {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 10px;
+}
+    `;
+
+        $("head").append('<style id="invoicePdfPreviewStyles">' + css + '</style>');
+        previewStylesInjected = true;
+    }
+
+
+    function renderInvoicePreview(model) {
+        ensurePreviewStyles();
+
+        const h = model.invoiceheader || {};
+        const c = model.customer && model.customer.customerParty ? model.customer.customerParty : {};
+
+        const lines = model.invoiceLines || [];
+
+        const currencyCode = h.DocumentCurrencyCode || "TRY";
+        const currencySuffix = currencyCode === "TRY" ? "TL" : currencyCode;
+
+        // Fatura No (elinde ayrı alan varsa onu kullan, yoksa ETTN'den üret)
+        let invoiceNo =
+            $("#txtInvoiceNumber").val() ||
+            $("#txtFaturaNo").val() ||
+            "";
+
+        if (!invoiceNo) {
+            if (h.Prefix && h.Invoice_ID) {
+                invoiceNo = h.Prefix + (h.Invoice_ID.replace(/-/g, "").substring(0, 13));
+            } else {
+                invoiceNo = h.Invoice_ID || "";
+            }
+        }
+
+        function formatIssueDate(dateStr) {
+            if (!dateStr) return "";
+            const parts = dateStr.split("-");
+            if (parts.length === 3) {
+                return parts[2] + " - " + parts[1] + " - " + parts[0];
+            }
+            return dateStr;
+        }
+
+        function formatIssueTime(timeStr) {
+            if (!timeStr) return "";
+            const parts = timeStr.split(":");
+            const hh = parts[0] || "00";
+            const mm = parts[1] || "00";
+            const ss = parts[2] || "00";
+            return hh + " : " + mm + " : " + ss;
+        }
+
+        // Toplam iskonto; satırdan hesaplıyoruz
+        let toplamIskonto = 0;
+        lines.forEach(l => {
+            toplamIskonto += Number(l.DiscountAmount || 0);
+        });
+
+        const malHizmetToplam = Number(h.LineExtensionAmount || 0);
+        const kdvToplam = Number(h.Taxes || 0);
+        const vergilerDahil = Number(h.TaxInclusiveAmount || h.PayableAmount || (malHizmetToplam + kdvToplam));
+        const odenecek = Number(h.PayableAmount || vergilerDahil);
+
+        // KDV oranı tek ise, özet tabloda parantez içinde göster
+        const kdvRates = Array.from(new Set(
+            lines
+                .map(l => Number(l.KdvOran))
+                .filter(v => !isNaN(v))
+        ));
+        let kdvLabelSuffix = "";
+        if (kdvRates.length === 1) {
+            kdvLabelSuffix = " (%" + Utils.formatNumber(kdvRates[0], 0) + ")";
+        }
+
+        // Alıcı tam ad + adres
+        const aliciAdSoyad = ((c.Person_FirstName || "") + " " + (c.Person_FamilyName || "")).trim() ||
+            (c.PartyName || "");
+
+        const aliciAdresSatir1 = c.StreetName || "";
+        const aliciAdresSatir2 = [
+            c.PostalZone || "",
+            c.CitySubdivisionName || "",
+            c.CityName || ""
+        ].filter(Boolean).join(" ");
+
+        // Hafif yardımcı
+        function fmt(n, dec) {
+            return Utils.formatNumber(n || 0, dec == null ? 2 : dec);
+        }
+
+        const issueDateText = formatIssueDate(h.IssueDate);
+        const issueTimeText = formatIssueTime(h.IssueTime);
+
+        // Özelleştirme No (yoksa TR1.2 bırak)
+        const ozellestirmeNo = $("#txtOzelNitelikNo").val() || "TR1.2";
+
+        let html = "";
+        html += "<div class='invoice-pdf'>";
+        html += "  <div class='invoice-pdf-page'>";
+
+        // Watermark
+        html += "    <div class='invoice-watermark'>TASLAK</div>";
+
+        // ÜST – Satıcı, logo, QR
+        html += "    <div class='row' style='position:relative; z-index:1;'>";
+        html += "      <div class='col-xs-6'>";
+        html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
+        html += "          <tr><td><strong>" + ($("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan").first().text().trim() ||
+            $("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan").first().val() || "Satıcı Ünvanı") + "</strong></td></tr>";
+        html += "          <tr><td>" + ($("#sellerAddress").text().trim() || $("#sellerAddress").val() || "") + "</td></tr>";
+        html += "          <tr><td>" + ($("#sellerDistrictCity").text().trim() || "") + "</td></tr>";
+        html += "          <tr><td>Tel:" + ($("#sellerPhone").val() || $("#sellerPhone").text() || "") +
+            "  Fax:" + ($("#sellerFax").val() || $("#sellerFax").text() || "") + "</td></tr>";
+        html += "          <tr><td>Web Sitesi:" + ($("#sellerWeb").val() || $("#sellerWeb").text() || "") + "</td></tr>";
+        html += "          <tr><td>E-Posta:" + ($("#sellerEmail").val() || $("#sellerEmail").text() || "") + "</td></tr>";
+        html += "          <tr><td>Vergi Dairesi:" + ($("#sellerVergiDairesi").val() || $("#sellerVergiDairesi").text() || "") + "</td></tr>";
+        html += "          <tr><td>VKN:" + ($("#sellerVkn").val() || $("#sellerVkn").text() || "") + "</td></tr>";
+        html += "          <tr><td>TICARETSICILNO:" + ($("#sellerTicaretSicilNo").val() || $("#sellerTicaretSicilNo").text() || "") + "</td></tr>";
+        html += "          <tr><td>MERSISNO:" + ($("#sellerMersisNo").val() || $("#sellerMersisNo").text() || "") + "</td></tr>";
+        html += "        </table>";
+        html += "      </div>";
+
+        html += "      <div class='col-xs-3 text-center'>";
+        html += "        <div class='invoice-logo-text'>e-FATURA</div>";
+        html += "      </div>";
+
+        html += "      <div class='col-xs-3 text-right'>";
+        html += "        <div class='invoice-qr'>QR KOD</div>";
+        html += "      </div>";
+        html += "    </div>";
+
+        // ETTN satırı
+        html += "    <div class='row' style='position:relative; z-index:1; margin-top:4px;'>";
+        html += "      <div class='col-xs-12 text-right text-xs'><strong>ETTN:</strong> " + (h.Invoice_ID || "") + "</div>";
+        html += "    </div>";
+
+        html += "    <hr class='invoice-separator'/>";
+
+        // Orta – Alıcı ve Fatura üst bilgileri
+        html += "    <div class='row' style='position:relative; z-index:1;'>";
+        // SAYIN blok
+        html += "      <div class='col-xs-7'>";
+        html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
+        html += "          <tr><td><strong>SAYIN</strong></td></tr>";
+        html += "          <tr><td><strong>" + (aliciAdSoyad || "") + "</strong></td></tr>";
+        if (aliciAdresSatir1) {
+            html += "      <tr><td>" + aliciAdresSatir1 + "</td></tr>";
+        }
+        if (aliciAdresSatir2) {
+            html += "      <tr><td>" + aliciAdresSatir2 + "</td></tr>";
+        }
+        if (c.WebsiteURI) {
+            html += "      <tr><td>Web Sitesi:" + c.WebsiteURI + "</td></tr>";
+        }
+        if (c.ElectronicMail) {
+            html += "      <tr><td>E-Posta:" + c.ElectronicMail + "</td></tr>";
+        }
+        if (c.Telephone) {
+            html += "      <tr><td>Tel:" + c.Telephone + "</td></tr>";
+        }
+        if (c.TaxSchemeName) {
+            html += "      <tr><td>Vergi Dairesi:" + c.TaxSchemeName + "</td></tr>";
+        }
+        if (c.IdentificationID) {
+            html += "      <tr><td>VKN/TCKN:" + c.IdentificationID + "</td></tr>";
+        }
+        html += "        </table>";
+        html += "      </div>";
+
+        // Sağdaki küçük tablo
+        html += "      <div class='col-xs-5'>";
+        html += "        <table class='table table-condensed invoice-table-tight text-xs'>";
+        html += "          <tr><th>Özelleştirme No</th><td>" + ozellestirmeNo + "</td></tr>";
+        html += "          <tr><th>Senaryo</th><td>" + (h.Scenario || "") + "</td></tr>";
+        html += "          <tr><th>Fatura Tipi</th><td>" + (h.InvoiceTypeCode || "") + "</td></tr>";
+        html += "          <tr><th>Fatura No</th><td>" + (invoiceNo || "") + "</td></tr>";
+        html += "          <tr><th>Fatura Tarihi</th><td>" + (issueDateText || "") + "</td></tr>";
+        html += "          <tr><th>Fatura Saati</th><td>" + (issueTimeText || "") + "</td></tr>";
+        html += "        </table>";
+        html += "      </div>";
+        html += "    </div>";
+
+        // KALEM TABLOSU
+        html += "    <div class='row' style='position:relative; z-index:1; margin-top:4px;'>";
+        html += "      <div class='col-xs-12'>";
+        html += "        <table class='table table-condensed invoice-table-tight text-xs'>";
+        html += "          <thead>";
+        html += "            <tr>";
+        html += "              <th style='width:3%;'>Sıra No</th>";
+        html += "              <th style='width:18%;'>Mal Hizmet</th>";
+        html += "              <th style='width:10%;'>Satıcı Ürün Kodu</th>";
+        html += "              <th style='width:8%;'>Miktar</th>";
+        html += "              <th style='width:9%;'>Birim Fiyat</th>";
+        html += "              <th style='width:8%;'>İskonto Oranı</th>";
+        html += "              <th style='width:9%;'>İskonto Tutarı</th>";
+        html += "              <th style='width:6%;'>KDV Oranı</th>";
+        html += "              <th style='width:9%;'>KDV Tutarı</th>";
+        html += "              <th style='width:9%;'>Diğer Vergiler</th>";
+        html += "              <th style='width:11%;'>Mal Hizmet Tutarı</th>";
+        html += "            </tr>";
+        html += "          </thead>";
+        html += "          <tbody>";
+
+        if (!lines.length) {
+            html += "        <tr><td colspan='11' class='text-center'>Herhangi bir satır bulunamadı.</td></tr>";
+        } else {
+            lines.forEach(l => {
+                const discRateText = fmt(l.DiscountRate || 0, 2);
+                html += "        <tr>";
+                html += "          <td class='text-right'>" + (l.LineNo || "") + "</td>";
+                html += "          <td>" + (l.ItemName || "") + "</td>";
+                html += "          <td>" + (l.SellerItemCode || "") + "</td>";
+                html += "          <td class='text-right'>" + fmt(l.Quantity || 0, 4) + " " + (l.UnitCode || "") + "</td>";
+                html += "          <td class='text-right'>" + fmt(l.Price || 0, 2) + currencySuffix + "</td>";
+                html += "          <td class='text-right'>%" + discRateText + "</td>";
+                html += "          <td class='text-right'>" + fmt(l.DiscountAmount || 0, 2) + currencySuffix + "</td>";
+                html += "          <td class='text-right'>" + fmt(l.KdvOran || 0, 0) + "</td>";
+                html += "          <td class='text-right'>" + fmt(l.KdvTutar || 0, 2) + currencySuffix + "</td>";
+                html += "          <td class='text-right'>" + fmt(0, 2) + currencySuffix + "</td>";
+                html += "          <td class='text-right'>" + fmt(l.Amount || 0, 2) + currencySuffix + "</td>";
+                html += "        </tr>";
+            });
+        }
+
+        html += "          </tbody>";
+        html += "        </table>";
+        html += "      </div>";
+        html += "    </div>";
+
+        // ALT – Not ve özetler
+        html += "    <div class='row' style='position:relative; z-index:1; margin-top:4px;'>";
+        html += "      <div class='col-xs-6'>";
+        if (h.Note) {
+            html += "      <p class='text-xs'><strong>Not:</strong> " + (h.Note || "") + "</p>";
+        }
+        html += "      </div>";
+
+        html += "      <div class='col-xs-6'>";
+        html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
+        html += "          <tr><th>Mal Hizmet Toplam Tutarı</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Toplam İskonto</th><td class='text-right'>" + fmt(toplamIskonto, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>KDV Matrahı" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Hesaplanan KDV" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(kdvToplam, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Vergiler Dahil Toplam Tutar</th><td class='text-right'>" + fmt(vergilerDahil, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Ödenecek Tutar</th><td class='text-right'><strong>" + fmt(odenecek, 2) + currencySuffix + "</strong></td></tr>";
+        html += "        </table>";
+        html += "      </div>";
+        html += "    </div>";
+
+        // Sayfa altı
+        html += "    <div class='invoice-footer-page'>1/1</div>";
+
+        html += "  </div>"; // invoice-pdf-page
+        html += "</div>";    // invoice-pdf
+
+        $("#invoicePreviewContent").html(html);
+    }
+
+    /***********************************************************
+     *  Invoice Entity (DTO)
+     ***********************************************************/
+    function buildInvoiceEntityFromUI() {
+        recalcTotals();
+        const model = buildInvoiceModelFromUI();
+        const h = model.invoiceheader || {};
+
+        const customerId = parseInt($("#ddlMusteriAra").val(), 10) || 0;
+
+        const entity = {
+            Id: 0,
+            CustomerId: customerId,
+            Ettn: h.Invoice_ID || null,
+            InvoiceNo: h.Prefix ? (h.Prefix + "-" + (h.Invoice_ID || "")) : (h.Invoice_ID || null),
+            InvoiceDate: h.IssueDate
+                ? h.IssueDate + "T" + (h.IssueTime || "00:00") + ":00"
+                : null,
+            Total: h.PayableAmount || 0,
+            Currency: h.DocumentCurrencyCode || "TRY",
+
+            BranchCode: $("#ddlSubeKodu").val() || null,
+            SourceUrn: $("#ddlSourceUrn").val() || null,
+            InvoicePrefix: $("#ddlInvoicePrefix").val() || null,
+            TemplateName: $("#ddlGoruntuDosyasi").val() || null,
+
+            InvoiceTypeCode: h.InvoiceTypeCode || null,
+            Scenario: h.Scenario || null,
+
+            Customer: model.customer || null,
+            InvoicesItems: [],
+            InvoicesTaxes: [],
+            InvoicesDiscounts: [],
+            Tourists: [],
+            SgkRecords: [],
+            ServicesProviders: [],
+            Returns: [],
+            InvoicesPayments: []
         };
 
-        return { header, buyer, kamu, lines, totals };
+        (model.invoiceLines || []).forEach(l => {
+            entity.InvoicesItems.push({
+                Id: 0,
+                InvoiceId: 0,
+                Name: l.ItemName,
+                Quantity: l.Quantity,
+                UnitCode: l.UnitCode,
+                UnitPrice: l.Price,
+                DiscountRate: l.DiscountRate,
+                DiscountAmount: l.DiscountAmount,
+                LineAmount: l.Amount,
+                TaxRate: l.KdvOran,
+                TaxAmount: l.KdvTutar,
+                LineTotal: l.LineTotal,
+                IstisnaKodu: l.IstisnaKodu
+            });
+        });
+
+        if ((h.Taxes || 0) > 0) {
+            entity.InvoicesTaxes.push({
+                Id: 0,
+                InvoiceId: 0,
+                TaxTypeCode: "KDV",
+                TaxPercent: null,
+                TaxAmount: h.Taxes
+            });
+        }
+
+        const payment = {
+            Id: 0,
+            InvoiceId: 0,
+            PaymentMeansCode: $("#PaymentMeansCode").val() || "",
+            PaymentDueDate: $("#PaymentDueDate").val() || null,
+            InstructionNote: $("#InstructionNote").val() || "",
+            PaymentChannelCode: $("#PaymentChannelCode").val() || "",
+            PayeeFinancialAccount: $("#PayeeFinancialAccount").val() || "",
+            PayeeFinancialCurrencyCode: $("#PayeeFinancialCurrencyCode").val() || ""
+        };
+
+        if (
+            payment.PaymentMeansCode ||
+            payment.PaymentDueDate ||
+            payment.InstructionNote ||
+            payment.PaymentChannelCode ||
+            payment.PayeeFinancialAccount ||
+            payment.PayeeFinancialCurrencyCode
+        ) {
+            entity.InvoicesPayments.push(payment);
+        }
+
+        const ilaveFaturaTipi = $("#ddlilaveFaturaTipi").val();
+        if (ilaveFaturaTipi) {
+            entity.SgkRecords.push({
+                Id: 0,
+                InvoiceId: 0,
+                IlaveFaturaTipi: ilaveFaturaTipi,
+                MukellefKodu: $("#mukellefkodu").val() || "",
+                MukellefAdi: $("#mukellefadi").val() || "",
+                DosyaNo: $("#dosyano").val() || "",
+                SendingDateStart: $("#txtSendingDateBaslangic").val() || null,
+                SendingDateEnd: $("#txtSendingDateBitis").val() || null
+            });
+        }
+
+        return entity;
     }
 
-    function saveDraft() {
-        try {
-            const data = collectDraft();
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
-            if (window.toastr) toastr.success("Taslak kaydedildi.");
-            console.log("Taslak kaydedildi:", data);
-        } catch (e) {
-            console.error("Taslak kaydedilemedi:", e);
-            if (window.toastr) toastr.error("Taslak kaydedilirken hata oluştu.");
+    /***********************************************************
+     *  SGK EK ALANLAR
+     ***********************************************************/
+    const sgkConfig = {
+        "SAGLIK_ECZ": {
+            mukellefKodu: "SGK Kurum Kodu",
+            mukellefAdi: "SGK Kurum Adı",
+            dosyaNo: "Reçete / Takip No",
+            showSendingDate: true
+        },
+        "SAGLIK_HAS": {
+            mukellefKodu: "SGK Kurum Kodu",
+            mukellefAdi: "SGK Kurum Adı",
+            dosyaNo: "Takip No",
+            showSendingDate: true
+        },
+        "SAGLIK_OPT": {
+            mukellefKodu: "SGK Kurum Kodu",
+            mukellefAdi: "SGK Kurum Adı",
+            dosyaNo: "Reçete No",
+            showSendingDate: true
+        },
+        "SAGLIK_MED": {
+            mukellefKodu: "SGK Kurum Kodu",
+            mukellefAdi: "SGK Kurum Adı",
+            dosyaNo: "Evrak No",
+            showSendingDate: true
+        },
+        "ABONELIK": {
+            mukellefKodu: "Abone No",
+            mukellefAdi: "Abone Adı",
+            dosyaNo: "Sözleşme / Müşteri No",
+            showSendingDate: true
+        },
+        "MAL_HIZMET": {
+            mukellefKodu: "Müşteri / Kurum Kodu",
+            mukellefAdi: "Müşteri / Kurum Adı",
+            dosyaNo: "Evrak / Dosya No",
+            showSendingDate: true
+        },
+        "DIGER": {
+            mukellefKodu: "Referans Kodu",
+            mukellefAdi: "Referans Adı",
+            dosyaNo: "Referans No",
+            showSendingDate: false
+        }
+    };
+
+    function updateSgkFields() {
+        const val = $("#ddlilaveFaturaTipi").val();
+        const cfg = sgkConfig[val];
+
+        const $fields = $(".sgk-field");
+        if (!val) {
+            $fields.addClass("d-none");
+            return;
+        }
+
+        $("#fieldMukellefKodu, #fieldMukellefAdi, #fieldDosyaNo, #fieldGonderimTarihi").removeClass("d-none");
+
+        if (cfg) {
+            $("#lblMukellefKodu").text(cfg.mukellefKodu);
+            $("#lblMukellefAdi").text(cfg.mukellefAdi);
+            $("#lblDosyaNo").text(cfg.dosyaNo);
+            if (cfg.showSendingDate) {
+                $("#fieldGonderimTarihi").removeClass("d-none");
+            } else {
+                $("#fieldGonderimTarihi").addClass("d-none");
+            }
+        } else {
+            $("#lblMukellefKodu").text("Mükellef Kodu");
+            $("#lblMukellefAdi").text("Mükellef Adı");
+            $("#lblDosyaNo").text("Dosya / Evrak No");
+            $("#fieldGonderimTarihi").removeClass("d-none");
         }
     }
 
-    function loadDraft() {
-        try {
-            const raw = localStorage.getItem(DRAFT_KEY);
-            if (!raw) return;
-            const d = JSON.parse(raw);
-
-            if (d.header) {
-                $("#subeKodu").val(d.header.subeKodu);
-                $("#SourceUrn").val(d.header.SourceUrn);
-                // UUID her sayfa açıldığında yeni üretiliyor; draft'takini kullanmıyoruz
-                $("#txtInvoice_Prefix").val(d.header.Prefix);
-                $("#ddlsenaryo").val(d.header.Senaryo);
-                $("#ddlfaturatip").val(d.header.FaturaTipi);
-                $("#txtIssueDate").val(d.header.IssueDate);
-                $("#txtIssueTime").val(d.header.IssueTime);
-                $("#DocumentCurrencyCode").val(d.header.Currency);
-                $("#txtKurBilgisi").val(d.header.Kur);
-            }
-            if (d.buyer) {
-                $("#txtIdentificationID").val(d.buyer.VknTckn);
-                $("#txtPartyName").val(d.buyer.PartyName);
-                $("#txtPerson_FirstName").val(d.buyer.FirstName);
-                $("#txtPerson_FamilyName").val(d.buyer.FamilyName);
-                $("#txtTaxSchemeName").val(d.buyer.TaxOffice);
-                $("#txtStreetName").val(d.buyer.Adres);
-                $("#txtElectronicMail").val(d.buyer.Email);
-                $("#txtPostalZone").val(d.buyer.PostaKodu);
-                $("#txtWebsiteURI").val(d.buyer.Web);
-                $("#txtTelephone").val(d.buyer.Telefon);
-            }
-            if (d.kamu) {
-                $("#txtKamuVkn").val(d.kamu.Vkn);
-                $("#txtKamuUnvan").val(d.kamu.Unvan);
-                $("#txtKamuUlke").val(d.kamu.Ulke);
-                $("#IlbuyerCustomer").val(d.kamu.Il);
-                $("#taxRepresentativeCitySubdivisionName").val(d.kamu.Ilce);
-            }
-
-            // satırları yeniden oluştur
-            if (Array.isArray(d.lines) && d.lines.length) {
-                const $tbody = $("#manuel_grid tbody");
-                $tbody.empty();
-                d.lines.forEach(function (ln, idx) {
-                    const $row = $(`
-                        <tr>
-                            <td class="text-center ln-ix"></td>
-                            <td><input class="form-control ln-name" type="text" /></td>
-                            <td><input class="form-control ln-qty" step="0.0001" type="number" /></td>
-                            <td><select class="form-control ln-unit"></select></td>
-                            <td><input class="form-control ln-price" step="0.0001" type="number" /></td>
-                            <td><input class="form-control ln-discp" step="0.01" type="number" /></td>
-                            <td><input class="form-control ln-isk" type="text" /></td>
-                            <td><input class="form-control ln-net" type="text" /></td>
-                            <td><input class="form-control ln-kdv" step="0.01" type="number" /></td>
-                            <td><input class="form-control ln-kdvt" type="text" /></td>
-                            <td><input class="form-control ln-istisna" type="text" /></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-xs einv-btn-group" role="group">
-                                    <button class="btn btn-success js-line-add" type="button" title="Altına Satır Ekle"><i class="fa fa-plus"></i></button>
-                                    <button class="btn btn-info js-line-edit" type="button" title="Düzenle"><i class="fa fa-pencil"></i></button>
-                                    <button class="btn btn-danger js-line-del" type="button" title="Sil"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>`);
-                    $row.find(".ln-name").val(ln.name);
-                    $row.find(".ln-qty").val(ln.qty);
-                    $row.find(".ln-price").val(ln.price);
-                    $row.find(".ln-discp").val(ln.discp);
-                    $row.find(".ln-isk").val(ln.isk);
-                    $row.find(".ln-net").val(ln.net);
-                    $row.find(".ln-kdv").val(ln.kdvPerc);
-                    $row.find(".ln-kdvt").val(ln.kdvTutar);
-                    $row.find(".ln-istisna").val(ln.istisna);
-                    $tbody.append($row);
-                });
-
-                fillLineUnitSelect($tbody);
-                applyFaturaTipiIstisnaMode();
-                renumberLines();
-            }
-
-            if (d.totals) {
-                $("#manuelToplam").val(d.totals.manuelToplam || "false");
-                $("#tAra").val(d.totals.tAra);
-                $("#tIsk").val(d.totals.tIsk);
-                $("#tMatrah20").val(d.totals.tMatrah20);
-                $("#tKdv20").val(d.totals.tKdv20);
-                $("#tVergiDahil").val(d.totals.tVergiDahil);
-                $("#tGenel").val(d.totals.tGenel);
-            }
-
-            toggleManualTotals();
-            recalcTotals();
-        } catch (e) {
-            console.error("Taslak okunamadı:", e);
-        }
+    /***********************************************************
+     *  DİĞER TABLOLAR - Yeni Satır Ekle / Sil
+     ***********************************************************/
+    function addNewIrsaliyeRow() {
+        const row = `
+        <tr>
+            <td><input type="text" class="form-control input-sm irs-no" placeholder="İrsaliye No"></td>
+            <td><input type="date" class="form-control input-sm irs-date"></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-danger btn-sm js-irsaliye-remove">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+        $("#tblIrsaliyeBody").append(row);
     }
 
-    /* ==================== DOM READY ==================== */
+    function addNewSaticiEkRow() {
+        const row = `
+        <tr>
+            <td><input type="text" class="form-control input-sm" placeholder="Kod"></td>
+            <td><input type="text" class="form-control input-sm" placeholder="Değer"></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-danger btn-sm js-satici-ek-remove">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+        $("#tbodySaticiEk").append(row);
+    }
 
-    $(function () {
-        // 3) Tüm selectleri data bloktan doldur
-        fillStaticSelectsFromData();
-        fillLineUnitSelect();
+    function addNewSaticiSubeEkRow() {
+        const row = `
+        <tr>
+            <td><input type="text" class="form-control input-sm" placeholder="Kod"></td>
+            <td><input type="text" class="form-control input-sm" placeholder="Değer"></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-danger btn-sm js-satici-sube-ek-remove">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+        $("#tbodySaticiSubeEk").append(row);
+    }
 
-        // 4) UUID üret ve inputu kilitle
-        initUUID();
+    function addNewAliciEkRow() {
+        const row = `
+        <tr>
+            <td><input type="text" class="form-control input-sm" placeholder="Kod"></td>
+            <td><input type="text" class="form-control input-sm" placeholder="Değer"></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-danger btn-sm js-alici-ek-remove">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+        $("#tbodyAliciEk").append(row);
+    }
 
-        // 2) Butonlar -> satır ekleme
-        $("#btnYeniSatir").on("click", function () {
+    function addNewEkalaniRow() {
+        const row = `
+        <tr>
+            <td>
+                <select class="form-control input-sm">
+                    <option value="">Seçiniz</option>
+                    <option value="KOBI">KOBİ</option>
+                    <option value="EYDEP">EYDEP</option>
+                </select>
+            </td>
+            <td>
+                <select class="form-control input-sm">
+                    <option value="">Seçiniz</option>
+                    <option value="EVET">EVET</option>
+                    <option value="HAYIR">HAYIR</option>
+                </select>
+            </td>
+            <td><input type="text" class="form-control input-sm" placeholder="Bilgi"></td>
+            <td><input type="date" class="form-control input-sm"></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-danger btn-sm js-ekalani-remove">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+        $("#tbodyEkalani").append(row);
+    }
+
+    /***********************************************************
+     *  ZORUNLU ALAN KONTROLÜ
+     ***********************************************************/
+    function validateForm() {
+        const errors = [];
+        const invalidElements = [];
+
+        function requireInput(selector, message) {
+            const $el = $(selector);
+            if (!$el.length) return;
+            const v = ($el.val() || "").toString().trim();
+            if (!v) {
+                errors.push(message);
+                $el.addClass("is-invalid");
+                invalidElements.push($el);
+            } else {
+                $el.removeClass("is-invalid");
+            }
+        }
+
+        function requireSelect(selector, message, invalidValues) {
+            const $el = $(selector);
+            if (!$el.length) return;
+            const v = ($el.val() || "").toString();
+            const invalids = invalidValues || ["", "0"];
+            if (invalids.indexOf(v) !== -1) {
+                errors.push(message);
+                $el.addClass("is-invalid");
+                invalidElements.push($el);
+            } else {
+                $el.removeClass("is-invalid");
+            }
+        }
+
+        // HEADER / ŞUBE vs
+        requireSelect("#ddlSubeKodu", "Şube seçiniz.");
+        requireSelect("#ddlSourceUrn", "Gönderici etiketini seçiniz.", [""]);
+        requireSelect("#ddlInvoicePrefix", "Fatura ön ekini seçiniz.", [""]);
+        requireSelect("#ddlGoruntuDosyasi", "Görüntü dosyasını seçiniz.", [""]);
+        requireInput("#txtUUID", "ETTN üretilemedi.");
+        requireInput("#txtIssueDate", "Fatura tarihini giriniz.");
+        requireInput("#txtIssueTime", "Fatura saatini giriniz.");
+        requireSelect("#ddlParaBirimi", "Para birimini seçiniz.", [""]);
+
+        // ALICI BİLGİLERİ
+        requireInput("#txtIdentificationID", "VKN/TCKN giriniz.");
+        requireInput("#txtPartyName", "Firma adını giriniz.");
+        requireInput("#txtPersonFirstName", "Adı alanını doldurunuz.");
+        requireInput("#txtPersonLastName", "Soyadı alanını doldurunuz.");
+
+        if ($("#chkManuelSehir").is(":checked")) {
+            requireInput("#txtUlke", "Ülke bilgisini giriniz.");
+            requireInput("#txtIl", "İl bilgisini giriniz.");
+            requireInput("#txtIlce", "İlçe bilgisini giriniz.");
+        } else {
+            requireSelect("#ddlUlke", "Ülke seçiniz.", [""]);
+            requireSelect("#ddlIl", "İl seçiniz.", [""]);
+            requireSelect("#ddlIlce", "İlçe seçiniz.", [""]);
+        }
+
+        // ÖDEME
+        requireSelect("#PaymentMeansCode", "Ödeme şeklini seçiniz.", [""]);
+        requireInput("#PaymentDueDate", "Ödeme tarihini giriniz.");
+        requireSelect("#PayeeFinancialCurrencyCode", "Hesap para birimini seçiniz.", [""]);
+
+        // FATURA KALEMLERİ
+        if ($("#invoiceBody tr").length === 0) {
+            errors.push("En az bir fatura kalemi ekleyiniz.");
+        } else {
+            let hasNamedLine = false;
+            $("#invoiceBody tr").each(function () {
+                const name = ($(this).find(".js-line-name").val() || "").trim();
+                const qty = Utils.parseNumber($(this).find(".js-line-qty").val());
+                if (name && qty > 0) {
+                    hasNamedLine = true;
+                }
+            });
+            if (!hasNamedLine) {
+                errors.push("En az bir satırda mal/hizmet adı ve miktar giriniz.");
+            }
+        }
+
+        // KAMU SENARYOSU İSE
+        const isKamuSenaryo = $("#ddlSenaryo").val() === "KAMU";
+        if (isKamuSenaryo) {
+            requireInput("#txtKamuVkn", "Kamu alıcı VKN giriniz.");
+            requireInput("#txtKamuUnvan", "Kamu alıcı unvanını giriniz.");
+            requireInput("#txtKamuUlke", "Kamu alıcı ülke bilgisini giriniz.");
+            requireInput("#txtKamuIl", "Kamu alıcı il bilgisini giriniz.");
+        }
+
+        if (errors.length && invalidElements.length) {
+            invalidElements[0].focus();
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    /***********************************************************
+     *  EVENT BINDINGS
+     ***********************************************************/
+    function bindEvents() {
+        // Manuel şehir
+        $(document).on("change", "#chkManuelSehir", toggleManuelSehir);
+
+        // Alıcıdan kamuya kopyala
+        $(document).on("click", "#btnAliciBilgilerindenKopyala", function (e) {
+            e.preventDefault();
+            copyAliciToKamu();
+        });
+
+        // Müşteri seçimi
+        $(document).on("change", "#ddlMusteriAra", function () {
+            const id = parseInt($(this).val(), 10);
+            const cust = TestCustomers.find(x => x.id === id);
+            fillCustomerFieldsFromTest(cust);
+        });
+
+        // Header değişiklikleri
+        bindHeaderInputs();
+
+        // Fatura kalemleri – yeni satır
+        $(document).on("click", "#btnLineAdd", function () {
             addNewLineRow();
         });
-        $("#manuel_grid").on("click", ".js-line-add", function () {
-            const $row = $(this).closest("tr");
-            addNewLineRow($row);
-        });
-        $("#manuel_grid").on("click", ".js-line-del", function () {
-            const $row = $(this).closest("tr");
-            $row.remove();
-            if (!$("#manuel_grid tbody tr").length) {
-                addNewLineRow();
-            }
+
+        // Fatura kalemleri – satır sil
+        $(document).on("click", ".js-line-remove", function () {
+            $(this).closest("tr").remove();
             renumberLines();
             recalcTotals();
         });
-        $("#manuel_grid").on("click", ".js-line-edit", function () {
-            $(this).closest("tr").find(".ln-name").focus().select();
+
+        // Fatura kalemleri – hesaplama
+        $(document).on("keyup change",
+            "#invoiceBody .js-line-qty, " +
+            "#invoiceBody .js-line-price, " +
+            "#invoiceBody .js-line-disc-rate, " +
+            "#invoiceBody .js-line-kdv",
+            function () {
+                const $row = $(this).closest("tr");
+                calcLine($row);
+            });
+
+        // KDV hariç/dahil
+        $(document).on("change", "#kdvStatu", function () {
+            $("#invoiceBody tr").each(function () {
+                calcLine($(this));
+            });
         });
 
-        $("#btnDespatchAdd").on("click", addDespatchRow);
-        $("#btnIadeAdd").on("click", addIadeRow);
-        $("#btnSellerExtraAdd").on("click", function () { addExtraRow("saticiekalan_grid"); });
-        $("#btnSellerAgentExtraAdd").on("click", function () { addExtraRow("saticiAgentekalan_grid"); });
-        $("#btnBuyerExtraAdd").on("click", function () { addExtraRow("aliciekalan_grid"); });
-
-        // 6) Hesaplamayı tetikleyecek alanlar
-        $(document).on("input change",
-            "#kdvStatu, #DocumentCurrencyCode, #txtKurBilgisi, #manuel_grid .ln-qty, #manuel_grid .ln-price, #manuel_grid .ln-discp, #manuel_grid .ln-kdv",
-            function () { recalcTotals(); });
-
-        // 7) Otomatik / manuel toplam
-        $("#manuelToplam").on("change", function () {
-            toggleManualTotals();
+        // Önizleme
+        $(document).on("click", "#btnPreviewInvoice", function (e) {
+            e.preventDefault();
             recalcTotals();
-        });
-        toggleManualTotals();
-
-        // 5) Fatura tipi -> istisna sütunu
-        $("#ddlfaturatip").on("change", function () {
-            applyFaturaTipiIstisnaMode();
-        });
-        applyFaturaTipiIstisnaMode();
-
-        // 8) Alıcıdan Kopyala
-        $("#btnAlicidanKopyala").on("click", function () {
-            copyBuyerAddressToKamu();
+            const model = buildInvoiceModelFromUI();
+            renderInvoicePreview(model);
+            $("#invoicePreviewModal").modal("show");
         });
 
-        // Taslak Kaydet
-        $("#btn_taslak").on("click", function () {
-            saveDraft();
-        });
+        // TASLAK / GİB GÖNDER BUTONLARI
+        $(document).on("click", "#btnDraftSave, #btnSendToGib", function (e) {
+            e.preventDefault();
 
-        // (İstersen) sayfa açılınca taslağı yükle
-        loadDraft();
+            const isDraft = this.id === "btnDraftSave";
 
-        // İlk hesaplama
-        renumberLines();
-        recalcTotals();
+            const validation = validateForm();
+            if (!validation.isValid) {
+                const htmlErrors = validation.errors.map(e => "• " + e).join("<br>");
+                showAlert("danger", "Lütfen zorunlu alanları doldurunuz:<br>" + htmlErrors);
+                return;
+            }
 
-        // Manuel şehir seçimi (checkbox) – cshtml’de vardı
-        $('input[name="manuelSehir"]').on("change", function () {
-            const on = $(this).is(":checked");
-            const $c = $("#selIl, #selIlce");
-            const $t = $("#txtIl, #txtIlce");
+            const entity = buildInvoiceEntityFromUI();
 
-            if (on) {
-                $c.closest(".inputPadding").find("select").addClass("hidden");
-                $t.removeClass("hidden");
+            if (isDraft) {
+                console.log("Taslak olarak kaydedilecek Invoice DTO:", entity);
+                showAlert("success", "Taslak fatura DTO başarıyla oluşturuldu.");
             } else {
-                $c.closest(".inputPadding").find("select").removeClass("hidden");
-                $t.addClass("hidden");
+                console.log("GİB'e gönderilecek Invoice DTO:", entity);
+                showAlert("success", "Fatura DTO başarıyla oluşturuldu ve GİB'e gönderilmeye hazır.");
             }
         });
-    });
 
-})(jQuery);
+        // SGK ilave fatura tipi
+        $(document).on("change", "#ddlilaveFaturaTipi", updateSgkFields);
 
+        // İrsaliye
+        $(document).on("click", "#btnYeniIrsaliyeEkle", function () {
+            addNewIrsaliyeRow();
+        });
+        $(document).on("click", ".js-irsaliye-remove", function () {
+            $(this).closest("tr").remove();
+        });
 
+        // Satıcı ek alanlar
+        $(document).on("click", "#btnAddSaticiEk", function () {
+            addNewSaticiEkRow();
+        });
+        $(document).on("click", ".js-satici-ek-remove", function () {
+            $(this).closest("tr").remove();
+        });
+
+        // Satıcı şube ek alanlar
+        $(document).on("click", "#btnAddSaticiSubeEk", function () {
+            addNewSaticiSubeEkRow();
+        });
+        $(document).on("click", ".js-satici-sube-ek-remove", function () {
+            $(this).closest("tr").remove();
+        });
+
+        // Alıcı ek alanlar
+        $(document).on("click", "#btnAddAliciEk", function () {
+            addNewAliciEkRow();
+        });
+        $(document).on("click", ".js-alici-ek-remove", function () {
+            $(this).closest("tr").remove();
+        });
+
+        // Ek alanlar
+        $(document).on("click", "#btnAddEkalani", function () {
+            addNewEkalaniRow();
+        });
+        $(document).on("click", ".js-ekalani-remove", function () {
+            $(this).closest("tr").remove();
+        });
+
+        // Excel / Medula / Cezaevi / Toplu işlemler - placeholder
+        $(document).on("click", "#excelLineModalOpen", function (e) {
+            e.preventDefault();
+            console.log("Excel'den yükleme burada implemente edilecek.");
+        });
+        $(document).on("click", "#excelLineExport", function (e) {
+            e.preventDefault();
+            console.log("Excel'e aktarma burada implemente edilecek.");
+        });
+        $(document).on("click", "#btnMedulaAktar", function () {
+            console.log("Medula aktarım fonksiyonu burada implemente edilebilir.");
+        });
+        $(document).on("click", "#btnCezaeviAktar", function () {
+            console.log("Cezaevi aktarım fonksiyonu burada implemente edilebilir.");
+        });
+        $(document).on("click", "#btnTopluIndirim", function () {
+            console.log("Toplu indirim/Artırım fonksiyonu burada implemente edilebilir.");
+        });
+        $(document).on("click", "#btnTopluVergi", function () {
+            console.log("Toplu vergi fonksiyonu burada implemente edilebilir.");
+        });
+    }
+
+    /***********************************************************
+     *  INIT
+     ***********************************************************/
+    function initDefaults() {
+        // ETTN üret
+        if ($("#txtUUID").length) {
+            const ettn = generateUUIDv4();
+            $("#txtUUID").val(ettn);
+            invoiceModel.invoiceheader.Invoice_ID = ettn;
+        }
+
+        // Manuel şehir default: seçili
+        if ($("#chkManuelSehir").length) {
+            $("#chkManuelSehir").prop("checked", true);
+            toggleManuelSehir();
+        }
+
+        // Müşteri dropdown (demo)
+        fillMusteriAraDropdown();
+
+        // ListData'dan dropdownlar
+        fillSubeDropdown();
+        fillSourceUrnDropdown();
+        fillInvoicePrefixDropdown();
+        fillGoruntuDosyasiDropdown();
+        fillAliciEtiketiDropdown();
+        fillParaBirimiDropdown();
+        fillPaymentDropdowns();
+
+        // txtKurBilgisi varsayılan 1
+        if ($("#txtKurBilgisi").length && !$("#txtKurBilgisi").val()) {
+            $("#txtKurBilgisi").val("1");
+        }
+
+        // Fatura Ön İzleme modalini genişlet
+        if ($("#invoicePreviewModal .modal-dialog").length) {
+            $("#invoicePreviewModal .modal-dialog").css({
+                "max-width": "95%",
+                "width": "95%"
+            });
+        }
+        if ($("#invoicePreviewContent").length) {
+            $("#invoicePreviewContent").css({
+                "max-height": "80vh",
+                "overflow-x": "auto",
+                "overflow-y": "auto"
+            });
+        }
+
+        // SGK alanları
+        updateSgkFields();
+
+        // Tarih & saat default
+        const now = new Date();
+        if ($("#txtIssueDate").length && !$("#txtIssueDate").val()) {
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, "0");
+            const d = String(now.getDate()).padStart(2, "0");
+            $("#txtIssueDate").val(`${y}-${m}-${d}`);
+        }
+        if ($("#txtIssueTime").length && !$("#txtIssueTime").val()) {
+            const hh = String(now.getHours()).padStart(2, "0");
+            const mm = String(now.getMinutes()).padStart(2, "0");
+            $("#txtIssueTime").val(`${hh}:${mm}`);
+        }
+
+        // Model header başlangıç değerleri
+        invoiceModel.invoiceheader.InvoiceTypeCode = $("#ddlFaturaTipi").val() || null;
+        invoiceModel.invoiceheader.Scenario = $("#ddlSenaryo").val() || null;
+        invoiceModel.invoiceheader.Currency = $("#ddlParaBirimi").val() || "TRY";
+        invoiceModel.invoiceheader.DocumentCurrencyCode = invoiceModel.invoiceheader.Currency;
+
+        // İlk satır
+        if ($("#btnLineAdd").length) {
+            $("#btnLineAdd").trigger("click");
+        }
+    }
+
+    function init() {
+        bindEvents();
+        initDefaults();
+    }
+
+    const InvoiceApp = {
+        init,
+        recalcTotals,
+        buildInvoiceModelFromUI,
+        buildInvoiceEntityFromUI
+    };
+
+    global.InvoiceApp = InvoiceApp;
+
+})(window, jQuery);
+
+// Sayfa yüklenince başlat
+$(function () {
+    if (window.InvoiceApp && typeof window.InvoiceApp.init === "function") {
+        window.InvoiceApp.init();
+    }
+});
