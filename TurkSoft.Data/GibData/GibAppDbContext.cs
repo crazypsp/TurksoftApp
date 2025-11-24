@@ -118,6 +118,7 @@ namespace TurkSoft.Data.GibData
                 .OnDelete(DeleteBehavior.Restrict);
 
             // === Açık tekillikler (filtered unique) — kritik tablolar ===
+
             // Role: Name benzersiz (yalnız aktifler)
             modelBuilder.Entity<Role>(e =>
             {
@@ -186,6 +187,7 @@ namespace TurkSoft.Data.GibData
             {
                 var clr = et.ClrType;
                 if (clr == null || clr.IsAbstract) continue;
+
                 // IsActive filtresi varsa uygula
                 if (et.FindProperty("IsActive") != null)
                 {
@@ -195,16 +197,14 @@ namespace TurkSoft.Data.GibData
                     var lambda = Expression.Lambda(body, param);
                     et.SetQueryFilter(lambda);
                 }
+
                 // RowVersion
                 if (et.FindProperty("RowVersion") != null)
-                {
                     b.Entity(clr).Property<byte[]>("RowVersion").IsRowVersion();
-                }
+
                 // IsActive default true
                 if (et.FindProperty("IsActive") != null)
-                {
                     b.Entity(clr).Property<bool>("IsActive").HasDefaultValue(true);
-                }
             }
         }
 
@@ -251,10 +251,10 @@ namespace TurkSoft.Data.GibData
             var seedDate = new DateTime(2025, 11, 7, 0, 0, 0, DateTimeKind.Utc);
 
             // Hash formatı: PBKDF2$<iter>$<salt>$<hash>
-            const string adminHash = "PBKDF2$100000$dDSF2N132FQkI11U1m1m5A==$f5V1BBDJOOdE7QjoxPM+b557TmzNGPardO2QnHAho+I=";    // Admin!123
-            const string bayiHash = "PBKDF2$100000$QTFXdEp+oxfYXdv03gpFzg==$BGgBXx3qgMWCv0nh6/Web5cti+UztJ3EyfH0T12ZBF4=";    // Bayi!123
-            const string mmHash = "PBKDF2$100000$GQMf5cVH3D+Gk4hYHVeWRQ==$OjQXlOi7CCKny2cdt15McbKWGDuffOv8a8RSqS2CQs4=";    // MM!123
-            const string firmaHash = "PBKDF2$100000$nvzTYnu9jldsQTrX/0spEg==$3tnZ70MM9Fpzx0L8V+QyNLfq97hNSpppA+A7WaJXAMs=";    // Firma!123
+            const string adminHash = "PBKDF2$100000$dDSF2N132FQkI11U1m1m5A==$f5V1BBDJOOdE7QjoxPM+b557TmzNGPardO2QnHAho+I="; // Admin!123
+            const string bayiHash = "PBKDF2$100000$QTFXdEp+oxfYXdv03gpFzg==$BGgBXx3qgMWCv0nh6/Web5cti+UztJ3EyfH0T12ZBF4="; // Bayi!123
+            const string mmHash = "PBKDF2$100000$GQMf5cVH3D+Gk4hYHVeWRQ==$OjQXlOi7CCKny2cdt15McbKWGDuffOv8a8RSqS2CQs4="; // MM!123
+            const string firmaHash = "PBKDF2$100000$nvzTYnu9jldsQTrX/0spEg==$3tnZ70MM9Fpzx0L8V+QyNLfq97hNSpppA+A7WaJXAMs="; // Firma!123
 
             modelBuilder.Entity<User>().HasData(
                 new User { Id = 1, Username = "admin", Email = "admin@gib.com", PasswordHash = adminHash, CreatedAt = seedDate, IsActive = true },
@@ -288,36 +288,84 @@ namespace TurkSoft.Data.GibData
             return base.SaveChangesAsync(cancellationToken);
         }
 
+        /// <summary>
+        /// Soft delete ve CreatedAt / UpdatedAt / DeleteDate alanlarını yönetir.
+        /// DateTime ve DateTimeOffset tiplerini güvenli şekilde ele alır.
+        /// </summary>
         private void ApplyAuditAndSoftDelete()
         {
-            var utcNow = DateTime.UtcNow;
+            var utcNow = DateTimeOffset.UtcNow;
 
             foreach (var entry in ChangeTracker.Entries())
             {
-                // Soft delete
-                if (entry.State == EntityState.Deleted && entry.Properties.Any(p => p.Metadata.Name == "IsActive"))
+                // ---------- SOFT DELETE ----------
+                if (entry.State == EntityState.Deleted &&
+                    entry.Properties.Any(p => p.Metadata.Name == "IsActive"))
                 {
                     entry.State = EntityState.Modified;
                     entry.Property("IsActive").CurrentValue = false;
-                    if (entry.Properties.Any(p => p.Metadata.Name == "DeleteDate"))
-                        entry.Property("DeleteDate").CurrentValue = utcNow;
+
+                    var deleteProp = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "DeleteDate");
+                    if (deleteProp != null)
+                    {
+                        var clrType = deleteProp.Metadata.ClrType;
+
+                        if (IsDateTimeOffsetType(clrType))
+                            deleteProp.CurrentValue = utcNow;
+                        else if (IsDateTimeType(clrType))
+                            deleteProp.CurrentValue = utcNow.UtcDateTime;
+                    }
+
                     continue;
                 }
 
-                // Audit zaman damgaları
+                // ---------- ADDED (CreatedAt) ----------
                 if (entry.State == EntityState.Added)
                 {
                     var created = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "CreatedAt");
-                    if (created != null && (created.CurrentValue == null || (DateTime)created.CurrentValue == default))
-                        created.CurrentValue = utcNow;
+                    if (created != null)
+                    {
+                        var clrType = created.Metadata.ClrType;
+
+                        if (created.CurrentValue == null)
+                        {
+                            if (IsDateTimeOffsetType(clrType))
+                                created.CurrentValue = utcNow;
+                            else if (IsDateTimeType(clrType))
+                                created.CurrentValue = utcNow.UtcDateTime;
+                        }
+                        else if (created.CurrentValue is DateTimeOffset dto && dto == default)
+                        {
+                            created.CurrentValue = utcNow;
+                        }
+                        else if (created.CurrentValue is DateTime dt && dt == default)
+                        {
+                            created.CurrentValue = utcNow.UtcDateTime;
+                        }
+                    }
                 }
+                // ---------- MODIFIED (UpdatedAt) ----------
                 else if (entry.State == EntityState.Modified)
                 {
                     var updated = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
-                    if (updated != null) updated.CurrentValue = utcNow;
+                    if (updated != null)
+                    {
+                        var clrType = updated.Metadata.ClrType;
+
+                        if (IsDateTimeOffsetType(clrType))
+                            updated.CurrentValue = utcNow;
+                        else if (IsDateTimeType(clrType))
+                            updated.CurrentValue = utcNow.UtcDateTime;
+                    }
                 }
             }
         }
+
+        private static bool IsDateTimeOffsetType(Type t)
+            => t == typeof(DateTimeOffset) || t == typeof(DateTimeOffset?);
+
+        private static bool IsDateTimeType(Type t)
+            => t == typeof(DateTime) || t == typeof(DateTime?);
     }
 
     // ==========================================================

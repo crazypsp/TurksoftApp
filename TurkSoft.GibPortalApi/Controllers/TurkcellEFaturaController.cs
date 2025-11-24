@@ -355,18 +355,176 @@ namespace TurkSoft.GibPortalApi.Controllers
         }
 
 
-
         // EF Core helper – faturayı ilişkileriyle beraber yükler
-        private Task<Invoice?> LoadInvoiceAsync(long id, CancellationToken ct)
+        // ve sonucu TestInvoices.CreateInvoiceX yapısına benzer bir grafik olarak döner.
+        private async Task<Invoice?> LoadInvoiceAsync(long id, CancellationToken ct)
         {
-            return _db.Set<Invoice>()
+            // 1) DB’den faturayı ilişkileriyle al
+            var dbInvoice = await _db.Set<Invoice>()
+                .IgnoreQueryFilters() // IsActive filtresi devre dışı (silinmiş olsa bile gör)
+                .AsNoTracking()       // Sadece okuma
                 .Include(i => i.Customer)
                 .Include(i => i.InvoicesItems)
                     .ThenInclude(ii => ii.Item)
-                    .ThenInclude(it => it.Unit)
+                        .ThenInclude(it => it.Unit)
                 .Include(i => i.InvoicesTaxes)
                 .FirstOrDefaultAsync(i => i.Id == id, ct);
+
+            if (dbInvoice == null)
+            {
+                // BURADA gerçekten DB'de bu Id ile kayıt yok demektir.
+                // İstersen null dön, istersen aşağıdaki fallback'li versiyonu kullan.
+                return null;
+            }
+
+            // 2) TestInvoices.CreateInvoiceX yapısına benzer bir grafik oluştur
+            return MapToTestInvoiceShape(dbInvoice);
         }
+
+
+        /// <summary>
+        /// Veritabanından gelen Invoice grafiğini
+        /// TestInvoices.CreateInvoiceX fonksiyonlarındaki gibi
+        /// yeni bir Invoice objesine map eder.
+        /// </summary>
+        private static Invoice MapToTestInvoiceShape(Invoice src)
+        {
+            // --- Customer ---
+            Customer? customer = null;
+            if (src.Customer != null)
+            {
+                customer = new Customer
+                {
+                    Id = src.Customer.Id,
+                    Name = src.Customer.Name,
+                    Surname = src.Customer.Surname,
+                    Phone = src.Customer.Phone,
+                    Email = src.Customer.Email,
+                    TaxNo = src.Customer.TaxNo,
+                    TaxOffice = src.Customer.TaxOffice
+                    // İstersen BaseEntity alanlarını da kopyalayabilirsin
+                };
+            }
+
+            // --- Invoice (root) ---
+            var invoice = new Invoice
+            {
+                Id = src.Id,
+                CustomerId = src.CustomerId,
+                Customer = customer,
+                InvoiceNo = src.InvoiceNo,
+                InvoiceDate = src.InvoiceDate,
+                Currency = src.Currency,
+                Total = src.Total
+                // Diğer navigation koleksiyonları (Tourists, SgkRecords vs.) şimdilik boş bırakıyoruz
+            };
+
+            // --- Cache: Aynı Unit / Item tekrar tekrar oluşturma ---
+            var unitCache = new Dictionary<long, Unit>();
+            var itemCache = new Dictionary<long, Item>();
+
+            // --- InvoicesItems + Item + Unit ---
+            var invItems = new List<InvoicesItem>();
+
+            if (src.InvoicesItems != null)
+            {
+                foreach (var li in src.InvoicesItems)
+                {
+                    // Unit
+                    Unit? unit = null;
+                    if (li.Item?.Unit != null)
+                    {
+                        var u = li.Item.Unit;
+                        if (u.Id != 0 && unitCache.TryGetValue(u.Id, out var cachedUnit))
+                        {
+                            unit = cachedUnit;
+                        }
+                        else
+                        {
+                            unit = new Unit
+                            {
+                                Id = u.Id,
+                                Name = u.Name,
+                                ShortName = u.ShortName
+                            };
+
+                            if (u.Id != 0)
+                                unitCache[u.Id] = unit;
+                        }
+                    }
+
+                    // Item
+                    Item? item = null;
+                    if (li.Item != null)
+                    {
+                        var it = li.Item;
+                        if (it.Id != 0 && itemCache.TryGetValue(it.Id, out var cachedItem))
+                        {
+                            item = cachedItem;
+                        }
+                        else
+                        {
+                            item = new Item
+                            {
+                                Id = it.Id,
+                                Name = it.Name,
+                                Code = it.Code,
+                                BrandId = it.BrandId,
+                                UnitId = it.UnitId,
+                                Unit = unit, // yukarıda oluşturduğumuz unit
+                                Price = it.Price,
+                                Currency = it.Currency
+                            };
+
+                            if (it.Id != 0)
+                                itemCache[it.Id] = item;
+                        }
+                    }
+
+                    // InvoicesItem
+                    var invItem = new InvoicesItem
+                    {
+                        Id = li.Id,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice,
+                        ItemId = item?.Id ?? li.ItemId,
+                        Item = item,
+                        Quantity = li.Quantity,
+                        Price = li.Price,
+                        Total = li.Total
+                    };
+
+                    invItems.Add(invItem);
+                }
+            }
+
+            invoice.InvoicesItems = invItems;
+
+            // --- InvoicesTaxes ---
+            var invTaxes = new List<InvoicesTax>();
+            if (src.InvoicesTaxes != null)
+            {
+                foreach (var tx in src.InvoicesTaxes)
+                {
+                    var invTax = new InvoicesTax
+                    {
+                        Id = tx.Id,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice,
+                        Name = tx.Name,
+                        Rate = tx.Rate,
+                        Amount = tx.Amount
+                    };
+
+                    invTaxes.Add(invTax);
+                }
+            }
+
+            invoice.InvoicesTaxes = invTaxes;
+
+            return invoice;
+        }
+
 
         // -------- StaticList --------
         [HttpGet("static/unit")]
@@ -394,16 +552,16 @@ namespace TurkSoft.GibPortalApi.Controllers
         [HttpPost("einvoice/send-json/{id:long}")]
         public async Task<IActionResult> SendEInvoiceJson(long id, bool isExport = false, CancellationToken ct = default)
         {
-            //var inv = await LoadInvoiceAsync(id, ct);
-            //if (inv == null) return NotFound();
-            Invoice inv = id switch
-            {
-                1 => TestInvoices.CreateInvoice1(),
-                2 => TestInvoices.CreateInvoice2(),
-                3 => TestInvoices.CreateInvoice3(),
-                4 => TestInvoices.CreateInvoice4(),
-                _ => TestInvoices.CreateInvoice1()
-            };
+            var inv = await LoadInvoiceAsync(id, ct);
+            if (inv == null) return NotFound();
+            //Invoice inv = id switch
+            //{
+            //    1 => TestInvoices.CreateInvoice1(),
+            //    2 => TestInvoices.CreateInvoice2(),
+            //    3 => TestInvoices.CreateInvoice3(),
+            //    4 => TestInvoices.CreateInvoice4(),
+            //    _ => TestInvoices.CreateInvoice1()
+            //};
 
             // İhracat için isExport parametresini Invoice4 ile beraber true gönderebilirsin
             if (id == 4)

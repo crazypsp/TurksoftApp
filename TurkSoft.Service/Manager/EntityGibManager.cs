@@ -14,10 +14,9 @@ namespace TurkSoft.Service.Manager
 {
     /// <summary>
     /// GIB veritabanı (GibAppDbContext) üzerinde çalışan generic servis.
-    /// - Id tipi (TKey) entity sınıflarına göre belirlenir (int/long/Guid).
-    /// - IsActive özelliği varsa soft delete uygular (DbContext SaveChanges override ile).
-    /// - DB tarafındaki filtered unique index kurallarını ihlal eden eklemelerde
-    ///   2601/2627 SQL hataları yakalanıp anlamlı mesaj üretilir.
+    /// - BaseEntity audit alanları DateTimeOffset (UTC) olarak yönetilir.
+    /// - UserId + iş anahtarı (Name/Code/TaxNo vb.) kombinasyonuna göre mükerrer kayıtları engeller.
+    /// - Aynı anahtarla aktif kayıt varsa insert yapmaz, var olan kaydı kullanır.
     /// </summary>
     public class EntityGibManager<TEntity, TKey> : IEntityGibService<TEntity, TKey>
         where TEntity : class
@@ -29,7 +28,33 @@ namespace TurkSoft.Service.Manager
             ?? throw new InvalidOperationException($"'{typeof(TEntity).Name}' üzerinde 'Id' alanı yok.");
 
         private static readonly PropertyInfo? IsActiveProp = typeof(TEntity).GetProperty("IsActive");
-        private static readonly PropertyInfo? DeleteDateProp = typeof(TEntity).GetProperty("DeleteDate");
+
+        // UserScopedUniqueness ile uyumlu iş anahtarı adayları
+        private static readonly string[] UniqueKeyCandidates =
+        {
+            "Code", "Name", "Title", "TaxNo", "IsoCode", "Email", "Username", "Sku", "Barcode"
+        };
+
+        // Bazı entity’ler için tercih edilen iş anahtarları
+        private static readonly Dictionary<string, string[]> PreferredUniqueKeyByEntity =
+            new Dictionary<string, string[]>
+            {
+                { "Item",               new[] { "Code", "Name" } },
+                { "CompanyInformation", new[] { "TaxNo" } },
+                { "Currency",           new[] { "Code" } },
+                { "Country",            new[] { "IsoCode", "Code" } },
+                { "Brand",              new[] { "Name" } },
+                { "Category",           new[] { "Name" } },
+                { "Unit",               new[] { "ShortName", "Name" } },
+                { "Warehouse",          new[] { "Name" } },
+                { "UserRole",           new[] { "RoleId" } },
+                // Bank, PaymentType, PaymentAccount da Name üzerinden benzersiz
+                { "Bank",               new[] { "Name" } },
+                { "PaymentType",        new[] { "Name" } },
+                { "PaymentAccount",     new[] { "Name" } },
+                // Customer’da TaxNo varsa onu tercih et, yoksa Name
+                { "Customer",           new[] { "TaxNo", "Name" } },
+            };
 
         public EntityGibManager(GibAppDbContext db)
         {
@@ -43,9 +68,9 @@ namespace TurkSoft.Service.Manager
 
         public async Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default)
         {
-            // Global query filters (IsActive=1) zaten aktif; yine de tip güvenli filtre destekliyoruz.
             var query = _set.AsNoTracking().AsQueryable();
             query = ApplyIsActiveFilterIfExists(query);
+
             var predicate = BuildIdEqualsExpression(id);
             return await query.FirstOrDefaultAsync(predicate, ct);
         }
@@ -54,48 +79,91 @@ namespace TurkSoft.Service.Manager
         {
             var query = _set.AsNoTracking().AsQueryable();
             query = ApplyIsActiveFilterIfExists(query);
+
             return await query.ToListAsync(ct);
         }
 
         public async Task<TEntity> AddAsync(TEntity entity, CancellationToken ct = default)
         {
-            // Komut zaman aşımını kısa süre artır (yoğun işlemler için)
             var prevTimeout = _db.Database.GetCommandTimeout();
             _db.Database.SetCommandTimeout(TimeSpan.FromSeconds(120));
 
+            var utcNow = DateTimeOffset.UtcNow;
+
             try
             {
-                // Fatura grafını normalize et (FK/Nav çözümle, döngü kır, NOT NULL koru)
+                // 0) Eğer Id > 0 geldiyse: önce DB’de böyle bir kayıt var mı bak
+                if (IdProp != null)
+                {
+                    var idValue = IdProp.GetValue(entity);
+                    if (idValue != null)
+                    {
+                        var idType = Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType;
+                        if (idType == typeof(long) || idType == typeof(int) || idType == typeof(short))
+                        {
+                            var numeric = Convert.ToInt64(idValue);
+                            if (numeric > 0)
+                            {
+                                var existingById = await _set.FindAsync(new object[] { idValue }, ct);
+                                if (existingById != null)
+                                {
+                                    // Zaten var, insert etme
+                                    return existingById;
+                                }
+                                else
+                                {
+                                    // Bu Id ile kayıt yok, identity insert hatası yaşamamak için Id'yi sıfırla
+                                    ResetIdentityId(entity);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 1) Audit alanları (BaseEntity ise)
+                TouchAudit(entity, utcNow);
+
+                // 2) Invoice grafı ise ilişkileri düzelt / normalize et
                 if (entity is Invoice inv)
                 {
-                    await FixInvoiceGraphAsync(inv, ct);
-
-                    if (inv.Customer != null && string.IsNullOrWhiteSpace(inv.Customer.Phone))
-                        NormalizeCustomer(inv.Customer);
+                    await FixInvoiceGraphAsync(inv, utcNow, ct);
                 }
 
-                try
+                // 3) UserId + iş anahtarı bazlı duplicate kontrolü
+                var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, entity, ct);
+                if (existingByKey != null)
                 {
-                    await _set.AddAsync(entity, ct);
-                    await _db.SaveChangesAsync(ct);
-                }
-                catch (Exception ex)
-                {
-
-                    throw;
+                    // Aynı anahtarla aktif kayıt var, onu kullan
+                    return existingByKey;
                 }
 
-                
+                // 4) Gerçek insert
+                await _set.AddAsync(entity, ct);
+                await _db.SaveChangesAsync(ct);
+
                 return entity;
             }
             catch (DbUpdateException due) when (IsUniqueViolation(due))
             {
+                // DB unique constraint patladıysa, son bir kez daha aynı anahtarla kayıt var mı bak
+                var existing = await TryGetExistingByUniqueKeyAsync(_db, entity, ct);
+                if (existing != null)
+                {
+                    // Yeni entity'yi context'ten çıkar, var olanı dön
+                    var entry = _db.Entry(entity);
+                    if (entry != null)
+                        entry.State = EntityState.Detached;
+
+                    return existing;
+                }
+
                 throw new Exception(BuildUniqueViolationMessage<TEntity>(due), due);
             }
             catch (OperationCanceledException oce)
             {
                 throw new Exception(
-                    "Veri kaydı iptal edildi (OperationCanceled). Genellikle istek iptali veya SQL zaman aşımı/kilit kaynaklıdır.", oce);
+                    "Veri kaydı iptal edildi (OperationCanceled). Genellikle istek iptali veya SQL zaman aşımı/kilit kaynaklıdır.",
+                    oce);
             }
             finally
             {
@@ -105,6 +173,9 @@ namespace TurkSoft.Service.Manager
 
         public async Task<TEntity> UpdateAsync(TEntity entity, CancellationToken ct = default)
         {
+            // UpdatedAt güncelle
+            TouchAudit(entity, DateTimeOffset.UtcNow);
+
             _set.Update(entity);
             try
             {
@@ -122,18 +193,24 @@ namespace TurkSoft.Service.Manager
             var entity = await _set.FirstOrDefaultAsync(BuildIdEqualsExpression(id), ct);
             if (entity == null) return false;
 
-            // Soft delete tercihimiz:
-            if (IsActiveProp != null && IsActiveProp.PropertyType == typeof(bool))
+            var utcNow = DateTimeOffset.UtcNow;
+
+            // BaseEntity ise soft delete
+            if (entity is BaseEntity be)
             {
+                be.IsActive = false;
+                be.DeleteDate = utcNow;
+                _set.Update(entity);
+            }
+            else if (IsActiveProp != null && IsActiveProp.PropertyType == typeof(bool))
+            {
+                // BaseEntity olmayan ama IsActive alanı olan bir tipse
                 IsActiveProp.SetValue(entity, false);
-                if (DeleteDateProp != null && (DeleteDateProp.PropertyType == typeof(DateTimeOffset?) || DeleteDateProp.PropertyType == typeof(DateTime?)))
-                    DeleteDateProp.SetValue(entity, DateTime.UtcNow);
                 _set.Update(entity);
             }
             else
             {
-                // Base şemanın dışında bir entity ise DbContext zaten Deleted->Modified dönüşümü yapacaktır,
-                // ama güvenli olmak adına hard delete'e düşebiliriz:
+                // Hiçbiri değilse hard delete
                 _set.Remove(entity);
             }
 
@@ -153,7 +230,9 @@ namespace TurkSoft.Service.Manager
             object? idValue;
             try
             {
-                idValue = Convert.ChangeType(id, Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType);
+                idValue = Convert.ChangeType(
+                    id,
+                    Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType);
             }
             catch (Exception ex)
             {
@@ -180,7 +259,6 @@ namespace TurkSoft.Service.Manager
 
         private static bool IsUniqueViolation(DbUpdateException ex)
         {
-            // SQL Server: 2601 (duplicate key), 2627 (unique constraint)
             var msg = (ex.InnerException?.Message ?? ex.Message)?.ToLowerInvariant() ?? "";
             return msg.Contains("2601") || msg.Contains("2627") ||
                    msg.Contains("cannot insert duplicate key") ||
@@ -190,601 +268,870 @@ namespace TurkSoft.Service.Manager
 
         private static string BuildUniqueViolationMessage<T>(DbUpdateException ex)
         {
-            // İndeks adı mesaj içindeyse yakalayalım
             var msg = ex.InnerException?.Message ?? ex.Message;
-            // Basit ve anlaşılır dönüş
-            return $"Aynı veriden mükerrer kayıt eklenemez (tablo: {typeof(T).Name}). " +
-                   $"Detay: {msg}";
+            return $"Aynı veriden mükerrer kayıt eklenemez (tablo: {typeof(T).Name}). Detay: {msg}";
         }
 
-        private static object? ChangeType(object? value, Type targetType)
+        /// <summary>
+        /// Herhangi bir entity için "Id" property’si integer tipindeyse ve > 0 ise, 0'a çeker.
+        /// Identity kolon insert hatalarını engellemek için kullanılır.
+        /// </summary>
+        private static void ResetIdentityId(object? obj)
         {
-            var t = Nullable.GetUnderlyingType(targetType) ?? targetType;
-            if (value == null) return t.IsValueType ? Activator.CreateInstance(t) : null;
-            if (t.IsEnum) return Enum.Parse(t, value.ToString()!);
-            return Convert.ChangeType(value, t);
-        }
+            if (obj == null) return;
 
-        private static bool IsNonDefault(object? value)
-        {
-            if (value == null) return false;
-            var t = value.GetType();
-            var def = t.IsValueType ? Activator.CreateInstance(t) : null;
-            return !Equals(value, def);
-        }
+            var type = obj.GetType();
+            var idProp = type.GetProperty("Id");
+            if (idProp == null) return;
 
-        private static long ToInt64(object v) { try { return Convert.ToInt64(v); } catch { return 0; } }
+            var propType = Nullable.GetUnderlyingType(idProp.PropertyType) ?? idProp.PropertyType;
+            var current = idProp.GetValue(obj);
+            if (current == null) return;
 
-        private Type GetPkType(Type entityType)
-            => _db.Model.FindEntityType(entityType)!.FindPrimaryKey()!.Properties[0].ClrType;
-
-        private object ReadIdValue(object entity)
-            => entity.GetType().GetProperty("Id")!.GetValue(entity)!;
-
-        // ======================================================
-        // Normalizers (NOT NULL güvenliği)
-        // ======================================================
-
-        private static void NormalizePaymentType(PaymentType pt)
-        {
-            pt.Name = string.IsNullOrWhiteSpace(pt.Name) ? "NAKIT" : pt.Name;
-            pt.Desc = string.IsNullOrWhiteSpace(pt.Desc) ? pt.Name : pt.Desc;
-            if (pt.CreatedAt == default) pt.CreatedAt = DateTime.UtcNow;
-            pt.UpdatedAt = DateTime.UtcNow;
-        }
-
-        private static void NormalizeBank(Bank b)
-        {
-            b.Name = string.IsNullOrWhiteSpace(b.Name) ? "Ziraat Bankası" : b.Name;
-            b.SwiftCode = string.IsNullOrWhiteSpace(b.SwiftCode) ? "TCZBTR2A" : b.SwiftCode;
-            b.Country = string.IsNullOrWhiteSpace(b.Country) ? "TR" : b.Country;
-            b.City = string.IsNullOrWhiteSpace(b.City) ? "Ankara" : b.City;
-            if (b.CreatedAt == default) b.CreatedAt = DateTime.UtcNow;
-            b.UpdatedAt = DateTime.UtcNow;
-        }
-
-        private static void NormalizePaymentAccount(PaymentAccount pa, string defaultCurrency)
-        {
-            pa.Name = string.IsNullOrWhiteSpace(pa.Name) ? "KASA" : pa.Name;
-            pa.Desc = string.IsNullOrWhiteSpace(pa.Desc) ? "Varsayılan Kasa" : pa.Desc;
-            pa.AccountNo = string.IsNullOrWhiteSpace(pa.AccountNo) ? "0001" : pa.AccountNo;
-            pa.Iban = string.IsNullOrWhiteSpace(pa.Iban) ? "TR000000000000000000000000" : pa.Iban;
-            pa.Currency = string.IsNullOrWhiteSpace(pa.Currency) ? (string.IsNullOrWhiteSpace(defaultCurrency) ? "TRY" : defaultCurrency) : pa.Currency;
-
-            if (pa.CreatedAt == default) pa.CreatedAt = DateTime.UtcNow;
-            pa.UpdatedAt = DateTime.UtcNow;
-        }
-
-        private static void NormalizeBrand(Brand b)
-        {
-            b.Name = string.IsNullOrWhiteSpace(b.Name) ? "GENEL" : b.Name;
-            b.Country = string.IsNullOrWhiteSpace(b.Country) ? "TR" : b.Country;
-            if (b.CreatedAt == default) b.CreatedAt = DateTime.UtcNow;
-            b.UpdatedAt = DateTime.UtcNow;
-        }
-
-        private static void NormalizeCustomer(Customer c)
-        {
-            c.Name = string.IsNullOrWhiteSpace(c.Name) ? "GENEL MÜŞTERİ" : c.Name;
-            c.Phone = string.IsNullOrWhiteSpace(c.Phone) ? "-" : c.Phone;
-            if (c.CreatedAt == default) c.CreatedAt = DateTime.UtcNow;
-            c.UpdatedAt = DateTime.UtcNow;
-        }
-
-        // ======================================================
-        // Dynamic Find / Ensure
-        // ======================================================
-
-        private async Task<object?> FindByIdAsync(Type entityType, object id, CancellationToken ct)
-        {
-            var pk = GetPkType(entityType);
-            var keyObj = ChangeType(id, pk)!;
-            var found = await _db.FindAsync(entityType, new object[] { keyObj }, ct);
-            return found;
-        }
-
-        private async Task<T?> FindByIdAsync<T>(object id, CancellationToken ct) where T : class
-            => (await FindByIdAsync(typeof(T), id, ct)) as T;
-
-        private async Task<T?> FindByStringPropertyAsync<T>(string propName, string? value, CancellationToken ct)
-            where T : class
-        {
-            if (string.IsNullOrWhiteSpace(value)) return null;
-
-            var type = typeof(T);
-            var pi = type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-            if (pi == null || pi.PropertyType != typeof(string)) return null;
-
-            var p = Expression.Parameter(type, "x");
-            var body = Expression.Equal(Expression.Property(p, pi), Expression.Constant(value));
-            var lambda = Expression.Lambda<Func<T, bool>>(body, p);
-
-            return await _db.Set<T>().AsNoTracking().FirstOrDefaultAsync(lambda, ct);
-        }
-
-        private async Task<T?> FindLookupAsync<T>(object? probe, CancellationToken ct) where T : class
-        {
-            if (probe == null) return null;
-
-            // 1) Id
-            var idProp = probe.GetType().GetProperty("Id");
-            var idVal = idProp?.GetValue(probe);
-            if (IsNonDefault(idVal))
+            try
             {
-                var found = await FindByIdAsync<T>(idVal!, ct);
-                if (found != null) { _db.Attach(found); _db.Entry(found).State = EntityState.Unchanged; return found; }
-            }
-
-            // 2) Code / ShortName / Name / SwiftCode
-            var code = probe.GetType().GetProperty("Code")?.GetValue(probe)?.ToString();
-            if (!string.IsNullOrWhiteSpace(code))
-            {
-                var found = await FindByStringPropertyAsync<T>("Code", code, ct);
-                if (found != null) { _db.Attach(found); _db.Entry(found).State = EntityState.Unchanged; return found; }
-            }
-
-            var shortName = probe.GetType().GetProperty("ShortName")?.GetValue(probe)?.ToString();
-            if (!string.IsNullOrWhiteSpace(shortName))
-            {
-                var found = await FindByStringPropertyAsync<T>("ShortName", shortName, ct);
-                if (found != null) { _db.Attach(found); _db.Entry(found).State = EntityState.Unchanged; return found; }
-            }
-
-            var name = probe.GetType().GetProperty("Name")?.GetValue(probe)?.ToString();
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                var found = await FindByStringPropertyAsync<T>("Name", name, ct);
-                if (found != null) { _db.Attach(found); _db.Entry(found).State = EntityState.Unchanged; return found; }
-            }
-
-            var swift = probe.GetType().GetProperty("SwiftCode")?.GetValue(probe)?.ToString();
-            if (!string.IsNullOrWhiteSpace(swift))
-            {
-                var found = await FindByStringPropertyAsync<T>("SwiftCode", swift, ct);
-                if (found != null) { _db.Attach(found); _db.Entry(found).State = EntityState.Unchanged; return found; }
-            }
-
-            return null;
-        }
-
-        private async Task<T> EnsureLookupAsync<T>(IDictionary<string, string?> candidates, CancellationToken ct)
-            where T : class, new()
-        {
-            // 1) Önce bul
-            foreach (var key in new[] { "Code", "ShortName", "Name", "SwiftCode" })
-            {
-                if (!candidates.TryGetValue(key, out var val) || string.IsNullOrWhiteSpace(val)) continue;
-                var found = await FindByStringPropertyAsync<T>(key, val, ct);
-                if (found != null)
+                if (propType == typeof(long))
                 {
-                    _db.Attach(found);
-                    _db.Entry(found).State = EntityState.Unchanged;
-                    return found;
+                    long v = Convert.ToInt64(current);
+                    if (v > 0) idProp.SetValue(obj, 0L);
+                }
+                else if (propType == typeof(int))
+                {
+                    int v = Convert.ToInt32(current);
+                    if (v > 0) idProp.SetValue(obj, 0);
+                }
+                else if (propType == typeof(short))
+                {
+                    short v = Convert.ToInt16(current);
+                    if (v > 0) idProp.SetValue(obj, (short)0);
                 }
             }
-
-            // 2) Yoksa oluştur
-            var now = DateTime.UtcNow;
-            var obj = new T();
-
-            void TrySetStr(string name, string? val)
+            catch
             {
-                if (string.IsNullOrWhiteSpace(val)) return;
-                var p = typeof(T).GetProperty(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-                if (p != null && p.CanWrite && p.PropertyType == typeof(string))
-                    p.SetValue(obj, val);
+                // Tip uyumsuzluğu vs. olursa sessiz geç.
             }
-
-            TrySetStr("Code", candidates.TryGetValue("Code", out var c) ? c : null);
-            TrySetStr("ShortName", candidates.TryGetValue("ShortName", out var s) ? s : null);
-            TrySetStr("Name", candidates.TryGetValue("Name", out var n) ? n : null);
-            TrySetStr("SwiftCode", candidates.TryGetValue("SwiftCode", out var sw) ? sw : null);
-            TrySetStr("Currency", candidates.TryGetValue("Currency", out var cur) ? cur : null);
-            TrySetStr("AccountNo", candidates.TryGetValue("AccountNo", out var acc) ? acc : null);
-            TrySetStr("Iban", candidates.TryGetValue("Iban", out var iban) ? iban : null);
-            TrySetStr("Desc", candidates.TryGetValue("Desc", out var desc) ? desc : null);
-            TrySetStr("Country", candidates.TryGetValue("Country", out var country) ? country : null);
-
-            if (obj is PaymentAccount paObj) NormalizePaymentAccount(paObj, paObj.Currency ?? "TRY");
-            if (obj is Bank bankObj) NormalizeBank(bankObj);
-            if (obj is PaymentType ptObj) NormalizePaymentType(ptObj);
-            if (obj is Brand brObj) NormalizeBrand(brObj);
-
-            typeof(T).GetProperty("CreatedAt")?.SetValue(obj, now);
-            typeof(T).GetProperty("UpdatedAt")?.SetValue(obj, now);
-
-            _db.Set<T>().Add(obj); // SaveChanges dışarıda
-            return obj;
         }
 
-        private async Task AttachLookupByFkOrNavOrEnsure<TLookup>(
-            object owner, string fkName, string navName,
-            Func<object?, IDictionary<string, string?>>? toCandidates,
+        // ======================================================
+        // Audit helper (CreatedAt / UpdatedAt / IsActive)
+        // ======================================================
+
+        private static void TouchAudit(object entity, DateTimeOffset utcNow)
+        {
+            if (entity is not BaseEntity be) return;
+
+            if (be.CreatedAt == default)
+                be.CreatedAt = utcNow;
+
+            be.UpdatedAt = utcNow;
+
+            if (!be.IsActive)
+                be.IsActive = true;
+        }
+
+        /// <summary>
+        /// Parent - child ilişkisinde UserId propagation.
+        /// Child.UserId = 0 ise parent.UserId değeriyle doldurur.
+        /// </summary>
+        private static void PropagateUserId(BaseEntity parent, BaseEntity child)
+        {
+            if (parent == null || child == null) return;
+
+            if (child.UserId == 0 && parent.UserId != 0)
+            {
+                child.UserId = parent.UserId;
+            }
+        }
+
+        // ======================================================
+        // Duplicate Engelleyici (UserId + İş Anahtarı)
+        // ======================================================
+
+        private static async Task<TRef?> TryGetExistingByUniqueKeyAsync<TRef>(
+            GibAppDbContext db,
+            TRef entity,
             CancellationToken ct)
-            where TLookup : class, new()
+            where TRef : class
         {
-            var fkProp = owner.GetType().GetProperty(fkName);
-            var navProp = owner.GetType().GetProperty(navName);
-            if (fkProp == null || navProp == null) return;
+            if (entity == null) return null;
 
-            var fkVal = fkProp.GetValue(owner);
-            var navVal = navProp.GetValue(owner);
+            var type = typeof(TRef);
+            var set = db.Set<TRef>();
 
-            // 1) Id var → bul; yoksa nav’dan ensure et (FK sıfırlanır)
-            if (IsNonDefault(fkVal))
+            // 1) İş anahtarı property’sini bul
+            PropertyInfo? keyProp = null;
+
+            if (PreferredUniqueKeyByEntity.TryGetValue(type.Name, out var preferredList))
             {
-                var found = await FindByIdAsync<TLookup>(fkVal!, ct);
-                if (found != null)
+                foreach (var name in preferredList)
                 {
-                    _db.Attach(found);
-                    _db.Entry(found).State = EntityState.Unchanged;
-                    navProp.SetValue(owner, null);
-                    return;
+                    keyProp = type.GetProperty(name);
+                    if (keyProp != null) break;
                 }
-
-                if (navVal != null && toCandidates != null)
-                {
-                    var ensured = await EnsureLookupAsync<TLookup>(toCandidates(navVal), ct);
-                    navProp.SetValue(owner, ensured);
-                    fkProp.SetValue(owner, Activator.CreateInstance(fkProp.PropertyType)); // EF doldurur
-                    return;
-                }
-
-                // Geçersiz FK → 0'a çek ki conflict olmasın
-                fkProp.SetValue(owner, Activator.CreateInstance(fkProp.PropertyType));
             }
 
-            // 2) Id yok, Nav var → bul/oluştur
-            if (navVal != null)
+            if (keyProp == null)
             {
-                var found = await FindLookupAsync<TLookup>(navVal, ct);
-                if (found != null)
+                foreach (var cand in UniqueKeyCandidates)
                 {
-                    _db.Attach(found);
-                    _db.Entry(found).State = EntityState.Unchanged;
-                    return; // EF FK’yi doldurur
-                }
-
-                if (toCandidates != null)
-                {
-                    var ensured = await EnsureLookupAsync<TLookup>(toCandidates(navVal), ct);
-                    navProp.SetValue(owner, ensured);
-                    return;
+                    keyProp = type.GetProperty(cand);
+                    if (keyProp != null) break;
                 }
             }
+
+            if (keyProp == null)
+                return null;
+
+            var keyValue = keyProp.GetValue(entity);
+            if (keyValue == null)
+                return null;
+
+            if (keyValue is string s && string.IsNullOrWhiteSpace(s))
+                return null;
+
+            var param = Expression.Parameter(type, "e");
+
+            Expression body = Expression.Equal(
+                Expression.Property(param, keyProp),
+                Expression.Constant(keyValue, keyProp.PropertyType)
+            );
+
+            // 2) UserId varsa onu da filtreye ekle
+            var userIdProp = type.GetProperty("UserId");
+            if (userIdProp != null)
+            {
+                var userIdValue = userIdProp.GetValue(entity);
+                if (userIdValue != null)
+                {
+                    var targetUserType = Nullable.GetUnderlyingType(userIdProp.PropertyType) ?? userIdProp.PropertyType;
+                    var convertedUserId = Convert.ChangeType(userIdValue, targetUserType);
+
+                    var userExpr = Expression.Equal(
+                        Expression.Property(param, userIdProp),
+                        Expression.Constant(convertedUserId, userIdProp.PropertyType)
+                    );
+
+                    body = Expression.AndAlso(userExpr, body);
+                }
+            }
+
+            // 3) IsActive == true (varsa)
+            var isActiveProp = type.GetProperty("IsActive");
+            if (isActiveProp != null && isActiveProp.PropertyType == typeof(bool))
+            {
+                var activeExpr = Expression.Equal(
+                    Expression.Property(param, isActiveProp),
+                    Expression.Constant(true)
+                );
+                body = Expression.AndAlso(activeExpr, body);
+            }
+
+            var lambda = Expression.Lambda<Func<TRef, bool>>(body, param);
+
+            return await set.AsNoTracking().FirstOrDefaultAsync(lambda, ct);
+        }
+
+        private static Task<TEntity?> TryGetExistingByUniqueKeyAsync(
+            GibAppDbContext db,
+            TEntity entity,
+            CancellationToken ct)
+            => TryGetExistingByUniqueKeyAsync<TEntity>(db, entity, ct);
+
+        // ======================================================
+        // Normalizers (zorunlu alanlar)
+        // ======================================================
+
+        private static void NormalizeCustomer(Customer c, DateTimeOffset utcNow)
+        {
+            c.Name = string.IsNullOrWhiteSpace(c.Name) ? "GENEL MÜŞTERİ" : c.Name.Trim();
+            c.Surname = string.IsNullOrWhiteSpace(c.Surname) ? "." : c.Surname.Trim();
+            c.Phone = string.IsNullOrWhiteSpace(c.Phone) ? "-" : c.Phone.Trim();
+            c.Email = (c.Email ?? string.Empty).Trim();
+            c.TaxNo = (c.TaxNo ?? string.Empty).Trim();
+            c.TaxOffice = (c.TaxOffice ?? string.Empty).Trim();
+
+            TouchAudit(c, utcNow);
+        }
+
+        private static void NormalizeBrand(Brand b, DateTimeOffset utcNow)
+        {
+            b.Name = string.IsNullOrWhiteSpace(b.Name) ? "GENEL" : b.Name.Trim();
+            b.Country = string.IsNullOrWhiteSpace(b.Country) ? "TR" : b.Country.Trim();
+
+            TouchAudit(b, utcNow);
+        }
+
+        private static void NormalizeUnit(Unit u, DateTimeOffset utcNow)
+        {
+            u.ShortName = string.IsNullOrWhiteSpace(u.ShortName) ? "C62" : u.ShortName.Trim();
+            u.Name = string.IsNullOrWhiteSpace(u.Name)
+                ? (u.ShortName == "C62" ? "ADET" : u.ShortName)
+                : u.Name.Trim();
+
+            TouchAudit(u, utcNow);
+        }
+
+        private static void NormalizePaymentType(PaymentType pt, DateTimeOffset utcNow)
+        {
+            pt.Name = string.IsNullOrWhiteSpace(pt.Name) ? "NAKIT" : pt.Name.Trim();
+            if (string.IsNullOrWhiteSpace(pt.Desc))
+                pt.Desc = pt.Name;
+
+            TouchAudit(pt, utcNow);
+        }
+
+        private static void NormalizeBank(Bank b, DateTimeOffset utcNow)
+        {
+            b.Name = string.IsNullOrWhiteSpace(b.Name) ? "Ziraat Bankası" : b.Name.Trim();
+            b.SwiftCode = string.IsNullOrWhiteSpace(b.SwiftCode) ? "TCZBTR2A" : b.SwiftCode.Trim();
+            b.Country = string.IsNullOrWhiteSpace(b.Country) ? "TR" : b.Country.Trim();
+            b.City = string.IsNullOrWhiteSpace(b.City) ? "Ankara" : b.City.Trim();
+
+            TouchAudit(b, utcNow);
+        }
+
+        private static void NormalizePaymentAccount(PaymentAccount pa, string defaultCurrency, DateTimeOffset utcNow)
+        {
+            pa.Name = string.IsNullOrWhiteSpace(pa.Name) ? "KASA" : pa.Name.Trim();
+
+            if (string.IsNullOrWhiteSpace(pa.Desc))
+                pa.Desc = "Varsayılan Kasa";
+
+            if (string.IsNullOrWhiteSpace(pa.AccountNo))
+                pa.AccountNo = "0001";
+
+            if (string.IsNullOrWhiteSpace(pa.Iban))
+                pa.Iban = "TR000000000000000000000000";
+
+            if (string.IsNullOrWhiteSpace(pa.Currency))
+                pa.Currency = string.IsNullOrWhiteSpace(defaultCurrency) ? "TRY" : defaultCurrency;
+
+            TouchAudit(pa, utcNow);
+        }
+
+        private static void NormalizeItem(Item it, string defaultCurrency, DateTimeOffset utcNow)
+        {
+            if (string.IsNullOrWhiteSpace(it.Name))
+                it.Name = "GENEL ÜRÜN";
+
+            if (string.IsNullOrWhiteSpace(it.Code))
+                it.Code = it.Name;
+
+            if (string.IsNullOrWhiteSpace(it.Currency))
+                it.Currency = string.IsNullOrWhiteSpace(defaultCurrency) ? "TRY" : defaultCurrency;
+
+            TouchAudit(it, utcNow);
+        }
+
+        private static void NormalizeSgk(Sgk sg, Invoice inv, DateTimeOffset utcNow)
+        {
+            sg.Type = string.IsNullOrWhiteSpace(sg.Type) ? "GENEL" : sg.Type.Trim();
+            sg.Code = (sg.Code ?? string.Empty).Trim();
+            sg.Name = (sg.Name ?? string.Empty).Trim();
+            sg.No = (sg.No ?? string.Empty).Trim();
+
+            if (sg.StartDate == default)
+                sg.StartDate = inv.InvoiceDate != default ? inv.InvoiceDate : utcNow.UtcDateTime;
+
+            if (sg.EndDate == default)
+                sg.EndDate = sg.StartDate;
+
+            TouchAudit(sg, utcNow);
+        }
+
+        private static void NormalizeTourist(Tourist t, DateTimeOffset utcNow)
+        {
+            t.Name = string.IsNullOrWhiteSpace(t.Name) ? "MISAFIR" : t.Name.Trim();
+            t.Surname = string.IsNullOrWhiteSpace(t.Surname) ? "." : t.Surname.Trim();
+            t.PassportNo = string.IsNullOrWhiteSpace(t.PassportNo) ? "-" : t.PassportNo.Trim();
+            t.Country = string.IsNullOrWhiteSpace(t.Country) ? "TR" : t.Country.Trim();
+            t.City = (t.City ?? string.Empty).Trim();
+            t.District = (t.District ?? string.Empty).Trim();
+            t.AccountNo = (t.AccountNo ?? string.Empty).Trim();
+            t.Bank = (t.Bank ?? string.Empty).Trim();
+            t.Currency = string.IsNullOrWhiteSpace(t.Currency) ? "TRY" : t.Currency.Trim();
+            t.Note = (t.Note ?? string.Empty).Trim();
+
+            if (t.PassportDate == default)
+                t.PassportDate = utcNow.UtcDateTime;
+
+            TouchAudit(t, utcNow);
+        }
+
+        private static void NormalizeReturns(Returns r, Invoice inv, DateTimeOffset utcNow)
+        {
+            r.Number = string.IsNullOrWhiteSpace(r.Number) ? "-" : r.Number.Trim();
+
+            if (r.Date == default)
+                r.Date = inv.InvoiceDate != default ? inv.InvoiceDate : utcNow.UtcDateTime;
+
+            TouchAudit(r, utcNow);
+        }
+
+        private static void NormalizeServicesProvider(ServicesProvider sp, DateTimeOffset utcNow)
+        {
+            sp.No = (sp.No ?? string.Empty).Trim();
+            sp.SystemUser = (sp.SystemUser ?? string.Empty).Trim();
+
+            TouchAudit(sp, utcNow);
+        }
+
+        private static void NormalizePayment(Payment p, Invoice inv, DateTimeOffset utcNow)
+        {
+            if (string.IsNullOrWhiteSpace(p.Currency))
+                p.Currency = string.IsNullOrWhiteSpace(inv.Currency) ? "TRY" : inv.Currency;
+
+            if (p.Date == default)
+                p.Date = utcNow.UtcDateTime;
+
+            p.Note = (p.Note ?? string.Empty).Trim();
+
+            TouchAudit(p, utcNow);
+        }
+
+        private static void NormalizeInvoice(Invoice inv, DateTimeOffset utcNow)
+        {
+            if (string.IsNullOrWhiteSpace(inv.Currency))
+                inv.Currency = "TRY";
+
+            if (inv.InvoiceDate == default)
+                inv.InvoiceDate = utcNow.UtcDateTime;
+
+            if (string.IsNullOrWhiteSpace(inv.InvoiceNo))
+                inv.InvoiceNo = $"INV-{utcNow:yyyyMMddHHmmss}";
+
+            TouchAudit(inv, utcNow);
         }
 
         // ======================================================
-        // Default helpers
+        // Attach / Create Helpers
         // ======================================================
 
-        private async Task<Bank> EnsureDefaultBankAsync(CancellationToken ct)
+        private async Task AttachOrCreateBrandAsync(Item item, CancellationToken ct, DateTimeOffset utcNow)
         {
-            var probe = new { Name = "Ziraat Bankası", SwiftCode = "TCZBTR2A" };
-            var found = await FindLookupAsync<Bank>(probe, ct);
-            if (found != null) return found;
+            var brand = item.Brand;
+            if (brand == null) return;
 
-            var ensured = await EnsureLookupAsync<Bank>(new Dictionary<string, string?>
+            PropagateUserId(item, brand);
+
+            if (brand.Id > 0)
             {
-                ["Name"] = "Ziraat Bankası",
-                ["SwiftCode"] = "TCZBTR2A",
-                ["Country"] = "TR",
-                ["City"] = "Ankara"
-            }, ct);
+                var existing = await _db.Set<Brand>().FindAsync(new object[] { brand.Id }, ct);
+                if (existing != null)
+                {
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    item.Brand = existing;
+                    item.BrandId = existing.Id;
+                    return;
+                }
+            }
 
-            return ensured;
+            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, brand, ct);
+            if (existingByKey != null)
+            {
+                _db.Attach(existingByKey);
+                _db.Entry(existingByKey).State = EntityState.Unchanged;
+                item.Brand = existingByKey;
+                item.BrandId = existingByKey.Id;
+                return;
+            }
+
+            ResetIdentityId(brand);
+            NormalizeBrand(brand, utcNow);
+            brand.Items = null;
         }
 
-        private async Task<Brand> EnsureDefaultBrandAsync(CancellationToken ct)
+        private async Task AttachOrCreateUnitAsync(Item item, CancellationToken ct, DateTimeOffset utcNow)
         {
-            var probe = new { Name = "GENEL", Country = "TR" };
-            var found = await FindLookupAsync<Brand>(probe, ct);
-            if (found != null) return found;
+            var unit = item.Unit;
+            if (unit == null) return;
 
-            var ensured = await EnsureLookupAsync<Brand>(new Dictionary<string, string?>
+            PropagateUserId(item, unit);
+
+            if (unit.Id > 0)
             {
-                ["Name"] = "GENEL",
-                ["Country"] = "TR"
-            }, ct);
+                var existing = await _db.Set<Unit>().FindAsync(new object[] { unit.Id }, ct);
+                if (existing != null)
+                {
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    item.Unit = existing;
+                    item.UnitId = existing.Id;
+                    return;
+                }
+            }
 
-            return ensured;
+            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, unit, ct);
+            if (existingByKey != null)
+            {
+                _db.Attach(existingByKey);
+                _db.Entry(existingByKey).State = EntityState.Unchanged;
+                item.Unit = existingByKey;
+                item.UnitId = existingByKey.Id;
+                return;
+            }
+
+            ResetIdentityId(unit);
+            NormalizeUnit(unit, utcNow);
+            unit.Items = null;
+        }
+
+        private async Task AttachOrCreatePaymentTypeAsync(Payment p, CancellationToken ct, DateTimeOffset utcNow)
+        {
+            var pt = p.PaymentType;
+            if (pt == null) return;
+
+            PropagateUserId(p, pt);
+
+            if (pt.Id > 0)
+            {
+                var existing = await _db.Set<PaymentType>().FindAsync(new object[] { pt.Id }, ct);
+                if (existing != null)
+                {
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    p.PaymentType = existing;
+                    p.PaymentTypeId = existing.Id;
+                    return;
+                }
+            }
+
+            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, pt, ct);
+            if (existingByKey != null)
+            {
+                _db.Attach(existingByKey);
+                _db.Entry(existingByKey).State = EntityState.Unchanged;
+                p.PaymentType = existingByKey;
+                p.PaymentTypeId = existingByKey.Id;
+                return;
+            }
+
+            ResetIdentityId(pt);
+            NormalizePaymentType(pt, utcNow);
+            pt.Payments = null;
+        }
+
+        private async Task AttachOrCreateBankAsync(PaymentAccount pa, CancellationToken ct, DateTimeOffset utcNow)
+        {
+            var bank = pa.Bank;
+            if (bank == null) return;
+
+            PropagateUserId(pa, bank);
+
+            if (bank.Id > 0)
+            {
+                var existing = await _db.Set<Bank>().FindAsync(new object[] { bank.Id }, ct);
+                if (existing != null)
+                {
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    pa.Bank = existing;
+                    pa.BankId = existing.Id;
+                    return;
+                }
+            }
+
+            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, bank, ct);
+            if (existingByKey != null)
+            {
+                _db.Attach(existingByKey);
+                _db.Entry(existingByKey).State = EntityState.Unchanged;
+                pa.Bank = existingByKey;
+                pa.BankId = existingByKey.Id;
+                return;
+            }
+
+            ResetIdentityId(bank);
+            NormalizeBank(bank, utcNow);
+            bank.PaymentAccounts = null;
+        }
+
+        private async Task AttachOrCreatePaymentAccountAsync(Payment p, CancellationToken ct, DateTimeOffset utcNow)
+        {
+            var pa = p.PaymentAccount;
+            if (pa == null) return;
+
+            PropagateUserId(p, pa);
+
+            if (pa.Id > 0)
+            {
+                var existing = await _db.Set<PaymentAccount>().FindAsync(new object[] { pa.Id }, ct);
+                if (existing != null)
+                {
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    p.PaymentAccount = existing;
+                    p.PaymentAccountId = existing.Id;
+                    return;
+                }
+            }
+
+            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, pa, ct);
+            if (existingByKey != null)
+            {
+                _db.Attach(existingByKey);
+                _db.Entry(existingByKey).State = EntityState.Unchanged;
+                p.PaymentAccount = existingByKey;
+                p.PaymentAccountId = existingByKey.Id;
+                return;
+            }
+
+            ResetIdentityId(pa);
+            NormalizePaymentAccount(pa, p.Currency, utcNow);
+            await AttachOrCreateBankAsync(pa, ct, utcNow);
+            pa.Payments = null;
         }
 
         // ======================================================
         // Invoice Graph Fixer
         // ======================================================
 
-        private async Task FixInvoiceGraphAsync(Invoice inv, CancellationToken ct)
+        private async Task FixInvoiceGraphAsync(Invoice inv, DateTimeOffset utcNow, CancellationToken ct)
         {
-            var now = DateTime.UtcNow;
+            // Root
+            TouchAudit(inv, utcNow);
 
-            // ---- CUSTOMER
-            try
+            // 1) CUSTOMER
+            Customer? cust = inv.Customer;
+            long customerId = inv.CustomerId;
+
+            if (cust != null)
             {
-                if (inv.CustomerId > 0)
-                {
-                    var existing = await FindByIdAsync<Customer>(inv.CustomerId, ct);
-                    if (existing == null)
-                        throw new Exception($"CustomerId {inv.CustomerId} bulunamadı.");
-
-                    _db.Attach(existing);
-                    _db.Entry(existing).State = EntityState.Unchanged;
-                    inv.Customer = existing; // yeni kayıt denemesini engeller
-                }
-                else if (inv.Customer != null)
-                {
-                    NormalizeCustomer(inv.Customer);
-
-                    // döngüleri kır + timestamp
-                    inv.Customer.Invoices = null;
-                    inv.Customer.Addresses = null;
-                    inv.Customer.CustomersGroups = null;
-                    if (inv.Customer.CreatedAt == default) inv.Customer.CreatedAt = now;
-                    inv.Customer.UpdatedAt = now;
-                }
+                PropagateUserId(inv, cust);
             }
-            catch (MissingMemberException)
+
+            if (cust != null && cust.Id > 0 && customerId == 0)
+                customerId = cust.Id;
+
+            if (customerId > 0)
             {
-                if (inv.Customer != null)
+                var existingById = await _db.Set<Customer>().FindAsync(new object[] { customerId }, ct);
+                if (existingById != null)
                 {
-                    NormalizeCustomer(inv.Customer);
-                    inv.Customer.Invoices = null;
-                    inv.Customer.Addresses = null;
-                    inv.Customer.CustomersGroups = null;
-                    if (inv.Customer.CreatedAt == default) inv.Customer.CreatedAt = now;
-                    inv.Customer.UpdatedAt = now;
+                    _db.Attach(existingById);
+                    _db.Entry(existingById).State = EntityState.Unchanged;
+                    inv.Customer = existingById;
+                    inv.CustomerId = existingById.Id;
+                }
+                else
+                {
+                    inv.CustomerId = 0;
                 }
             }
 
-            // ---- Backrefs temizle (döngü kır)
-            foreach (var it in inv.InvoicesItems ?? Enumerable.Empty<InvoicesItem>()) it.Invoice = null;
-            foreach (var tx in inv.InvoicesTaxes ?? Enumerable.Empty<InvoicesTax>()) tx.Invoice = null;
-            foreach (var sp in inv.ServicesProviders ?? Enumerable.Empty<ServicesProvider>()) sp.Invoice = null;
-            foreach (var sg in inv.SgkRecords ?? Enumerable.Empty<Sgk>()) sg.Invoice = null;
-            foreach (var p in inv.InvoicesPayments ?? Enumerable.Empty<InvoicesPayment>()) p.Invoice = null;
-            foreach (var r in inv.Returns ?? Enumerable.Empty<Returns>()) r.Invoice = null;
-            foreach (var t in inv.Tourists ?? Enumerable.Empty<Tourist>()) t.Invoice = null;
-
-            // ---- Items: Unit + Brand çözümleme
-            if (inv.InvoicesItems != null)
+            if (inv.CustomerId == 0)
             {
-                foreach (var li in inv.InvoicesItems)
+                if (cust == null)
                 {
-                    if (li.CreatedAt == default) li.CreatedAt = now;
-                    li.UpdatedAt = now;
+                    cust = new Customer { Name = "GENEL MÜŞTERİ" };
+                    PropagateUserId(inv, cust);
+                    inv.Customer = cust;
+                }
 
-                    var it = li.Item;
-                    if (it != null)
+                var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, cust, ct);
+                if (existingByKey != null)
+                {
+                    _db.Attach(existingByKey);
+                    _db.Entry(existingByKey).State = EntityState.Unchanged;
+                    inv.Customer = existingByKey;
+                    inv.CustomerId = existingByKey.Id;
+                }
+                else
+                {
+                    ResetIdentityId(cust);
+                    NormalizeCustomer(cust, utcNow);
+                    cust.Addresses = null;
+                    cust.CustomersGroups = null;
+                    cust.Invoices = null;
+                }
+            }
+
+            // 2) Koleksiyon init
+            inv.InvoicesItems ??= new List<InvoicesItem>();
+            inv.InvoicesTaxes ??= new List<InvoicesTax>();
+            inv.InvoicesDiscounts ??= new List<InvoicesDiscount>();
+            inv.Tourists ??= new List<Tourist>();
+            inv.SgkRecords ??= new List<Sgk>();
+            inv.ServicesProviders ??= new List<ServicesProvider>();
+            inv.Returns ??= new List<Returns>();
+            inv.InvoicesPayments ??= new List<InvoicesPayment>();
+
+            // 3) ITEMS
+            foreach (var li in inv.InvoicesItems)
+            {
+                PropagateUserId(inv, li);
+                TouchAudit(li, utcNow);
+                li.Invoice = null;
+
+                var it = li.Item;
+
+                if (it != null)
+                {
+                    PropagateUserId(inv, it);
+
+                    if (it.Id > 0)
                     {
-                        if (it.CreatedAt == default) it.CreatedAt = now;
-                        it.UpdatedAt = now;
-
-                        // --- UNIT
-                        var unitPi = it.GetType().GetProperty("Unit");
-                        var unitIdPi = it.GetType().GetProperty("UnitId");
-                        var unitObj = unitPi?.GetValue(it);
-                        var unitIdVal = unitIdPi?.GetValue(it);
-
-                        string? unitCode = it.GetType().GetProperty("UnitCode")?.GetValue(it)?.ToString();
-                        string? unitShort = it.GetType().GetProperty("UnitShortName")?.GetValue(it)?.ToString();
-                        string? unitName = it.GetType().GetProperty("UnitName")?.GetValue(it)?.ToString();
-
-                        if (unitObj != null)
+                        var existingItem = await _db.Set<Item>().FindAsync(new object[] { it.Id }, ct);
+                        if (existingItem != null)
                         {
-                            unitCode ??= unitObj.GetType().GetProperty("Code")?.GetValue(unitObj)?.ToString();
-                            unitShort ??= unitObj.GetType().GetProperty("ShortName")?.GetValue(unitObj)?.ToString();
-                            unitName ??= unitObj.GetType().GetProperty("Name")?.GetValue(unitObj)?.ToString();
-                        }
-
-                        unitShort ??= "C62";
-                        unitName ??= unitShort == "C62" ? "ADET" : unitShort;
-
-                        var unitCandidates = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-                        {
-                            ["Code"] = unitCode,
-                            ["ShortName"] = unitShort,
-                            ["Name"] = unitName
-                        };
-
-                        Unit ensuredUnit;
-                        if (unitIdVal != null && ToInt64(unitIdVal) != 0L)
-                        {
-                            var existing = await FindByIdAsync<Unit>(unitIdVal!, ct);
-                            ensuredUnit = existing ?? await EnsureLookupAsync<Unit>(unitCandidates, ct);
+                            _db.Attach(existingItem);
+                            _db.Entry(existingItem).State = EntityState.Unchanged;
+                            li.Item = existingItem;
+                            li.ItemId = existingItem.Id;
+                            it = existingItem;
                         }
                         else
                         {
-                            ensuredUnit = await EnsureLookupAsync<Unit>(unitCandidates, ct);
+                            it.Id = 0;
                         }
-                        unitPi?.SetValue(it, ensuredUnit);
+                    }
 
-                        // --- BRAND
-                        var brandPi = it.GetType().GetProperty("Brand");
-                        var brandIdPi = it.GetType().GetProperty("BrandId");
-                        var brandObj = brandPi?.GetValue(it);
-                        var brandIdVal = brandIdPi?.GetValue(it);
-
-                        var brandCandidates = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                    if (it.Id == 0)
+                    {
+                        var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, it, ct);
+                        if (existingByKey != null)
                         {
-                            ["Name"] = brandObj?.GetType().GetProperty("Name")?.GetValue(brandObj)?.ToString(),
-                            ["Code"] = brandObj?.GetType().GetProperty("Code")?.GetValue(brandObj)?.ToString(),
-                            ["Country"] = brandObj?.GetType().GetProperty("Country")?.GetValue(brandObj)?.ToString() ?? "TR"
-                        };
+                            _db.Attach(existingByKey);
+                            _db.Entry(existingByKey).State = EntityState.Unchanged;
+                            li.Item = existingByKey;
+                            li.ItemId = existingByKey.Id;
+                            it = existingByKey;
+                        }
+                    }
 
-                        Brand ensuredBrand;
+                    if (it.Id == 0)
+                    {
+                        ResetIdentityId(it);
+                        NormalizeItem(it, inv.Currency, utcNow);
 
-                        if (brandIdVal != null && ToInt64(brandIdVal) != 0L)
+                        if (it.Brand != null)
+                            await AttachOrCreateBrandAsync(it, ct, utcNow);
+                        else if (it.BrandId > 0)
                         {
-                            var existingBrand = await FindByIdAsync<Brand>(brandIdVal!, ct);
+                            var existingBrand = await _db.Set<Brand>().FindAsync(new object[] { it.BrandId }, ct);
                             if (existingBrand != null)
                             {
-                                ensuredBrand = existingBrand;
-                            }
-                            else
-                            {
-                                brandIdPi?.SetValue(it, Activator.CreateInstance(brandIdPi.PropertyType));
-                                if (brandObj != null)
-                                {
-                                    var found = await FindLookupAsync<Brand>(brandObj, ct);
-                                    ensuredBrand = found ?? await EnsureLookupAsync<Brand>(brandCandidates, ct);
-                                }
-                                else
-                                {
-                                    ensuredBrand = await EnsureDefaultBrandAsync(ct);
-                                }
+                                _db.Attach(existingBrand);
+                                _db.Entry(existingBrand).State = EntityState.Unchanged;
+                                it.Brand = existingBrand;
                             }
                         }
-                        else
+
+                        if (it.Unit != null)
+                            await AttachOrCreateUnitAsync(it, ct, utcNow);
+                        else if (it.UnitId > 0)
                         {
-                            if (brandObj != null)
+                            var existingUnit = await _db.Set<Unit>().FindAsync(new object[] { it.UnitId }, ct);
+                            if (existingUnit != null)
                             {
-                                var found = await FindLookupAsync<Brand>(brandObj, ct);
-                                ensuredBrand = found ?? await EnsureLookupAsync<Brand>(brandCandidates, ct);
-                            }
-                            else
-                            {
-                                ensuredBrand = await EnsureDefaultBrandAsync(ct);
+                                _db.Attach(existingUnit);
+                                _db.Entry(existingUnit).State = EntityState.Unchanged;
+                                it.Unit = existingUnit;
                             }
                         }
 
-                        NormalizeBrand(ensuredBrand);
-                        brandPi?.SetValue(it, ensuredBrand);
-
-                        // döngüleri kır
-                        it.GetType().GetProperty("ItemsCategories")?.SetValue(it, null);
-                        it.GetType().GetProperty("ItemsDiscounts")?.SetValue(it, null);
-                        it.GetType().GetProperty("Identifiers")?.SetValue(it, null);
+                        it.ItemsCategories = null;
+                        it.ItemsDiscounts = null;
+                        it.Identifiers = null;
                     }
                 }
-            }
-
-            // ---- Taxes
-            foreach (var tx in inv.InvoicesTaxes ?? Enumerable.Empty<InvoicesTax>())
-            { if (tx.CreatedAt == default) tx.CreatedAt = now; tx.UpdatedAt = now; }
-
-            // ---- Payments (PaymentType / PaymentAccount / Bank)
-            if (inv.InvoicesPayments != null)
-            {
-                foreach (var link in inv.InvoicesPayments)
+                else if (li.ItemId > 0)
                 {
-                    if (link.CreatedAt == default) link.CreatedAt = now;
-                    link.UpdatedAt = now;
-
-                    var p = link.Payment;
-                    if (p != null)
+                    var existingItem = await _db.Set<Item>().FindAsync(new object[] { li.ItemId }, ct);
+                    if (existingItem != null)
                     {
-                        if (p.CreatedAt == default) p.CreatedAt = now;
-                        p.UpdatedAt = now;
-
-                        // PaymentType
-                        await AttachLookupByFkOrNavOrEnsure<PaymentType>(
-                            p,
-                            "PaymentTypeId",
-                            "PaymentType",
-                            nav => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                ["Name"] = nav?.GetType().GetProperty("Name")?.GetValue(nav)?.ToString() ?? "NAKIT",
-                                ["Code"] = nav?.GetType().GetProperty("Code")?.GetValue(nav)?.ToString()
-                            },
-                            ct);
-
-                        if (p.PaymentType != null) NormalizePaymentType(p.PaymentType);
-
-                        // PaymentAccount
-                        await AttachLookupByFkOrNavOrEnsure<PaymentAccount>(
-                            p,
-                            "PaymentAccountId",
-                            "PaymentAccount",
-                            nav => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                ["Name"] = nav?.GetType().GetProperty("Name")?.GetValue(nav)?.ToString() ?? "KASA",
-                                ["Code"] = nav?.GetType().GetProperty("Code")?.GetValue(nav)?.ToString(),
-                                ["Desc"] = nav?.GetType().GetProperty("Desc")?.GetValue(nav)?.ToString(),
-                                ["AccountNo"] = nav?.GetType().GetProperty("AccountNo")?.GetValue(nav)?.ToString(),
-                                ["Iban"] = nav?.GetType().GetProperty("Iban")?.GetValue(nav)?.ToString(),
-                                ["Currency"] = nav?.GetType().GetProperty("Currency")?.GetValue(nav)?.ToString()
-                            },
-                            ct);
-
-                        var pa = p.PaymentAccount;
-                        if (pa != null)
-                        {
-                            if (pa.BankId != 0)
-                            {
-                                var bank = await FindByIdAsync<Bank>(pa.BankId, ct);
-                                if (bank != null) pa.Bank = bank;
-                                else pa.BankId = 0;
-                            }
-
-                            if (pa.Bank == null)
-                            {
-                                await AttachLookupByFkOrNavOrEnsure<Bank>(
-                                    pa,
-                                    "BankId",
-                                    "Bank",
-                                    nav => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-                                    {
-                                        ["Name"] = nav?.GetType().GetProperty("Name")?.GetValue(nav)?.ToString(),
-                                        ["SwiftCode"] = nav?.GetType().GetProperty("SwiftCode")?.GetValue(nav)?.ToString(),
-                                        ["Country"] = nav?.GetType().GetProperty("Country")?.GetValue(nav)?.ToString(),
-                                        ["City"] = nav?.GetType().GetProperty("City")?.GetValue(nav)?.ToString(),
-                                    },
-                                    ct);
-                            }
-
-                            if (pa.Bank == null && pa.BankId == 0)
-                            {
-                                var defBank = await EnsureDefaultBankAsync(ct);
-                                pa.Bank = defBank;
-                            }
-
-                            NormalizePaymentAccount(pa, p.Currency);
-                            if (pa.Bank != null) NormalizeBank(pa.Bank);
-
-                            pa.Payments = null; // döngü kır
-                        }
-
-                        p.InvoicesPayments = null; // döngü kır
+                        _db.Attach(existingItem);
+                        _db.Entry(existingItem).State = EntityState.Unchanged;
+                        li.Item = existingItem;
                     }
                 }
+
+                if (li.Price <= 0 && li.Item != null)
+                    li.Price = li.Item.Price;
+
+                if (li.Total <= 0)
+                    li.Total = li.Quantity * li.Price;
             }
 
-            // ---- Discounts
+            // 4) TAXES (InvoicesTax) - duplicate kontrollü
+            if (inv.InvoicesTaxes != null && inv.InvoicesTaxes.Count > 0)
+            {
+                var normalizedTaxes = new List<InvoicesTax>();
+
+                foreach (var tx in inv.InvoicesTaxes)
+                {
+                    PropagateUserId(inv, tx);
+                    TouchAudit(tx, utcNow);
+                    tx.Invoice = null;
+
+                    InvoicesTax? existing = null;
+
+                    // a) Id ile
+                    if (tx.Id > 0)
+                    {
+                        existing = await _db.Set<InvoicesTax>().FindAsync(new object[] { tx.Id }, ct);
+                    }
+
+                    // b) (UserId + Name) ile
+                    if (existing == null)
+                    {
+                        existing = await TryGetExistingByUniqueKeyAsync(_db, tx, ct);
+                    }
+
+                    if (existing != null)
+                    {
+                        _db.Attach(existing);
+                        _db.Entry(existing).State = EntityState.Unchanged;
+                        normalizedTaxes.Add(existing);
+                    }
+                    else
+                    {
+                        ResetIdentityId(tx);
+                        normalizedTaxes.Add(tx);
+                    }
+                }
+
+                inv.InvoicesTaxes = normalizedTaxes;
+            }
+
+            // 5) DISCOUNTS (InvoicesDiscount) - duplicate kontrollü
             if (inv.InvoicesDiscounts != null && inv.InvoicesDiscounts.Count > 0)
             {
-                var firstItem = inv.InvoicesItems?.FirstOrDefault()?.Item;
+                var firstItem = inv.InvoicesItems.FirstOrDefault()?.Item;
+                var normalizedDiscounts = new List<InvoicesDiscount>();
+
                 foreach (var d in inv.InvoicesDiscounts)
                 {
-                    if (d.CreatedAt == default) d.CreatedAt = now;
-                    d.UpdatedAt = now;
-                    if (firstItem != null) d.Item = firstItem;
+                    PropagateUserId(inv, d);
+                    TouchAudit(d, utcNow);
+
+                    if (firstItem != null && d.Item == null && d.ItemId == 0)
+                        d.Item = firstItem;
+
+                    InvoicesDiscount? existing = null;
+
+                    if (d.Id > 0)
+                    {
+                        existing = await _db.Set<InvoicesDiscount>().FindAsync(new object[] { d.Id }, ct);
+                    }
+
+                    if (existing == null)
+                    {
+                        existing = await TryGetExistingByUniqueKeyAsync(_db, d, ct);
+                    }
+
+                    if (existing != null)
+                    {
+                        _db.Attach(existing);
+                        _db.Entry(existing).State = EntityState.Unchanged;
+                        normalizedDiscounts.Add(existing);
+                    }
+                    else
+                    {
+                        ResetIdentityId(d);
+                        normalizedDiscounts.Add(d);
+                    }
                 }
+
+                inv.InvoicesDiscounts = normalizedDiscounts;
             }
 
-            // ---- SGK / SP / Returns / Tourists
-            foreach (var sg in inv.SgkRecords ?? Enumerable.Empty<Sgk>())
-            { if (sg.CreatedAt == default) sg.CreatedAt = now; sg.UpdatedAt = now; }
-
-            foreach (var sp in inv.ServicesProviders ?? Enumerable.Empty<ServicesProvider>())
-            { if (sp.CreatedAt == default) sp.CreatedAt = now; sp.UpdatedAt = now; }
-
-            foreach (var r in inv.Returns ?? Enumerable.Empty<Returns>())
-            { if (r.CreatedAt == default) r.CreatedAt = now; r.UpdatedAt = now; }
-
-            foreach (var t in inv.Tourists ?? Enumerable.Empty<Tourist>())
-            { if (t.CreatedAt == default) t.CreatedAt = now; t.UpdatedAt = now; }
-
-            // ---- Invoice temel alanlar
-            if (string.IsNullOrWhiteSpace(inv.Currency)) inv.Currency = "TRY";
-            if (inv.InvoiceDate == default) inv.InvoiceDate = now;
-            if (inv.CreatedAt == default) inv.CreatedAt = now;
-            inv.UpdatedAt = now;
-
-            if (inv.Total <= 0 && inv.InvoicesItems?.Any() == true)
+            // 6) SGK / SP / RETURNS / TOURISTS
+            foreach (var sg in inv.SgkRecords)
             {
-                var gross = inv.InvoicesItems.Sum(x => x.Total);
-                if (inv.InvoicesTaxes?.Any() == true) gross += inv.InvoicesTaxes.Sum(x => x.Amount);
-                inv.Total = gross;
+                PropagateUserId(inv, sg);
+                NormalizeSgk(sg, inv, utcNow);
+                sg.Invoice = null;
+            }
+
+            foreach (var sp in inv.ServicesProviders)
+            {
+                PropagateUserId(inv, sp);
+                NormalizeServicesProvider(sp, utcNow);
+                sp.Invoice = null;
+            }
+
+            foreach (var r in inv.Returns)
+            {
+                PropagateUserId(inv, r);
+                NormalizeReturns(r, inv, utcNow);
+                r.Invoice = null;
+            }
+
+            foreach (var t in inv.Tourists)
+            {
+                PropagateUserId(inv, t);
+                NormalizeTourist(t, utcNow);
+                t.Invoice = null;
+            }
+
+            // 7) PAYMENTS
+            foreach (var link in inv.InvoicesPayments)
+            {
+                PropagateUserId(inv, link);
+                TouchAudit(link, utcNow);
+                link.Invoice = null;
+
+                var p = link.Payment;
+                if (p == null) continue;
+
+                PropagateUserId(inv, p);
+
+                if (p.Id > 0)
+                {
+                    var existingPayment = await _db.Set<Payment>().FindAsync(new object[] { p.Id }, ct);
+                    if (existingPayment != null)
+                    {
+                        _db.Attach(existingPayment);
+                        _db.Entry(existingPayment).State = EntityState.Unchanged;
+                        link.Payment = existingPayment;
+                        link.PaymentId = existingPayment.Id;
+                        continue;
+                    }
+
+                    p.Id = 0;
+                }
+
+                NormalizePayment(p, inv, utcNow);
+
+                if (p.PaymentType != null)
+                    await AttachOrCreatePaymentTypeAsync(p, ct, utcNow);
+                else if (p.PaymentTypeId > 0)
+                {
+                    var existingPt = await _db.Set<PaymentType>().FindAsync(new object[] { p.PaymentTypeId }, ct);
+                    if (existingPt != null)
+                    {
+                        _db.Attach(existingPt);
+                        _db.Entry(existingPt).State = EntityState.Unchanged;
+                        p.PaymentType = existingPt;
+                    }
+                }
+
+                if (p.PaymentAccount != null)
+                    await AttachOrCreatePaymentAccountAsync(p, ct, utcNow);
+                else if (p.PaymentAccountId > 0)
+                {
+                    var existingPa = await _db.Set<PaymentAccount>().FindAsync(new object[] { p.PaymentAccountId }, ct);
+                    if (existingPa != null)
+                    {
+                        _db.Attach(existingPa);
+                        _db.Entry(existingPa).State = EntityState.Unchanged;
+                        p.PaymentAccount = existingPa;
+                    }
+                }
+
+                p.InvoicesPayments = null;
+            }
+
+            // 8) INVOICE temel
+            NormalizeInvoice(inv, utcNow);
+
+            if (inv.Total <= 0)
+            {
+                var itemsTotal = inv.InvoicesItems.Sum(x => x.Total);
+                var taxesTotal = inv.InvoicesTaxes.Sum(x => x.Amount);
+                inv.Total = itemsTotal + taxesTotal;
             }
         }
     }

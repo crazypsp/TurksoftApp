@@ -1,7 +1,4 @@
-﻿/// <reference path="../entites/invoice.js" />
-/// <reference path="../entites/invoice.js" />
-/// <reference path="../entites/invoice.js" />
-
+﻿
 // Login.js'teki gibi: Service'den create fonksiyonunu al
 import { create as createInvoice } from '../entites/invoice.js';
 
@@ -56,6 +53,21 @@ import { create as createInvoice } from '../entites/invoice.js';
             console.error("RowVersion base64 dönüşümünde hata:", e);
             return "";
         }
+    }
+
+    // BaseEntity alanlarını doldurmak için helper
+    function buildBaseEntity(currentUserId, nowIso, rowVersionBase64) {
+        return {
+            UserId: currentUserId || 0,
+            IsActive: true,
+            DeleteDate: null,
+            DeletedByUserId: null,
+            CreatedAt: nowIso,
+            UpdatedAt: null,
+            CreatedByUserId: currentUserId || null,
+            UpdatedByUserId: null,
+            RowVersion: rowVersionBase64 || null
+        };
     }
 
     // Global ListData objesini garanti altına al
@@ -122,7 +134,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             TemplateName: null
         },
 
-        // Önceki cevaptan: xml/preview için nested customerParty
+        // Önizleme için nested customerParty
         customer: null,
 
         // Modellerin düz halleri (DB/DTO için daha uygun)
@@ -136,7 +148,7 @@ import { create as createInvoice } from '../entites/invoice.js';
         sellerAdditional: [],        // Satıcı Ek
         sellerAgentAdditional: [],   // Satıcı Şube Ek
         buyerAdditional: [],         // Alıcı Ek
-        ekAlan: [],                 // KOBİ / EYDEP vb.
+        ekAlan: [],                  // KOBİ / EYDEP vb.
 
         // Fatura satırları
         invoiceLines: []
@@ -497,6 +509,24 @@ import { create as createInvoice } from '../entites/invoice.js';
             AliciEtiketi,
             ManuelCityEntry: isManual
         };
+    }
+
+    // FirstName/LastName boşsa PartyName'den ad/soyad ayır
+    function splitNameSurname(flatCustomer) {
+        let name = flatCustomer.FirstName || "";
+        let surname = flatCustomer.LastName || "";
+
+        if (!name && !surname && flatCustomer.PartyName) {
+            const parts = flatCustomer.PartyName.trim().split(/\s+/);
+            if (parts.length === 1) {
+                name = parts[0];
+                surname = ".";
+            } else {
+                surname = parts.pop();
+                name = parts.join(" ");
+            }
+        }
+        return { name, surname };
     }
 
     function fillCustomerFieldsFromTest(cust) {
@@ -959,7 +989,8 @@ import { create as createInvoice } from '../entites/invoice.js';
                 KdvOran: Utils.parseNumber($row.find(".js-line-kdv").val()),
                 KdvTutar: Utils.parseNumber($row.find(".js-line-kdv-amount").val()),
                 LineTotal: Utils.parseNumber($row.find(".js-line-total").val()),
-                IstisnaKodu: $row.find(".js-line-istisna").val() || ""
+                IstisnaKodu: $row.find(".js-line-istisna").val() || "",
+                SellerItemCode: "" // UI'de alan yoksa boş
             });
         });
 
@@ -1295,15 +1326,24 @@ import { create as createInvoice } from '../entites/invoice.js';
     }
 
     /***********************************************************
-     *  Invoice Entity (DTO)
+     *  Invoice Entity (DTO) - C# Invoice ve tüm ilişkiler full dolu
      ***********************************************************/
+    /***********************************************************
+ *  Invoice Entity (DTO) - C# Invoice ve tüm ilişkiler full dolu
+ ***********************************************************/
     function buildInvoiceEntityFromUI() {
         // Toplamları güncelle
         recalcTotals();
         const model = buildInvoiceModelFromUI();
         const h = model.invoiceheader || {};
 
-        const customerId = parseInt($("#ddlMusteriAra").val(), 10) || 0;
+        // Seçili müşteri Id (varsa)
+        let customerId = 0;
+        const ddlVal = $("#ddlMusteriAra").val();
+        if (ddlVal) {
+            const parsed = parseInt(ddlVal, 10);
+            if (!isNaN(parsed)) customerId = parsed;
+        }
 
         // Kullanıcı Id'si – sayfada varsa oradan al, yoksa 0
         let currentUserId = 0;
@@ -1313,54 +1353,78 @@ import { create as createInvoice } from '../entites/invoice.js';
             if (!isNaN(parsed)) currentUserId = parsed;
         }
 
-        // RowVersion – 0x... hex → base64
-        let rowVersionBase64 = "";
+        const nowIso = new Date().toISOString();
+
+        // Sabit RowVersion hex (yeni kayıtlar için)
+        const DEFAULT_ROWVERSION_HEX = "0x00000000000007E1";
+        const defaultRowVersionBase64 = rowVersionHexToBase64(DEFAULT_ROWVERSION_HEX);
+
+        // RowVersion – 0x... hex → base64 (mevcut kayıt düzenleniyorsa, yoksa sabit)
+        let rowVersionBase64 = defaultRowVersionBase64;
         const $rowVerHidden = $("#hdnRowVersion");
         if ($rowVerHidden.length) {
-            const hexVal = $rowVerHidden.val();
+            const hexVal = ($rowVerHidden.val() || "").trim();
             if (hexVal) {
                 rowVersionBase64 = rowVersionHexToBase64(hexVal);
             }
         }
 
-        const nowIso = new Date().toISOString();
+        // Tüm BaseEntity türevleri için ortak doldurucu
+        const baseFor = (rvBase64) => buildBaseEntity(
+            currentUserId,
+            nowIso,
+            rvBase64 || defaultRowVersionBase64 // null/falsy gelirse bile default RowVersion bas
+        );
 
-        const entity = {
-            // ------------ Invoice.pk ------------
+        // Fatura no ve tarih
+        let invoiceNo =
+            $("#txtInvoiceNumber").val() ||
+            $("#txtFaturaNo").val() ||
+            (h.Prefix && h.Invoice_ID ? (h.Prefix + "-" + h.Invoice_ID) : (h.Invoice_ID || null)) ||
+            ("INV-" + Date.now());
+
+        let invoiceDateIso = nowIso;
+        if (h.IssueDate) {
+            const datePart = h.IssueDate;
+            const timePart = h.IssueTime || "00:00";
+            invoiceDateIso = datePart + "T" + timePart + ":00";
+        }
+
+        // Para birimi ve toplam
+        const currency = (h.DocumentCurrencyCode || $("#ddlParaBirimi").val() || "TRY").toString().toUpperCase();
+
+        let total = h.PayableAmount || 0;
+        if (!total) {
+            const txtTotal =
+                $("#odenecekToplam").val() ||
+                $("#odenecekToplam").text() ||
+                "0";
+            total = Utils.parseNumber(txtTotal);
+        }
+
+        // -------- ROOT INVOICE --------
+        const invoice = {
+            // BaseEntity (RowVersion kesin dolu)
+            ...baseFor(rowVersionBase64),
+
+            // Invoice alanları
             Id: 0,
+            CustomerId: customerId || 0,
+            InvoiceNo: invoiceNo,
+            InvoiceDate: invoiceDateIso,
+            Total: total,
+            Currency: currency,
 
-            // ------------ BaseEntity alanları ------------
-            UserId: currentUserId,
-            IsActive: true,
-            DeleteDate: null,
-            DeletedByUserId: null,
-            CreatedAt: nowIso,
-            UpdatedAt: null,
-            CreatedByUserId: currentUserId || null,
-            UpdatedByUserId: null,
-
-            RowVersion: rowVersionBase64,
-
-            // ------------ Invoice alanları ------------
-            CustomerId: customerId,
+            // Ek alanlar (C# Invoice'ta olmasa bile JSON sorun değil)
             Ettn: h.Invoice_ID || null,
-            InvoiceNo: h.Prefix
-                ? (h.Prefix + "-" + (h.Invoice_ID || ""))
-                : (h.Invoice_ID || null),
-            InvoiceDate: h.IssueDate
-                ? h.IssueDate + "T" + (h.IssueTime || "00:00") + ":00"
-                : null,
-            Total: h.PayableAmount || 0,
-            Currency: h.DocumentCurrencyCode || "TRY",
-
             BranchCode: $("#ddlSubeKodu").val() || null,
             SourceUrn: $("#ddlSourceUrn").val() || null,
             InvoicePrefix: $("#ddlInvoicePrefix").val() || null,
             TemplateName: $("#ddlGoruntuDosyasi").val() || null,
-
             InvoiceTypeCode: h.InvoiceTypeCode || null,
             Scenario: h.Scenario || null,
 
+            // Navigation
             Customer: null,
             InvoicesItems: [],
             InvoicesTaxes: [],
@@ -1377,89 +1441,259 @@ import { create as createInvoice } from '../entites/invoice.js';
             KamuAlicisi: model.kamuAlicisi || null
         };
 
-        // ------------ Customer ------------
-        const flatCustomer = readCustomerFromUI();
-        entity.Customer = {
-            IdentificationID: flatCustomer.IdentificationID,
-            PartyName: flatCustomer.PartyName,
-            FirstName: flatCustomer.FirstName,
-            LastName: flatCustomer.LastName,
-            TaxOffice: flatCustomer.TaxOffice,
-            CountryName: flatCustomer.CountryName,
-            CityName: flatCustomer.CityName,
-            CitySubdivisionName: flatCustomer.CitySubdivisionName,
-            StreetName: flatCustomer.StreetName,
-            Email: flatCustomer.Email,
-            WebsiteURI: flatCustomer.WebsiteURI,
-            Telephone: flatCustomer.Telephone,
-            Fax: flatCustomer.Fax,
-            PostalZone: flatCustomer.PostalZone,
-            AliciEtiketi: flatCustomer.AliciEtiketi,
-            ManuelCityEntry: flatCustomer.ManuelCityEntry
+        // -------- CUSTOMER --------
+        const flatCustomer = model.Customer || readCustomerFromUI();
+        const nameParts = splitNameSurname(flatCustomer);
+
+        const customerEntity = {
+            ...baseFor(), // RowVersion sabit dolu
+            Id: customerId || 0,
+            Name: nameParts.name || "",
+            Surname: nameParts.surname || "",
+            Phone: flatCustomer.Telephone || "",
+            Email: flatCustomer.Email || "",
+            TaxNo: flatCustomer.IdentificationID || "",
+            TaxOffice: flatCustomer.TaxOffice || "",
+            CustomersGroups: [],
+            Addresses: [],
+            Invoices: []
         };
 
-        // ------------ Kalemler ------------
-        (model.invoiceLines || []).forEach(l => {
-            entity.InvoicesItems.push({
+        // Tek adres
+        const addressEntity = {
+            ...baseFor(),
+            Id: 0,
+            CustomerId: 0,
+            Country: flatCustomer.CountryName || "",
+            City: flatCustomer.CityName || "",
+            District: flatCustomer.CitySubdivisionName || "",
+            Street: flatCustomer.StreetName || "",
+            PostCode: flatCustomer.PostalZone || "",
+            Customer: null
+        };
+
+        customerEntity.Addresses.push(addressEntity);
+        invoice.Customer = customerEntity;
+
+        // -------- KALEMLER (InvoicesItem + Item + Brand + Unit) --------
+        (model.invoiceLines || []).forEach((l, idx) => {
+            const itemEntity = {
+                ...baseFor(),
+                Id: 0,
+                Name: l.ItemName || ("Satır " + (idx + 1)),
+                Code: l.SellerItemCode || ("ITEM-" + (idx + 1)),
+                BrandId: 0,
+                UnitId: 0,
+                Price: Number(l.Price || 0),
+                Currency: currency,
+
+                Brand: {
+                    ...baseFor(),
+                    Id: 0,
+                    Name: "GENEL MARKA",
+                    Country: flatCustomer.CountryName || "TR",
+                    Items: []
+                },
+                Unit: {
+                    ...baseFor(),
+                    Id: 0,
+                    Name: l.UnitText || l.UnitCode || "ADET",
+                    ShortName: l.UnitCode || "C62",
+                    Items: []
+                },
+                ItemsCategories: [],
+                ItemsDiscounts: [],
+                Identifiers: []
+            };
+
+            const lineTotal = Number(
+                l.LineTotal ||
+                (l.Amount || 0) + (l.KdvTutar || 0)
+            );
+
+            const invoicesItemEntity = {
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
-                Name: l.ItemName,
-                Quantity: l.Quantity,
-                UnitCode: l.UnitCode,
-                UnitPrice: l.Price,
-                DiscountRate: l.DiscountRate,
-                DiscountAmount: l.DiscountAmount,
-                LineAmount: l.Amount,
-                TaxRate: l.KdvOran,
-                TaxAmount: l.KdvTutar,
-                LineTotal: l.LineTotal,
-                IstisnaKodu: l.IstisnaKodu
+                ItemId: 0,
+                Quantity: Number(l.Quantity || 0),
+                Price: Number(l.Price || 0),
+                Total: lineTotal,
+                Invoice: null,
+                Item: itemEntity
+            };
+
+            invoice.InvoicesItems.push(invoicesItemEntity);
+        });
+
+        // -------- VERGİLER (InvoicesTax) --------
+        const taxMap = {};
+        (model.invoiceLines || []).forEach(l => {
+            const rate = Number(l.KdvOran || 0);
+            const amount = Number(l.KdvTutar || 0);
+            if (!taxMap[rate]) taxMap[rate] = 0;
+            taxMap[rate] += amount;
+        });
+
+        Object.keys(taxMap).forEach(rateStr => {
+            const rate = Number(rateStr);
+            const amount = taxMap[rateStr] || 0;
+            invoice.InvoicesTaxes.push({
+                ...baseFor(),
+                Id: 0,
+                InvoiceId: 0,
+                Name: "KDV",
+                Rate: rate,
+                Amount: amount,
+                Invoice: null
             });
         });
 
-        // ------------ Vergi ------------
-        if ((h.Taxes || 0) > 0) {
-            entity.InvoicesTaxes.push({
+        // -------- TOPLAM İSKONTO (InvoicesDiscount) --------
+        let totalDiscount = 0;
+        (model.invoiceLines || []).forEach(l => {
+            totalDiscount += Number(l.DiscountAmount || 0);
+        });
+        if (totalDiscount > 0) {
+            invoice.InvoicesDiscounts.push({
+                ...baseFor(),
                 Id: 0,
-                InvoiceId: 0,
-                TaxTypeCode: "KDV",
-                TaxPercent: null,
-                TaxAmount: h.Taxes
+                ItemId: 0,
+                Name: "Genel İskonto",
+                Desc: "Satır iskonto toplamı",
+                Base: "GENEL",
+                Rate: 0,
+                Amount: totalDiscount,
+                Item: null
             });
         }
 
-        // ------------ Ödeme ------------
+        // -------- SGK (SgkRecords) --------
+        if (model.sgk) {
+            const startDateIso = model.sgk.GonderimTarihiBaslangic
+                ? new Date(model.sgk.GonderimTarihiBaslangic).toISOString()
+                : nowIso;
+            const endDateIso = model.sgk.GonderimTarihiBitis
+                ? new Date(model.sgk.GonderimTarihiBitis).toISOString()
+                : nowIso;
+
+            invoice.SgkRecords.push({
+                ...baseFor(),
+                Id: 0,
+                InvoiceId: 0,
+                Type: model.sgk.IlaveFaturaTipi || "",
+                Code: model.sgk.MukellefKodu || "",
+                Name: model.sgk.MukellefAdi || "",
+                No: model.sgk.DosyaNo || "",
+                StartDate: startDateIso,
+                EndDate: endDateIso,
+                Invoice: null
+            });
+        }
+
+        // -------- HİZMET SAĞLAYICI (ServicesProvider) --------
+        const systemUser =
+            ($("#hdnUserName").val() || $("#lblUserName").text() || "").trim() || "WEBUI";
+
+        invoice.ServicesProviders.push({
+            ...baseFor(),
+            Id: 0,
+            No: "SRV-" + Date.now(),
+            SystemUser: systemUser,
+            InvoiceId: 0,
+            Invoice: null
+        });
+
+        // -------- ÖDEME (Payment + PaymentType + PaymentAccount + Bank + InvoicesPayment) --------
         if (model.payment) {
             const p = model.payment;
-            entity.InvoicesPayments.push({
+
+            const paymentTypeName =
+                $("#PaymentMeansCode option:selected").text() ||
+                p.PaymentMeansCode ||
+                "Ödeme";
+
+            const paymentChannelText =
+                $("#PaymentChannelCode option:selected").text() ||
+                p.PaymentChannelCode ||
+                "";
+
+            const paymentCurrency = (p.PayeeFinancialCurrencyCode || currency || "TRY").toString().toUpperCase();
+
+            const paymentDateIso = p.PaymentDueDate
+                ? p.PaymentDueDate + "T00:00:00"
+                : invoice.InvoiceDate || nowIso;
+
+            const paymentType = {
+                ...baseFor(),
+                Id: 0,
+                Name: paymentTypeName,
+                Desc: paymentChannelText || "Ödeme Şekli",
+                Payments: []
+            };
+
+            const bankName = $("#txtBankName").val() || $("#txtBankName").text() || "";
+            const bankCountry = $("#txtBankCountry").val() || flatCustomer.CountryName || "TR";
+            const bankCity = $("#txtBankCity").val() || flatCustomer.CityName || "";
+            const bankSwift = $("#txtSwiftCode").val() || "";
+
+            const bank = {
+                ...baseFor(),
+                Id: 0,
+                Name: bankName || "Banka",
+                SwiftCode: bankSwift,
+                Country: bankCountry,
+                City: bankCity,
+                PaymentAccounts: []
+            };
+
+            const accountName = p.PayeeFinancialAccount || "Hesap";
+            const accountNo = $("#txtAccountNo").val() || p.PayeeFinancialAccount || "";
+            const iban = $("#txtIban").val() || "";
+
+            const paymentAccount = {
+                ...baseFor(),
+                Id: 0,
+                Name: accountName,
+                Desc: paymentChannelText || "",
+                BankId: 0,
+                AccountNo: accountNo,
+                Iban: iban,
+                Currency: paymentCurrency,
+                Bank: bank,
+                Payments: []
+            };
+
+            const paymentEntity = {
+                ...baseFor(),
+                Id: 0,
+                PaymentTypeId: 0,
+                PaymentAccountId: 0,
+                Amount: invoice.Total || 0,
+                Currency: paymentCurrency,
+                Date: paymentDateIso,
+                Note: p.InstructionNote || "",
+                PaymentType: paymentType,
+                PaymentAccount: paymentAccount,
+                InvoicesPayments: []
+            };
+
+            const invoicePayment = {
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
-                PaymentMeansCode: p.PaymentMeansCode || "",
-                PaymentDueDate: p.PaymentDueDate || null,
-                InstructionNote: p.InstructionNote || "",
-                PaymentChannelCode: p.PaymentChannelCode || "",
-                PayeeFinancialAccount: p.PayeeFinancialAccount || "",
-                PayeeFinancialCurrencyCode: p.PayeeFinancialCurrencyCode || ""
-            });
+                PaymentId: 0,
+                Invoice: null,
+                Payment: paymentEntity
+            };
+
+            invoice.InvoicesPayments.push(invoicePayment);
         }
 
-        // ------------ SGK ------------
-        if (model.sgk) {
-            entity.SgkRecords.push({
-                Id: 0,
-                InvoiceId: 0,
-                IlaveFaturaTipi: model.sgk.IlaveFaturaTipi,
-                MukellefKodu: model.sgk.MukellefKodu,
-                MukellefAdi: model.sgk.MukellefAdi,
-                DosyaNo: model.sgk.DosyaNo,
-                GonderimTarihiBaslangic: model.sgk.GonderimTarihiBaslangic || null,
-                GonderimTarihiBitis: model.sgk.GonderimTarihiBitis || null
-            });
-        }
-
-        // ------------ İrsaliye (Despatchs) ------------
+        // -------- İRSALİYE (Despatchs) --------
         if ((model.irsaliyeler || []).length) {
-            entity.Despatchs = model.irsaliyeler.map(d => ({
+            invoice.Despatchs = model.irsaliyeler.map(d => ({
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
                 DespatchNo: d.IrsaliyeNo,
@@ -1467,7 +1701,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             }));
         }
 
-        // ------------ Ek Alanlar ------------
+        // -------- Ek Alanlar (AdditionalFields) --------
         const additional = {
             Seller: model.sellerAdditional || [],
             SellerAgent: model.sellerAgentAdditional || [],
@@ -1482,11 +1716,12 @@ import { create as createInvoice } from '../entites/invoice.js';
             (additional.EkAlan && additional.EkAlan.length);
 
         if (hasAdditional) {
-            entity.AdditionalFields = additional;
+            invoice.AdditionalFields = additional;
         }
 
-        return entity;
+        return invoice;
     }
+
 
     /***********************************************************
      *  SGK EK ALANLAR
@@ -1754,10 +1989,12 @@ import { create as createInvoice } from '../entites/invoice.js';
     }
 
     /***********************************************************
-     *  TASLAK KAYIT – createInvoice çağrısı
+     *  TASLAK KAYIT – createInvoice çağrısı (Invoice.cs graph)
      ***********************************************************/
     async function saveInvoiceDraft(entity) {
         try {
+            // Taslak bilgisi – C# entity'de yok, ama ekstra alan JSON'da sorun olmaz
+            entity.IsDraft = true;
             const result = await createInvoice(entity);
             return result;
         } catch (err) {
@@ -1827,7 +2064,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             $("#invoicePreviewModal").modal("show");
         });
 
-        // TASLAK / GİB GÖNDER
+        // TASLAK / GİB GÖNDER → Invoice.cs + tüm ilişkiler dolu create API
         $(document).on("click", "#btnDraftSave, #btnSendToGib", async function (e) {
             e.preventDefault();
 
@@ -1835,26 +2072,37 @@ import { create as createInvoice } from '../entites/invoice.js';
 
             const validation = validateForm();
             if (!validation.isValid) {
-                const htmlErrors = validation.errors.map(e => "• " + e).join("<br>");
+                const htmlErrors = validation.errors.map(m => "• " + m).join("<br>");
                 showAlert("danger", "Lütfen zorunlu alanları doldurunuz:<br>" + htmlErrors);
                 return;
             }
 
             const entity = buildInvoiceEntityFromUI();
+            if (!entity.InvoicesItems || !entity.InvoicesItems.length) {
+                showAlert("danger", "En az bir fatura kalemi ekleyiniz.");
+                return;
+            }
 
-            if (isDraft) {
-                try {
+            try {
+                if (isDraft) {
                     const res = await saveInvoiceDraft(entity);
-                    if (res) {
-                        console.log("Taslak olarak kaydedilen Invoice:", res);
-                        showAlert("success", "Taslak fatura başarıyla kaydedildi.");
-                    }
-                } catch (err) {
-                    // showAlert içeride
+                    console.log("Taslak olarak kaydedilen Invoice:", res);
+                    showAlert("success", "Taslak fatura başarıyla kaydedildi.");
+                } else {
+                    // GİB GÖNDER: şu an için aynı create API'ye tam dolu Invoice graph gönderiyoruz
+                    entity.IsDraft = false;
+                    const res = await createInvoice(entity);
+                    console.log("GİB'e gönderilen Invoice:", res);
+                    showAlert("success", "Fatura başarıyla oluşturuldu ve GİB'e gönderildi (create API).");
                 }
-            } else {
-                console.log("GİB'e gönderilecek Invoice DTO:", entity);
-                showAlert("success", "Fatura DTO başarıyla oluşturuldu ve GİB'e gönderilmeye hazır.");
+            } catch (err) {
+                console.error("Fatura kaydedilirken/gönderilirken hata:", err);
+                showAlert(
+                    "danger",
+                    isDraft
+                        ? "Taslak fatura kaydedilirken bir hata oluştu."
+                        : "Fatura GİB'e gönderilirken bir hata oluştu."
+                );
             }
         });
 

@@ -18,18 +18,19 @@ using TurkSoft.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =====================================================
-// SERVICES
-// =====================================================
+var configuration = builder.Configuration;
+var environment = builder.Environment;
 
-// ---- GIB DbContext (Sadece GIB tabloları için)
+// ==================== SERVICES ====================
+
+// DbContext
 builder.Services.AddDbContext<GibAppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-// ---- İş Katmanı Servisleri (Sadece GIB)
+// Business Layer
 builder.Services.AddGibEntityServices();
 
-// ---- API Versioning
+// API Versioning
 builder.Services.AddApiVersioning(opt =>
 {
     opt.DefaultApiVersion = new ApiVersion(1, 0);
@@ -44,7 +45,7 @@ builder.Services.AddVersionedApiExplorer(opt =>
     opt.SubstituteApiVersionInUrl = true;
 });
 
-// ---- Controllers + JSON
+// Controllers
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
@@ -52,35 +53,36 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-// ---- CORS (WebUI erişimi)
+// CORS
+var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("AllowWebUI", p =>
+    opt.AddPolicy("AllowConfiguredOrigins", policy =>
     {
-        p.WithOrigins("https://localhost:7056") // WebUI portu
-         .AllowAnyHeader()
-         .AllowAnyMethod()
-         .AllowCredentials();
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
-// ---- Swagger
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddSwaggerGen(opt =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
+    opt.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "TurkSoft.GibErpApi",
         Version = "v1",
         Description = "GIB veritabanı için ERP API (JWT + Cookie destekli)"
     });
 
-    var xml = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xml);
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
-        options.IncludeXmlComments(xmlPath);
+        opt.IncludeXmlComments(xmlPath);
 
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    opt.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
         Description = "Bearer {token}",
@@ -88,7 +90,7 @@ builder.Services.AddSwaggerGen(options =>
         Type = SecuritySchemeType.ApiKey
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    opt.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
@@ -100,26 +102,21 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ---- Proxy/Forwarded headers
+// Proxy & Form Ayarları
 builder.Services.Configure<ForwardedHeadersOptions>(opt =>
 {
     opt.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
-
-// ---- Form limitleri
-builder.Services.Configure<FormOptions>(o =>
+builder.Services.Configure<FormOptions>(opt =>
 {
-    o.ValueLengthLimit = int.MaxValue;
-    o.MultipartBodyLengthLimit = long.MaxValue;
-    o.MultipartHeadersLengthLimit = int.MaxValue;
+    opt.ValueLengthLimit = int.MaxValue;
+    opt.MultipartBodyLengthLimit = long.MaxValue;
+    opt.MultipartHeadersLengthLimit = int.MaxValue;
 });
 
-// =====================================================
-// AUTHENTICATION + AUTHORIZATION
-// =====================================================
-
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
-var jwtOpt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()!;
+// JWT & Cookie Auth
+builder.Services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
+var jwtOpt = configuration.GetSection("Jwt").Get<JwtOptions>()!;
 var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOpt.SigningKey));
 
 builder.Services
@@ -146,9 +143,9 @@ builder.Services
         opts.SlidingExpiration = true;
         opts.ExpireTimeSpan = TimeSpan.FromHours(8);
     })
-    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, o =>
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
     {
-        o.TokenValidationParameters = new()
+        opts.TokenValidationParameters = new()
         {
             ValidateIssuer = true,
             ValidateAudience = true,
@@ -174,29 +171,26 @@ builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddHttpContextAccessor();
 
-// =====================================================
-// PIPELINE
-// =====================================================
+// ==================== PIPELINE ====================
 
 var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 
-// ✅ CORS en üstte olmalı (Swagger'dan önce)
-app.UseCors("AllowWebUI");
+app.UseCors("AllowConfiguredOrigins");
 
-// Swagger
-if (app.Environment.IsDevelopment())
+// ✅ Swagger her ortamda çalışsın
+if (configuration.GetValue<bool>("Swagger:Enabled"))
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    app.UseSwaggerUI(opt =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "GIB ERP API v1");
+        opt.SwaggerEndpoint("/swagger/v1/swagger.json", "GIB ERP API v1");
+        opt.RoutePrefix = configuration.GetValue<string>("Swagger:RoutePrefix") ?? "swagger";
     });
 }
 
-// Auth middleware sırası önemli
 app.UseAuthentication();
 app.UseAuthorization();
 
