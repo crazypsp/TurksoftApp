@@ -434,3 +434,11 @@ export const _internals = {
 };
 
 export { deriveContextFromRoleNames as deriveContext };
+
+/* ----------------------------------------------------
+ *  Session Clear All
+ * --------------------------------------------------*/
+export function clearAllSessions() {
+    try { sessionStorage.removeItem('ts.auth'); } catch { }
+    try { localStorage.removeItem('ts.auth.backup'); } catch { }
+}

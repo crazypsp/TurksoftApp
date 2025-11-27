@@ -56,6 +56,9 @@ namespace TurkSoft.Service.Manager
                 { "Customer",           new[] { "TaxNo", "Name" } },
             };
 
+        // >>> YENİ: SQL decimal(18,2) için kaba max limit
+        private const decimal SqlDecimal18_2Max = 9999999999999999.99m;
+
         public EntityGibManager(GibAppDbContext db)
         {
             _db = db;
@@ -127,6 +130,9 @@ namespace TurkSoft.Service.Manager
                 if (entity is Invoice inv)
                 {
                     await FixInvoiceGraphAsync(inv, utcNow, ct);
+
+                    // >>> YENİ: Invoice grafındaki tüm decimal alanları SQL decimal aralığına göre doğrula
+                    ValidateInvoiceDecimalRanges(inv);
                 }
 
                 // 3) UserId + iş anahtarı bazlı duplicate kontrolü
@@ -784,6 +790,94 @@ namespace TurkSoft.Service.Manager
         }
 
         // ======================================================
+        // Decimal range validator (YENİ)
+        // ======================================================
+
+        private static void EnsureDecimalInSqlRange(decimal value, string context, string propertyName)
+        {
+            if (value > SqlDecimal18_2Max || value < -SqlDecimal18_2Max)
+            {
+                // Burada istersen throw yerine CLAMP de yapabilirsin ama önerilmez:
+                // value = Math.Clamp(value, -SqlDecimal18_2Max, SqlDecimal18_2Max);
+                throw new ArgumentOutOfRangeException(
+                    $"{context}.{propertyName}",
+                    value,
+                    $"Değer SQL decimal(18,2) aralığının dışında. Context={context}, Property={propertyName}, Value={value}");
+            }
+        }
+
+        private static void ValidateDecimalProperties(object? obj, string context)
+        {
+            if (obj == null) return;
+
+            var type = obj.GetType();
+            var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var prop in props)
+            {
+                if (prop.PropertyType == typeof(decimal))
+                {
+                    var raw = prop.GetValue(obj);
+                    if (raw != null)
+                    {
+                        var val = (decimal)raw;
+                        EnsureDecimalInSqlRange(val, $"{context}.{type.Name}", prop.Name);
+                    }
+                }
+                else if (prop.PropertyType == typeof(decimal?))
+                {
+                    var raw = prop.GetValue(obj);
+                    if (raw is decimal val)
+                    {
+                        EnsureDecimalInSqlRange(val, $"{context}.{type.Name}", prop.Name);
+                    }
+                }
+            }
+        }
+
+        private static void ValidateInvoiceDecimalRanges(Invoice inv)
+        {
+            // Root invoice
+            ValidateDecimalProperties(inv, "Invoice");
+
+            // Items
+            if (inv.InvoicesItems != null)
+            {
+                foreach (var li in inv.InvoicesItems)
+                {
+                    ValidateDecimalProperties(li, "Invoice.InvoicesItems");
+                    if (li.Item != null)
+                        ValidateDecimalProperties(li.Item, "Invoice.InvoicesItems.Item");
+                }
+            }
+
+            // Taxes
+            if (inv.InvoicesTaxes != null)
+            {
+                foreach (var tx in inv.InvoicesTaxes)
+                    ValidateDecimalProperties(tx, "Invoice.InvoicesTaxes");
+            }
+
+            // Discounts
+            if (inv.InvoicesDiscounts != null)
+            {
+                foreach (var d in inv.InvoicesDiscounts)
+                    ValidateDecimalProperties(d, "Invoice.InvoicesDiscounts");
+            }
+
+            // Payments + Payment entities
+            if (inv.InvoicesPayments != null)
+            {
+                foreach (var link in inv.InvoicesPayments)
+                {
+                    ValidateDecimalProperties(link, "Invoice.InvoicesPayments");
+                    if (link.Payment != null)
+                        ValidateDecimalProperties(link.Payment, "Invoice.InvoicesPayments.Payment");
+                }
+            }
+        }
+
+        // ======================================================
         // Invoice Graph Fixer
         // ======================================================
 
@@ -1133,6 +1227,9 @@ namespace TurkSoft.Service.Manager
                 var taxesTotal = inv.InvoicesTaxes.Sum(x => x.Amount);
                 inv.Total = itemsTotal + taxesTotal;
             }
+
+            // >>> YENİ: tüm decimal alanlar için son kontrol
+            ValidateInvoiceDecimalRanges(inv);
         }
     }
 }

@@ -4,7 +4,8 @@
 }
 @using Microsoft.Extensions.Options
 @inject IOptions<TurkSoft.GIBWebUI.AppSettings.ApiSettings> ApiSettings
-
+@using TurkSoft.GIBWebUI.AppSettings
+@inject IOptions<ApiSettings> ApiSettings
 <!DOCTYPE html>
 <html lang="tr" class="sidebar-mini skin-red" style="height:auto; min-height:100%;">
 <head>
@@ -17,7 +18,9 @@
         window.__API_BASE = "@ApiSettings.Value.BaseUrl";
         console.log("API Base (Layout):", window.__API_BASE);
     </script>
-
+    <script>
+        window.gibPortalApiBaseUrl = '@ApiSettings.Value.GibPortalApiBaseUrl';
+    </script>
     <title>@ViewData["Title"] - Nox Yazılım</title>
 
     <!-- Inline essentials carried over from the uploaded HTML (spinner/overlay resets) -->

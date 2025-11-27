@@ -11,5 +11,6 @@ namespace TurkSoft.GIBWebUI.AppSettings
     public sealed class ApiSettings
     {
         public string BaseUrl { get; set; } = string.Empty; //Boş gelirse build-time’da fark edelim
+        public string GibPortalApiBaseUrl { get; set; }  // yeni
     }
 }

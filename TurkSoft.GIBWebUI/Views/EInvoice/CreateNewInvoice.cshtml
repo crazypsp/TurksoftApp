@@ -4,6 +4,14 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<!-- Taslak kaydedince gelen kayıt Id -->
+<input type="hidden" id="hfInvoiceId" />
+
+<!-- GİB'e gönderim sonucunda gelecek bilgiler -->
+<input type="hidden" id="hfGibStatusCode" />
+<input type="hidden" id="hfGibInvoiceUuid" />
+<input type="hidden" id="hfGibInvoiceNumber" />
+<input type="hidden" id="hfGibDocumentId" />
 <form id="faturaformu">
     <!--ÜST BİLGİLER-->
     <div class="box box-default">
@@ -902,4 +910,5 @@
 @section Scripts {
     <script src="~/apps/listdata.js"></script>
     <script type="module" src="~/apps/Invoice.js"></script>
+
 }

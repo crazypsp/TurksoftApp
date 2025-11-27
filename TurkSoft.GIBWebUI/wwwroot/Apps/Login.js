@@ -1,5 +1,5 @@
 ﻿// /apps/login-glue.js
-import { signIn, getSession } from '../Service/Login.js';
+import { signIn, getSession, clearAllSessions } from '../Service/Login.js';
 
 function ensureErrorBox() {
     let el = document.getElementById('loginError');
@@ -57,6 +57,7 @@ function showError(msg) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    clearAllSessions();
     const form = document.getElementById('loginForm');
     const emailInput = document.getElementById('Email');
     const passwordInput = document.getElementById('Password');
@@ -66,15 +67,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     wireValidation(emailInput, passwordInput);
     showError('');
 
-    // Daha önce login olmuşsa direkt yönlendir
+    // Otomatik yönlendirme: sadece email & password girildiyse
     try {
         const existing = await getSession({ hydrate: true });
-        if (existing?.userId) {
+        const email = emailInput?.value?.trim();
+        const pass = passwordInput?.value?.trim();
+
+        if (
+            existing?.userId &&
+            existing?.loginAt &&
+            email && pass &&
+            isValidEmail(email)
+        ) {
             window.location.href = homeUrl;
             return;
         }
     } catch {
-        // sesson okunamadıysa sessiz geç
+        // Sessiz geç
     }
 
     // Son kullanılan e-mail'i hatırlat
@@ -85,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } catch { }
 
+    // Form submit işlemi
     form?.addEventListener('submit', async (e) => {
         e.preventDefault();
         showError('');
@@ -94,7 +104,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let ok = true;
 
-        // E-posta kontrolü
         if (!email) {
             setInvalid(emailInput, 'E-posta zorunludur.');
             ok = false;
@@ -105,7 +114,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearInvalid(emailInput);
         }
 
-        // Şifre kontrolü
         if (!pass) {
             setInvalid(passwordInput, 'Şifre zorunludur.');
             ok = false;
@@ -115,7 +123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!ok) return;
 
-        // Butonu kilitle
         submitBtn?.setAttribute('disabled', 'disabled');
         submitBtn?.classList.add('disabled');
 
@@ -124,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!res.success) {
                 showError(res.message || 'Giriş başarısız.');
-                return; // redirect yok
+                return;
             }
 
             try { sessionStorage.setItem('lastLoginEmail', email); } catch { }
@@ -133,7 +140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Login error:', err);
             showError(err?.message || 'Beklenmeyen bir hata oluştu.');
         } finally {
-            // Sadece butonu serbest bırak; redirect zaten try içinde
             submitBtn?.removeAttribute('disabled');
             submitBtn?.classList.remove('disabled');
         }

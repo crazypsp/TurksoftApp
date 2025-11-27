@@ -4,7 +4,7 @@ import { create as createInvoice } from '../entites/invoice.js';
 
 ; (function (global, $) {
     "use strict";
-
+  
     /***********************************************************
      *  UTILS
      ***********************************************************/
@@ -26,6 +26,26 @@ import { create as createInvoice } from '../entites/invoice.js';
             });
         }
     };
+    // GİB Portal API'ye gönderim yapan yardımcı fonksiyon
+    async function sendInvoiceToGibById(invoiceId) {
+        const baseUrl = window.gibPortalApiBaseUrl || gibPortalApiBaseUrl; // sende hangisi varsa
+        const url = baseUrl + "/EInvoice/SendEInvoiceJson"; // TurkSoft.GibPortalApi'deki route'a göre düzenle
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json;charset=utf-8"
+            },
+            body: JSON.stringify({ id: invoiceId }) // API'de parametre adı farklıysa değiştir
+        });
+
+        if (!response.ok) {
+            throw new Error("GİB API isteği başarısız. Status: " + response.status);
+        }
+
+        const res = await response.json();
+        return res; // Örnek beklenen: { statusCode: 200, uuid: '...', invoiceNumber: '...', documentId: '...' }
+    }
 
     // RowVersion hex → base64 (SQL rowversion -> JSON string)
     function rowVersionHexToBase64(hex) {
@@ -2064,11 +2084,17 @@ import { create as createInvoice } from '../entites/invoice.js';
             $("#invoicePreviewModal").modal("show");
         });
 
+        
         // TASLAK / GİB GÖNDER → Invoice.cs + tüm ilişkiler dolu create API
         $(document).on("click", "#btnDraftSave, #btnSendToGib", async function (e) {
             e.preventDefault();
 
             const isDraft = this.id === "btnDraftSave";
+
+            // Taslak Kaydet daha önce başarılı olduysa ve buton disabled ise 2. kez çalışmasın
+            if (isDraft && $("#btnDraftSave").prop("disabled")) {
+                return;
+            }
 
             const validation = validateForm();
             if (!validation.isValid) {
@@ -2084,17 +2110,90 @@ import { create as createInvoice } from '../entites/invoice.js';
             }
 
             try {
+                // 1) SADECE TASLAK KAYDET
                 if (isDraft) {
                     const res = await saveInvoiceDraft(entity);
                     console.log("Taslak olarak kaydedilen Invoice:", res);
                     showAlert("success", "Taslak fatura başarıyla kaydedildi.");
-                } else {
-                    // GİB GÖNDER: şu an için aynı create API'ye tam dolu Invoice graph gönderiyoruz
-                    entity.IsDraft = false;
-                    const res = await createInvoice(entity);
-                    console.log("GİB'e gönderilen Invoice:", res);
-                    showAlert("success", "Fatura başarıyla oluşturuldu ve GİB'e gönderildi (create API).");
+
+                    // Taslak kayıttan dönen invoice Id'yi al (response schema'na göre burayı düzenle)
+                    const invoiceId = res && res.id;
+
+                    if (invoiceId) {
+                        // Hidden input'a yaz
+                        $("#hfInvoiceId").val(invoiceId);
+
+                        // Aynı sayfada ikinci kez taslak kaydetmeyi engelle
+                        $("#btnDraftSave").prop("disabled", true);
+                    } else {
+                        console.warn("Taslak kayıttan invoiceId alınamadı. Response:", res);
+                    }
+
+                    return;
                 }
+
+                // 2) GİB GÖNDER BUTONU
+
+                let invoiceIdFromHidden = $("#hfInvoiceId").val();
+                const draftButtonDisabled = $("#btnDraftSave").prop("disabled");
+
+                // a) Taslak daha hiç kaydedilmemişse VEYA hidden boş ise
+                //    önce taslağı kaydet, sonra GİB'e gönder
+                if (!invoiceIdFromHidden || !draftButtonDisabled) {
+                    const draftRes = await saveInvoiceDraft(entity);
+                    console.log("GİB öncesi otomatik taslak kaydedildi:", draftRes);
+
+                    const newInvoiceId =
+                        draftRes?.invoiceId ||
+                        draftRes?.id ||
+                        (draftRes?.data && (draftRes.data.invoiceId || draftRes.data.id));
+
+                    if (!newInvoiceId) {
+                        showAlert("danger", "Taslak fatura kaydedildi, ancak Invoice Id alınamadı. GİB gönderilemedi.");
+                        return;
+                    }
+
+                    $("#hfInvoiceId").val(newInvoiceId);
+                    $("#btnDraftSave").prop("disabled", true);
+
+                    invoiceIdFromHidden = newInvoiceId;
+                }
+
+                // b) Elimizde artık mutlaka bir Invoice Id var → GİB Portal API'ye gönder
+                // DİKKAT: Burada eskiden createInvoice(entity) çağırıyordun; artık GİB API kullanıyoruz.
+                const gibRes = await sendInvoiceToGibById(invoiceIdFromHidden);
+                console.log("GİB'e gönderim sonucu:", gibRes);
+
+                // GİB response alanlarını kendi API'ne göre çek
+                const statusCode =
+                    gibRes?.statusCode || gibRes?.StatusCode || gibRes?.code;
+                const uuid =
+                    gibRes?.uuid || gibRes?.Uuid || gibRes?.invoiceUuid;
+                const invoiceNumber =
+                    gibRes?.invoiceNumber || gibRes?.InvoiceNumber || gibRes?.fisNo;
+                const documentId =
+                    gibRes?.documentId || gibRes?.DocumentId || gibRes?.id;
+
+                // 3) GİB dönüşünü hidden input'lara bas → Download butonları bunları kullanacak
+                $("#hfGibStatusCode").val(statusCode || "");
+                $("#hfGibInvoiceUuid").val(uuid || "");
+                $("#hfGibInvoiceNumber").val(invoiceNumber || "");
+                $("#hfGibDocumentId").val(documentId || "");
+
+                if (statusCode === 200 || statusCode === "200") {
+                    showAlert("success", "Fatura başarıyla GİB'e gönderildi.");
+
+                    // PDF / XML butonlarını aktif et
+                    $("#btnDownloadPDF").prop("disabled", false);
+                    $("#btnDownloadXML").prop("disabled", false);
+                } else {
+                    showAlert(
+                        "danger",
+                        (gibRes?.message || gibRes?.Message) ||
+                        "Fatura GİB'e gönderilirken bir hata oluştu."
+                    );
+                }
+
             } catch (err) {
                 console.error("Fatura kaydedilirken/gönderilirken hata:", err);
                 showAlert(
@@ -2104,6 +2203,56 @@ import { create as createInvoice } from '../entites/invoice.js';
                         : "Fatura GİB'e gönderilirken bir hata oluştu."
                 );
             }
+        });
+
+        // PDF İndir
+        $(document).on("click", "#btnDownloadPDF", function (e) {
+            e.preventDefault();
+
+            const uuid = $("#hfGibInvoiceUuid").val();
+            const documentId = $("#hfGibDocumentId").val();
+
+            if (!uuid && !documentId) {
+                showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                return;
+            }
+
+            const baseUrl = window.gibPortalApiBaseUrl || gibPortalApiBaseUrl;
+
+            // TurkSoft.GibPortalApi'deki gerçek route'a göre bu satırı düzenle:
+            // Örneğin: api/EInvoice/GetEInvoiceOutboxPdf?uuid=...
+            const url =
+                baseUrl +
+                "EInvoice/GetEInvoiceOutboxPdf?" +
+                (uuid
+                    ? "uuid=" + encodeURIComponent(uuid)
+                    : "id=" + encodeURIComponent(documentId));
+
+            window.open(url, "_blank"); // dosya indirme
+        });
+
+        // XML (UBL) İndir
+        $(document).on("click", "#btnDownloadXML", function (e) {
+            e.preventDefault();
+
+            const uuid = $("#hfGibInvoiceUuid").val();
+            const documentId = $("#hfGibDocumentId").val();
+
+            if (!uuid && !documentId) {
+                showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                return;
+            }
+
+            const baseUrl = window.gibPortalApiBaseUrl || gibPortalApiBaseUrl;
+
+            const url =
+                baseUrl +
+                "EInvoice/GetEInvoiceOutboxUbl?" +
+                (uuid
+                    ? "uuid=" + encodeURIComponent(uuid)
+                    : "id=" + encodeURIComponent(documentId));
+
+            window.open(url, "_blank");
         });
 
         // SGK ilave fatura tipi
