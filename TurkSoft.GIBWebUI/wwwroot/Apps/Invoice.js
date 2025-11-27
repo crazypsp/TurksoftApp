@@ -28,24 +28,58 @@ import { create as createInvoice } from '../entites/invoice.js';
     };
     // GİB Portal API'ye gönderim yapan yardımcı fonksiyon
     async function sendInvoiceToGibById(invoiceId) {
-        const baseUrl = window.gibPortalApiBaseUrl || gibPortalApiBaseUrl; // sende hangisi varsa
-        const url = baseUrl + "/EInvoice/SendEInvoiceJson"; // TurkSoft.GibPortalApi'deki route'a göre düzenle
+        // Id'yi garanti sayıya çevir
+        const numericId = Number(invoiceId);
+        if (!Number.isFinite(numericId) || numericId <= 0) {
+            throw new Error("Geçersiz invoiceId: " + invoiceId);
+        }
 
+        const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+        if (!baseUrl) {
+            throw new Error("GİB Portal API Base URL (gibPortalApiBaseUrl) tanımlı değil.");
+        }
+
+        // BaseUrl sonu / ile bitmiyorsa ekle
+        const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+
+        // Senin Swagger URL formatın:
+        // https://localhost:7151/api/TurkcellEFatura/einvoice/send-json/11?isExport=false
+        const url = normBase + "TurkcellEFatura/einvoice/send-json/" + encodeURIComponent(numericId) + "?isExport=false";
+
+        console.log("[GIB] Gönderim URL:", url);
+
+        // Genelde bu endpoint POST oluyor; body istemiyor, sadece route + query ile çalışıyor
         const response = await fetch(url, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json;charset=utf-8"
-            },
-            body: JSON.stringify({ id: invoiceId }) // API'de parametre adı farklıysa değiştir
+                "Accept": "application/json"
+            }
+            // body yok
         });
 
         if (!response.ok) {
-            throw new Error("GİB API isteği başarısız. Status: " + response.status);
+            // JSON dönmezse bile hata mesajını görmek için text'i de okumaya çalış
+            let errorText = "";
+            try {
+                errorText = await response.text();
+            } catch { /* ignore */ }
+
+            throw new Error("GİB API isteği başarısız. Status: "
+                + response.status + " " + response.statusText
+                + (errorText ? " - " + errorText : ""));
         }
 
-        const res = await response.json();
-        return res; // Örnek beklenen: { statusCode: 200, uuid: '...', invoiceNumber: '...', documentId: '...' }
+        // Bazı endpoint'ler 204 NoContent dönebilir, ona göre koru
+        let res = null;
+        try {
+            res = await response.json();
+        } catch {
+            res = {};
+        }
+        console.log(res);
+        return res; // Örn: { statusCode: 200, uuid: '...', invoiceNumber: '...', documentId: '...' }
     }
+
 
     // RowVersion hex → base64 (SQL rowversion -> JSON string)
     function rowVersionHexToBase64(hex) {
@@ -184,8 +218,8 @@ import { create as createInvoice } from '../entites/invoice.js';
     const TestCustomers = [
         {
             id: 1,
-            displayName: "0001 - TEST FİRMA A.Ş.",
-            identificationId: "11111111111",
+            displayName: "0001 - TEST A.Ş.",
+            identificationId: "1234567803",
             aliciEtiketi: "urn:mail:testfirma@example.com",
             partyName: "TEST FİRMA A.Ş.",
             firstName: "TEST",
@@ -206,8 +240,8 @@ import { create as createInvoice } from '../entites/invoice.js';
         },
         {
             id: 2,
-            displayName: "0002 - DENEME LTD. ŞTİ.",
-            identificationId: "22222222222",
+            displayName: "0002 - DENEME ŞTİ.",
+            identificationId: "1234567803",
             aliciEtiketi: "urn:mail:deneme@example.com",
             partyName: "DENEME LTD. ŞTİ.",
             firstName: "DENEME",
@@ -2167,10 +2201,8 @@ import { create as createInvoice } from '../entites/invoice.js';
                 // GİB response alanlarını kendi API'ne göre çek
                 const statusCode =
                     gibRes?.statusCode || gibRes?.StatusCode || gibRes?.code;
-                const uuid =
-                    gibRes?.uuid || gibRes?.Uuid || gibRes?.invoiceUuid;
-                const invoiceNumber =
-                    gibRes?.invoiceNumber || gibRes?.InvoiceNumber || gibRes?.fisNo;
+                const uuid = gibRes && gibRes.id;                   // PDF URL'de kullanılacak
+                const invoiceNumber = gibRes && gibRes.invoiceNumber;
                 const documentId =
                     gibRes?.documentId || gibRes?.DocumentId || gibRes?.id;
 
@@ -2180,17 +2212,19 @@ import { create as createInvoice } from '../entites/invoice.js';
                 $("#hfGibInvoiceNumber").val(invoiceNumber || "");
                 $("#hfGibDocumentId").val(documentId || "");
 
-                if (statusCode === 200 || statusCode === "200") {
+                if (hasUuid && hasInvoiceNumber) {
                     showAlert("success", "Fatura başarıyla GİB'e gönderildi.");
 
                     // PDF / XML butonlarını aktif et
                     $("#btnDownloadPDF").prop("disabled", false);
                     $("#btnDownloadXML").prop("disabled", false);
                 } else {
+                    console.warn("GİB yanıtında uuid veya invoiceNumber eksik:", gibRes);
+
                     showAlert(
                         "danger",
                         (gibRes?.message || gibRes?.Message) ||
-                        "Fatura GİB'e gönderilirken bir hata oluştu."
+                        "Fatura GİB'e gönderilirken bir hata oluştu (uuid veya fatura numarası alınamadı)."
                     );
                 }
 
@@ -2209,51 +2243,72 @@ import { create as createInvoice } from '../entites/invoice.js';
         $(document).on("click", "#btnDownloadPDF", function (e) {
             e.preventDefault();
 
+            // GİB'den dönen uuid (response.id)
             const uuid = $("#hfGibInvoiceUuid").val();
-            const documentId = $("#hfGibDocumentId").val();
 
-            if (!uuid && !documentId) {
+            if (!uuid) {
                 showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
                 return;
             }
 
-            const baseUrl = window.gibPortalApiBaseUrl || gibPortalApiBaseUrl;
+            const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+            if (!baseUrl) {
+                showAlert("danger", "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).");
+                return;
+            }
 
-            // TurkSoft.GibPortalApi'deki gerçek route'a göre bu satırı düzenle:
-            // Örneğin: api/EInvoice/GetEInvoiceOutboxPdf?uuid=...
+            // baseUrl: https://localhost:7151/api/  (appsettings’ten geliyor)
+            const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+
+            // Hedef URL:
+            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/pdf/{uuid}?standardXslt=true
             const url =
-                baseUrl +
-                "EInvoice/GetEInvoiceOutboxPdf?" +
-                (uuid
-                    ? "uuid=" + encodeURIComponent(uuid)
-                    : "id=" + encodeURIComponent(documentId));
+                normBase +
+                "TurkcellEFatura/einvoice/outbox/pdf/" +
+                encodeURIComponent(uuid) +
+                "?standardXslt=true";
 
-            window.open(url, "_blank"); // dosya indirme
+            console.log("[GIB] PDF download URL:", url);
+
+            // PDF endpoint'ine top-level navigation ile gidiyoruz, CORS derdi yok
+            window.open(url, "_blank");
         });
 
         // XML (UBL) İndir
         $(document).on("click", "#btnDownloadXML", function (e) {
             e.preventDefault();
 
+            // GİB gönderim cevabından gelen uuid (response.id)
             const uuid = $("#hfGibInvoiceUuid").val();
-            const documentId = $("#hfGibDocumentId").val();
 
-            if (!uuid && !documentId) {
+            if (!uuid) {
                 showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
                 return;
             }
 
-            const baseUrl = window.gibPortalApiBaseUrl || gibPortalApiBaseUrl;
+            const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+            if (!baseUrl) {
+                showAlert("danger", "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).");
+                return;
+            }
 
+            // baseUrl: https://localhost:7151/api/  (appsettings’ten geliyor)
+            const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+
+            // Hedef URL:
+            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/ubl/{uuid}?standardXslt=true
             const url =
-                baseUrl +
-                "EInvoice/GetEInvoiceOutboxUbl?" +
-                (uuid
-                    ? "uuid=" + encodeURIComponent(uuid)
-                    : "id=" + encodeURIComponent(documentId));
+                normBase +
+                "TurkcellEFatura/einvoice/outbox/ubl/" +
+                encodeURIComponent(uuid) +
+                "?standardXslt=true";
 
+            console.log("[GIB] UBL download URL:", url);
+
+            // XML/UBL dosyasını indirmek için yeni sekmede aç
             window.open(url, "_blank");
         });
+
 
         // SGK ilave fatura tipi
         $(document).on("change", "#ddlilaveFaturaTipi", updateSgkFields);

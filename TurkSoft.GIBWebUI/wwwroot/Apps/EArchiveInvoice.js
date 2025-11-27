@@ -1,4 +1,7 @@
-﻿; (function (global, $) {
+﻿// Login.js'teki gibi: Service'den create fonksiyonunu al
+import { create as createInvoice } from '../entites/EArchiveInvoice.js';
+
+; (function (global, $) {
     "use strict";
 
     /***********************************************************
@@ -22,6 +25,48 @@
             });
         }
     };
+
+    // RowVersion hex -> base64 (SQL rowversion -> JSON string)
+    function rowVersionHexToBase64(hex) {
+        if (!hex) return "";
+        let h = String(hex).trim();
+        if (h.startsWith("0x") || h.startsWith("0X")) {
+            h = h.substring(2);
+        }
+        if (h.length % 2 === 1) {
+            h = "0" + h;
+        }
+        const bytes = [];
+        for (let i = 0; i < h.length; i += 2) {
+            const b = parseInt(h.substr(i, 2), 16);
+            if (!isNaN(b)) bytes.push(b);
+        }
+        let bin = "";
+        for (let i = 0; i < bytes.length; i++) {
+            bin += String.fromCharCode(bytes[i]);
+        }
+        try {
+            return btoa(bin);
+        } catch (e) {
+            console.error("RowVersion base64 dönüşümünde hata:", e);
+            return "";
+        }
+    }
+
+    // BaseEntity alanlarını doldurmak için helper
+    function buildBaseEntity(currentUserId, nowIso, rowVersionBase64) {
+        return {
+            UserId: currentUserId || 0,
+            IsActive: true,
+            DeleteDate: null,
+            DeletedByUserId: null,
+            CreatedAt: nowIso,
+            UpdatedAt: null,
+            CreatedByUserId: currentUserId || null,
+            UpdatedByUserId: null,
+            RowVersion: rowVersionBase64 || null
+        };
+    }
 
     // Global ListData objesini garanti altına al
     global.ListData = global.ListData || {};
@@ -1115,7 +1160,7 @@
     }
 
     /***********************************************************
-     *  Invoice Entity (DTO)
+     *  Invoice Entity (DTO) – RowVersion'lı
      ***********************************************************/
     function buildInvoiceEntityFromUI() {
         recalcTotals();
@@ -1124,16 +1169,74 @@
 
         const customerId = parseInt($("#ddlMusteriAra").val(), 10) || 0;
 
+        // Kullanıcı Id'si – varsa gizli inputtan al
+        let currentUserId = 0;
+        const $userHidden = $("#hdnUserId");
+        if ($userHidden && $userHidden.length) {
+            const parsed = parseInt($userHidden.val(), 10);
+            if (!isNaN(parsed)) currentUserId = parsed;
+        }
+
+        const nowIso = new Date().toISOString();
+
+        // Sabit RowVersion hex (yeni kayıtlar için)
+        const DEFAULT_ROWVERSION_HEX = "0x00000000000007E1";
+        const defaultRowVersionBase64 = rowVersionHexToBase64(DEFAULT_ROWVERSION_HEX);
+
+        // RowVersion – 0x. hex → base64 (mevcut kayıt düzenleniyorsa, yoksa sabit)
+        let rowVersionBase64 = defaultRowVersionBase64;
+        const $rowVerHidden = $("#hdnRowVersion");
+        if ($rowVerHidden && $rowVerHidden.length) {
+            const hexVal = ($rowVerHidden.val() || "").trim();
+            if (hexVal) {
+                rowVersionBase64 = rowVersionHexToBase64(hexVal);
+            }
+        }
+
+        // Tüm BaseEntity türevleri için ortak doldurucu
+        const baseFor = (rvBase64) => buildBaseEntity(
+            currentUserId,
+            nowIso,
+            rvBase64 || defaultRowVersionBase64
+        );
+
+        // Fatura No
+        let invoiceNo =
+            $("#txtInvoiceNumber").val() ||
+            $("#txtFaturaNo").val() ||
+            (h.Prefix && h.Invoice_ID ? (h.Prefix + "-" + h.Invoice_ID) : (h.Invoice_ID || null)) ||
+            ("INV-" + Date.now());
+
+        // Fatura tarihi (ISO)
+        let invoiceDateIso = nowIso;
+        if (h.IssueDate) {
+            const datePart = h.IssueDate;
+            const timePart = h.IssueTime || "00:00";
+            invoiceDateIso = datePart + "T" + timePart + ":00";
+        }
+
+        const currency = (h.DocumentCurrencyCode || $("#ddlParaBirimi").val() || "TRY").toString().toUpperCase();
+
+        let total = h.PayableAmount || 0;
+        if (!total) {
+            const txtTotal =
+                $("#odenecekToplam").val() ||
+                $("#odenecekToplam").text() ||
+                "0";
+            total = Utils.parseNumber(txtTotal);
+        }
+
         const entity = {
+            // BaseEntity (RowVersion kesin dolu)
+            ...baseFor(rowVersionBase64),
+
             Id: 0,
             CustomerId: customerId,
             Ettn: h.Invoice_ID || null,
-            InvoiceNo: h.Prefix ? (h.Prefix + "-" + (h.Invoice_ID || "")) : (h.Invoice_ID || null),
-            InvoiceDate: h.IssueDate
-                ? h.IssueDate + "T" + (h.IssueTime || "00:00") + ":00"
-                : null,
-            Total: h.PayableAmount || 0,
-            Currency: h.DocumentCurrencyCode || "TRY",
+            InvoiceNo: invoiceNo,
+            InvoiceDate: invoiceDateIso,
+            Total: total,
+            Currency: currency,
 
             BranchCode: $("#ddlSubeKodu").val() || null,
             SourceUrn: $("#ddlSourceUrn").val() || null,
@@ -1153,8 +1256,9 @@
             Returns: [],
             InvoicesPayments: [],
 
-            // e-ARŞİV DTO alanı
+            // e-ARŞİV DTO alanı (+ RowVersion ekledik)
             EArchive: {
+                RowVersion: rowVersionBase64,
                 SendType: h.EArchiveSendType || $("#EArchiveSendType").val() || "KAGIT",
                 IsInternetSale: !!h.IsInternetSale,
                 WebsiteURI: h.IsInternet_WebsiteURI || $("#IsInternet_WebsiteURI").val() || "",
@@ -1166,8 +1270,10 @@
             }
         };
 
+        // -------- KALEMLER (InvoicesItems) --------
         (model.invoiceLines || []).forEach(l => {
             entity.InvoicesItems.push({
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
                 Name: l.ItemName,
@@ -1184,8 +1290,10 @@
             });
         });
 
+        // -------- VERGİLER (InvoicesTaxes) --------
         if ((h.Taxes || 0) > 0) {
             entity.InvoicesTaxes.push({
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
                 TaxTypeCode: "KDV",
@@ -1194,7 +1302,9 @@
             });
         }
 
+        // -------- ÖDEME (InvoicesPayments) --------
         const payment = {
+            ...baseFor(),
             Id: 0,
             InvoiceId: 0,
             PaymentMeansCode: $("#PaymentMeansCode").val() || "",
@@ -1216,9 +1326,11 @@
             entity.InvoicesPayments.push(payment);
         }
 
+        // -------- SGK / İlave Fatura Tipi (varsa) --------
         const ilaveFaturaTipi = $("#ddlilaveFaturaTipi").val();
         if (ilaveFaturaTipi) {
             entity.SgkRecords.push({
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
                 IlaveFaturaTipi: ilaveFaturaTipi,
@@ -1229,6 +1341,19 @@
                 SendingDateEnd: $("#txtSendingDateBitis").val() || null
             });
         }
+
+        // -------- HİZMET SAĞLAYICI (ServicesProvider) – opsiyonel ama RowVersion'lı tek kayıt --------
+        const systemUser =
+            ($("#hdnUserName").val() || $("#lblUserName").text() || "").trim() || "WEBUI";
+
+        entity.ServicesProviders.push({
+            ...baseFor(),
+            Id: 0,
+            No: "SRV-" + Date.now(),
+            SystemUser: systemUser,
+            InvoiceId: 0,
+            Invoice: null
+        });
 
         return entity;
     }
@@ -1498,6 +1623,22 @@
     }
 
     /***********************************************************
+     *  TASLAK KAYIT – createInvoice çağrısı (Invoice.cs graph)
+     ***********************************************************/
+    async function saveInvoiceDraft(entity) {
+        try {
+            // Taslak bilgisi – C# entity'de yok, ama ekstra alan JSON'da sorun olmaz
+            entity.IsDraft = true;
+            const result = await createInvoice(entity);
+            return result;
+        } catch (err) {
+            console.error('[ArchiveInvoice] Taslak kaydedilirken hata:', err);
+            showAlert('danger', 'Taslak e-Arşiv fatura kaydedilirken bir hata oluştu.');
+            throw err;
+        }
+    }
+
+    /***********************************************************
      *  EVENT BINDINGS
      ***********************************************************/
     function bindEvents() {
@@ -1559,27 +1700,91 @@
             $("#invoicePreviewModal").modal("show");
         });
 
-        // TASLAK / GİB GÖNDER BUTONLARI
-        $(document).on("click", "#btnDraftSave, #btnSendToGib", function (e) {
+        // TASLAK / GİB GÖNDER → Invoice.cs + create API
+        $(document).on("click", "#btnDraftSave, #btnSendToGib", async function (e) {
             e.preventDefault();
 
             const isDraft = this.id === "btnDraftSave";
 
+            // Taslak Kaydet daha önce başarılı olduysa ve buton disabled ise 2. kez çalışmasın
+            if (isDraft && $("#btnDraftSave").prop("disabled")) {
+                return;
+            }
+
             const validation = validateForm();
             if (!validation.isValid) {
-                const htmlErrors = validation.errors.map(e => "• " + e).join("<br>");
+                const htmlErrors = validation.errors.map(m => "• " + m).join("<br>");
                 showAlert("danger", "Lütfen zorunlu alanları doldurunuz:<br>" + htmlErrors);
                 return;
             }
 
             const entity = buildInvoiceEntityFromUI();
+            if (!entity.InvoicesItems || !entity.InvoicesItems.length) {
+                showAlert("danger", "En az bir satırda mal/hizmet ve miktar olmalı.");
+                return;
+            }
 
-            if (isDraft) {
-                console.log("e-Arşiv TASLAK olarak kaydedilecek DTO:", entity);
-                showAlert("success", "Taslak e-Arşiv fatura DTO başarıyla oluşturuldu.");
-            } else {
-                console.log("e-Arşiv GİB'e gönderilecek DTO:", entity);
-                showAlert("success", "e-Arşiv fatura DTO başarıyla oluşturuldu ve GİB'e gönderilmeye hazır.");
+            try {
+                // 1) SADECE TASLAK KAYDET
+                if (isDraft) {
+                    const res = await saveInvoiceDraft(entity);
+                    console.log("Taslak olarak kaydedilen e-Arşiv Invoice:", res);
+                    showAlert("success", "Taslak e-Arşiv fatura başarıyla kaydedildi.");
+
+                    // Taslak kayıttan dönen invoice Id'yi al (response schema'na göre burayı güncelleyebilirsin)
+                    const invoiceId = res && res.id;
+
+                    if (invoiceId) {
+                        // Hidden input'a yaz (sayfada yoksa bir zarar vermez)
+                        $("#hfInvoiceId").val(invoiceId);
+
+                        // Aynı sayfada ikinci kez taslak kaydetmeyi engelle
+                        $("#btnDraftSave").prop("disabled", true);
+                    } else {
+                        console.warn("Taslak kayıttan invoiceId alınamadı. Response:", res);
+                    }
+
+                    return;
+                }
+
+                // 2) GİB GÖNDER BUTONU (e-Arşiv)
+                let invoiceIdFromHidden = $("#hfInvoiceId").val();
+                const draftButtonDisabled = $("#btnDraftSave").prop("disabled");
+
+                // a) Taslak daha hiç kaydedilmemişse VEYA hidden boş ise
+                //    önce taslağı kaydet, sonra devam et
+                if (!invoiceIdFromHidden || !draftButtonDisabled) {
+                    const draftRes = await saveInvoiceDraft(entity);
+                    console.log("GİB öncesi otomatik e-Arşiv taslak kaydedildi:", draftRes);
+
+                    const newInvoiceId =
+                        draftRes?.invoiceId ||
+                        draftRes?.id ||
+                        (draftRes?.data && (draftRes.data.invoiceId || draftRes.data.id));
+
+                    if (!newInvoiceId) {
+                        showAlert("danger", "Taslak e-Arşiv fatura kaydedildi, ancak Invoice Id alınamadı. Devam edilemiyor.");
+                        return;
+                    }
+
+                    $("#hfInvoiceId").val(newInvoiceId);
+                    $("#btnDraftSave").prop("disabled", true);
+
+                    invoiceIdFromHidden = newInvoiceId;
+                }
+
+                // b) Elimizde artık mutlaka bir Invoice Id var → Burada e-Arşiv GİB API'ni çağırabilirsin
+                console.log("GİB'e gönderime hazır e-Arşiv fatura. InvoiceId:", invoiceIdFromHidden);
+                console.log("GİB'e gönderilecek e-Arşiv DTO:", entity);
+
+                // TODO:
+                // Buraya kendi e-Arşiv gönderim endpoint'ini (fetch ile) ekleyebilirsin.
+                // Örn: /api/TurkcellEArsiv/earchive/send-json/{invoiceId}
+
+                showAlert("success", "e-Arşiv fatura kaydedildi, GİB'e gönderim için hazır. Burada e-Arşiv GİB API çağrısını yapabilirsiniz.");
+            } catch (err) {
+                console.error('[ArchiveInvoice] Taslak / gönderim sırasında hata:', err);
+                showAlert("danger", "e-Arşiv fatura kaydedilirken veya gönderim için hazırlanırken bir hata oluştu.");
             }
         });
 

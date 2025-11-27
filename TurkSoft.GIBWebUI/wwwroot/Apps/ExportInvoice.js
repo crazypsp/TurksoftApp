@@ -1,4 +1,10 @@
-﻿; (function (global, $) {
+﻿// ExportInvoice.js
+// İhracat e-Fatura ekranı – taslak kaydet + GİB gönder + PDF/XML indirme destekli
+
+// ERP tarafındaki Invoice create API'si
+import { create as createInvoice } from "../entites/ExportInvoice.js";
+
+; (function (global, $) {
     "use strict";
 
     /***********************************************************
@@ -22,6 +28,48 @@
             });
         }
     };
+
+    // RowVersion hex → base64 (SQL rowversion -> JSON string)
+    function rowVersionHexToBase64(hex) {
+        if (!hex) return "";
+        let h = String(hex).trim();
+        if (h.startsWith("0x") || h.startsWith("0X")) {
+            h = h.substring(2);
+        }
+        if (h.length % 2 === 1) {
+            h = "0" + h;
+        }
+        const bytes = [];
+        for (let i = 0; i < h.length; i += 2) {
+            const b = parseInt(h.substr(i, 2), 16);
+            if (!isNaN(b)) bytes.push(b);
+        }
+        let bin = "";
+        for (let i = 0; i < bytes.length; i++) {
+            bin += String.fromCharCode(bytes[i]);
+        }
+        try {
+            return btoa(bin);
+        } catch (e) {
+            console.error("RowVersion base64 dönüşümünde hata:", e);
+            return "";
+        }
+    }
+
+    // BaseEntity alanlarını doldurmak için helper
+    function buildBaseEntity(currentUserId, nowIso, rowVersionBase64) {
+        return {
+            UserId: currentUserId || 0,
+            IsActive: true,
+            DeleteDate: null,
+            DeletedByUserId: null,
+            CreatedAt: nowIso,
+            UpdatedAt: null,
+            CreatedByUserId: currentUserId || null,
+            UpdatedByUserId: null,
+            RowVersion: rowVersionBase64 || null
+        };
+    }
 
     // Global ListData objesini garanti altına al
     global.ListData = global.ListData || {};
@@ -164,7 +212,6 @@
             $ddl.append(opt);
         });
 
-        // Liste varsa ilk şubeyi otomatik seç
         if (subeList.length > 0) {
             $ddl.val(subeList[0].SubeKodu).trigger("change");
         }
@@ -183,7 +230,6 @@
             $ddl.append(new Option(urn, urn));
         });
 
-        // Gönderici etiketi listeden ilk değeri seç
         if (arr.length > 0) {
             $ddl.val(arr[0]).trigger("change");
         }
@@ -198,7 +244,6 @@
         $ddl.empty();
 
         if (!prefixes.length) {
-            // Elinde liste yoksa en azından örnek bir iki prefix ver
             $ddl.append(new Option("FTR", "FTR"));
             $ddl.append(new Option("IRS", "IRS"));
         } else {
@@ -239,7 +284,6 @@
             $ddl.append(new Option(urn, urn));
         });
 
-        // Alıcı etiketi listeden ilk değeri seç
         if (arr.length > 0) {
             $ddl.val(arr[0]).trigger("change");
         }
@@ -258,7 +302,6 @@
             $ddl.append(new Option(`${p.Kodu} - ${p.Aciklama}`, p.Kodu));
         });
 
-        // Default TRY varsa seç
         if (paraList.some(p => p.Kodu === "TRY")) {
             $ddl.val("TRY");
         }
@@ -296,7 +339,6 @@
                 $payeeCur.append(new Option(`${p.Kodu} - ${p.Aciklama}`, p.Kodu));
             });
 
-            // Default TRY varsa o seçilsin
             if ((listData.parabirimList || []).some(p => p.Kodu === "TRY")) {
                 $payeeCur.val("TRY");
             }
@@ -414,7 +456,6 @@
         let firstName = cust.firstName || "";
         let lastName = cust.lastName || "";
 
-        // Ad / Soyad boş geliyorsa Firma adından türet
         if (!firstName && !lastName && cust.partyName) {
             const parts = cust.partyName.trim().split(/\s+/);
             if (parts.length === 1) {
@@ -603,7 +644,7 @@
         $tbody.append($row);
 
         fillBirimSelect($row.find(".js-line-unit"));
-        toggleIstisnaOnLines(); // İhracat sayfasında Fatura Tipi default ISTISNA olduğu için istisna kolonu ilk satırdan itibaren aktif olur
+        toggleIstisnaOnLines();
 
         renumberLines();
         calcLine($row);
@@ -707,7 +748,9 @@
      *  ÖNİZLEME MODEL / HTML
      ***********************************************************/
     function buildInvoiceModelFromUI() {
+        recalcTotals();
         const model = JSON.parse(JSON.stringify(invoiceModel));
+        const h = model.invoiceheader || {};
 
         const ettn = $("#txtUUID").val() || null;
 
@@ -740,14 +783,14 @@
                 KdvOran: Utils.parseNumber($row.find(".js-line-kdv").val()),
                 KdvTutar: Utils.parseNumber($row.find(".js-line-kdv-amount").val()),
                 LineTotal: Utils.parseNumber($row.find(".js-line-total").val()),
-                IstisnaKodu: $row.find(".js-line-istisna").val() || ""
+                IstisnaKodu: $row.find(".js-line-istisna").val() || "",
+                SellerItemCode: "" // şu anlık boş
             });
         });
 
         return model;
     }
 
-    // Fatura önizleme için PDF'e benzer stil tanımı
     let previewStylesInjected = false;
     function ensurePreviewStyles() {
         if (previewStylesInjected) return;
@@ -840,7 +883,6 @@
         previewStylesInjected = true;
     }
 
-
     function renderInvoicePreview(model) {
         ensurePreviewStyles();
 
@@ -852,7 +894,6 @@
         const currencyCode = h.DocumentCurrencyCode || "TRY";
         const currencySuffix = currencyCode === "TRY" ? "TL" : currencyCode;
 
-        // Fatura No (elinde ayrı alan varsa onu kullan, yoksa ETTN'den üret)
         let invoiceNo =
             $("#txtInvoiceNumber").val() ||
             $("#txtFaturaNo").val() ||
@@ -884,7 +925,6 @@
             return hh + " : " + mm + " : " + ss;
         }
 
-        // Toplam iskonto; satırdan hesaplıyoruz
         let toplamIskonto = 0;
         lines.forEach(l => {
             toplamIskonto += Number(l.DiscountAmount || 0);
@@ -895,7 +935,6 @@
         const vergilerDahil = Number(h.TaxInclusiveAmount || h.PayableAmount || (malHizmetToplam + kdvToplam));
         const odenecek = Number(h.PayableAmount || vergilerDahil);
 
-        // KDV oranı tek ise, özet tabloda parantez içinde göster
         const kdvRates = Array.from(new Set(
             lines
                 .map(l => Number(l.KdvOran))
@@ -906,7 +945,6 @@
             kdvLabelSuffix = " (%" + Utils.formatNumber(kdvRates[0], 0) + ")";
         }
 
-        // Alıcı tam ad + adres
         const aliciAdSoyad = ((c.Person_FirstName || "") + " " + (c.Person_FamilyName || "")).trim() ||
             (c.PartyName || "");
 
@@ -917,7 +955,6 @@
             c.CityName || ""
         ].filter(Boolean).join(" ");
 
-        // Hafif yardımcı
         function fmt(n, dec) {
             return Utils.formatNumber(n || 0, dec == null ? 2 : dec);
         }
@@ -925,17 +962,14 @@
         const issueDateText = formatIssueDate(h.IssueDate);
         const issueTimeText = formatIssueTime(h.IssueTime);
 
-        // Özelleştirme No (yoksa TR1.2 bırak)
         const ozellestirmeNo = $("#txtOzelNitelikNo").val() || "TR1.2";
 
         let html = "";
         html += "<div class='invoice-pdf'>";
         html += "  <div class='invoice-pdf-page'>";
 
-        // Watermark
         html += "    <div class='invoice-watermark'>TASLAK</div>";
 
-        // ÜST – Satıcı, logo, QR
         html += "    <div class='row' style='position:relative; z-index:1;'>";
         html += "      <div class='col-xs-6'>";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
@@ -963,16 +997,13 @@
         html += "      </div>";
         html += "    </div>";
 
-        // ETTN satırı
         html += "    <div class='row' style='position:relative; z-index:1; margin-top:4px;'>";
         html += "      <div class='col-xs-12 text-right text-xs'><strong>ETTN:</strong> " + (h.Invoice_ID || "") + "</div>";
         html += "    </div>";
 
         html += "    <hr class='invoice-separator'/>";
 
-        // Orta – Alıcı ve Fatura üst bilgileri
         html += "    <div class='row' style='position:relative; z-index:1;'>";
-        // SAYIN blok
         html += "      <div class='col-xs-7'>";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
         html += "          <tr><td><strong>SAYIN</strong></td></tr>";
@@ -1001,7 +1032,6 @@
         html += "        </table>";
         html += "      </div>";
 
-        // Sağdaki küçük tablo
         html += "      <div class='col-xs-5'>";
         html += "        <table class='table table-condensed invoice-table-tight text-xs'>";
         html += "          <tr><th>Özelleştirme No</th><td>" + ozellestirmeNo + "</td></tr>";
@@ -1014,7 +1044,6 @@
         html += "      </div>";
         html += "    </div>";
 
-        // KALEM TABLOSU
         html += "    <div class='row' style='position:relative; z-index:1; margin-top:4px;'>";
         html += "      <div class='col-xs-12'>";
         html += "        <table class='table table-condensed invoice-table-tight text-xs'>";
@@ -1061,7 +1090,6 @@
         html += "      </div>";
         html += "    </div>";
 
-        // ALT – Not ve özetler
         html += "    <div class='row' style='position:relative; z-index:1; margin-top:4px;'>";
         html += "      <div class='col-xs-6'>";
         if (h.Note) {
@@ -1081,35 +1109,93 @@
         html += "      </div>";
         html += "    </div>";
 
-        // Sayfa altı
         html += "    <div class='invoice-footer-page'>1/1</div>";
 
-        html += "  </div>"; // invoice-pdf-page
-        html += "</div>";    // invoice-pdf
+        html += "  </div>";
+        html += "</div>";
 
         $("#invoicePreviewContent").html(html);
     }
 
     /***********************************************************
-     *  Invoice Entity (DTO)
+     *  Invoice Entity (DTO) – ERP API için (RowVersion’lı)
      ***********************************************************/
     function buildInvoiceEntityFromUI() {
+        // Toplamları bir daha güncelle
         recalcTotals();
         const model = buildInvoiceModelFromUI();
         const h = model.invoiceheader || {};
 
+        // Seçili müşteri Id (varsa)
         const customerId = parseInt($("#ddlMusteriAra").val(), 10) || 0;
 
+        // Kullanıcı Id'si – varsa gizli inputtan al
+        let currentUserId = 0;
+        const $userHidden = $("#hdnUserId");
+        if ($userHidden && $userHidden.length) {
+            const parsed = parseInt($userHidden.val(), 10);
+            if (!isNaN(parsed)) currentUserId = parsed;
+        }
+
+        const nowIso = new Date().toISOString();
+
+        // Sabit RowVersion hex (yeni kayıtlar için)
+        const DEFAULT_ROWVERSION_HEX = "0x00000000000007E1";
+        const defaultRowVersionBase64 = rowVersionHexToBase64(DEFAULT_ROWVERSION_HEX);
+
+        // RowVersion – 0x. hex → base64 (mevcut kayıt düzenleniyorsa, yoksa sabit)
+        let rowVersionBase64 = defaultRowVersionBase64;
+        const $rowVerHidden = $("#hdnRowVersion");
+        if ($rowVerHidden && $rowVerHidden.length) {
+            const hexVal = ($rowVerHidden.val() || "").trim();
+            if (hexVal) {
+                rowVersionBase64 = rowVersionHexToBase64(hexVal);
+            }
+        }
+
+        // Tüm BaseEntity türevleri için ortak doldurucu
+        const baseFor = (rvBase64) => buildBaseEntity(
+            currentUserId,
+            nowIso,
+            rvBase64 || defaultRowVersionBase64
+        );
+
+        // Fatura no ve tarih
+        let invoiceNo =
+            $("#txtInvoiceNumber").val() ||
+            $("#txtFaturaNo").val() ||
+            (h.Prefix && h.Invoice_ID ? (h.Prefix + "-" + h.Invoice_ID) : (h.Invoice_ID || null)) ||
+            ("INV-" + Date.now());
+
+        let invoiceDateIso = nowIso;
+        if (h.IssueDate) {
+            const datePart = h.IssueDate;
+            const timePart = h.IssueTime || "00:00";
+            invoiceDateIso = datePart + "T" + timePart + ":00";
+        }
+
+        const currency = (h.DocumentCurrencyCode || $("#ddlParaBirimi").val() || "TRY").toString().toUpperCase();
+
+        let total = h.PayableAmount || 0;
+        if (!total) {
+            const txtTotal =
+                $("#odenecekToplam").val() ||
+                $("#odenecekToplam").text() ||
+                "0";
+            total = Utils.parseNumber(txtTotal);
+        }
+
         const entity = {
+            // BaseEntity (RowVersion kesin dolu)
+            ...baseFor(rowVersionBase64),
+
             Id: 0,
             CustomerId: customerId,
             Ettn: h.Invoice_ID || null,
-            InvoiceNo: h.Prefix ? (h.Prefix + "-" + (h.Invoice_ID || "")) : (h.Invoice_ID || null),
-            InvoiceDate: h.IssueDate
-                ? h.IssueDate + "T" + (h.IssueTime || "00:00") + ":00"
-                : null,
-            Total: h.PayableAmount || 0,
-            Currency: h.DocumentCurrencyCode || "TRY",
+            InvoiceNo: invoiceNo,
+            InvoiceDate: invoiceDateIso,
+            Total: total,
+            Currency: currency,
 
             BranchCode: $("#ddlSubeKodu").val() || null,
             SourceUrn: $("#ddlSourceUrn").val() || null,
@@ -1130,8 +1216,10 @@
             InvoicesPayments: []
         };
 
+        // -------- KALEMLER (InvoicesItems) --------
         (model.invoiceLines || []).forEach(l => {
             entity.InvoicesItems.push({
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
                 Name: l.ItemName,
@@ -1148,8 +1236,10 @@
             });
         });
 
+        // -------- VERGİLER (InvoicesTaxes) --------
         if ((h.Taxes || 0) > 0) {
             entity.InvoicesTaxes.push({
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
                 TaxTypeCode: "KDV",
@@ -1158,7 +1248,9 @@
             });
         }
 
+        // -------- ÖDEME (InvoicesPayments) --------
         const payment = {
+            ...baseFor(),
             Id: 0,
             InvoiceId: 0,
             PaymentMeansCode: $("#PaymentMeansCode").val() || "",
@@ -1180,10 +1272,11 @@
             entity.InvoicesPayments.push(payment);
         }
 
-        // Export sayfasında SGK alanları yok; #ddlilaveFaturaTipi bulunmadığı için burası zaten boş kalır.
+        // -------- SGK / İlave Fatura Tipi (varsa) --------
         const ilaveFaturaTipi = $("#ddlilaveFaturaTipi").val();
         if (ilaveFaturaTipi) {
             entity.SgkRecords.push({
+                ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
                 IlaveFaturaTipi: ilaveFaturaTipi,
@@ -1195,12 +1288,24 @@
             });
         }
 
+        // -------- HİZMET SAĞLAYICI (ServicesProvider) – opsiyonel ama RowVersion'lı tek kayıt --------
+        const systemUser =
+            ($("#hdnUserName").val() || $("#lblUserName").text() || "").trim() || "WEBUI";
+
+        entity.ServicesProviders.push({
+            ...baseFor(),
+            Id: 0,
+            No: "SRV-" + Date.now(),
+            SystemUser: systemUser,
+            InvoiceId: 0,
+            Invoice: null
+        });
+
         return entity;
     }
 
     /***********************************************************
      *  SGK EK ALANLAR
-     *  (İhracat sayfasında bu alanlar yok ama fonksiyonların kalması zarar vermez)
      ***********************************************************/
     const sgkConfig = {
         "SAGLIK_ECZ": {
@@ -1445,7 +1550,7 @@
             }
         }
 
-        // KAMU SENARYOSU İSE (İhracat sayfasında pek kullanılmaz ama check kalabilir)
+        // KAMU SENARYOSU İSE
         const isKamuSenaryo = $("#ddlSenaryo").val() === "KAMU";
         if (isKamuSenaryo) {
             requireInput("#txtKamuVkn", "Kamu alıcı VKN giriniz.");
@@ -1462,6 +1567,143 @@
             isValid: errors.length === 0,
             errors: errors
         };
+    }
+
+    /***********************************************************
+     *  TASLAK & GİB PORTAL YARDIMCI FONKSİYONLARI
+     ***********************************************************/
+    function extractInvoiceIdFromResponse(res) {
+        if (!res) return null;
+        if (typeof res === "number" || typeof res === "string") return res;
+        if (res.id != null) return res.id;
+        if (res.invoiceId != null) return res.invoiceId;
+        if (res.data) {
+            if (res.data.id != null) return res.data.id;
+            if (res.data.invoiceId != null) return res.data.invoiceId;
+        }
+        return null;
+    }
+
+    async function saveInvoiceDraft(entity) {
+        try {
+            entity.IsDraft = true;
+            const res = await createInvoice(entity);
+            console.log("[ExportInvoice] Taslak olarak kaydedilen Invoice:", res);
+
+            const invoiceId = extractInvoiceIdFromResponse(res);
+            if (invoiceId) {
+                $("#hfInvoiceId").val(invoiceId);
+                $("#btnDraftSave").prop("disabled", true);
+            } else {
+                console.warn("[ExportInvoice] Taslak kayıttan invoiceId alınamadı. Response:", res);
+            }
+
+            showAlert("success", "Taslak ihracat faturası başarıyla kaydedildi.");
+            return res;
+        } catch (err) {
+            console.error("[ExportInvoice] Taslak kaydedilirken hata:", err);
+            showAlert("danger", "Taslak ihracat fatura kaydedilirken bir hata oluştu.");
+            throw err;
+        }
+    }
+
+    function getGibPortalBaseUrl() {
+        let baseUrl = window.gibPortalApiBaseUrl;
+        if (!baseUrl && typeof gibPortalApiBaseUrl !== "undefined") {
+            baseUrl = gibPortalApiBaseUrl;
+        }
+
+        if (!baseUrl) {
+            throw new Error("GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).");
+        }
+
+        if (!baseUrl.endsWith("/")) {
+            baseUrl += "/";
+        }
+        return baseUrl;
+    }
+
+    // İhracat faturası için GİB'e gönderim (isExport = true)
+    async function sendInvoiceToGibById(invoiceId) {
+        const baseUrl = getGibPortalBaseUrl();
+        const url =
+            baseUrl +
+            "TurkcellEFatura/einvoice/send-json/" +
+            encodeURIComponent(invoiceId) +
+            "?isExport=true";
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => "");
+            throw new Error("GİB API isteği başarısız. Status: " + response.status + " " + text);
+        }
+
+        let json = null;
+        try {
+            json = await response.json();
+        } catch {
+            json = null;
+        }
+
+        return json;
+    }
+
+    function handleGibSendResponse(gibRes) {
+        const uuid =
+            (gibRes && (gibRes.id || gibRes.uuid || gibRes.ettn)) || "";
+        const invoiceNumber =
+            (gibRes && (gibRes.invoiceNumber || gibRes.invoiceNo || gibRes.number)) || "";
+
+        $("#hfGibInvoiceUuid").val(uuid || "");
+        $("#hfGibInvoiceNumber").val(invoiceNumber || "");
+
+        if (uuid && invoiceNumber) {
+            $("#btnDownloadPDF").prop("disabled", false);
+            $("#btnDownloadXML").prop("disabled", false);
+
+            showAlert("success", "Fatura başarıyla GİB'e gönderildi.");
+        } else {
+            showAlert(
+                "danger",
+                (gibRes && (gibRes.message || gibRes.Message)) ||
+                "Fatura GİB'e gönderilirken bir hata oluştu."
+            );
+        }
+    }
+
+    async function downloadBinaryFromGib(url, defaultFileName) {
+        const response = await fetch(url, { method: "GET" });
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => "");
+            throw new Error("Dosya indirme isteği başarısız. Status: " + response.status + " " + text);
+        }
+
+        const blob = await response.blob();
+        let fileName = defaultFileName || "file";
+
+        const contentDisposition = response.headers.get("content-disposition");
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename\*?=(?:UTF-8''|)([^;]+)/i);
+            if (match && match[1]) {
+                fileName = decodeURIComponent(match[1].replace(/["']/g, "").trim());
+            }
+        }
+
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
     }
 
     /***********************************************************
@@ -1527,30 +1769,107 @@
         });
 
         // TASLAK / GİB GÖNDER BUTONLARI
-        $(document).on("click", "#btnDraftSave, #btnSendToGib", function (e) {
+        $(document).on("click", "#btnDraftSave, #btnSendToGib", async function (e) {
             e.preventDefault();
 
-            const isDraft = this.id === "btnDraftSave";
+            const isDraftButton = this.id === "btnDraftSave";
 
             const validation = validateForm();
             if (!validation.isValid) {
-                const htmlErrors = validation.errors.map(e => "• " + e).join("<br>");
+                const htmlErrors = validation.errors.map(m => "• " + m).join("<br>");
                 showAlert("danger", "Lütfen zorunlu alanları doldurunuz:<br>" + htmlErrors);
                 return;
             }
 
             const entity = buildInvoiceEntityFromUI();
 
-            if (isDraft) {
-                console.log("Taslak olarak kaydedilecek Export Invoice DTO:", entity);
-                showAlert("success", "Taslak ihracat fatura DTO başarıyla oluşturuldu.");
-            } else {
-                console.log("GİB'e gönderilecek Export Invoice DTO:", entity);
-                showAlert("success", "İhracat fatura DTO başarıyla oluşturuldu ve GİB'e gönderilmeye hazır.");
+            try {
+                let currentInvoiceId = $("#hfInvoiceId").val();
+
+                if (isDraftButton) {
+                    const draftRes = await saveInvoiceDraft(entity);
+                    currentInvoiceId = extractInvoiceIdFromResponse(draftRes) || currentInvoiceId;
+                } else {
+                    // GİB'e gönder
+                    if (!currentInvoiceId || $("#btnDraftSave").prop("disabled") === false) {
+                        // Henüz taslak yok ya da buton hâlâ aktif → önce taslak kaydet
+                        const draftRes = await saveInvoiceDraft(entity);
+                        currentInvoiceId = extractInvoiceIdFromResponse(draftRes) || currentInvoiceId;
+                    }
+
+                    if (!currentInvoiceId) {
+                        showAlert("danger", "Fatura taslak kaydedilemedi, GİB'e gönderim iptal edildi.");
+                        return;
+                    }
+
+                    const gibRes = await sendInvoiceToGibById(currentInvoiceId);
+                    console.log("[ExportInvoice] GİB send response:", gibRes);
+                    handleGibSendResponse(gibRes);
+                }
+            } catch (err) {
+                console.error("[ExportInvoice] Taslak/GİB gönderim hatası:", err);
+                showAlert(
+                    "danger",
+                    isDraftButton
+                        ? "Taslak ihracat fatura kaydedilirken bir hata oluştu."
+                        : "İhracat faturası GİB'e gönderilirken bir hata oluştu."
+                );
             }
         });
 
-        // SGK ilave fatura tipi (ihracat ekranında yok ama varsa çalışsın)
+        // PDF İndir
+        $(document).on("click", "#btnDownloadPDF", async function (e) {
+            e.preventDefault();
+
+            const uuid = $("#hfGibInvoiceUuid").val();
+
+            if (!uuid) {
+                showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                return;
+            }
+
+            try {
+                const baseUrl = getGibPortalBaseUrl();
+                const url =
+                    baseUrl +
+                    "TurkcellEFatura/einvoice/outbox/pdf/" +
+                    encodeURIComponent(uuid) +
+                    "?standardXslt=true";
+
+                await downloadBinaryFromGib(url, uuid + ".pdf");
+            } catch (err) {
+                console.error("[ExportInvoice] PDF indirilirken hata:", err);
+                showAlert("danger", "PDF indirilirken bir hata oluştu.");
+            }
+        });
+
+        // XML (UBL) İndir
+        $(document).on("click", "#btnDownloadXML", async function (e) {
+            e.preventDefault();
+
+            const uuid = $("#hfGibInvoiceUuid").val();
+
+            if (!uuid) {
+                showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                return;
+            }
+
+            try {
+                const baseUrl = getGibPortalBaseUrl();
+                const url =
+                    baseUrl +
+                    "TurkcellEFatura/einvoice/outbox/ubl/" +
+                    encodeURIComponent(uuid) +
+                    "?standardXslt=true";
+
+                await downloadBinaryFromGib(url, uuid + ".xml");
+            } catch (err) {
+                console.error("[ExportInvoice] XML (UBL) indirilirken hata:", err);
+                showAlert("danger", "XML (UBL) indirilirken bir hata oluştu.");
+            }
+        });
+
+        // SGK ilave fatura tipi
         $(document).on("change", "#ddlilaveFaturaTipi", updateSgkFields);
 
         // İrsaliye
@@ -1665,7 +1984,7 @@
             });
         }
 
-        // SGK alanları (ihracat ekranında yoksa zaten etkisi olmayacak)
+        // SGK alanları
         updateSgkFields();
 
         // Tarih & saat default
@@ -1682,8 +2001,6 @@
             $("#txtIssueTime").val(`${hh}:${mm}`);
         }
 
-        // Model header başlangıç değerleri
-        // İhracat ekranında senaryo default IHRACAT, fatura tipi default ISTISNA
         if ($("#ddlSenaryo").length) {
             const scenVal = $("#ddlSenaryo").val() || "IHRACAT";
             $("#ddlSenaryo").val(scenVal);
@@ -1698,7 +2015,12 @@
         invoiceModel.invoiceheader.Currency = $("#ddlParaBirimi").val() || "TRY";
         invoiceModel.invoiceheader.DocumentCurrencyCode = invoiceModel.invoiceheader.Currency;
 
-        // İlk satır
+        if ($("#hfGibInvoiceUuid").length) {
+            const hasUuid = !!$("#hfGibInvoiceUuid").val();
+            $("#btnDownloadPDF").prop("disabled", !hasUuid);
+            $("#btnDownloadXML").prop("disabled", !hasUuid);
+        }
+
         if ($("#btnLineAdd").length) {
             $("#btnLineAdd").trigger("click");
         }

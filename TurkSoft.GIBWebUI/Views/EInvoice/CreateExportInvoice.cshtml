@@ -5,6 +5,20 @@
 }
 
 <form id="faturaformu">
+    @* JS tarafında (ExportInvoice.js) kullanılan hidden alanlar *@
+    <input type="hidden" id="hfInvoiceId" value="" />
+    <input type="hidden" id="hfGibStatusCode" value="" />
+    <input type="hidden" id="hfGibInvoiceUuid" value="" />
+    <input type="hidden" id="hfGibInvoiceNumber" value="" />
+    <input type="hidden" id="hfGibDocumentId" value="" />
+
+    @* Yeni kayıtta boş kalabilir, düzenleme senaryosunda RowVersion hex buraya basılabilir *@
+    <input type="hidden" id="hdnRowVersion" value="" />
+
+    @* Kullanıcı bilgisi – istersen ViewModel'den veya Claims'ten doldurursun *@
+    <input type="hidden" id="hdnUserId" value="" />
+    <input type="hidden" id="hdnUserName" value="" />
+
     <!--ÜST BİLGİLER-->
     <div class="box box-default">
         <div class="box-header with-border">
@@ -18,13 +32,19 @@
                         <div class="col-0 col-md-2 col-lg-2 mb-2 px-1"></div>
 
                         <div class="col-6 col-md-2 col-lg-2 mb-2 px-1">
-                            <button type="button" class="btn btn-danger btn-block text-sm text-md text-lg" id="btnDownloadPDF">
+                            <button type="button"
+                                    class="btn btn-danger btn-block text-sm text-md text-lg"
+                                    id="btnDownloadPDF"
+                                    disabled>
                                 Fatura PDF İndir &nbsp;<span class="btn-label"><i class="fa fa-download"></i></span>
                             </button>
                         </div>
 
                         <div class="col-6 col-md-2 col-lg-2 mb-2 px-1">
-                            <button type="button" class="btn btn-danger btn-block text-sm text-md text-lg" id="btnDownloadXML">
+                            <button type="button"
+                                    class="btn btn-danger btn-block text-sm text-md text-lg"
+                                    id="btnDownloadXML"
+                                    disabled>
                                 Fatura XML İndir &nbsp;<span class="btn-label"><i class="fa fa-download"></i></span>
                             </button>
                         </div>
@@ -417,7 +437,7 @@
                     </div>
                 </div>
             </div>
-           
+
             <!-- Ödeme -->
             <div class="tab-pane" id="odeme">
                 <div class="box-body">
@@ -829,5 +849,5 @@
 
 @section Scripts {
     <script src="~/apps/listdata.js"></script>
-    <script src="~/apps/ExportInvoice.js"></script>
+    <script type="module" src="~/apps/ExportInvoice.js"></script>
 }
