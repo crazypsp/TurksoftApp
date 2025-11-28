@@ -1,13 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TurkSoft.Entities.GIBEntityDB
 {
-    public class Invoice: BaseEntity
+    public class Invoice : BaseEntity
     {
         public long Id { get; set; }
         public long CustomerId { get; set; }
@@ -26,5 +23,9 @@ namespace TurkSoft.Entities.GIBEntityDB
         [ValidateNever] public ICollection<ServicesProvider> ServicesProviders { get; set; }
         [ValidateNever] public ICollection<Returns> Returns { get; set; }
         [ValidateNever] public ICollection<InvoicesPayment> InvoicesPayments { get; set; }
+
+        // 🔹 Yeni: Log ve kredi hareketleri navigasyonları
+        [ValidateNever] public ICollection<GibInvoiceOperationLog> GibInvoiceOperationLogs { get; set; }
+        [ValidateNever] public ICollection<GibUserCreditTransaction> GibUserCreditTransactions { get; set; }
     }
 }
