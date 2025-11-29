@@ -14,7 +14,7 @@ namespace TurkSoft.Data.GibData
     /// - CreatedAt / UpdatedAt alanlarını otomatik set eder.
     /// - Cascade delete (multiple path) hatalarına karşı tüm ilişkiler Restrict yapılmıştır.
     /// - UserAnnouncementRead ilişkisi özel olarak NoAction olarak ayarlanmıştır.
-    /// - İlk migration sırasında Role ve User tabloları seed edilir.
+    /// - İlk migration sırasında şema oluşturulur. Seed işlemleri runtime'da yapılabilir.
     /// - Tüm tablolarda (UserId + İş Anahtarı) benzersiz index (IsActive=1 filtresiyle).
     /// - Soft delete: Delete çağrıları IsActive=false + DeleteDate olur.
     /// </summary>
@@ -80,6 +80,14 @@ namespace TurkSoft.Data.GibData
         public DbSet<Users> Users { get; set; } = default!;
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
         public DbSet<ApiRefreshToken> ApiRefreshToken { get; set; } = default!;
+
+        // 🔹 Yeni GİB bağlı modeller
+        public DbSet<GibFirm> GibFirm { get; set; } = default!;
+        public DbSet<GibInvoiceScenario> GibInvoiceScenario { get; set; } = default!;
+        public DbSet<GibInvoiceType> GibInvoiceType { get; set; } = default!;
+        public DbSet<GibUserCreditAccount> GibUserCreditAccount { get; set; } = default!;
+        public DbSet<GibUserCreditTransaction> GibUserCreditTransaction { get; set; } = default!;
+        public DbSet<GibInvoiceOperationLog> GibInvoiceOperationLog { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -175,9 +183,14 @@ namespace TurkSoft.Data.GibData
             modelBuilder.ApplyUserScopedUniqueness();
 
             // === SEED DATA ===
-            SeedRoles(modelBuilder);
-            SeedUsers(modelBuilder);
-            SeedUserRoles(modelBuilder);
+            // ÖNEMLİ: Migration alınırken EF Core "Sequence contains no elements" hatası
+            // verdiği için HasData tabanlı seed çağrılarını buradan kaldırıyoruz.
+            // Seed işlemlerini runtime'da (ayrı bir seeder sınıfında) yapacağız.
+            //
+            //SeedRoles(modelBuilder);
+            //SeedGibFirms(modelBuilder);
+            //SeedUsers(modelBuilder);
+            //SeedUserRoles(modelBuilder);
         }
 
         // ---- GLOBAL FILTER & ROWVERSION ----
@@ -232,7 +245,8 @@ namespace TurkSoft.Data.GibData
             }
         }
 
-        // ---- SEED: Roller ----
+        // ---- SEED METOTLARI (şu an kullanılmıyor, runtime seeding için saklıyoruz) ----
+
         private void SeedRoles(ModelBuilder modelBuilder)
         {
             var seedDate = new DateTime(2025, 11, 7, 0, 0, 0, DateTimeKind.Utc);
@@ -245,33 +259,60 @@ namespace TurkSoft.Data.GibData
             );
         }
 
-        // ---- SEED: Kullanıcılar (PBKDF2 hash) ----
+        private void SeedGibFirms(ModelBuilder modelBuilder)
+        {
+            var seedDate = new DateTime(2025, 11, 7, 0, 0, 0, DateTimeKind.Utc);
+
+            modelBuilder.Entity<GibFirm>().HasData(
+              new GibFirm
+              {
+                  Id = 1,
+                  UserId = 1,
+                  Title = "Turkcell Test Firması",
+                  TaxNo = "1234567803",
+                  TaxOffice = "GIB",
+                  CommercialRegistrationNo = "1234567890123456",
+                  MersisNo = "9876543210987654",
+                  AddressLine = "İnönü Mah. Cumhuriyet Cad. No:1",
+                  City = "İstanbul",
+                  District = "Şişli",
+                  Country = "Türkiye",
+                  PostalCode = "34380",
+                  Phone = "+90 212 000 0000",
+                  Email = "info@turkcelltestfirmasi.com",
+                  GibAlias = "urn:mail:defaulttest3pk@medyasoft.com.tr",
+                  ApiKey = "EcwbRm3WbGk2tRpNGwlu4j7UbuPiVZwWCBdhLIx3Bbo=",
+                  IsEInvoiceRegistered = true,
+                  IsEArchiveRegistered = true,
+                  CreatedAt = seedDate,
+                  IsActive = true
+              });
+        }
+
         private void SeedUsers(ModelBuilder modelBuilder)
         {
             var seedDate = new DateTime(2025, 11, 7, 0, 0, 0, DateTimeKind.Utc);
 
-            // Hash formatı: PBKDF2$<iter>$<salt>$<hash>
-            const string adminHash = "PBKDF2$100000$dDSF2N132FQkI11U1m1m5A==$f5V1BBDJOOdE7QjoxPM+b557TmzNGPardO2QnHAho+I="; // Admin!123
-            const string bayiHash = "PBKDF2$100000$QTFXdEp+oxfYXdv03gpFzg==$BGgBXx3qgMWCv0nh6/Web5cti+UztJ3EyfH0T12ZBF4="; // Bayi!123
-            const string mmHash = "PBKDF2$100000$GQMf5cVH3D+Gk4hYHVeWRQ==$OjQXlOi7CCKny2cdt15McbKWGDuffOv8a8RSqS2CQs4="; // MM!123
-            const string firmaHash = "PBKDF2$100000$nvzTYnu9jldsQTrX/0spEg==$3tnZ70MM9Fpzx0L8V+QyNLfq97hNSpppA+A7WaJXAMs="; // Firma!123
+            const string adminHash = "PBKDF2$100000$dDSF2N132FQkI11U1m1m5A==$f5V1BBDJOOdE7QjoxPM+b557TmzNGPardO2QnHAho+I=";
+            const string bayiHash = "PBKDF2$100000$QTFXdEp+oxfYXdv03gpFzg==$BGgBXx3qgMWCv0nh6/Web5cti+UztJ3EyfH0T12ZBF4=";
+            const string mmHash = "PBKDF2$100000$GQMf5cVH3D+Gk4hYHVeWRQ==$OjQXlOi7CCKny2cdt15McbKWGDuffOv8a8RSqS2CQs4=";
+            const string firmaHash = "PBKDF2$100000$nvzTYnu9jldsQTrX/0spEg==$3tnZ70MM9Fpzx0L8V+QyNLfq97hNSpppA+A7WaJXAMs=";
 
             modelBuilder.Entity<User>().HasData(
-                new User { Id = 1, Username = "admin", Email = "admin@gib.com", PasswordHash = adminHash, CreatedAt = seedDate, IsActive = true },
-                new User { Id = 2, Username = "bayi", Email = "bayi@gib.com", PasswordHash = bayiHash, CreatedAt = seedDate, IsActive = true },
-                new User { Id = 3, Username = "malimusavir", Email = "mm@gib.com", PasswordHash = mmHash, CreatedAt = seedDate, IsActive = true },
-                new User { Id = 4, Username = "firma", Email = "firma@gib.com", PasswordHash = firmaHash, CreatedAt = seedDate, IsActive = true }
+                new User { Id = 1, Username = "admin", Email = "admin@gib.com", PasswordHash = adminHash, GibFirmId = 1, CreatedAt = seedDate, IsActive = true },
+                new User { Id = 2, Username = "bayi", Email = "bayi@gib.com", PasswordHash = bayiHash, GibFirmId = 1, CreatedAt = seedDate, IsActive = true },
+                new User { Id = 3, Username = "malimusavir", Email = "mm@gib.com", PasswordHash = mmHash, GibFirmId = 1, CreatedAt = seedDate, IsActive = true },
+                new User { Id = 4, Username = "firma", Email = "firma@gib.com", PasswordHash = firmaHash, GibFirmId = 1, CreatedAt = seedDate, IsActive = true }
             );
         }
 
-        // ---- SEED: Kullanıcı-Rol eşlemesi ----
         private void SeedUserRoles(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<UserRole>().HasData(
-                new UserRole { Id = 1, UserId = 1, RoleId = 1, IsActive = true }, // Admin
-                new UserRole { Id = 2, UserId = 2, RoleId = 2, IsActive = true }, // Bayi
-                new UserRole { Id = 3, UserId = 3, RoleId = 3, IsActive = true }, // MaliMüşavir
-                new UserRole { Id = 4, UserId = 4, RoleId = 4, IsActive = true }  // Firma
+                new UserRole { Id = 1, UserId = 1, RoleId = 1, IsActive = true },
+                new UserRole { Id = 2, UserId = 2, RoleId = 2, IsActive = true },
+                new UserRole { Id = 3, UserId = 3, RoleId = 3, IsActive = true },
+                new UserRole { Id = 4, UserId = 4, RoleId = 4, IsActive = true }
             );
         }
 
@@ -288,17 +329,12 @@ namespace TurkSoft.Data.GibData
             return base.SaveChangesAsync(cancellationToken);
         }
 
-        /// <summary>
-        /// Soft delete ve CreatedAt / UpdatedAt / DeleteDate alanlarını yönetir.
-        /// DateTime ve DateTimeOffset tiplerini güvenli şekilde ele alır.
-        /// </summary>
         private void ApplyAuditAndSoftDelete()
         {
             var utcNow = DateTimeOffset.UtcNow;
 
             foreach (var entry in ChangeTracker.Entries())
             {
-                // ---------- SOFT DELETE ----------
                 if (entry.State == EntityState.Deleted &&
                     entry.Properties.Any(p => p.Metadata.Name == "IsActive"))
                 {
@@ -319,7 +355,6 @@ namespace TurkSoft.Data.GibData
                     continue;
                 }
 
-                // ---------- ADDED (CreatedAt) ----------
                 if (entry.State == EntityState.Added)
                 {
                     var created = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "CreatedAt");
@@ -344,7 +379,6 @@ namespace TurkSoft.Data.GibData
                         }
                     }
                 }
-                // ---------- MODIFIED (UpdatedAt) ----------
                 else if (entry.State == EntityState.Modified)
                 {
                     var updated = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
@@ -373,11 +407,9 @@ namespace TurkSoft.Data.GibData
     // ==========================================================
     internal static class UserScopedUniquenessExtensions
     {
-        // Genel adaylar
         private static readonly string[] GenericCandidates =
             { "Code", "Name", "Title", "TaxNo", "IsoCode", "Email", "Username", "Sku", "Barcode" };
 
-        // Entity’ye özel tercih listeleri
         private static readonly System.Collections.Generic.Dictionary<string, string[]> PreferredByEntity = new()
         {
             { "Item",               new[] { "Code", "Name" } },
@@ -388,7 +420,7 @@ namespace TurkSoft.Data.GibData
             { "Category",           new[] { "Name" } },
             { "Unit",               new[] { "ShortName", "Name" } },
             { "Warehouse",          new[] { "Name" } },
-            { "UserRole",           new[] { "RoleId" } }, // (UserId, RoleId)
+            { "UserRole",           new[] { "RoleId" } },
         };
 
         public static void ApplyUserScopedUniqueness(this ModelBuilder b)
@@ -400,18 +432,13 @@ namespace TurkSoft.Data.GibData
                 var clr = et.ClrType;
                 if (clr == null || clr.IsAbstract) continue;
 
-                // Yalnız UserId + IsActive olan tablolar
                 if (et.FindProperty("UserId") is null || et.FindProperty("IsActive") is null) continue;
 
-                // Önce tabloya özel bir iş anahtarı ara
                 var keyProp = FindPreferredProperty(et);
-
-                // Yoksa genel adaylardan birini seç
                 keyProp ??= FindGenericProperty(et);
 
                 if (keyProp == null)
                 {
-                    // İlişki tablosu gibi (UserId, RoleId) vb.
                     if (et.FindProperty("RoleId") != null)
                         CreateUnique(b, et, new[] { "UserId", "RoleId" }, Filter);
                     continue;
@@ -423,7 +450,6 @@ namespace TurkSoft.Data.GibData
                 {
                     CreateUnique(b, et, pair, Filter);
 
-                    // String ise Required yap (NULL tekilliğini bozmasın)
                     if (keyProp.ClrType == typeof(string))
                         b.Entity(clr).Property(keyProp.Name).IsRequired();
                 }

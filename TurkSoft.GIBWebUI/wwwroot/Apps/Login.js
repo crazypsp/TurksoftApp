@@ -1,6 +1,6 @@
 ﻿// /apps/login-glue.js
 import { signIn, getSession, clearAllSessions } from '../Service/Login.js';
-
+import { FirmaApi } from '../Entites/index.js';
 function ensureErrorBox() {
     let el = document.getElementById('loginError');
     if (!el) {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const res = await signIn(email, pass);
-
+            const byQuery = await FirmaApi.list();
             if (!res.success) {
                 showError(res.message || 'Giriş başarısız.');
                 return;

@@ -20,12 +20,14 @@ namespace TurkSoft.GibErpApi.Controllers
 <#
     var gib = new[]{
         "Address","Announcement","Bank","Brand","Category","City","CommissionsMove","Country","Currency",
-        "Customer","CustomersGroup","CustomReport","Dealer","Document","DocumentType","ExchangeRate","ExchangeRates",
-        "GeneralReport","Group","Identifiers","InfCode","Invoice","InvoicesDiscount","InvoicesItem","InvoicesPayment",
-        "InvoicesTax","Item","ItemsCategory","ItemsDiscount","ItemsExport","Log","Payment","PaymentAccount","PaymentType",
-        "Permission","ProcesingReport","Purchase","PurchaseItem","Request","Returns","Role","RolePermission","ServicesProvider",
-        "Setting","Sgk","Stock","StockMovement","Supplier","Tax","Tourist","Unit","User","UserAnnouncementRead","UserRole",
-        "Users","Warehouse"
+    "Customer","CustomersGroup","CustomReport","Dealer","Document","DocumentType","ExchangeRate","ExchangeRates",
+    "GeneralReport","Group","Identifiers","InfCode","Invoice","InvoicesDiscount","InvoicesItem","InvoicesPayment",
+    "InvoicesTax","Item","ItemsCategory","ItemsDiscount","ItemsExport","Log","Payment","PaymentAccount","PaymentType",
+    "Permission","ProcesingReport","Purchase","PurchaseItem","Request","Returns","Role","RolePermission","ServicesProvider",
+    "Setting","Sgk","Stock","StockMovement","Supplier","Tax","Tourist","Unit","User","UserAnnouncementRead","UserRole",
+    "Users","Warehouse",
+    // 🔹 Eksik olanlar eklendi
+    "GibFirm","GibInvoiceScenario","GibInvoiceType","GibUserCreditAccount","GibUserCreditTransaction","GibInvoiceOperationLog"
     };
     foreach (var e in gib) {
 #>

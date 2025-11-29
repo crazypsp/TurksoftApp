@@ -5,10 +5,10 @@
 //  Özel aksiyon ihtiyacında aynı isimle partial Gib{Entity}Controller açabilirsin (Controllers/Custom).
 // </auto-generated>
 
-using Microsoft.AspNetCore.Mvc;  
+using Microsoft.AspNetCore.Mvc;
 using TurkSoft.Entities.GIBEntityDB;                // GIB entities
 using TurkSoft.Service.Interface.Gib;
-using TurkSoft.GIBErpApi.Controllers.Common;        // GibCrudController
+using TurkSoft.GIBErpApi.Controllers.Common;               // IGib{Entity}Service
 
 namespace TurkSoft.GibErpApi.Controllers
 {
@@ -514,6 +514,60 @@ namespace TurkSoft.GibErpApi.Controllers
     public partial class GibWarehouseController : GibCrudController<Warehouse, IGibWarehouseService>
     {
         public GibWarehouseController(IGibWarehouseService service) : base(service) { }
+    }
+
+    /// <summary>GIB GibFirm CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibGibFirmController : GibCrudController<GibFirm, IGibGibFirmService>
+    {
+        public GibGibFirmController(IGibGibFirmService service) : base(service) { }
+    }
+
+    /// <summary>GIB GibInvoiceScenario CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibGibInvoiceScenarioController : GibCrudController<GibInvoiceScenario, IGibGibInvoiceScenarioService>
+    {
+        public GibGibInvoiceScenarioController(IGibGibInvoiceScenarioService service) : base(service) { }
+    }
+
+    /// <summary>GIB GibInvoiceType CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibGibInvoiceTypeController : GibCrudController<GibInvoiceType, IGibGibInvoiceTypeService>
+    {
+        public GibGibInvoiceTypeController(IGibGibInvoiceTypeService service) : base(service) { }
+    }
+
+    /// <summary>GIB GibUserCreditAccount CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibGibUserCreditAccountController : GibCrudController<GibUserCreditAccount, IGibGibUserCreditAccountService>
+    {
+        public GibGibUserCreditAccountController(IGibGibUserCreditAccountService service) : base(service) { }
+    }
+
+    /// <summary>GIB GibUserCreditTransaction CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibGibUserCreditTransactionController : GibCrudController<GibUserCreditTransaction, IGibGibUserCreditTransactionService>
+    {
+        public GibGibUserCreditTransactionController(IGibGibUserCreditTransactionService service) : base(service) { }
+    }
+
+    /// <summary>GIB GibInvoiceOperationLog CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibGibInvoiceOperationLogController : GibCrudController<GibInvoiceOperationLog, IGibGibInvoiceOperationLogService>
+    {
+        public GibGibInvoiceOperationLogController(IGibGibInvoiceOperationLogService service) : base(service) { }
     }
 
 }

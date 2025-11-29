@@ -23,7 +23,7 @@ namespace TurkSoft.Data.GibData
 
         public virtual void Configure(EntityTypeBuilder<T> b)
         {
-            // Ortak kurallar gerekiyorsa burada verilebilir (null)
+            // Ortak kurallar gerekiyorsa burada verilebilir
             // RowVersion / IsActive default vb. DbContext tarafında veriliyor.
         }
 
@@ -544,6 +544,15 @@ namespace TurkSoft.Data.GibData
                  .IsUnique()
                  .HasFilter("[IsActive] = 1");
             }
+
+            // İlişki: User -> GibFirm (GibFirmId varsa)
+            if (b.Metadata.FindProperty("GibFirmId") != null)
+            {
+                b.HasOne(typeof(GibFirm))
+                 .WithMany()
+                 .HasForeignKey("GibFirmId")
+                 .OnDelete(DeleteBehavior.Restrict);
+            }
         }
     }
 
@@ -604,6 +613,101 @@ namespace TurkSoft.Data.GibData
         {
             b.ToTable("ApiRefreshToken"); b.HasKey(x => x.Id);
             ApplyUserScopedUniqueness(b, "Code", "Name");
+        }
+    }
+
+    // ======================
+    // 🔹 YENİ: GİB ENTİTY CONFIG'LARI
+    // ======================
+
+    public class GibFirmConfiguration : BaseGibEntityConfig<GibFirm>
+    {
+        public override void Configure(EntityTypeBuilder<GibFirm> b)
+        {
+            b.ToTable("GibFirm"); b.HasKey(x => x.Id);
+
+            // Aynı kullanıcı için aynı vergi numarasından sadece bir firma olsun
+            ApplyUserScopedUniqueness(b, "TaxNo");
+        }
+    }
+
+    public class GibInvoiceScenarioConfiguration : BaseGibEntityConfig<GibInvoiceScenario>
+    {
+        public override void Configure(EntityTypeBuilder<GibInvoiceScenario> b)
+        {
+            b.ToTable("GibInvoiceScenario"); b.HasKey(x => x.Id);
+            ApplyUserScopedUniqueness(b, "Code");
+        }
+    }
+
+    public class GibInvoiceTypeConfiguration : BaseGibEntityConfig<GibInvoiceType>
+    {
+        public override void Configure(EntityTypeBuilder<GibInvoiceType> b)
+        {
+            b.ToTable("GibInvoiceType"); b.HasKey(x => x.Id);
+            ApplyUserScopedUniqueness(b, "Code");
+        }
+    }
+
+    public class GibUserCreditAccountConfiguration : BaseGibEntityConfig<GibUserCreditAccount>
+    {
+        public override void Configure(EntityTypeBuilder<GibUserCreditAccount> b)
+        {
+            b.ToTable("GibUserCreditAccount"); b.HasKey(x => x.Id);
+
+            // Aynı kullanıcı için aynı firmaya ait tek kredi hesabı
+            ApplyUserScopedUniqueness(b, "GibFirmId");
+
+            b.HasOne(x => x.GibFirm)
+             .WithMany(x => x.CreditAccounts)
+             .HasForeignKey(x => x.GibFirmId)
+             .OnDelete(DeleteBehavior.Restrict);
+        }
+    }
+
+    public class GibUserCreditTransactionConfiguration : BaseGibEntityConfig<GibUserCreditTransaction>
+    {
+        public override void Configure(EntityTypeBuilder<GibUserCreditTransaction> b)
+        {
+            b.ToTable("GibUserCreditTransaction"); b.HasKey(x => x.Id);
+
+            // Transaction -> CreditAccount
+            b.HasOne(x => x.GibUserCreditAccount)
+             .WithMany(x => x.Transactions)
+             .HasForeignKey("GibUserCreditAccountId")
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Transaction -> Invoice (opsiyonel)
+            if (b.Metadata.FindProperty("InvoiceId") != null)
+            {
+                b.HasOne(x => x.Invoice)
+                 .WithMany(x => x.GibUserCreditTransactions)
+                 .HasForeignKey(x => x.InvoiceId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            }
+        }
+    }
+
+    public class GibInvoiceOperationLogConfiguration : BaseGibEntityConfig<GibInvoiceOperationLog>
+    {
+        public override void Configure(EntityTypeBuilder<GibInvoiceOperationLog> b)
+        {
+            b.ToTable("GibInvoiceOperationLog"); b.HasKey(x => x.Id);
+
+            // Log -> Invoice
+            b.HasOne(x => x.Invoice)
+             .WithMany(x => x.GibInvoiceOperationLogs)
+             .HasForeignKey(x => x.InvoiceId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Log -> User (opsiyonel)
+            if (b.Metadata.FindProperty("UserId") != null)
+            {
+                b.HasOne(x => x.User)
+                 .WithMany()
+                 .HasForeignKey(x => x.UserId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            }
         }
     }
 }

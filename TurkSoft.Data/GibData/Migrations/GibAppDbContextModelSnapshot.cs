@@ -17,10 +17,125 @@ namespace TurkSoft.Data.GibData.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "9.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("GibFirm", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AddressLine")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ApiKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CommercialRegistrationNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("DeleteDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("DeletedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GibAlias")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsEArchiveRegistered")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEInvoiceRegistered")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MersisNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TaxNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TaxOffice")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("UpdatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "TaxNo")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.HasIndex("UserId", "Title")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("GibFirm", (string)null);
+                });
 
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Address", b =>
                 {
@@ -1268,6 +1383,309 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.ToTable("GeneralReport", (string)null);
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibInvoiceOperationLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExternalInvoiceId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("InvoiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OperationName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RawResponseJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("GibInvoiceOperationLog", (string)null);
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibInvoiceScenario", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("DeleteDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("DeletedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("UpdatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Code")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("GibInvoiceScenario", (string)null);
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibInvoiceType", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("DeleteDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("DeletedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsActiveForEInvoice")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("UpdatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Code")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("GibInvoiceType", (string)null);
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibUserCreditAccount", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("DeleteDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("DeletedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("GibFirmId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("TotalCredits")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("UpdatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UsedCredits")
+                        .HasColumnType("int");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GibFirmId");
+
+                    b.HasIndex("UserId", "GibFirmId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("GibUserCreditAccount", (string)null);
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibUserCreditTransaction", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("DeleteDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("DeletedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("GibUserCreditAccountId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("InvoiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("TransactionType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("UpdatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GibUserCreditAccountId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.ToTable("GibUserCreditTransaction", (string)null);
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Group", b =>
                 {
                     b.Property<long>("Id")
@@ -1486,6 +1904,15 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.Property<long?>("DeletedByUserId")
                         .HasColumnType("bigint");
 
+                    b.Property<long?>("GibFirmId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("GibInvoiceScenarioId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("GibInvoiceTypeId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("InvoiceDate")
                         .HasColumnType("datetime2");
 
@@ -1519,6 +1946,12 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("GibFirmId");
+
+                    b.HasIndex("GibInvoiceScenarioId");
+
+                    b.HasIndex("GibInvoiceTypeId");
 
                     b.ToTable("Invoice", (string)null);
                 });
@@ -2828,44 +3261,6 @@ namespace TurkSoft.Data.GibData.Migrations
                         .HasFilter("[IsActive] = 1");
 
                     b.ToTable("Role", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Desc = "Sistem yöneticisi",
-                            IsActive = true,
-                            Name = "Admin",
-                            UserId = 0L
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Desc = "Bayi kullanıcısı",
-                            IsActive = true,
-                            Name = "Bayi",
-                            UserId = 0L
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Desc = "Mali müşavir kullanıcısı",
-                            IsActive = true,
-                            Name = "MaliMüşavir",
-                            UserId = 0L
-                        },
-                        new
-                        {
-                            Id = 4L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Desc = "Firma kullanıcısı",
-                            IsActive = true,
-                            Name = "Firma",
-                            UserId = 0L
-                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.RolePermission", b =>
@@ -3561,6 +3956,9 @@ namespace TurkSoft.Data.GibData.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<long?>("GibFirmId")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -3590,53 +3988,13 @@ namespace TurkSoft.Data.GibData.Migrations
                         .IsUnique()
                         .HasFilter("[IsActive] = 1");
 
+                    b.HasIndex("GibFirmId");
+
                     b.HasIndex("Username")
                         .IsUnique()
                         .HasFilter("[IsActive] = 1");
 
                     b.ToTable("User", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "admin@gib.com",
-                            IsActive = true,
-                            PasswordHash = "PBKDF2$100000$dDSF2N132FQkI11U1m1m5A==$f5V1BBDJOOdE7QjoxPM+b557TmzNGPardO2QnHAho+I=",
-                            RowVersion = new byte[0],
-                            Username = "admin"
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "bayi@gib.com",
-                            IsActive = true,
-                            PasswordHash = "PBKDF2$100000$QTFXdEp+oxfYXdv03gpFzg==$BGgBXx3qgMWCv0nh6/Web5cti+UztJ3EyfH0T12ZBF4=",
-                            RowVersion = new byte[0],
-                            Username = "bayi"
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "mm@gib.com",
-                            IsActive = true,
-                            PasswordHash = "PBKDF2$100000$GQMf5cVH3D+Gk4hYHVeWRQ==$OjQXlOi7CCKny2cdt15McbKWGDuffOv8a8RSqS2CQs4=",
-                            RowVersion = new byte[0],
-                            Username = "malimusavir"
-                        },
-                        new
-                        {
-                            Id = 4L,
-                            CreatedAt = new DateTimeOffset(new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "firma@gib.com",
-                            IsActive = true,
-                            PasswordHash = "PBKDF2$100000$nvzTYnu9jldsQTrX/0spEg==$3tnZ70MM9Fpzx0L8V+QyNLfq97hNSpppA+A7WaJXAMs=",
-                            RowVersion = new byte[0],
-                            Username = "firma"
-                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.UserAnnouncementRead", b =>
@@ -3751,40 +4109,6 @@ namespace TurkSoft.Data.GibData.Migrations
                         .HasFilter("[IsActive] = 1");
 
                     b.ToTable("UserRole", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            CreatedAt = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsActive = true,
-                            RoleId = 1L,
-                            UserId = 1L
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            CreatedAt = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsActive = true,
-                            RoleId = 2L,
-                            UserId = 2L
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            CreatedAt = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsActive = true,
-                            RoleId = 3L,
-                            UserId = 3L
-                        },
-                        new
-                        {
-                            Id = 4L,
-                            CreatedAt = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsActive = true,
-                            RoleId = 4L,
-                            UserId = 4L
-                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Users", b =>
@@ -3955,6 +4279,15 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.ToTable("Warehouse", (string)null);
                 });
 
+            modelBuilder.Entity("GibFirm", b =>
+                {
+                    b.HasOne("TurkSoft.Entities.GIBEntityDB.User", null)
+                        .WithMany("GibFirms")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Address", b =>
                 {
                     b.HasOne("TurkSoft.Entities.GIBEntityDB.Customer", "Customer")
@@ -4070,6 +4403,53 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibInvoiceOperationLog", b =>
+                {
+                    b.HasOne("TurkSoft.Entities.GIBEntityDB.Invoice", "Invoice")
+                        .WithMany("GibInvoiceOperationLogs")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TurkSoft.Entities.GIBEntityDB.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibUserCreditAccount", b =>
+                {
+                    b.HasOne("GibFirm", "GibFirm")
+                        .WithMany("CreditAccounts")
+                        .HasForeignKey("GibFirmId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GibFirm");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibUserCreditTransaction", b =>
+                {
+                    b.HasOne("TurkSoft.Entities.GIBEntityDB.GibUserCreditAccount", "GibUserCreditAccount")
+                        .WithMany("Transactions")
+                        .HasForeignKey("GibUserCreditAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TurkSoft.Entities.GIBEntityDB.Invoice", "Invoice")
+                        .WithMany("GibUserCreditTransactions")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("GibUserCreditAccount");
+
+                    b.Navigation("Invoice");
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Identifiers", b =>
                 {
                     b.HasOne("TurkSoft.Entities.GIBEntityDB.Item", "Item")
@@ -4088,6 +4468,21 @@ namespace TurkSoft.Data.GibData.Migrations
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("GibFirm", null)
+                        .WithMany("Invoices")
+                        .HasForeignKey("GibFirmId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TurkSoft.Entities.GIBEntityDB.GibInvoiceScenario", null)
+                        .WithMany("Invoices")
+                        .HasForeignKey("GibInvoiceScenarioId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TurkSoft.Entities.GIBEntityDB.GibInvoiceType", null)
+                        .WithMany("Invoices")
+                        .HasForeignKey("GibInvoiceTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Customer");
                 });
@@ -4407,6 +4802,14 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.Navigation("Invoice");
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.User", b =>
+                {
+                    b.HasOne("GibFirm", null)
+                        .WithMany()
+                        .HasForeignKey("GibFirmId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.UserAnnouncementRead", b =>
                 {
                     b.HasOne("TurkSoft.Entities.GIBEntityDB.Announcement", "Announcement")
@@ -4448,6 +4851,13 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GibFirm", b =>
+                {
+                    b.Navigation("CreditAccounts");
+
+                    b.Navigation("Invoices");
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Announcement", b =>
@@ -4499,6 +4909,21 @@ namespace TurkSoft.Data.GibData.Migrations
                     b.Navigation("Documents");
                 });
 
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibInvoiceScenario", b =>
+                {
+                    b.Navigation("Invoices");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibInvoiceType", b =>
+                {
+                    b.Navigation("Invoices");
+                });
+
+            modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.GibUserCreditAccount", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Group", b =>
                 {
                     b.Navigation("CustomersGroups");
@@ -4506,6 +4931,10 @@ namespace TurkSoft.Data.GibData.Migrations
 
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.Invoice", b =>
                 {
+                    b.Navigation("GibInvoiceOperationLogs");
+
+                    b.Navigation("GibUserCreditTransactions");
+
                     b.Navigation("InvoicesDiscounts");
 
                     b.Navigation("InvoicesItems");
@@ -4586,6 +5015,8 @@ namespace TurkSoft.Data.GibData.Migrations
 
             modelBuilder.Entity("TurkSoft.Entities.GIBEntityDB.User", b =>
                 {
+                    b.Navigation("GibFirms");
+
                     b.Navigation("UserAnnouncementReads");
 
                     b.Navigation("UserRoles");

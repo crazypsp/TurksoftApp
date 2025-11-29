@@ -12,7 +12,7 @@ namespace TurkSoft.Entities.GIBEntityDB
         public int Id { get; set; }
 
         // FK -> Invoice
-        public int InvoiceId { get; set; }
+        public long InvoiceId { get; set; }
         public Invoice Invoice { get; set; }
 
         // Dönen id (Turkcell/GİB tarafındaki fatura GUID'i)
@@ -35,7 +35,7 @@ namespace TurkSoft.Entities.GIBEntityDB
         public string RawResponseJson { get; set; }
 
         // İşlemi yapan kullanıcı (opsiyonel)
-        public int? UserId { get; set; }
+        public long? UserId { get; set; }
         [ValidateNever] public User User { get; set; }
 
         public DateTime CreatedAt { get; set; }

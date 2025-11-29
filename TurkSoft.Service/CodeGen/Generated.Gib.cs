@@ -127,6 +127,24 @@ namespace TurkSoft.Service.Interface.Gib
     public partial interface IGibUsersService : IEntityGibService<Users, long> { }
     /// <summary> Warehouse varlığı için GIB servis sözleşmesi. </summary>
     public partial interface IGibWarehouseService : IEntityGibService<Warehouse, long> { }
+    /// <summary> GibFirm varlığı için GIB servis sözleşmesi. </summary>
+    public partial interface IGibGibFirmService : IEntityGibService<GibFirm, long> { }
+
+    /// <summary> GibInvoiceScenario varlığı için GIB servis sözleşmesi. </summary>
+    public partial interface IGibGibInvoiceScenarioService : IEntityGibService<GibInvoiceScenario, long> { }
+
+    /// <summary> GibInvoiceType varlığı için GIB servis sözleşmesi. </summary>
+    public partial interface IGibGibInvoiceTypeService : IEntityGibService<GibInvoiceType, long> { }
+
+    /// <summary> GibUserCreditAccount varlığı için GIB servis sözleşmesi. </summary>
+    public partial interface IGibGibUserCreditAccountService : IEntityGibService<GibUserCreditAccount, long> { }
+
+    /// <summary> GibUserCreditTransaction varlığı için GIB servis sözleşmesi. </summary>
+    public partial interface IGibGibUserCreditTransactionService : IEntityGibService<GibUserCreditTransaction, long> { }
+
+    /// <summary> GibInvoiceOperationLog varlığı için GIB servis sözleşmesi. </summary>
+    public partial interface IGibGibInvoiceOperationLogService : IEntityGibService<GibInvoiceOperationLog, long> { }
+
 }
 
 namespace TurkSoft.Service.Manager.Gib
@@ -745,6 +763,66 @@ namespace TurkSoft.Service.Manager.Gib
         }
 
         /// <summary> İsteğe bağlı constructor sonrası kanca. </summary>
+        partial void OnConstructed();
+    }
+
+    public partial class GibFirmManager : EntityGibManager<GibFirm, long>, IGibGibFirmService
+    {
+        public GibFirmManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibInvoiceScenarioManager : EntityGibManager<GibInvoiceScenario, long>, IGibGibInvoiceScenarioService
+    {
+        public GibInvoiceScenarioManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibInvoiceTypeManager : EntityGibManager<GibInvoiceType, long>, IGibGibInvoiceTypeService
+    {
+        public GibInvoiceTypeManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibUserCreditAccountManager : EntityGibManager<GibUserCreditAccount, long>, IGibGibUserCreditAccountService
+    {
+        public GibUserCreditAccountManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibUserCreditTransactionManager : EntityGibManager<GibUserCreditTransaction, long>, IGibGibUserCreditTransactionService
+    {
+        public GibUserCreditTransactionManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibInvoiceOperationLogManager : EntityGibManager<GibInvoiceOperationLog, long>, IGibGibInvoiceOperationLogService
+    {
+        public GibInvoiceOperationLogManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
         partial void OnConstructed();
     }
 }

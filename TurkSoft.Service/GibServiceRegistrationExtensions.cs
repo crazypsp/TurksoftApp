@@ -79,6 +79,13 @@ namespace TurkSoft.Service
             services.AddScoped<IGibUserRoleService, GibUserRoleManager>();
             services.AddScoped<IGibUsersService, GibUsersManager>();
             services.AddScoped<IGibWarehouseService, GibWarehouseManager>();
+            services.AddScoped<IGibGibFirmService, GibFirmManager>();
+            services.AddScoped<IGibGibInvoiceScenarioService, GibInvoiceScenarioManager>();
+            services.AddScoped<IGibGibInvoiceTypeService, GibInvoiceTypeManager>();
+            services.AddScoped<IGibGibUserCreditAccountService, GibUserCreditAccountManager>();
+            services.AddScoped<IGibGibUserCreditTransactionService, GibUserCreditTransactionManager>();
+            services.AddScoped<IGibGibInvoiceOperationLogService, GibInvoiceOperationLogManager>();
+
 
             return services;
         }

@@ -14,5 +14,5 @@ export * as InvoiceApi from './Invoice.js';
 export * as UserApi from './User.js';
 export * as UserRolesApi from './UserRole.js';
 export * as RoleApi from './Role.js';
-
+export * as FirmaApi from './Firma.js';
 

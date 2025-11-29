@@ -21,8 +21,9 @@ namespace TurkSoft.Entities.GIBEntityDB
         public long? DeletedByUserId { get; set; }
         [Timestamp]
         public byte[] RowVersion { get; set; } = Array.Empty<byte>();
-
+        public long? GibFirmId { get; set; }
         // Navigation
+        [ValidateNever] public ICollection<GibFirm> GibFirms { get; set; }
         [ValidateNever] public ICollection<UserRole> UserRoles { get; set; }
 
         // 🔹 İlişki: 1 kullanıcı birden fazla duyuruyu okumuş olabilir
