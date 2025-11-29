@@ -256,71 +256,36 @@
 
             /***********************************************************
              *  SAHTE HOME API (Test Verileri)
-             *  - Backend endpointleri yoksa bile sorun çıkarmasın diye
              ***********************************************************/
             const HomeApi = {
-                /**
-                 * Aylık toplamlar (12 elemanlı dizi döner)
-                 */
                 getMonthlyTotals: async function (year) {
                     console.log('[HomeApi] getMonthlyTotals year =', year);
-
-                    // Örnek/test verisi (Ocak–Aralık)
                     const base = 1000;
                     const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => i * base);
-
-                    // İleride burayı gerçek API çağrısına dönüştürebilirsin
-                    // örn: return ApiClient.get('/dashboard/monthlyTotals', { year });
-
-                    // Küçük bir yapay gecikme
                     await new Promise(r => setTimeout(r, 150));
                     return data;
                 },
-
-                /**
-                 * Talep gönder (Konu / Açıklama / Telefon / Email)
-                 */
                 sendTalep: async function (payload) {
                     console.log('[HomeApi] sendTalep payload =', payload);
-
-                    // Burada normalde gerçek API:
-                    // await ApiClient.post('/support/talep', payload);
-
                     await new Promise(r => setTimeout(r, 300));
-
-                    // Test yanıtı
                     return {
                         success: true,
                         id: Math.floor(Math.random() * 100000),
                         message: 'Talebiniz alındı.'
                     };
                 },
-
-                /**
-                 * Dashboard sayaçları: gelen / giden / arşiv
-                 */
                 getDashboardCounts: async function () {
                     console.log('[HomeApi] getDashboardCounts');
-
                     await new Promise(r => setTimeout(r, 200));
-
-                    // Test verisi
                     return {
                         inbox: 12,
                         outbox: 8,
                         archive: 34
                     };
                 },
-
-                /**
-                 * Kontör/credit bilgileri
-                 */
                 getCredits: async function () {
                     console.log('[HomeApi] getCredits');
-
                     await new Promise(r => setTimeout(r, 200));
-
-                    // Test verisi
                     return {
                         total: 1000,
                         used: 250,
@@ -329,7 +294,6 @@
                 }
             };
 
-            // Dışarıdan da erişmek istersen:
             window.HomeApi = HomeApi;
 
             /***********************************************************
@@ -361,7 +325,6 @@
 
                 var data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-                // Eski: /Home/GetMonthlyTotals yerine HomeApi kullanıyoruz
                 HomeApi.getMonthlyTotals(year)
                     .then(function (res) {
                         if (Array.isArray(res) && res.length === 12) {
@@ -414,11 +377,10 @@
                     });
             }
 
-            // Yıl değişince grafiği güncelle
             function setYear() {
                 buildChart();
             }
-            window.setYear = setYear; // Razor tarafında onchange vs. çağırabil
+            window.setYear = setYear;
 
             /***********************************************************
              *  Kontör modal
@@ -463,7 +425,6 @@
              *  Sayaçlar & krediler
              ***********************************************************/
             function loadDashboard() {
-                // Eski: /Home/GetDashboardCounts yerine HomeApi
                 HomeApi.getDashboardCounts()
                     .then(function (r) {
                         if (!r) return;
@@ -477,7 +438,6 @@
                         $('#faturadiv').prop('hidden', false);
                     });
 
-                // Eski: /Home/GetCredits yerine HomeApi
                 HomeApi.getCredits()
                     .then(function (r) {
                         if (!r) return;
@@ -490,6 +450,203 @@
                     });
             }
             window.loadDashboard = loadDashboard;
+
+            /***********************************************************
+             *  MÜKELLEF ARAMA (SessionStorage.MukellefList)
+             *  - Identifier  = VKN/TCKN
+             *  - Title       = Ünvan
+             *  - Alias       = urn:mail:... (GİB etiketi)
+             ***********************************************************/
+            let _mukellefCache = null;
+
+            function getMukellefListFromSession() {
+                if (_mukellefCache) return _mukellefCache;
+
+                try {
+                    const txt = sessionStorage.getItem('MukellefList');
+
+                    console.log('[Mükellef] Session MukellefList raw (ilk 200 char):',
+                        txt ? txt.substring(0, 200) : 'YOK');
+
+                    if (!txt) {
+                        _mukellefCache = [];
+                        return _mukellefCache;
+                    }
+
+                    const parsed = JSON.parse(txt);
+
+                    let arr;
+                    if (Array.isArray(parsed)) {
+                        arr = parsed;
+                    } else if (Array.isArray(parsed.items)) {
+                        arr = parsed.items;
+                    } else if (Array.isArray(parsed.results)) {
+                        arr = parsed.results;
+                    } else if (Array.isArray(parsed.list)) {
+                        arr = parsed.list;
+                    } else {
+                        const vals = Object.values(parsed);
+                        if (vals.length && typeof vals[0] === 'object') {
+                            arr = vals;
+                        } else {
+                            arr = [];
+                        }
+                    }
+
+                    _mukellefCache = Array.isArray(arr) ? arr : [];
+                } catch (err) {
+                    console.error('[Mükellef] MukellefList parse/normalize hatası:', err);
+                    _mukellefCache = [];
+                }
+                return _mukellefCache;
+            }
+
+            function normalizeMukellef(raw, index) {
+                if (!raw || typeof raw !== 'object') raw = {};
+
+                const identifier =
+                    raw.Identifier ||
+                    raw.identifier ||
+                    raw.Vkn ||
+                    raw.vkn ||
+                    '';
+
+                const title =
+                    raw.Title ||
+                    raw.title ||
+                    '';
+
+                const alias =
+                    raw.Alias ||
+                    raw.alias ||
+                    raw.GibAlias ||
+                    raw.gibAlias ||
+                    '';
+
+                const id = identifier || raw.Id || raw.id || (index + 1);
+
+                return {
+                    id: id,
+                    vkn: (identifier || '').toString().trim(),
+                    title: (title || '').toString().trim(),
+                    alias: (alias || '').toString().trim(),
+                    raw: raw
+                };
+            }
+
+            function getNormalizedMukellefList() {
+                const rawList = getMukellefListFromSession();
+                const normalized = rawList.map(normalizeMukellef);
+                console.log('[Mükellef] Normalize edilmiş kayıt sayısı:', normalized.length);
+                if (normalized.length > 0) {
+                    console.log('[Mükellef] Örnek kayıt:', normalized[0]);
+                }
+                return normalized;
+            }
+
+            function fillMusteriCariDatalist(filterText) {
+                const $datalist = $('#MusteriCariList');
+                if (!$datalist.length) return;
+
+                const term = (filterText || '').toString().trim().toLowerCase();
+                const all = getNormalizedMukellefList();
+
+                console.log('[Mükellef] Toplam mükellef sayısı:', all.length);
+
+                if (!all.length) {
+                    $datalist.empty();
+                    return;
+                }
+
+                const filtered = term
+                    ? all.filter(function (m) {
+                        const v = (m.vkn || '').toLowerCase();
+                        const t = (m.title || '').toLowerCase();
+                        return v.includes(term) || t.includes(term);
+                    })
+                    : all;
+
+                const maxItems = 50;
+                $datalist.empty();
+
+                filtered.slice(0, maxItems).forEach(function (m) {
+                    const disp = m.vkn && m.title
+                        ? (m.vkn + ' - ' + m.title)
+                        : (m.vkn || m.title);
+
+                    if (!disp) return;
+
+                    const opt = document.createElement('option');
+                    opt.value = disp;
+                    opt.setAttribute('data-id', m.id || '');
+                    opt.setAttribute('data-vkn', m.vkn || '');
+                    opt.setAttribute('data-title', m.title || '');
+                    opt.setAttribute('data-alias', m.alias || '');
+                    $datalist.append(opt);
+                });
+
+                console.log('[Mükellef] Datalist dolduruldu. Filtrelenen kayıt:', filtered.length);
+            }
+
+            /**
+             * Seçili mükellefi sessionStorage'a koyup fatura sayfasına gider
+             */
+            function openCreateInvoiceWithSelectedMukellef(e) {
+                if (e && e.preventDefault) e.preventDefault();
+
+                const all = getNormalizedMukellefList();
+                if (!all.length) {
+                    alert('Mükellef listesi bulunamadı. Lütfen tekrar giriş yapın.');
+                    return;
+                }
+
+                const inputVal = ($('#checkInput').val() || '').trim();
+                if (!inputVal) {
+                    alert('Lütfen VKN/TCKN veya Ünvan girerek bir mükellef seçiniz.');
+                    return;
+                }
+
+                // Datalist display value: "VKN - Ünvan"
+                let selected = all.find(m => {
+                    const disp = m.vkn && m.title
+                        ? (m.vkn + ' - ' + m.title)
+                        : (m.vkn || m.title);
+                    return disp === inputVal;
+                });
+
+                if (!selected) {
+                    const lower = inputVal.toLowerCase();
+                    selected = all.find(m =>
+                        (m.vkn || '').toLowerCase() === lower ||
+                        (m.title || '').toLowerCase() === lower
+                    );
+                }
+
+                if (!selected) {
+                    alert('Girilen değere uygun mükellef bulunamadı. Lütfen listeden birini seçiniz.');
+                    return;
+                }
+
+                const payload = {
+                    Identifier: selected.vkn || '',
+                    Title: selected.title || '',
+                    Alias: selected.alias || ''
+                };
+
+                try {
+                    sessionStorage.setItem('SelectedMukellefForInvoice', JSON.stringify(payload));
+                    console.log('[Mükellef] SelectedMukellefForInvoice kaydedildi:', payload);
+                } catch (err) {
+                    console.error('[Mükellef] SelectedMukellefForInvoice kaydedilemedi:', err);
+                }
+
+                window.location.href = '/EInvoice/CreateNewInvoice';
+            }
+
+            // Eğer HTML'de onclick="checkFatura()" varsa bunu global yap
+            window.checkFatura = function () {
+                openCreateInvoiceWithSelectedMukellef();
+            };
 
             /***********************************************************
              *  DOM ready
@@ -520,9 +677,34 @@
 
                 // Dashboard sayaçlarını yükle
                 loadDashboard();
+
+                /*******************************************************
+                 *  Mükellef arama input eventleri
+                 *******************************************************/
+                var $checkInput = $('#checkInput');
+                if ($checkInput.length) {
+                    $checkInput.on('focus', function () {
+                        fillMusteriCariDatalist('');
+                    });
+
+                    $checkInput.on('input', function (e) {
+                        var val = e.target.value || '';
+                        fillMusteriCariDatalist(val);
+                    });
+                }
+
+                // Hem id'si checkFatura olan butonu,
+                // hem de varsa #btnCreateInvoiceFromModal butonunu yakala
+                $('#checkFatura, #btnCreateInvoiceFromModal').on('click', openCreateInvoiceWithSelectedMukellef);
             });
 
         })(window, jQuery);
     </script>
 }
+
+
+
+
+
+
 

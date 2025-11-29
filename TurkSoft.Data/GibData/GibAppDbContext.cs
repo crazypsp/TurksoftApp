@@ -293,10 +293,10 @@ namespace TurkSoft.Data.GibData
         {
             var seedDate = new DateTime(2025, 11, 7, 0, 0, 0, DateTimeKind.Utc);
 
-            const string adminHash = "PBKDF2$100000$dDSF2N132FQkI11U1m1m5A==$f5V1BBDJOOdE7QjoxPM+b557TmzNGPardO2QnHAho+I=";
-            const string bayiHash = "PBKDF2$100000$QTFXdEp+oxfYXdv03gpFzg==$BGgBXx3qgMWCv0nh6/Web5cti+UztJ3EyfH0T12ZBF4=";
-            const string mmHash = "PBKDF2$100000$GQMf5cVH3D+Gk4hYHVeWRQ==$OjQXlOi7CCKny2cdt15McbKWGDuffOv8a8RSqS2CQs4=";
-            const string firmaHash = "PBKDF2$100000$nvzTYnu9jldsQTrX/0spEg==$3tnZ70MM9Fpzx0L8V+QyNLfq97hNSpppA+A7WaJXAMs=";
+            const string adminHash = "PBKDF2$100000$dDSF2N132FQkI11U1m1m5A==$f5V1BBDJOOdE7QjoxPM+b557TmzNGPardO2QnHAho+I="; // Admin!123
+            const string bayiHash = "PBKDF2$100000$QTFXdEp+oxfYXdv03gpFzg==$BGgBXx3qgMWCv0nh6/Web5cti+UztJ3EyfH0T12ZBF4="; // Bayi!123
+            const string mmHash = "PBKDF2$100000$GQMf5cVH3D+Gk4hYHVeWRQ==$OjQXlOi7CCKny2cdt15McbKWGDuffOv8a8RSqS2CQs4="; // MM!123
+            const string firmaHash = "PBKDF2$100000$nvzTYnu9jldsQTrX/0spEg==$3tnZ70MM9Fpzx0L8V+QyNLfq97hNSpppA+A7WaJXAMs=";// Firma!123
 
             modelBuilder.Entity<User>().HasData(
                 new User { Id = 1, Username = "admin", Email = "admin@gib.com", PasswordHash = adminHash, GibFirmId = 1, CreatedAt = seedDate, IsActive = true },

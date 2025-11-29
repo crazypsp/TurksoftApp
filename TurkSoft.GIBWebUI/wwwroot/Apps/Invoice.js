@@ -218,46 +218,90 @@ import { create as createInvoice } from '../entites/invoice.js';
     const TestCustomers = [
         {
             id: 1,
-            displayName: "0001 - TEST A.Ş.",
+            displayName: "0001 - ALİ YILMAZ",
             identificationId: "1234567803",
-            aliciEtiketi: "urn:mail:testfirma@example.com",
-            partyName: "TEST FİRMA A.Ş.",
-            firstName: "TEST",
-            lastName: "FİRMA",
-            taxSchemeName: "İSTANBUL VERGİ DAİRESİ",
+            aliciEtiketi: "urn:mail:ali.yilmaz@test.com",
+            partyName: "ALİ YILMAZ",
+            firstName: "Ali",
+            lastName: "Yılmaz",
+            taxSchemeName: "Üsküdar",
+            ulkeCode: "TR",
+            ulkeText: "Türkiye",
+            ilCode: "34",
+            ilName: "İSTANBUL",
+            ilceCode: "3402",
+            ilceName: "ÜSKÜDAR",
+            streetName: "CUMHURİYET MAH. LAPTOP SK. NO:1",
+            email: "ali.yilmaz@test.com",
+            postalCode: "34674",
+            website: "https://www.aliyilmaz.com",
+            telephone: "05551112233",
+            fax: ""
+        },
+        {
+            id: 2,
+            displayName: "0002 - AHMET DEMİR",
+            identificationId: "1234567803",
+            aliciEtiketi: "urn:mail:ahmet.demir@test.com",
+            partyName: "AHMET DEMİR",
+            firstName: "Ahmet",
+            lastName: "Demir",
+            taxSchemeName: "Kadıköy",
             ulkeCode: "TR",
             ulkeText: "Türkiye",
             ilCode: "34",
             ilName: "İSTANBUL",
             ilceCode: "3401",
             ilceName: "KADIKÖY",
-            streetName: "ÖRNEK MAH. TEST CAD. NO:1",
-            email: "info@testfirma.com",
+            streetName: "KONSULT MAH. SAAT SK. NO:2",
+            email: "ahmet.demir@test.com",
             postalCode: "34000",
-            website: "https://www.testfirma.com",
-            telephone: "02120000000",
+            website: "https://www.ahmetdemir.com",
+            telephone: "05553334455",
             fax: ""
         },
         {
-            id: 2,
-            displayName: "0002 - DENEME ŞTİ.",
+            id: 3,
+            displayName: "0003 - MEHMET KAYA",
             identificationId: "1234567803",
-            aliciEtiketi: "urn:mail:deneme@example.com",
-            partyName: "DENEME LTD. ŞTİ.",
-            firstName: "DENEME",
-            lastName: "YETKİLİ",
-            taxSchemeName: "ANKARA VERGİ DAİRESİ",
+            aliciEtiketi: "urn:mail:mehmet.kaya@test.com",
+            partyName: "MEHMET KAYA",
+            firstName: "Mehmet",
+            lastName: "Kaya",
+            taxSchemeName: "Beşiktaş",
             ulkeCode: "TR",
             ulkeText: "Türkiye",
-            ilCode: "06",
-            ilName: "ANKARA",
-            ilceCode: "0601",
-            ilceName: "ÇANKAYA",
-            streetName: "DENEME MAH. DENEME CAD. NO:2",
-            email: "info@deneme.com",
-            postalCode: "06000",
-            website: "https://www.deneme.com",
-            telephone: "03120000000",
+            ilCode: "34",
+            ilName: "İSTANBUL",
+            ilceCode: "3403",
+            ilceName: "BEŞİKTAŞ",
+            streetName: "OFİS MAH. MOBİLYA SK. NO:3",
+            email: "mehmet.kaya@test.com",
+            postalCode: "34349",
+            website: "https://www.mehmetkaya.com",
+            telephone: "05557778899",
+            fax: ""
+        },
+        {
+            id: 4,
+            displayName: "0004 - EXPORT LTD",
+            identificationId: "1234567803",
+            aliciEtiketi: "urn:mail:export@test.com",
+            partyName: "EXPORT LTD",
+            firstName: "Export",
+            lastName: "Ltd",
+            taxSchemeName: "İstanbul",
+            ulkeCode: "TR",
+            ulkeText: "Türkiye",
+            ilCode: "34",
+            ilName: "İSTANBUL",
+            ilceCode: "3400",
+            ilceName: "MERKEZ",
+            streetName: "EXPORT MAH. İHRACAT SK. NO:4",
+            email: "export@test.com",
+            postalCode: "34010",
+            website: "https://www.exportltd.com",
+            telephone: "02125555555",
             fax: ""
         }
     ];
@@ -268,43 +312,42 @@ import { create as createInvoice } from '../entites/invoice.js';
      *  LİSTELERİ DOLDURMA (window.ListData)
      ***********************************************************/
     function fillSubeDropdown() {
-        const listData = getListData();
-        const subeList = listData.subeList || [];
         const $ddl = $("#ddlSubeKodu");
         if (!$ddl.length) return;
+
+        const firmaJson = sessionStorage.getItem("Firma");
+        if (!firmaJson) return;
+
+        const firma = JSON.parse(firmaJson);
 
         $ddl.empty();
         $ddl.append(new Option("Seçiniz", "0"));
 
-        subeList.forEach(s => {
-            const text = s.SubeAdi || ("Şube " + s.SubeKodu);
-            const opt = new Option(text, s.SubeKodu);
-            $(opt).attr("data-firmaid", s.FirmaId);
-            $ddl.append(opt);
-        });
+        const opt = new Option(firma.title, firma.id);
+        $(opt).attr("data-firmaid", firma.id);
+        $ddl.append(opt);
 
-        if (subeList.length > 0) {
-            $ddl.val(subeList[0].SubeKodu).trigger("change");
-        }
+        $ddl.val(firma.id).trigger("change");
     }
 
+
     function fillSourceUrnDropdown() {
-        const listData = getListData();
-        const arr = listData.GondericiEtiketList || [];
         const $ddl = $("#ddlSourceUrn");
         if (!$ddl.length) return;
+
+        const firmaJson = sessionStorage.getItem("Firma");
+        if (!firmaJson) return;
+        const firma = JSON.parse(firmaJson);
 
         $ddl.empty();
         $ddl.append(new Option("Seçiniz", ""));
 
-        arr.forEach(urn => {
-            $ddl.append(new Option(urn, urn));
-        });
-
-        if (arr.length > 0) {
-            $ddl.val(arr[0]).trigger("change");
+        if (firma.gibAlias) {
+            $ddl.append(new Option(firma.gibAlias, firma.gibAlias));
+            $ddl.val(firma.gibAlias).trigger("change");
         }
     }
+
 
     function fillInvoicePrefixDropdown() {
         const listData = getListData();
@@ -2402,6 +2445,10 @@ import { create as createInvoice } from '../entites/invoice.js';
         fillInvoicePrefixDropdown();
         fillGoruntuDosyasiDropdown();
         fillAliciEtiketiDropdown();
+
+        // 🔥 Home sayfasından gelen mükellefi uygula
+        applySelectedMukellefFromSession();
+
         fillParaBirimiDropdown();
         fillPaymentDropdowns();
 
@@ -2445,6 +2492,89 @@ import { create as createInvoice } from '../entites/invoice.js';
 
         if ($("#btnLineAdd").length) {
             $("#btnLineAdd").trigger("click");
+        }
+    }
+    // Home sayfasından seçilen mükellefi alıp, alıcı alanlarını doldurur
+    function applySelectedMukellefFromSession() {
+        try {
+            const txt = sessionStorage.getItem('SelectedMukellefForInvoice');
+            if (!txt) {
+                console.log('[Invoice] SelectedMukellefForInvoice bulunamadı.');
+                return;
+            }
+
+            const m = JSON.parse(txt);
+            console.log('[Invoice] SelectedMukellefForInvoice:', m);
+
+            const identifier = (m.Identifier || m.identifier || '').toString().trim();
+            const title = (m.Title || m.title || '').toString().trim();
+            const alias = (m.Alias || m.alias || '').toString().trim();
+
+            // VKN/TCKN
+            if (identifier) {
+                $('#txtIdentificationID').val(identifier);
+            }
+
+            // Ünvan
+            if (title) {
+                $('#txtPartyName').val(title);
+            }
+
+            // Alias (alıcı etiketi)
+            if (alias) {
+                const $ddl = $('#ddlAliciEtiketi');
+                if ($ddl.length) {
+                    if (!$ddl.find(`option[value="${alias}"]`).length) {
+                        $ddl.append(new Option(alias, alias));
+                    }
+                    $ddl.val(alias).trigger('change');
+                }
+            }
+
+            // Ad / Soyad (boşsa Ünvan'dan türet)
+            const curFirst = $('#txtPersonFirstName').val();
+            const curLast = $('#txtPersonLastName').val();
+            if (!curFirst && !curLast && title) {
+                const parts = title.split(/\s+/);
+                let firstName = '';
+                let lastName = '';
+                if (parts.length === 1) {
+                    firstName = parts[0];
+                    lastName = '.';
+                } else {
+                    lastName = parts.pop();
+                    firstName = parts.join(' ');
+                }
+                //$('#txtPersonFirstName').val(firstName);
+                //$('#txtPersonLastName').val(lastName);
+            }
+
+            // Invoice modelini güncelle
+            const flatCustomer = readCustomerFromUI();
+            invoiceModel.Customer = flatCustomer;
+            invoiceModel.customer = {
+                customerParty: {
+                    IdentificationID: flatCustomer.IdentificationID,
+                    PartyName: flatCustomer.PartyName,
+                    TaxSchemeName: flatCustomer.TaxOffice,
+                    CountryName: flatCustomer.CountryName,
+                    CityName: flatCustomer.CityName,
+                    CitySubdivisionName: flatCustomer.CitySubdivisionName,
+                    StreetName: flatCustomer.StreetName,
+                    PostalZone: flatCustomer.PostalZone,
+                    ElectronicMail: flatCustomer.Email,
+                    Telephone: flatCustomer.Telephone,
+                    WebsiteURI: flatCustomer.WebsiteURI,
+                    Person_FirstName: flatCustomer.FirstName,
+                    Person_FamilyName: flatCustomer.LastName,
+                    ManuelCityAndSubdivision: flatCustomer.ManuelCityEntry
+                }
+            };
+
+            // İstersen bir daha kullanmamak için temizleyebilirsin:
+            // sessionStorage.removeItem('SelectedMukellefForInvoice');
+        } catch (err) {
+            console.error('[Invoice] SelectedMukellefForInvoice uygulanırken hata:', err);
         }
     }
 

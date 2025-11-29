@@ -1,14 +1,16 @@
 ﻿@{
     Layout = null;
 }
-@using Microsoft.Extensions.Options
-@inject IOptions<TurkSoft.GIBWebUI.AppSettings.ApiSettings> ApiSettings
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@using TurkSoft.GIBWebUI.AppSettings
+@inject Microsoft.Extensions.Options.IOptions<ApiSettings> ApiSettings
+
 <!doctype html>
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400&display=swap" rel="stylesheet" />
 
     <link rel="stylesheet" href="@Url.Content("~/login/fonts/icomoon/style.css")" />
@@ -18,12 +20,16 @@
 
     <title>Giriş</title>
 
+    <!-- API Base URL bilgileri -->
     <meta name="api-base" content="@ApiSettings.Value.BaseUrl" />
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport" />
+
     <script>
-        // Fallback: JS tarafından API base URL erişimi
+        // Backend'den gelen API adreslerini JS tarafına geçiriyoruz
         window.__API_BASE = "@ApiSettings.Value.BaseUrl";
-        console.log("API Base (Layout):", window.__API_BASE);
+        console.log("API Base (Login):", window.__API_BASE);
+
+        window.gibPortalApiBaseUrl = "@ApiSettings.Value.GibPortalApiBaseUrl";
+        console.log("GIB Portal API Base:", window.gibPortalApiBaseUrl);
     </script>
 </head>
 <body>
@@ -39,9 +45,9 @@
                         <h3>Sisteme Giriş</h3>
                         <p class="mb-4">Lütfen kullanıcı bilgilerinizi giriniz.</p>
 
-                        <!-- URL'i Razor ile HTML'e gömüyoruz -->
+                        <!-- Login formu -->
                         <form id="loginForm"
-                              data-home-url="@Url.Action("Index","Home")"
+                              data-home-url="@Url.Action("Index", "Home")"
                               asp-controller="Login" asp-action="Index"
                               method="post" autocomplete="off" novalidate>
                             @Html.AntiForgeryToken()
@@ -77,11 +83,20 @@
         </div>
     </div>
 
+    <!-- Bağımlı JS dosyaları -->
     <script src="@Url.Content("~/login/js/jquery-3.3.1.min.js")"></script>
     <script src="@Url.Content("~/login/js/popper.min.js")"></script>
     <script src="@Url.Content("~/login/js/bootstrap.min.js")"></script>
     <script src="@Url.Content("~/login/js/main.js")"></script>
-    <script type="module" src="~/apps/login.js"></script>
+
+    <!-- JSZip (global JSZip objesi, login.js bundan sonra çalışacak) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+            integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+
+    <!-- Login akışını yöneten module -->
+    <script type="module" src="@Url.Content("~/apps/login.js")"></script>
 
 </body>
 </html>
