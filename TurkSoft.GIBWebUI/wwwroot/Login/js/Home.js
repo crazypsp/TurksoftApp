@@ -101,7 +101,7 @@ function normalizeMukellefRecord(raw, idx) {
     };
 }
 
-// İlk yüklemede (term boş) liste iste
+// İlk yüklemede (term boş) liste iste (küçük preload)
 async function loadMukellefListFromJson() {
     try {
         var url = '/Home/SearchMukellef?term=';
@@ -123,7 +123,9 @@ async function loadMukellefListFromJson() {
         }
 
         var data = await response.json();
-        var arr = Array.isArray(data) ? data : (data ? [data] : []);
+        var arr = Array.isArray(data)
+            ? data
+            : (data && Array.isArray(data.items) ? data.items : []);
 
         var slim = arr.map(normalizeMukellefRecord);
         window.MukellefList = slim;
@@ -135,15 +137,26 @@ async function loadMukellefListFromJson() {
     }
 }
 
-// İstersen her input değişiminde sunucuya sor
-async function searchMukellefOnServer(query) {
+/**
+ *  Sunucudan mükellef arama (isteğe bağlı sayfalama ile)
+ *  - query: arama metni
+ *  - page/pageSize verilirse: SearchMukellef bize { total, items[] } dönecek
+ *  - verilmezse: eski davranış (max 100 dizi)
+ */
+async function searchMukellefOnServer(query, page, pageSize) {
     try {
         var q = (query || '').trim();
         var url = '/Home/SearchMukellef?term=' + encodeURIComponent(q);
 
+        if (page != null && pageSize != null) {
+            url += '&page=' + encodeURIComponent(page) +
+                '&pageSize=' + encodeURIComponent(pageSize);
+        }
+
         var response = await fetch(url, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-cache'
         });
 
         if (!response.ok) {
@@ -152,7 +165,10 @@ async function searchMukellefOnServer(query) {
         }
 
         var data = await response.json();
-        var arr = Array.isArray(data) ? data : (data ? [data] : []);
+        var arr = Array.isArray(data)
+            ? data
+            : (data && Array.isArray(data.items) ? data.items : []);
+
         return arr.map(normalizeMukellefRecord);
     } catch (err) {
         console.error('[Mükellef] SearchMukellef (query) hata:', err);
@@ -165,6 +181,9 @@ async function searchMukellefOnServer(query) {
 //  (SearchMukellef ile datalist doldurur)
 // ============================================
 
+// Aynı anda birden fazla istek olursa, en son isteğin sonucu kullanılsın diye
+var _mukellefDatalistRequestId = 0;
+
 async function fillMusteriCariDatalistFromServer(filterText) {
     var dataList = document.getElementById('MusteriCariList');
     if (!dataList) {
@@ -174,15 +193,31 @@ async function fillMusteriCariDatalistFromServer(filterText) {
     var term = (filterText || '').toString().trim();
     console.log('[Mükellef] Datalist doldurma, term =', term);
 
-    var results = await searchMukellefOnServer(term);
+    // Yazmaya yeni başlamışsa (1 karakter), gereksiz sorgu atmayalım
+    if (term.length > 0 && term.length < 2) {
+        console.log('[Mükellef] Arama için en az 2 karakter bekleniyor.');
+        return;
+    }
+
+    var thisRequestId = ++_mukellefDatalistRequestId;
+
+    // İlk açılışta boş kelime ile 20 kayıt getir, aramada da yine 20 kayıt
+    var pageSize = 20;
+    var page = 1;
+
+    var results = await searchMukellefOnServer(term, page, pageSize);
+
+    // Bu arada yeni bir istek atılmışsa, bu sonucu çöpe at
+    if (thisRequestId !== _mukellefDatalistRequestId) {
+        return;
+    }
 
     // Eski seçenekleri temizle
     while (dataList.options.length > 0) {
         dataList.remove(0);
     }
 
-    var maxItems = 50;
-    results.slice(0, maxItems).forEach(function (m) {
+    results.forEach(function (m) {
         var vkn = m.Identifier || '';
         var title = m.Title || '';
         var alias = m.Alias || '';
@@ -312,7 +347,6 @@ function applyCreditFromSession() {
     }
 
     if (!creditRaw) {
-        // Session yoksa burada hiçbir şeyi bozma; sayfada ne yazıyorsa o kalsın
         console.log('[Credit] Session\'da UserCreditAccount yok, mevcut HTML değerleri korunuyor.');
         return;
     }
@@ -338,7 +372,6 @@ function applyCreditFromSession() {
         return fallback;
     }
 
-    // Örnek: {id, gibFirmId, totalCredits, usedCredits, userId}
     var total = pickNumber(credit, [
         'totalCredits', 'TotalCredits',
         'LoadedCredit', 'loadedCredit',
@@ -572,7 +605,7 @@ $(function () {
     // Fatura Oluştur modalındaki VKN / Ünvan arama alanı
     var $checkInput = $('#checkInput');
     if ($checkInput.length) {
-        // İlk odaklandığında boş term ile listeyi doldur
+        // İlk odaklandığında boş term ile küçük bir listeyi doldur
         $checkInput.on('focus', function () {
             fillMusteriCariDatalistFromServer('');
         });
@@ -590,13 +623,4 @@ $(function () {
 
     // Fatura Oluştur butonu
     $('#checkFatura, #btnCreateInvoiceFromModal').on('click', openCreateInvoiceWithSelectedMukellef);
-
-    // Buradan checkInput / arama işlemlerini server'a bağlayabilirsin:
-    //
-    // $(document).on('input', '#mukellefSearch', async function () {
-    //     var q = $(this).val();
-    //     var results = await searchMukellefOnServer(q);
-    //     console.log('[Mükellef] Arama:', q, 'Sonuç adedi:', results.length);
-    //     // TODO: results ile dropdown / listeyi doldur
-    // });
 });

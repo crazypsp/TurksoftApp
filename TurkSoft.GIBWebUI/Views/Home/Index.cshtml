@@ -285,7 +285,7 @@
                     };
                 },
                 getCredits: async function () {
-                    console.log('[HomeApi] getCredits');
+                    console.log('[HomeApi] getCredits (dummy)');
                     await new Promise(r => setTimeout(r, 200));
                     return {
                         total: 1000,
@@ -439,154 +439,32 @@
                         $('#faturadiv').prop('hidden', false);
                     });
 
-                HomeApi.getCredits()
-                    .then(function (r) {
-                        if (!r) return;
-                        $('#creditTotal').text(r.total != null ? r.total : '0');
-                        $('#creditStatus').text(r.used != null ? r.used : '0');
-                        $('#creditRemainder').text(r.remain != null ? r.remain : '0');
-                    })
-                    .catch(function (err) {
-                        console.error('HomeApi.getCredits error:', err);
-                    });
+                // 🔥 ÖNEMLİ: Eğer login.js sırasında gerçek kredi bilgisi
+                // sessionStorage.UserCreditAccount içine yazıldıysa,
+                // burada SAHTE HomeApi.getCredits() sonucu ile DOM'u bozmayalım.
+                var hasSessionCredit = false;
+                try {
+                    hasSessionCredit = !!sessionStorage.getItem('UserCreditAccount');
+                } catch (e) {
+                    console.warn('[Home] sessionStorage(UserCreditAccount) okunamadı:', e);
+                }
+
+                if (!hasSessionCredit) {
+                    HomeApi.getCredits()
+                        .then(function (r) {
+                            if (!r) return;
+                            $('#creditTotal').text(r.total != null ? r.total : '0');
+                            $('#creditStatus').text(r.used != null ? r.used : '0');
+                            $('#creditRemainder').text(r.remain != null ? r.remain : '0');
+                        })
+                        .catch(function (err) {
+                            console.error('HomeApi.getCredits error:', err);
+                        });
+                } else {
+                    console.log('[Home] Session\'da UserCreditAccount var, bakiye DOM\'u Home.js/applyCreditFromSession tarafından yönetilecek.');
+                }
             }
             window.loadDashboard = loadDashboard;
-
-            /***********************************************************
-             *  MÜKELLEF ARAMA (HomeController.SearchMukellef)
-             *  - Identifier  = VKN/TCKN
-             *  - Title       = Ünvan
-             *  - Alias       = urn:mail:... (GİB etiketi)
-             ***********************************************************/
-            async function searchMukellefOnServer(term) {
-                var q = (term || '').toString().trim();
-                var url = '/Home/SearchMukellef?term=' + encodeURIComponent(q);
-
-                try {
-                    var resp = await fetch(url, {
-                        method: 'GET',
-                        headers: { 'Accept': 'application/json' }
-                    });
-
-                    if (!resp.ok) {
-                        console.error('[Mükellef] SearchMukellef hata. status =', resp.status, resp.statusText);
-                        return [];
-                    }
-
-                    var data = await resp.json();
-                    var arr = Array.isArray(data) ? data : (data ? [data] : []);
-                    return arr.map(function (raw, idx) {
-                        var identifier =
-                            raw.Identifier ||
-                            raw.identifier ||
-                            raw.Vkn ||
-                            raw.vkn ||
-                            '';
-
-                        var title =
-                            raw.Title ||
-                            raw.title ||
-                            '';
-
-                        var alias =
-                            raw.Alias ||
-                            raw.alias ||
-                            raw.GibAlias ||
-                            raw.gibAlias ||
-                            '';
-
-                        var id = raw.id || raw.Id || identifier || (idx + 1);
-
-                        return {
-                            id: id,
-                            vkn: (identifier || '').toString().trim(),
-                            title: (title || '').toString().trim(),
-                            alias: (alias || '').toString().trim()
-                        };
-                    });
-                } catch (err) {
-                    console.error('[Mükellef] SearchMukellef exception:', err);
-                    return [];
-                }
-            }
-
-            async function fillMusteriCariDatalist(filterText) {
-                var $datalist = $('#MusteriCariList');
-                if (!$datalist.length) return;
-
-                var results = await searchMukellefOnServer(filterText);
-                $datalist.empty();
-
-                var maxItems = 50;
-                results.slice(0, maxItems).forEach(function (m) {
-                    var disp = m.vkn && m.title
-                        ? (m.vkn + ' - ' + m.title)
-                        : (m.vkn || m.title);
-
-                    if (!disp) return;
-
-                    var opt = document.createElement('option');
-                    opt.value = disp;
-                    opt.setAttribute('data-id', m.id || '');
-                    opt.setAttribute('data-vkn', m.vkn || '');
-                    opt.setAttribute('data-title', m.title || '');
-                    opt.setAttribute('data-alias', m.alias || '');
-                    $datalist.append(opt);
-                });
-
-                console.log('[Mükellef] Datalist dolduruldu. term =', filterText, 'kayıt sayısı =', results.length);
-            }
-
-            function openCreateInvoiceWithSelectedMukellef(e) {
-                if (e && e.preventDefault) e.preventDefault();
-
-                var inputVal = ($('#checkInput').val() || '').trim();
-                var $datalist = $('#MusteriCariList');
-
-                if (!inputVal) {
-                    alert('Lütfen VKN/TCKN veya Ünvan girerek bir mükellef seçiniz.');
-                    return;
-                }
-
-                if (!$datalist.length) {
-                    alert('Mükellef listesi yüklenemedi. Lütfen tekrar deneyiniz.');
-                    return;
-                }
-
-                var selected = null;
-                var options = $datalist[0].options;
-                for (var i = 0; i < options.length; i++) {
-                    if ((options[i].value || '').trim() === inputVal) {
-                        selected = options[i];
-                        break;
-                    }
-                }
-
-                if (!selected) {
-                    alert('Girilen değere uygun mükellef bulunamadı. Lütfen listeden birini seçiniz.');
-                    return;
-                }
-
-                var payload = {
-                    Identifier: selected.getAttribute('data-vkn') || '',
-                    Title: selected.getAttribute('data-title') || '',
-                    Alias: selected.getAttribute('data-alias') || ''
-                };
-
-                try {
-                    sessionStorage.setItem('SelectedMukellefForInvoice', JSON.stringify(payload));
-                    console.log('[Mükellef] SelectedMukellefForInvoice kaydedildi:', payload);
-                } catch (err) {
-                    console.error('[Mükellef] SelectedMukellefForInvoice kaydedilemedi:', err);
-                }
-
-                window.location.href = '/EInvoice/CreateNewInvoice';
-            }
-
-            // Eğer HTML'de onclick="checkFatura()" varsa bunu global yap
-            window.checkFatura = function () {
-                openCreateInvoiceWithSelectedMukellef();
-            };
 
             /***********************************************************
              *  DOM ready
@@ -615,27 +493,8 @@
                     buildChart
                 );
 
-                // Dashboard sayaçlarını yükle
+                // Dashboard sayaçlarını yükle (bakiye kısmı session'a göre davranıyor)
                 loadDashboard();
-
-                /*******************************************************
-                 *  Mükellef arama input eventleri (SearchMukellef)
-                 *******************************************************/
-                var $checkInput = $('#checkInput');
-                if ($checkInput.length) {
-                    $checkInput.on('focus', function () {
-                        fillMusteriCariDatalist('');
-                    });
-
-                    $checkInput.on('input', function (e) {
-                        var val = e.target.value || '';
-                        fillMusteriCariDatalist(val);
-                    });
-                }
-
-                // Hem id'si checkFatura olan butonu,
-                // hem de varsa #btnCreateInvoiceFromModal butonunu yakala
-                $('#checkFatura, #btnCreateInvoiceFromModal').on('click', openCreateInvoiceWithSelectedMukellef);
             });
 
         })(window, jQuery);
