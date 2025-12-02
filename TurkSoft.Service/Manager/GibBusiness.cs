@@ -21,16 +21,17 @@ namespace TurkSoft.Service.Manager
         // ---- Ayarlar ----
         public sealed class Options
         {
-            public string EFaturaBaseUrl { get; init; } = "https://efaturaservicetest.isim360.com";
+            
+            public string EFaturaBaseUrl { get; init; } = "https://efaturaservice.turkcellesirket.com";
             public string EIrsaliyeBaseUrl { get; init; } = "https://eirsaliyeservicetest.isim360.com";
             public string EDefterBaseUrl { get; init; } = "https://edefterservicetest.isim360.com";
 
             // 🔴 BURAYA test portalinden oluşturduğun API KEY'i yazacaksın
             // Örnek: "abc123xyz..."
-            public string ApiKey { get; init; } = "EcwbRm3WbGk2tRpNGwlu4j7UbuPiVZwWCBdhLIx3Bbo=";
+            public string ApiKey { get; set; } = "EcwbRm3WbGk2tRpNGwlu4j7UbuPiVZwWCBdhLIx3Bbo=";
 
-            public string TestSenderVkn { get; init; } = "1234567803";
-            public string TestInboxAlias { get; init; } = "urn:mail:defaulttest3pk@medyasoft.com.tr";
+            public string TestSenderVkn { get; set; } = "1234567803";
+            public string TestInboxAlias { get; set; } = "urn:mail:defaulttest3pk@medyasoft.com.tr";
         }
 
         // ---- DTO'lar ----
@@ -125,7 +126,7 @@ namespace TurkSoft.Service.Manager
             public DateTime IssueDate { get; set; } = DateTime.UtcNow;
             public string Currency { get; set; } = "TRY";
             public string? Note { get; set; }
-        }       
+        }
 
         private sealed class InvoiceTotals
         {
@@ -145,9 +146,6 @@ namespace TurkSoft.Service.Manager
             public bool? CheckLocalReferenceId { get; set; }
             public int Status { get; set; } = 20;
         }
-
-
-
 
         // ---- E-Arşiv JSON DTO'ları (Post_Earchive_Invoice_Json'a birebir uyumlu) ----
 
@@ -252,9 +250,6 @@ namespace TurkSoft.Service.Manager
             [JsonPropertyName("eMailAddress")] public string? EmailAddress { get; set; }
         }
 
-
-
-
         // ---- Alanlar ----
         private readonly Options _opt;
         private readonly HttpClient _http;
@@ -268,6 +263,24 @@ namespace TurkSoft.Service.Manager
             _opt = options ?? new Options();
             _http = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
             _http.Timeout = TimeSpan.FromSeconds(100);
+        }
+
+        /// <summary>
+        /// İşlem yapan kullanıcıya göre ApiKey, Gönderici VKN ve Inbox Alias değerlerini günceller.
+        /// Bu metot çağrıldıktan sonra tüm API istekleri bu güncel değerlerle çalışır.
+        /// </summary>
+        public void UpdateUserOptions(string apiKey, string senderVkn, string inboxAlias)
+        {
+            if (string.IsNullOrWhiteSpace(apiKey))
+                throw new ArgumentException("ApiKey boş olamaz.", nameof(apiKey));
+            if (string.IsNullOrWhiteSpace(senderVkn))
+                throw new ArgumentException("Sender VKN boş olamaz.", nameof(senderVkn));
+            if (string.IsNullOrWhiteSpace(inboxAlias))
+                throw new ArgumentException("Inbox alias boş olamaz.", nameof(inboxAlias));
+
+            _opt.ApiKey = apiKey;
+            _opt.TestSenderVkn = senderVkn;
+            _opt.TestInboxAlias = inboxAlias;
         }
 
         public void Dispose()
@@ -323,7 +336,6 @@ namespace TurkSoft.Service.Manager
             return Task.FromResult((bal.Remaining, bal.Used));
         }
 
-        // ---------- Mapping (Invoice -> JSON) ----------
         // ---------- Mapping (Invoice -> JSON) ----------
         private OutboxInvoiceCreateRequest MapToEInvoiceRequest(Invoice inv, bool isExport)
         {
@@ -471,7 +483,6 @@ namespace TurkSoft.Service.Manager
                 InvoiceLines = lines
             };
         }
-
 
         private EArchiveInvoiceCreateRequest MapToEArchiveRequest(Invoice inv)
         {
@@ -633,8 +644,6 @@ namespace TurkSoft.Service.Manager
                 }
             };
         }
-
-
 
         private static byte[] BuildDespatchAdviceZip(Invoice inv)
         {
@@ -906,10 +915,10 @@ namespace TurkSoft.Service.Manager
 
         // ---------- e-Arşiv ----------
         public async Task<HttpResult<object>> SendEArchiveJsonAsync(
-    Invoice inv,
-    bool consumeKontor = true,
-    string? kontorVkn = null,
-    CancellationToken ct = default)
+            Invoice inv,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            CancellationToken ct = default)
         {
             var payload = MapToEArchiveRequest(inv);
 

@@ -48,6 +48,19 @@ namespace TurkSoft.Service.Interface
 
     public interface IGibBusiness : IDisposable
     {
+        #region Ayarlar / Kullanıcı Bazlı Options
+
+        /// <summary>
+        /// İşlem yapan kullanıcıya göre ApiKey, Gönderici VKN ve Inbox Alias bilgilerini
+        /// runtime'da günceller. Controller'lar GİB çağrısından önce bunu kullanır.
+        /// </summary>
+        /// <param name="apiKey">Kullanıcıya ait GİB ApiKey</param>
+        /// <param name="senderVkn">GİB tarafında mükellef VKN/TCKN</param>
+        /// <param name="inboxAlias">Giden e-fatura için kullanılacak alias</param>
+        void UpdateUserOptions(string apiKey, string senderVkn, string inboxAlias);
+
+        #endregion
+
         #region Kontör
         Task<(int remaining, int used)> GetBalanceAsync(string companyVkn, CancellationToken ct = default);
         Task<(int remaining, int used)> ConsumeBalanceAsync(string companyVkn, int amount, string reason, CancellationToken ct = default);

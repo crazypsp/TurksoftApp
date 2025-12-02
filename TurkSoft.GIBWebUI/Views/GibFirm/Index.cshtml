@@ -1,0 +1,315 @@
+﻿@{
+    ViewData["Title"] = "Firmalar";
+    ViewData["Subtitle"] = "GİB Firmaları";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@section Styles {
+    <style>
+        /* ==== Kurumsal Modal Tasarımı (GİB Firma) ==== */
+
+        .modal-corporate .modal-header {
+            background: linear-gradient(90deg, #3c8dbc, #00a65a);
+            color: #fff;
+            border-bottom: none;
+            padding: 14px 20px;
+        }
+
+        .modal-corporate .modal-title {
+            font-weight: 600;
+            font-size: 16px;
+            letter-spacing: .02em;
+        }
+
+        .modal-corporate .modal-header .close {
+            color: #fff;
+            opacity: .8;
+            text-shadow: none;
+        }
+
+            .modal-corporate .modal-header .close:hover {
+                opacity: 1;
+            }
+
+        .modal-corporate .modal-body {
+            padding: 20px 24px 18px;
+            background-color: #f9fafb;
+        }
+
+        .modal-corporate .modal-footer {
+            background-color: #f5f7fa;
+            border-top: 1px solid #e1e5ee;
+            padding: 10px 20px;
+        }
+
+        /* Form elemanları */
+        .modal-corporate .form-group {
+            margin-bottom: 10px;
+        }
+
+        .modal-corporate label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #4b4f56;
+            margin-bottom: 4px;
+        }
+
+        .modal-corporate .form-control {
+            border-radius: 3px;
+            border-color: #d2d6de;
+            box-shadow: none;
+            font-size: 13px;
+        }
+
+            .modal-corporate .form-control:focus,
+            .modal-corporate textarea.form-control:focus {
+                border-color: #3c8dbc;
+                box-shadow: 0 0 0 1px rgba(60, 141, 188, .25);
+            }
+
+        .modal-corporate textarea.form-control {
+            resize: vertical;
+        }
+
+        .modal-corporate .checkbox {
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+            .modal-corporate .checkbox label {
+                font-weight: 400;
+                color: #555;
+            }
+
+        .modal-corporate .help-block {
+            margin-top: 4px;
+            margin-bottom: 0;
+            font-size: 11px;
+            color: #9ea3b0;
+        }
+
+        /* Bölüm başlıkları */
+        .modal-corporate .section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #9ea3b0;
+            font-weight: 600;
+            margin: 0 0 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #e6e9f0;
+        }
+
+            .modal-corporate .section-title i {
+                margin-right: 4px;
+                color: #3c8dbc;
+            }
+
+        .modal-corporate .m-t-20 {
+            margin-top: 20px;
+        }
+
+        /* Büyük ekranlarda modal genişliği (biraz daha ferah) */
+        @@media (min-width: 992px) {
+            .modal-dialog.modal-lg {
+                width: 1024px;
+            }
+        }
+    </style>
+}
+
+<div class="box">
+    <div class="box-header with-border">
+        <button id="btnNewFirm" class="btn btn-primary">
+            <i class="fa fa-plus"></i> Yeni Firma
+        </button>
+    </div>
+    <div class="box-body">
+        <table id="tblGibFirms" class="table table-striped table-bordered" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Ünvan</th>
+                    <th>VKN/TCKN</th>
+                    <th>GİB Alias</th>
+                    <th>E-Fatura</th>
+                    <th>E-Arşiv</th>
+                    <th style="width:130px;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="gibFirmModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gibFirmModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content modal-corporate">
+            <form id="gibFirmForm" method="post" novalidate>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="gibFirmModalLabel">
+                        <i class="fa fa-building-o"></i> Yeni Firma
+                    </h4>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="FirmId" name="Id" />
+                    <input type="hidden" id="RowVersionBase64" name="RowVersionBase64" />
+                    <div class="row">
+                        <!-- SOL SÜTUN -->
+                        <div class="col-md-6">
+                            <div class="section-title">
+                                <i class="fa fa-id-card-o"></i> Firma Bilgileri
+                            </div>
+
+                            <div class="form-group">
+                                <label for="Title">Ünvan</label>
+                                <input class="form-control" id="Title" name="Title" required maxlength="200" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="TaxNo">VKN / TCKN</label>
+                                <input class="form-control" id="TaxNo" name="TaxNo" maxlength="20" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="TaxOffice">Vergi Dairesi</label>
+                                <input class="form-control" id="TaxOffice" name="TaxOffice" maxlength="100" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="CommercialRegistrationNo">Ticaret Sicil No</label>
+                                <input class="form-control" id="CommercialRegistrationNo" name="CommercialRegistrationNo" maxlength="100" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="MersisNo">Mersis No</label>
+                                <input class="form-control" id="MersisNo" name="MersisNo" maxlength="100" />
+                            </div>
+
+                            <div class="section-title m-t-20">
+                                <i class="fa fa-envelope-o"></i> GİB Bilgileri
+                            </div>
+
+                            <div class="form-group">
+                                <label for="GibAlias">GİB Alias</label>
+                                <input class="form-control" id="GibAlias" name="GibAlias" maxlength="200" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ApiKey">API Key</label>
+                                <input class="form-control" id="ApiKey" name="ApiKey" maxlength="200" />
+                            </div>
+                        </div>
+
+                        <!-- SAĞ SÜTUN -->
+                        <div class="col-md-6">
+                            <div class="section-title">
+                                <i class="fa fa-map-marker"></i> Adres &amp; İletişim
+                            </div>
+
+                            <div class="form-group">
+                                <label for="AddressLine">Adres</label>
+                                <textarea class="form-control" id="AddressLine" name="AddressLine" rows="3"></textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="City">Şehir</label>
+                                        <input class="form-control" id="City" name="City" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="District">İlçe</label>
+                                        <input class="form-control" id="District" name="District" maxlength="100" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="Country">Ülke</label>
+                                        <input class="form-control" id="Country" name="Country" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="PostalCode">Posta Kodu</label>
+                                        <input class="form-control" id="PostalCode" name="PostalCode" maxlength="20" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="Phone">Telefon</label>
+                                        <input class="form-control" id="Phone" name="Phone" maxlength="50" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="FirmEmail">E-Posta</label>
+                                        <input type="email" class="form-control" id="FirmEmail" name="Email" maxlength="200" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-title m-t-20">
+                                <i class="fa fa-file-text-o"></i> E-Dönüşüm
+                            </div>
+
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="IsEInvoiceRegistered" name="IsEInvoiceRegistered" />
+                                    E-Fatura Mükellefi
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="IsEArchiveRegistered" name="IsEArchiveRegistered" />
+                                    E-Arşiv Mükellefi
+                                </label>
+                            </div>
+
+                            <div class="section-title m-t-20">
+                                <i class="fa fa-battery-full"></i> Kontör Ayarları
+                            </div>
+
+                            <div class="form-group">
+                                <label for="InitialCredits">
+                                    Başlangıç Kontör Miktarı
+                                    <span class="text-muted small">(GibUserCreditAccount.TotalCredits)</span>
+                                </label>
+                                <input type="number" min="0" class="form-control" id="InitialCredits" />
+                                <p class="help-block small">
+                                    Sadece yeni firma kaydında kullanılır. Güncellemede dokunulmaz.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="btnSaveFirm" type="submit" class="btn btn-success">
+                        <i class="fa fa-save"></i> Kaydet
+                    </button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script type="module" src="~/apps/gibFirm.js"></script>
+}

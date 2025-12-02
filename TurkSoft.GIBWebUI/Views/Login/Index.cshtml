@@ -20,6 +20,68 @@
 
     <title>Giriş</title>
 
+    <!-- Login loading overlay style -->
+    <style>
+        #login-loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 0, 0, .55);
+            display: none;
+        }
+
+        .login-loading-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            text-align: center;
+            animation: loginFadeInUp .4s ease-out;
+        }
+
+        .login-loading-spinner {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 255, 255, .35);
+            border-top-color: #fff;
+            margin: 0 auto 12px;
+            animation: loginSpin .9s linear infinite;
+        }
+
+        .login-loading-text {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            letter-spacing: .3px;
+        }
+
+        .login-loading-subtext {
+            font-size: 13px;
+            opacity: .85;
+        }
+
+        @@keyframes loginSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @@keyframes loginFadeInUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+    </style>
+
     <!-- API Base URL bilgileri -->
     <meta name="api-base" content="@ApiSettings.Value.BaseUrl" />
 
@@ -80,6 +142,15 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="login-loading-overlay">
+        <div class="login-loading-box">
+            <div class="login-loading-spinner"></div>
+            <div class="login-loading-text">Giriş yapılıyor, lütfen bekleyin...</div>
+            <div class="login-loading-subtext">Sayfa yönlendiriliyor</div>
         </div>
     </div>
 

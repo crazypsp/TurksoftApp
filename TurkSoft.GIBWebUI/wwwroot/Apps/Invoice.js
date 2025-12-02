@@ -1,10 +1,9 @@
-﻿
-// Login.js'teki gibi: Service'den create fonksiyonunu al
+﻿// Login.js'teki gibi: Service'den create fonksiyonunu al
 import { create as createInvoice } from '../entites/invoice.js';
 
 ; (function (global, $) {
     "use strict";
-  
+
     /***********************************************************
      *  UTILS
      ***********************************************************/
@@ -26,6 +25,10 @@ import { create as createInvoice } from '../entites/invoice.js';
             });
         }
     };
+
+    /***********************************************************
+     *  GİB PORTAL API – Fatura Gönderimi
+     ***********************************************************/
     // GİB Portal API'ye gönderim yapan yardımcı fonksiyon
     async function sendInvoiceToGibById(invoiceId) {
         // Id'yi garanti sayıya çevir
@@ -39,48 +42,96 @@ import { create as createInvoice } from '../entites/invoice.js';
             throw new Error("GİB Portal API Base URL (gibPortalApiBaseUrl) tanımlı değil.");
         }
 
+        // 🔹 BURADA oturumdaki kullanıcı Id'sini alıyoruz
+        const userId = getCurrentUserIdForGib();
+
         // BaseUrl sonu / ile bitmiyorsa ekle
         const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
-        // Senin Swagger URL formatın:
-        // https://localhost:7151/api/TurkcellEFatura/einvoice/send-json/11?isExport=false
-        const url = normBase + "TurkcellEFatura/einvoice/send-json/" + encodeURIComponent(numericId) + "?isExport=false";
+        // Query string'i güvenli şekilde üret
+        const qs = new URLSearchParams({
+            userId: String(userId),
+            isExport: "false"
+        });
+
+        // /api/TurkcellEFatura/einvoice/send-json/{id}?userId=...&isExport=false
+        const url =
+            normBase +
+            "TurkcellEFatura/einvoice/send-json/" +
+            encodeURIComponent(numericId) +
+            "?" + qs.toString();
 
         console.log("[GIB] Gönderim URL:", url);
 
-        // Genelde bu endpoint POST oluyor; body istemiyor, sadece route + query ile çalışıyor
         const response = await fetch(url, {
             method: "POST",
             headers: {
                 "Accept": "application/json"
             }
-            // body yok
         });
 
-        if (!response.ok) {
-            // JSON dönmezse bile hata mesajını görmek için text'i de okumaya çalış
-            let errorText = "";
+        // Hem hata hem başarı için text al
+        const contentType = (response.headers.get("content-type") || "").toLowerCase();
+        const isJson = contentType.includes("application/json");
+        const rawText = await response.text();
+        let data = null;
+
+        if (isJson && rawText) {
             try {
-                errorText = await response.text();
-            } catch { /* ignore */ }
-
-            throw new Error("GİB API isteği başarısız. Status: "
-                + response.status + " " + response.statusText
-                + (errorText ? " - " + errorText : ""));
+                data = JSON.parse(rawText);
+            } catch (e) {
+                console.warn("[GIB] JSON parse hatası:", e, rawText);
+            }
         }
 
-        // Bazı endpoint'ler 204 NoContent dönebilir, ona göre koru
-        let res = null;
-        try {
-            res = await response.json();
-        } catch {
-            res = {};
+        // HTTP 200–299 dışı ise hata
+        if (!response.ok) {
+            let warningMessages = [];
+
+            if (data && typeof data === "object") {
+                // Örnek: {"uyarı":["e-Fatura göndermiş olduğunuz firmanın VKN/TCKN ile etiketi(alias) uyuşmuyor."]}
+                const uyarilarRaw =
+                    data["uyarı"] ||
+                    data["uyari"] ||
+                    data["Uyarı"] ||
+                    data["Uyari"] ||
+                    data["warnings"] ||
+                    data["warning"];
+
+                if (Array.isArray(uyarilarRaw)) {
+                    warningMessages = uyarilarRaw;
+                } else if (typeof uyarilarRaw === "string" && uyarilarRaw.trim()) {
+                    warningMessages = [uyarilarRaw.trim()];
+                }
+            }
+
+            let msg =
+                (warningMessages.length
+                    ? warningMessages.join("\n")
+                    : (data && (data.message || data.Message)) ||
+                    `GİB API isteği başarısız. Status: ${response.status} ${response.statusText}`); // eslint-disable-line max-len
+
+            const err = new Error(msg);
+            err.status = response.status;
+            err.payload = data;
+            throw err;
         }
-        console.log(res);
-        return res; // Örn: { statusCode: 200, uuid: '...', invoiceNumber: '...', documentId: '...' }
+
+        // Başarılı durum: JSON yoksa, text'ten parse etmeyi dene
+        if (!data && rawText) {
+            try {
+                data = JSON.parse(rawText);
+            } catch {
+                data = {};
+            }
+        }
+
+        return data || {};
     }
 
-
+    /***********************************************************
+     *  RowVersion yardımcıları
+     ***********************************************************/
     // RowVersion hex → base64 (SQL rowversion -> JSON string)
     function rowVersionHexToBase64(hex) {
         if (!hex) return "";
@@ -100,7 +151,6 @@ import { create as createInvoice } from '../entites/invoice.js';
         for (let i = 0; i < bytes.length; i++) {
             bin += String.fromCharCode(bytes[i]);
         }
-        // btoa tarayıcıda hazır
         try {
             return btoa(bin);
         } catch (e) {
@@ -122,6 +172,32 @@ import { create as createInvoice } from '../entites/invoice.js';
             UpdatedByUserId: null,
             RowVersion: rowVersionBase64 || null
         };
+    }
+
+    // GİB için kullanılacak userId'yi UI'dan / global'den okur
+    function getCurrentUserIdForGib() {
+        let userId = 0;
+
+        // 1) Hidden input varsa (ör: <input type="hidden" id="hdnUserId" value="123" />)
+        const $userHidden = $("#hdnUserId");
+        if ($userHidden.length) {
+            const parsed = parseInt($userHidden.val(), 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                userId = parsed;
+            }
+        }
+
+        // 2) İsteğe bağlı global değişken (window.currentUserId) varsa
+        if (!userId && typeof window.currentUserId === "number" && window.currentUserId > 0) {
+            userId = window.currentUserId;
+        }
+
+        // 3) Hiç bulunamazsa hata fırlat
+        if (!userId) {
+            throw new Error("Kullanıcı Id (userId) bulunamadı. Lütfen oturumu kontrol edin.");
+        }
+
+        return userId;
     }
 
     // Global ListData objesini garanti altına al
@@ -330,7 +406,6 @@ import { create as createInvoice } from '../entites/invoice.js';
         $ddl.val(firma.id).trigger("change");
     }
 
-
     function fillSourceUrnDropdown() {
         const $ddl = $("#ddlSourceUrn");
         if (!$ddl.length) return;
@@ -347,7 +422,6 @@ import { create as createInvoice } from '../entites/invoice.js';
             $ddl.val(firma.gibAlias).trigger("change");
         }
     }
-
 
     function fillInvoicePrefixDropdown() {
         const listData = getListData();
@@ -763,8 +837,10 @@ import { create as createInvoice } from '../entites/invoice.js';
 
     function toggleIstisnaOnLines() {
         const isIstisna = $("#ddlFaturaTipi").val() === "ISTISNA";
-        $("#manuel_grid tbody tr").each(function () {
+        $("#invoiceBody tbody tr, #invoiceBody tr").each(function () {
             const $istisna = $(this).find(".js-line-istisna");
+            if (!$istisna.length) return;
+
             if (isIstisna) {
                 $istisna.prop("disabled", false);
                 if ($istisna.children().length <= 1) {
@@ -796,7 +872,7 @@ import { create as createInvoice } from '../entites/invoice.js';
                 <input type="number" step="0.0001" class="form-control input-sm js-line-price" value="0">
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control input-sm js-line-disc-rate" value="0">
+                <input type="number" step="0.0001" class="form-control input-sm js-line-disc-rate" value="0">
             </td>
             <td>
                 <input type="text" class="form-control input-sm js-line-disc-amount" value="0,00" disabled>
@@ -1187,7 +1263,6 @@ import { create as createInvoice } from '../entites/invoice.js';
         previewStylesInjected = true;
     }
 
-
     function renderInvoicePreview(model) {
         ensurePreviewStyles();
 
@@ -1404,12 +1479,20 @@ import { create as createInvoice } from '../entites/invoice.js';
 
         html += "      <div class='col-xs-6'>";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
-        html += "          <tr><th>Mal Hizmet Toplam Tutarı</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Toplam İskonto</th><td class='text-right'>" + fmt(toplamIskonto, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>KDV Matrahı" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Hesaplanan KDV" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(kdvToplam, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Vergiler Dahil Toplam Tutar</th><td class='text-right'>" + fmt(vergilerDahil, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Ödenecek Tutar</th><td class='text-right'><strong>" + fmt(odenecek, 2) + currencySuffix + "</strong></td></tr>";
+
+        html += "          <tr><th>Mal Hizmet Toplam Tutarı</th><td class='text-right'>" +
+            fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Toplam İskonto</th><td class='text-right'>" +
+            fmt(toplamIskonto, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>KDV Matrahı" + kdvLabelSuffix + "</th><td class='text-right'>" +
+            fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Hesaplanan KDV" + kdvLabelSuffix + "</th><td class='text-right'>" +
+            fmt(kdvToplam, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Vergiler Dahil Toplam Tutar</th><td class='text-right'>" +
+            fmt(vergilerDahil, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Ödenecek Tutar</th><td class='text-right'><strong>" +
+            fmt(odenecek, 2) + currencySuffix + "</strong></td></tr>";
+
         html += "        </table>";
         html += "      </div>";
         html += "    </div>";
@@ -1425,9 +1508,6 @@ import { create as createInvoice } from '../entites/invoice.js';
     /***********************************************************
      *  Invoice Entity (DTO) - C# Invoice ve tüm ilişkiler full dolu
      ***********************************************************/
-    /***********************************************************
- *  Invoice Entity (DTO) - C# Invoice ve tüm ilişkiler full dolu
- ***********************************************************/
     function buildInvoiceEntityFromUI() {
         // Toplamları güncelle
         recalcTotals();
@@ -1470,7 +1550,7 @@ import { create as createInvoice } from '../entites/invoice.js';
         const baseFor = (rvBase64) => buildBaseEntity(
             currentUserId,
             nowIso,
-            rvBase64 || defaultRowVersionBase64 // null/falsy gelirse bile default RowVersion bas
+            rvBase64 || defaultRowVersionBase64
         );
 
         // Fatura no ve tarih
@@ -1501,7 +1581,7 @@ import { create as createInvoice } from '../entites/invoice.js';
 
         // -------- ROOT INVOICE --------
         const invoice = {
-            // BaseEntity (RowVersion kesin dolu)
+            // BaseEntity
             ...baseFor(rowVersionBase64),
 
             // Invoice alanları
@@ -1512,7 +1592,6 @@ import { create as createInvoice } from '../entites/invoice.js';
             Total: total,
             Currency: currency,
 
-            // Ek alanlar (C# Invoice'ta olmasa bile JSON sorun değil)
             Ettn: h.Invoice_ID || null,
             BranchCode: $("#ddlSubeKodu").val() || null,
             SourceUrn: $("#ddlSourceUrn").val() || null,
@@ -1532,7 +1611,6 @@ import { create as createInvoice } from '../entites/invoice.js';
             Returns: [],
             InvoicesPayments: [],
 
-            // Ek alanlar / irsaliye / kamu
             Despatchs: [],
             AdditionalFields: null,
             KamuAlicisi: model.kamuAlicisi || null
@@ -1543,7 +1621,7 @@ import { create as createInvoice } from '../entites/invoice.js';
         const nameParts = splitNameSurname(flatCustomer);
 
         const customerEntity = {
-            ...baseFor(), // RowVersion sabit dolu
+            ...baseFor(),
             Id: customerId || 0,
             Name: nameParts.name || "",
             Surname: nameParts.surname || "",
@@ -1572,7 +1650,7 @@ import { create as createInvoice } from '../entites/invoice.js';
         customerEntity.Addresses.push(addressEntity);
         invoice.Customer = customerEntity;
 
-        // -------- KALEMLER (InvoicesItem + Item + Brand + Unit) --------
+        // -------- KALEMLER --------
         (model.invoiceLines || []).forEach((l, idx) => {
             const itemEntity = {
                 ...baseFor(),
@@ -1623,7 +1701,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             invoice.InvoicesItems.push(invoicesItemEntity);
         });
 
-        // -------- VERGİLER (InvoicesTax) --------
+        // -------- VERGİLER --------
         const taxMap = {};
         (model.invoiceLines || []).forEach(l => {
             const rate = Number(l.KdvOran || 0);
@@ -1646,7 +1724,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             });
         });
 
-        // -------- TOPLAM İSKONTO (InvoicesDiscount) --------
+        // -------- TOPLAM İSKONTO --------
         let totalDiscount = 0;
         (model.invoiceLines || []).forEach(l => {
             totalDiscount += Number(l.DiscountAmount || 0);
@@ -1665,7 +1743,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             });
         }
 
-        // -------- SGK (SgkRecords) --------
+        // -------- SGK --------
         if (model.sgk) {
             const startDateIso = model.sgk.GonderimTarihiBaslangic
                 ? new Date(model.sgk.GonderimTarihiBaslangic).toISOString()
@@ -1688,7 +1766,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             });
         }
 
-        // -------- HİZMET SAĞLAYICI (ServicesProvider) --------
+        // -------- HİZMET SAĞLAYICI --------
         const systemUser =
             ($("#hdnUserName").val() || $("#lblUserName").text() || "").trim() || "WEBUI";
 
@@ -1701,7 +1779,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             Invoice: null
         });
 
-        // -------- ÖDEME (Payment + PaymentType + PaymentAccount + Bank + InvoicesPayment) --------
+        // -------- ÖDEME --------
         if (model.payment) {
             const p = model.payment;
 
@@ -1787,7 +1865,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             invoice.InvoicesPayments.push(invoicePayment);
         }
 
-        // -------- İRSALİYE (Despatchs) --------
+        // -------- İRSALİYE --------
         if ((model.irsaliyeler || []).length) {
             invoice.Despatchs = model.irsaliyeler.map(d => ({
                 ...baseFor(),
@@ -1798,7 +1876,7 @@ import { create as createInvoice } from '../entites/invoice.js';
             }));
         }
 
-        // -------- Ek Alanlar (AdditionalFields) --------
+        // -------- Ek Alanlar --------
         const additional = {
             Seller: model.sellerAdditional || [],
             SellerAgent: model.sellerAgentAdditional || [],
@@ -1818,7 +1896,6 @@ import { create as createInvoice } from '../entites/invoice.js';
 
         return invoice;
     }
-
 
     /***********************************************************
      *  SGK EK ALANLAR
@@ -2028,6 +2105,7 @@ import { create as createInvoice } from '../entites/invoice.js';
         requireInput("#txtIssueTime", "Fatura saatini giriniz.");
         requireSelect("#ddlParaBirimi", "Para birimini seçiniz.", [""]);
 
+
         // ALICI
         requireInput("#txtIdentificationID", "VKN/TCKN giriniz.");
         requireInput("#txtPartyName", "Firma adını giriniz.");
@@ -2048,6 +2126,7 @@ import { create as createInvoice } from '../entites/invoice.js';
         requireSelect("#PaymentMeansCode", "Ödeme şeklini seçiniz.", [""]);
         requireInput("#PaymentDueDate", "Ödeme tarihini giriniz.");
         requireSelect("#PayeeFinancialCurrencyCode", "Hesap para birimini seçiniz.", [""]);
+
 
         // KALEMLER
         if ($("#invoiceBody tr").length === 0) {
@@ -2086,11 +2165,10 @@ import { create as createInvoice } from '../entites/invoice.js';
     }
 
     /***********************************************************
-     *  TASLAK KAYIT – createInvoice çağrısı (Invoice.cs graph)
+     *  TASLAK KAYIT – createInvoice çağrısı
      ***********************************************************/
     async function saveInvoiceDraft(entity) {
         try {
-            // Taslak bilgisi – C# entity'de yok, ama ekstra alan JSON'da sorun olmaz
             entity.IsDraft = true;
             const result = await createInvoice(entity);
             return result;
@@ -2161,8 +2239,8 @@ import { create as createInvoice } from '../entites/invoice.js';
             $("#invoicePreviewModal").modal("show");
         });
 
-        
-        // TASLAK / GİB GÖNDER → Invoice.cs + tüm ilişkiler dolu create API
+
+        // TASLAK / GİB GÖNDER
         $(document).on("click", "#btnDraftSave, #btnSendToGib", async function (e) {
             e.preventDefault();
 
@@ -2192,30 +2270,23 @@ import { create as createInvoice } from '../entites/invoice.js';
                     const res = await saveInvoiceDraft(entity);
                     console.log("Taslak olarak kaydedilen Invoice:", res);
                     showAlert("success", "Taslak fatura başarıyla kaydedildi.");
+                    alert("Taslak fatura başarıyla kaydedildi.");
 
-                    // Taslak kayıttan dönen invoice Id'yi al (response schema'na göre burayı düzenle)
-                    const invoiceId = res && res.id;
-
+                    const invoiceId = res && (res.invoiceId || res.id);
                     if (invoiceId) {
-                        // Hidden input'a yaz
                         $("#hfInvoiceId").val(invoiceId);
-
-                        // Aynı sayfada ikinci kez taslak kaydetmeyi engelle
                         $("#btnDraftSave").prop("disabled", true);
                     } else {
                         console.warn("Taslak kayıttan invoiceId alınamadı. Response:", res);
                     }
-
                     return;
                 }
 
                 // 2) GİB GÖNDER BUTONU
-
                 let invoiceIdFromHidden = $("#hfInvoiceId").val();
                 const draftButtonDisabled = $("#btnDraftSave").prop("disabled");
 
-                // a) Taslak daha hiç kaydedilmemişse VEYA hidden boş ise
-                //    önce taslağı kaydet, sonra GİB'e gönder
+                // Taslak yoksa ya da buton daha önce disable edilmediyse: önce taslak kaydet
                 if (!invoiceIdFromHidden || !draftButtonDisabled) {
                     const draftRes = await saveInvoiceDraft(entity);
                     console.log("GİB öncesi otomatik taslak kaydedildi:", draftRes);
@@ -2226,7 +2297,9 @@ import { create as createInvoice } from '../entites/invoice.js';
                         (draftRes?.data && (draftRes.data.invoiceId || draftRes.data.id));
 
                     if (!newInvoiceId) {
-                        showAlert("danger", "Taslak fatura kaydedildi, ancak Invoice Id alınamadı. GİB gönderilemedi.");
+                        const msg = "Taslak fatura kaydedildi, ancak Invoice Id alınamadı. GİB gönderilemedi.";
+                        showAlert("danger", msg);
+                        alert(msg);
                         return;
                     }
 
@@ -2236,49 +2309,104 @@ import { create as createInvoice } from '../entites/invoice.js';
                     invoiceIdFromHidden = newInvoiceId;
                 }
 
-                // b) Elimizde artık mutlaka bir Invoice Id var → GİB Portal API'ye gönder
-                // DİKKAT: Burada eskiden createInvoice(entity) çağırıyordun; artık GİB API kullanıyoruz.
+                // Artık elimizde kesin bir Invoice Id var → GİB Portal API'ye gönder
                 const gibRes = await sendInvoiceToGibById(invoiceIdFromHidden);
                 console.log("GİB'e gönderim sonucu:", gibRes);
 
-                // GİB response alanlarını kendi API'ne göre çek
-                const statusCode =
-                    gibRes?.statusCode || gibRes?.StatusCode || gibRes?.code;
-                const uuid = gibRes && gibRes.id;                   // PDF URL'de kullanılacak
-                const invoiceNumber = gibRes && gibRes.invoiceNumber;
-                const documentId =
-                    gibRes?.documentId || gibRes?.DocumentId || gibRes?.id;
+                // GİB'den gelebilecek uyarıları yakala
+                const warningsRaw =
+                    (gibRes && (
+                        gibRes["uyarı"] ||
+                        gibRes["uyari"] ||
+                        gibRes["Uyarı"] ||
+                        gibRes["Uyari"] ||
+                        gibRes["warnings"] ||
+                        gibRes["warning"]
+                    )) || null;
 
-                // 3) GİB dönüşünü hidden input'lara bas → Download butonları bunları kullanacak
+                let warningMessages = [];
+                if (Array.isArray(warningsRaw)) {
+                    warningMessages = warningsRaw;
+                } else if (typeof warningsRaw === "string" && warningsRaw.trim()) {
+                    warningMessages = [warningsRaw.trim()];
+                }
+
+                if (warningMessages.length) {
+                    const warnText = warningMessages.join("\n");
+                    console.warn("GİB uyarı:", warnText);
+
+                    alert(warnText);
+                    showAlert("danger", warnText);
+                    return;
+                }
+
+                // Başarılı örnek:
+                // { "id": "b96a0275-91e9-468d-a50d-08de2f9a73b3", "invoiceNumber": "MHS2025000000013" }
+                const statusCode =
+                    gibRes?.statusCode || gibRes?.StatusCode || gibRes?.code || 200;
+
+                const uuid =
+                    gibRes?.id ||
+                    gibRes?.uuid ||
+                    gibRes?.Uuid ||
+                    gibRes?.UUID ||
+                    null;
+
+                const invoiceNumber =
+                    gibRes?.invoiceNumber ||
+                    gibRes?.InvoiceNumber ||
+                    gibRes?.faturaNo ||
+                    gibRes?.FaturaNo ||
+                    null;
+
+                const documentId =
+                    gibRes?.documentId ||
+                    gibRes?.DocumentId ||
+                    uuid ||
+                    null;
+
+                const hasUuid = !!uuid;
+                const hasInvoiceNumber = !!invoiceNumber;
+
+                // Hidden inputlara yaz (PDF/XML butonları bunları kullanıyor)
                 $("#hfGibStatusCode").val(statusCode || "");
                 $("#hfGibInvoiceUuid").val(uuid || "");
                 $("#hfGibInvoiceNumber").val(invoiceNumber || "");
                 $("#hfGibDocumentId").val(documentId || "");
 
                 if (hasUuid && hasInvoiceNumber) {
-                    showAlert("success", "Fatura başarıyla GİB'e gönderildi.");
+                    const successText =
+                        "Fatura başarıyla GİB'e gönderildi.\n\n" +
+                        "GİB Id (UUID): " + uuid + "\n" +
+                        "Fatura No: " + invoiceNumber;
 
-                    // PDF / XML butonlarını aktif et
+                    alert(successText);
+                    showAlert("success", successText);
+
                     $("#btnDownloadPDF").prop("disabled", false);
                     $("#btnDownloadXML").prop("disabled", false);
                 } else {
                     console.warn("GİB yanıtında uuid veya invoiceNumber eksik:", gibRes);
 
-                    showAlert(
-                        "danger",
-                        (gibRes?.message || gibRes?.Message) ||
-                        "Fatura GİB'e gönderilirken bir hata oluştu (uuid veya fatura numarası alınamadı)."
-                    );
+                    const msg =
+                        (gibRes && (gibRes.message || gibRes.Message)) ||
+                        "Fatura GİB'e gönderildi ama dönen id veya fatura numarası alınamadı.";
+
+                    alert(msg);
+                    showAlert("danger", msg);
                 }
 
             } catch (err) {
                 console.error("Fatura kaydedilirken/gönderilirken hata:", err);
-                showAlert(
-                    "danger",
-                    isDraft
-                        ? "Taslak fatura kaydedilirken bir hata oluştu."
-                        : "Fatura GİB'e gönderilirken bir hata oluştu."
-                );
+
+                const baseMsg = isDraft
+                    ? "Taslak fatura kaydedilirken bir hata oluştu."
+                    : "Fatura GİB'e gönderilirken bir hata oluştu.";
+
+                const msg = (err && err.message) ? err.message : baseMsg;
+
+                alert(msg);
+                showAlert("danger", msg);
             }
         });
 
@@ -2286,34 +2414,49 @@ import { create as createInvoice } from '../entites/invoice.js';
         $(document).on("click", "#btnDownloadPDF", function (e) {
             e.preventDefault();
 
-            // GİB'den dönen uuid (response.id)
             const uuid = $("#hfGibInvoiceUuid").val();
 
             if (!uuid) {
                 showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                alert("Önce faturayı GİB'e başarıyla göndermelisiniz.");
                 return;
             }
 
             const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
             if (!baseUrl) {
-                showAlert("danger", "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).");
+                const msg = "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).";
+                showAlert("danger", msg);
+                alert(msg);
                 return;
             }
 
-            // baseUrl: https://localhost:7151/api/  (appsettings’ten geliyor)
             const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
-            // Hedef URL:
-            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/pdf/{uuid}?standardXslt=true
+            // 🔹 userId'yi oku
+            let userId;
+            try {
+                userId = getCurrentUserIdForGib();
+            } catch (err) {
+                const msg = err.message || "Kullanıcı Id okunamadı.";
+                showAlert("danger", msg);
+                alert(msg);
+                return;
+            }
+
+            const qs = new URLSearchParams({
+                userId: String(userId),
+                standardXslt: "true"
+            });
+
+            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/pdf/{uuid}?userId=...&standardXslt=true
             const url =
                 normBase +
                 "TurkcellEFatura/einvoice/outbox/pdf/" +
                 encodeURIComponent(uuid) +
-                "?standardXslt=true";
+                "?" + qs.toString();
 
             console.log("[GIB] PDF download URL:", url);
 
-            // PDF endpoint'ine top-level navigation ile gidiyoruz, CORS derdi yok
             window.open(url, "_blank");
         });
 
@@ -2321,37 +2464,50 @@ import { create as createInvoice } from '../entites/invoice.js';
         $(document).on("click", "#btnDownloadXML", function (e) {
             e.preventDefault();
 
-            // GİB gönderim cevabından gelen uuid (response.id)
             const uuid = $("#hfGibInvoiceUuid").val();
 
             if (!uuid) {
                 showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                alert("Önce faturayı GİB'e başarıyla göndermelisiniz.");
                 return;
             }
 
             const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
             if (!baseUrl) {
-                showAlert("danger", "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).");
+                const msg = "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).";
+                showAlert("danger", msg);
+                alert(msg);
                 return;
             }
 
-            // baseUrl: https://localhost:7151/api/  (appsettings’ten geliyor)
             const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
-            // Hedef URL:
-            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/ubl/{uuid}?standardXslt=true
+            // 🔹 userId'yi oku
+            let userId;
+            try {
+                userId = getCurrentUserIdForGib();
+            } catch (err) {
+                const msg = err.message || "Kullanıcı Id okunamadı.";
+                showAlert("danger", msg);
+                alert(msg);
+                return;
+            }
+
+            const qs = new URLSearchParams({
+                userId: String(userId),
+            });
+
+            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/ubl/{uuid}?userId=...
             const url =
                 normBase +
                 "TurkcellEFatura/einvoice/outbox/ubl/" +
                 encodeURIComponent(uuid) +
-                "?standardXslt=true";
+                "?" + qs.toString();
 
             console.log("[GIB] UBL download URL:", url);
 
-            // XML/UBL dosyasını indirmek için yeni sekmede aç
             window.open(url, "_blank");
         });
-
 
         // SGK ilave fatura tipi
         $(document).on("change", "#ddlilaveFaturaTipi", updateSgkFields);
@@ -2422,6 +2578,89 @@ import { create as createInvoice } from '../entites/invoice.js';
     /***********************************************************
      *  INIT
      ***********************************************************/
+    // Home sayfasından seçilen mükellefi alıp, alıcı alanlarını doldurur
+    function applySelectedMukellefFromSession() {
+        try {
+            const txt = sessionStorage.getItem('SelectedMukellefForInvoice');
+            if (!txt) {
+                console.log('[Invoice] SelectedMukellefForInvoice bulunamadı.');
+                return;
+            }
+
+            const m = JSON.parse(txt);
+            console.log('[Invoice] SelectedMukellefForInvoice:', m);
+
+            const identifier = (m.Identifier || m.identifier || '').toString().trim();
+            const title = (m.Title || m.title || '').toString().trim();
+            const alias = (m.Alias || m.alias || '').toString().trim();
+
+            // VKN/TCKN
+            if (identifier) {
+                $('#txtIdentificationID').val(identifier);
+            }
+
+            // Ünvan
+            if (title) {
+                $('#txtPartyName').val(title);
+            }
+
+            // Alias (alıcı etiketi)
+            if (alias) {
+                const $ddl = $('#ddlAliciEtiketi');
+                if ($ddl.length) {
+                    if (!$ddl.find(`option[value="${alias}"]`).length) {
+                        $ddl.append(new Option(alias, alias));
+                    }
+                    $ddl.val(alias).trigger('change');
+                }
+            }
+
+            // Ad / Soyad (boşsa Ünvan'dan türet)
+            const curFirst = $('#txtPersonFirstName').val();
+            const curLast = $('#txtPersonLastName').val();
+            if (!curFirst && !curLast && title) {
+                const parts = title.split(/\s+/);
+                let firstName = '';
+                let lastName = '';
+                if (parts.length === 1) {
+                    firstName = parts[0];
+                    lastName = '.';
+                } else {
+                    lastName = parts.pop();
+                    firstName = parts.join(' ');
+                }
+                // İstersen aç:
+                // $('#txtPersonFirstName').val(firstName);
+                // $('#txtPersonLastName').val(lastName);
+            }
+
+            // Invoice modelini güncelle
+            const flatCustomer = readCustomerFromUI();
+            invoiceModel.Customer = flatCustomer;
+            invoiceModel.customer = {
+                customerParty: {
+                    IdentificationID: flatCustomer.IdentificationID,
+                    PartyName: flatCustomer.PartyName,
+                    TaxSchemeName: flatCustomer.TaxOffice,
+                    CountryName: flatCustomer.CountryName,
+                    CityName: flatCustomer.CityName,
+                    CitySubdivisionName: flatCustomer.CitySubdivisionName,
+                    StreetName: flatCustomer.StreetName,
+                    PostalZone: flatCustomer.PostalZone,
+                    ElectronicMail: flatCustomer.Email,
+                    Telephone: flatCustomer.Telephone,
+                    WebsiteURI: flatCustomer.WebsiteURI,
+                    Person_FirstName: flatCustomer.FirstName,
+                    Person_FamilyName: flatCustomer.LastName,
+                    ManuelCityAndSubdivision: flatCustomer.ManuelCityEntry
+                }
+            };
+
+        } catch (err) {
+            console.error('[Invoice] SelectedMukellefForInvoice uygulanırken hata:', err);
+        }
+    }
+
     function initDefaults() {
         // ETTN
         if ($("#txtUUID").length) {
@@ -2492,89 +2731,6 @@ import { create as createInvoice } from '../entites/invoice.js';
 
         if ($("#btnLineAdd").length) {
             $("#btnLineAdd").trigger("click");
-        }
-    }
-    // Home sayfasından seçilen mükellefi alıp, alıcı alanlarını doldurur
-    function applySelectedMukellefFromSession() {
-        try {
-            const txt = sessionStorage.getItem('SelectedMukellefForInvoice');
-            if (!txt) {
-                console.log('[Invoice] SelectedMukellefForInvoice bulunamadı.');
-                return;
-            }
-
-            const m = JSON.parse(txt);
-            console.log('[Invoice] SelectedMukellefForInvoice:', m);
-
-            const identifier = (m.Identifier || m.identifier || '').toString().trim();
-            const title = (m.Title || m.title || '').toString().trim();
-            const alias = (m.Alias || m.alias || '').toString().trim();
-
-            // VKN/TCKN
-            if (identifier) {
-                $('#txtIdentificationID').val(identifier);
-            }
-
-            // Ünvan
-            if (title) {
-                $('#txtPartyName').val(title);
-            }
-
-            // Alias (alıcı etiketi)
-            if (alias) {
-                const $ddl = $('#ddlAliciEtiketi');
-                if ($ddl.length) {
-                    if (!$ddl.find(`option[value="${alias}"]`).length) {
-                        $ddl.append(new Option(alias, alias));
-                    }
-                    $ddl.val(alias).trigger('change');
-                }
-            }
-
-            // Ad / Soyad (boşsa Ünvan'dan türet)
-            const curFirst = $('#txtPersonFirstName').val();
-            const curLast = $('#txtPersonLastName').val();
-            if (!curFirst && !curLast && title) {
-                const parts = title.split(/\s+/);
-                let firstName = '';
-                let lastName = '';
-                if (parts.length === 1) {
-                    firstName = parts[0];
-                    lastName = '.';
-                } else {
-                    lastName = parts.pop();
-                    firstName = parts.join(' ');
-                }
-                //$('#txtPersonFirstName').val(firstName);
-                //$('#txtPersonLastName').val(lastName);
-            }
-
-            // Invoice modelini güncelle
-            const flatCustomer = readCustomerFromUI();
-            invoiceModel.Customer = flatCustomer;
-            invoiceModel.customer = {
-                customerParty: {
-                    IdentificationID: flatCustomer.IdentificationID,
-                    PartyName: flatCustomer.PartyName,
-                    TaxSchemeName: flatCustomer.TaxOffice,
-                    CountryName: flatCustomer.CountryName,
-                    CityName: flatCustomer.CityName,
-                    CitySubdivisionName: flatCustomer.CitySubdivisionName,
-                    StreetName: flatCustomer.StreetName,
-                    PostalZone: flatCustomer.PostalZone,
-                    ElectronicMail: flatCustomer.Email,
-                    Telephone: flatCustomer.Telephone,
-                    WebsiteURI: flatCustomer.WebsiteURI,
-                    Person_FirstName: flatCustomer.FirstName,
-                    Person_FamilyName: flatCustomer.LastName,
-                    ManuelCityAndSubdivision: flatCustomer.ManuelCityEntry
-                }
-            };
-
-            // İstersen bir daha kullanmamak için temizleyebilirsin:
-            // sessionStorage.removeItem('SelectedMukellefForInvoice');
-        } catch (err) {
-            console.error('[Invoice] SelectedMukellefForInvoice uygulanırken hata:', err);
         }
     }
 

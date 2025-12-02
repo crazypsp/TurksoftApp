@@ -286,6 +286,30 @@
                     <span>Transfer Belge Yükle</span>
                 </a>
             </li>
+
+            <li class="treeview" id="userFirmMenu" style="display:none;">
+                <a href="#">
+                    <i class="fa fa-users"></i>
+                    <span>Tanımlamalar</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
+                <ul class="treeview-menu">
+                    <li>
+                        <!-- Kullanıcı tanımlamaları: /User/Index -->
+                        <a asp-controller="User" asp-action="Index">
+                            <i class="fa fa-user"></i> Kullanıcı Tanımları
+                        </a>
+                    </li>
+                    <li>
+                        <!-- Firma tanımlamaları: /GibFirm/Index -->
+                        <a asp-controller="GibFirm" asp-action="Index">
+                            <i class="fa fa-building"></i> Firma Tanımları
+                        </a>
+                    </li>
+                </ul>
+            </li>
         </ul>
     </section>
 </aside>

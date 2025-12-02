@@ -1,12 +1,15 @@
-using TurkSoft.GIBWebUI.AppSettings;
+﻿using TurkSoft.GIBWebUI.AppSettings;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// "Api" ayarlar�n� kaydet
+// "Api" ayarlarını kaydet
 builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("Api"));
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-// MVC / Razor deste�i
+// 🔥 IHttpClientFactory kaydı (LoginController'da kullanıyorsun)
+builder.Services.AddHttpClient();
+
+// MVC / Razor desteği
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
@@ -25,7 +28,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
 
-// Varsay�lan route
+// Varsayılan route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Index}/{id?}");

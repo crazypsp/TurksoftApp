@@ -246,6 +246,7 @@
     </div>
 </div>
 
+
 @section Scripts {
     <script>
         (function (window, $) {
@@ -452,131 +453,79 @@
             window.loadDashboard = loadDashboard;
 
             /***********************************************************
-             *  MÜKELLEF ARAMA (SessionStorage.MukellefList)
+             *  MÜKELLEF ARAMA (HomeController.SearchMukellef)
              *  - Identifier  = VKN/TCKN
              *  - Title       = Ünvan
              *  - Alias       = urn:mail:... (GİB etiketi)
              ***********************************************************/
-            let _mukellefCache = null;
-
-            function getMukellefListFromSession() {
-                if (_mukellefCache) return _mukellefCache;
+            async function searchMukellefOnServer(term) {
+                var q = (term || '').toString().trim();
+                var url = '/Home/SearchMukellef?term=' + encodeURIComponent(q);
 
                 try {
-                    const txt = sessionStorage.getItem('MukellefList');
+                    var resp = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
 
-                    console.log('[Mükellef] Session MukellefList raw (ilk 200 char):',
-                        txt ? txt.substring(0, 200) : 'YOK');
-
-                    if (!txt) {
-                        _mukellefCache = [];
-                        return _mukellefCache;
+                    if (!resp.ok) {
+                        console.error('[Mükellef] SearchMukellef hata. status =', resp.status, resp.statusText);
+                        return [];
                     }
 
-                    const parsed = JSON.parse(txt);
+                    var data = await resp.json();
+                    var arr = Array.isArray(data) ? data : (data ? [data] : []);
+                    return arr.map(function (raw, idx) {
+                        var identifier =
+                            raw.Identifier ||
+                            raw.identifier ||
+                            raw.Vkn ||
+                            raw.vkn ||
+                            '';
 
-                    let arr;
-                    if (Array.isArray(parsed)) {
-                        arr = parsed;
-                    } else if (Array.isArray(parsed.items)) {
-                        arr = parsed.items;
-                    } else if (Array.isArray(parsed.results)) {
-                        arr = parsed.results;
-                    } else if (Array.isArray(parsed.list)) {
-                        arr = parsed.list;
-                    } else {
-                        const vals = Object.values(parsed);
-                        if (vals.length && typeof vals[0] === 'object') {
-                            arr = vals;
-                        } else {
-                            arr = [];
-                        }
-                    }
+                        var title =
+                            raw.Title ||
+                            raw.title ||
+                            '';
 
-                    _mukellefCache = Array.isArray(arr) ? arr : [];
+                        var alias =
+                            raw.Alias ||
+                            raw.alias ||
+                            raw.GibAlias ||
+                            raw.gibAlias ||
+                            '';
+
+                        var id = raw.id || raw.Id || identifier || (idx + 1);
+
+                        return {
+                            id: id,
+                            vkn: (identifier || '').toString().trim(),
+                            title: (title || '').toString().trim(),
+                            alias: (alias || '').toString().trim()
+                        };
+                    });
                 } catch (err) {
-                    console.error('[Mükellef] MukellefList parse/normalize hatası:', err);
-                    _mukellefCache = [];
+                    console.error('[Mükellef] SearchMukellef exception:', err);
+                    return [];
                 }
-                return _mukellefCache;
             }
 
-            function normalizeMukellef(raw, index) {
-                if (!raw || typeof raw !== 'object') raw = {};
-
-                const identifier =
-                    raw.Identifier ||
-                    raw.identifier ||
-                    raw.Vkn ||
-                    raw.vkn ||
-                    '';
-
-                const title =
-                    raw.Title ||
-                    raw.title ||
-                    '';
-
-                const alias =
-                    raw.Alias ||
-                    raw.alias ||
-                    raw.GibAlias ||
-                    raw.gibAlias ||
-                    '';
-
-                const id = identifier || raw.Id || raw.id || (index + 1);
-
-                return {
-                    id: id,
-                    vkn: (identifier || '').toString().trim(),
-                    title: (title || '').toString().trim(),
-                    alias: (alias || '').toString().trim(),
-                    raw: raw
-                };
-            }
-
-            function getNormalizedMukellefList() {
-                const rawList = getMukellefListFromSession();
-                const normalized = rawList.map(normalizeMukellef);
-                console.log('[Mükellef] Normalize edilmiş kayıt sayısı:', normalized.length);
-                if (normalized.length > 0) {
-                    console.log('[Mükellef] Örnek kayıt:', normalized[0]);
-                }
-                return normalized;
-            }
-
-            function fillMusteriCariDatalist(filterText) {
-                const $datalist = $('#MusteriCariList');
+            async function fillMusteriCariDatalist(filterText) {
+                var $datalist = $('#MusteriCariList');
                 if (!$datalist.length) return;
 
-                const term = (filterText || '').toString().trim().toLowerCase();
-                const all = getNormalizedMukellefList();
-
-                console.log('[Mükellef] Toplam mükellef sayısı:', all.length);
-
-                if (!all.length) {
-                    $datalist.empty();
-                    return;
-                }
-
-                const filtered = term
-                    ? all.filter(function (m) {
-                        const v = (m.vkn || '').toLowerCase();
-                        const t = (m.title || '').toLowerCase();
-                        return v.includes(term) || t.includes(term);
-                    })
-                    : all;
-
-                const maxItems = 50;
+                var results = await searchMukellefOnServer(filterText);
                 $datalist.empty();
 
-                filtered.slice(0, maxItems).forEach(function (m) {
-                    const disp = m.vkn && m.title
+                var maxItems = 50;
+                results.slice(0, maxItems).forEach(function (m) {
+                    var disp = m.vkn && m.title
                         ? (m.vkn + ' - ' + m.title)
                         : (m.vkn || m.title);
 
                     if (!disp) return;
 
-                    const opt = document.createElement('option');
+                    var opt = document.createElement('option');
                     opt.value = disp;
                     opt.setAttribute('data-id', m.id || '');
                     opt.setAttribute('data-vkn', m.vkn || '');
@@ -585,41 +534,32 @@
                     $datalist.append(opt);
                 });
 
-                console.log('[Mükellef] Datalist dolduruldu. Filtrelenen kayıt:', filtered.length);
+                console.log('[Mükellef] Datalist dolduruldu. term =', filterText, 'kayıt sayısı =', results.length);
             }
 
-            /**
-             * Seçili mükellefi sessionStorage'a koyup fatura sayfasına gider
-             */
             function openCreateInvoiceWithSelectedMukellef(e) {
                 if (e && e.preventDefault) e.preventDefault();
 
-                const all = getNormalizedMukellefList();
-                if (!all.length) {
-                    alert('Mükellef listesi bulunamadı. Lütfen tekrar giriş yapın.');
-                    return;
-                }
+                var inputVal = ($('#checkInput').val() || '').trim();
+                var $datalist = $('#MusteriCariList');
 
-                const inputVal = ($('#checkInput').val() || '').trim();
                 if (!inputVal) {
                     alert('Lütfen VKN/TCKN veya Ünvan girerek bir mükellef seçiniz.');
                     return;
                 }
 
-                // Datalist display value: "VKN - Ünvan"
-                let selected = all.find(m => {
-                    const disp = m.vkn && m.title
-                        ? (m.vkn + ' - ' + m.title)
-                        : (m.vkn || m.title);
-                    return disp === inputVal;
-                });
+                if (!$datalist.length) {
+                    alert('Mükellef listesi yüklenemedi. Lütfen tekrar deneyiniz.');
+                    return;
+                }
 
-                if (!selected) {
-                    const lower = inputVal.toLowerCase();
-                    selected = all.find(m =>
-                        (m.vkn || '').toLowerCase() === lower ||
-                        (m.title || '').toLowerCase() === lower
-                    );
+                var selected = null;
+                var options = $datalist[0].options;
+                for (var i = 0; i < options.length; i++) {
+                    if ((options[i].value || '').trim() === inputVal) {
+                        selected = options[i];
+                        break;
+                    }
                 }
 
                 if (!selected) {
@@ -627,10 +567,10 @@
                     return;
                 }
 
-                const payload = {
-                    Identifier: selected.vkn || '',
-                    Title: selected.title || '',
-                    Alias: selected.alias || ''
+                var payload = {
+                    Identifier: selected.getAttribute('data-vkn') || '',
+                    Title: selected.getAttribute('data-title') || '',
+                    Alias: selected.getAttribute('data-alias') || ''
                 };
 
                 try {
@@ -679,7 +619,7 @@
                 loadDashboard();
 
                 /*******************************************************
-                 *  Mükellef arama input eventleri
+                 *  Mükellef arama input eventleri (SearchMukellef)
                  *******************************************************/
                 var $checkInput = $('#checkInput');
                 if ($checkInput.length) {
@@ -701,10 +641,3 @@
         })(window, jQuery);
     </script>
 }
-
-
-
-
-
-
-

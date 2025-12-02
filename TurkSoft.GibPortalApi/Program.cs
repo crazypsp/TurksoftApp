@@ -50,7 +50,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowWebUi", policy =>
     {
         policy
-            .WithOrigins("https://localhost:7056") // Web UI origin
+            .WithOrigins("https://localhost:7056", "https://portal.noxmusavir.com") // Web UI origin
             .AllowAnyHeader()
             .AllowAnyMethod();
         // .AllowCredentials(); // Cookie / auth gerekiyorsa açarsın

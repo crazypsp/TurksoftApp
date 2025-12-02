@@ -35,15 +35,30 @@ namespace TurkSoft.GIBErpApi.Controllers.Common
         public virtual async Task<IActionResult> Create([FromBody] T entity)
             => Ok(await _service.AddAsync(entity));
 
-        [HttpPut]
+        [HttpPut("{id:long}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public virtual async Task<IActionResult> Update([FromBody] T entity, CancellationToken ct = default)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public virtual async Task<IActionResult> Update(long id, [FromBody] T entity, CancellationToken ct = default)
         {
+            // Entity üzerinde Id property’sini bul
             var idProp = typeof(T).GetProperty("Id", BindingFlags.Public | BindingFlags.Instance);
             if (idProp is null)
                 return BadRequest("Id alanı bulunamadı.");
-            return Ok(await _service.UpdateAsync(entity, ct));
+
+            // Route’tan gelen id ile entity.Id’yi senkronla
+            var idType = Nullable.GetUnderlyingType(idProp.PropertyType) ?? idProp.PropertyType;
+            var convertedId = Convert.ChangeType(id, idType);
+
+            var current = idProp.GetValue(entity);
+            if (current == null || !current.Equals(convertedId))
+            {
+                idProp.SetValue(entity, convertedId);
+            }
+
+            var updated = await _service.UpdateAsync(entity, ct);
+            return Ok(updated);
         }
+
 
         [HttpDelete("{id:long}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

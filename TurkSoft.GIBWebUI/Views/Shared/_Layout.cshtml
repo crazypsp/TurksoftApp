@@ -2,10 +2,11 @@
     ViewData["Title"] = ViewData["Title"] ?? "Portal";
     ViewData["Subtitle"] = ViewData["Subtitle"] ?? "";
 }
+
 @using Microsoft.Extensions.Options
-@inject IOptions<TurkSoft.GIBWebUI.AppSettings.ApiSettings> ApiSettings
 @using TurkSoft.GIBWebUI.AppSettings
 @inject IOptions<ApiSettings> ApiSettings
+
 <!DOCTYPE html>
 <html lang="tr" class="sidebar-mini skin-red" style="height:auto; min-height:100%;">
 <head>
@@ -94,6 +95,7 @@
 
 <body id="MainBody" class="sidebar-mini skin-red" style="height:auto; min-height:100%;">
     @RenderSection("Styles", required: false)
+
     <!-- Manual overlay/spinner -->
     <div id="overlayManuel">
         <div class="cv-spinner">
@@ -166,6 +168,7 @@
                                 <li class="footer"><span></span></li>
                             </ul>
                         </li>
+
                         <!-- User -->
                         <li class="dropdown user user-menu">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown">
@@ -194,6 +197,7 @@
                                 </li>
                             </ul>
                         </li>
+
                     </ul>
                 </div>
             </nav>
@@ -219,7 +223,6 @@
 
     <!-- Global Modals -->
     @await Html.PartialAsync("_Modals")
-
 
     <!-- JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -253,7 +256,7 @@
 
     <script src="~/login/js/home.js"></script>
 
-    <!-- Sidebar aktif / açık menü scripti -->
+    <!-- Sidebar aktif / açık menü scripti (mevcut kodun) -->
     <script>
         (function ($) {
             'use strict';
@@ -321,6 +324,105 @@
         })(jQuery);
     </script>
 
+    <!-- ✅ DÜZENLEME: Admin / Bayi için Kullanıcı & Firma Tanımları menüsünü açan script -->
+    <script>
+        (function () {
+            'use strict';
+
+            // Login.js'teki STORAGE yapısına paralel: ts.auth ve ts.auth.backup + meta fallback
+            function readSession() {
+                var raw = null;
+
+                try {
+                    raw = sessionStorage.getItem('ts.auth');
+                } catch (e) { }
+
+                if (!raw) {
+                    try {
+                        raw = localStorage.getItem('ts.auth.backup');
+                    } catch (e) { }
+                }
+
+                if (!raw) {
+                    try {
+                        var meta = document.querySelector('meta[name="ts-session"]');
+                        if (meta && meta.content) {
+                            raw = meta.content;
+                        }
+                    } catch (e) { }
+                }
+
+                if (!raw) return null;
+
+                try {
+                    return JSON.parse(raw);
+                } catch (e) {
+                    console.error('Session parse hatası:', e);
+                    return null;
+                }
+            }
+
+            function setupUserFirmMenu() {
+                var menuEl = document.getElementById('userFirmMenu');
+                if (!menuEl) {
+                    return;
+                }
+
+                // 1) Önce numeric rol kontrolü (UserRolId / UserRoleId)
+                var numericRole = null;
+                try {
+                    numericRole = sessionStorage.getItem('UserRolId') || sessionStorage.getItem('UserRoleId');
+                } catch (e) { }
+
+                if (numericRole) {
+                    // 1 = Admin, 2 = Bayi, 3 = MM, 4 = Firma
+                    var showForAdminOrBayi = (numericRole === '1' || numericRole === '2');
+                    menuEl.style.display = showForAdminOrBayi ? '' : 'none';
+                    console.log('[Layout] userFirmMenu numeric role kontrolü. roleId =', numericRole, 'görünür mü?', showForAdminOrBayi);
+                    return;
+                }
+
+                // 2) Eski ts.auth tabanlı kontrol (fallback)
+                var session = readSession();
+                if (!session) {
+                    return;
+                }
+
+                console.log('ts.auth session (menu için):', session);
+
+                var ctxType = session.context && session.context.type;
+                if (typeof ctxType === 'string') {
+                    ctxType = ctxType.toLowerCase();
+                }
+
+                var roles = Array.isArray(session.roles)
+                    ? session.roles.map(function (r) {
+                        return (r || '').toString().toLowerCase();
+                    })
+                    : [];
+
+                var isAdmin =
+                    ctxType === 'admin' ||
+                    roles.indexOf('admin') !== -1;
+
+                var isBayi =
+                    ctxType === 'bayi' ||
+                    roles.indexOf('bayi') !== -1;
+
+                var visible = (isAdmin || isBayi);
+                menuEl.style.display = visible ? '' : 'none';
+
+                console.log('[Layout] userFirmMenu ts.auth kontrolü. isAdmin=', isAdmin, 'isBayi=', isBayi, 'visible=', visible);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupUserFirmMenu);
+            } else {
+                setupUserFirmMenu();
+            }
+        })();
+    </script>
+    <!-- ✅ DÜZENLEME BİTİŞ -->
     @RenderSection("Scripts", required: false)
 </body>
 </html>

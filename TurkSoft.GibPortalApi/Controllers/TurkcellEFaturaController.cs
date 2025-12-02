@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;              // ✅ EF Core
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -17,13 +18,44 @@ namespace TurkSoft.GibPortalApi.Controllers
     public class TurkcellEFaturaController : ControllerBase
     {
         private readonly IGibBusiness _gib;
-        private readonly GibAppDbContext _db;    // ✅ Artık EF Core context
+        private readonly GibAppDbContext _db;    // ✅ EF Core context
 
         public TurkcellEFaturaController(IGibBusiness gibBusiness, GibAppDbContext db)
         {
             _gib = gibBusiness;
             _db = db;
         }
+
+        /// <summary>
+        /// Her istekten önce UserId'ye göre firma bulup
+        /// iş katmanındaki Options(ApiKey, VKN, Alias) değerlerini günceller.
+        /// Firma bulunamazsa 404 döndürmek için IActionResult üretir.
+        /// </summary>
+        private async Task<IActionResult?> ApplyGibFirmForUserAsync(long userId, CancellationToken ct)
+        {
+            // db.Gibfirm tablosundan UserId ile eşleşen firmayı çek
+            // Buradaki GibFirm ve property adını kendi entity / DbSet adına göre düzelt.
+            var firm = await _db.GibFirm
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == userId, ct);
+
+            if (firm == null)
+            {
+                return NotFound($"UserId {userId} için GIB firma kaydı bulunamadı.");
+            }
+
+            // ⚠️ BURAYI KENDİ ENTITY'NE GÖRE DÜZENLEMEN GEREKİYOR
+            // Alias property’si sende farklı isimde olabilir (ör: InboxAlias, GibAlias, AliasName vs.)
+            // Örneğin: var alias = firm.InboxAlias;
+            var alias = firm.GibAlias; // <--- EĞER entity'nde InboxAlias yoksa, BURAYI kendi alan adına göre değiştir
+
+            // İş katmanındaki Options değerlerini güncelle
+            _gib.UpdateUserOptions(firm.ApiKey, firm.TaxNo, alias);
+
+            return null;
+        }
+
+        // -------- TestInvoices --------
         public static class TestInvoices
         {
             // 1) Basit perakende fatura – 1 kalem, KDV %18
@@ -338,6 +370,7 @@ namespace TurkSoft.GibPortalApi.Controllers
                 return invoice;
             }
         }
+
         public class SendEInvoiceUblRequest
         {
             public long InvoiceId { get; set; }
@@ -350,19 +383,15 @@ namespace TurkSoft.GibPortalApi.Controllers
             public string? LocalReferenceId { get; set; }
             public bool? CheckLocalReferenceId { get; set; }
             public string? XsltCode { get; set; }
-
             public IFormFile InvoiceFile { get; set; } = null!;
         }
 
-
         // EF Core helper – faturayı ilişkileriyle beraber yükler
-        // ve sonucu TestInvoices.CreateInvoiceX yapısına benzer bir grafik olarak döner.
         private async Task<Invoice?> LoadInvoiceAsync(long id, CancellationToken ct)
         {
-            // 1) DB’den faturayı ilişkileriyle al
             var dbInvoice = await _db.Set<Invoice>()
-                .IgnoreQueryFilters() // IsActive filtresi devre dışı (silinmiş olsa bile gör)
-                .AsNoTracking()       // Sadece okuma
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Include(i => i.Customer)
                 .Include(i => i.InvoicesItems)
                     .ThenInclude(ii => ii.Item)
@@ -371,25 +400,13 @@ namespace TurkSoft.GibPortalApi.Controllers
                 .FirstOrDefaultAsync(i => i.Id == id, ct);
 
             if (dbInvoice == null)
-            {
-                // BURADA gerçekten DB'de bu Id ile kayıt yok demektir.
-                // İstersen null dön, istersen aşağıdaki fallback'li versiyonu kullan.
                 return null;
-            }
 
-            // 2) TestInvoices.CreateInvoiceX yapısına benzer bir grafik oluştur
             return MapToTestInvoiceShape(dbInvoice);
         }
 
-
-        /// <summary>
-        /// Veritabanından gelen Invoice grafiğini
-        /// TestInvoices.CreateInvoiceX fonksiyonlarındaki gibi
-        /// yeni bir Invoice objesine map eder.
-        /// </summary>
         private static Invoice MapToTestInvoiceShape(Invoice src)
         {
-            // --- Customer ---
             Customer? customer = null;
             if (src.Customer != null)
             {
@@ -402,11 +419,9 @@ namespace TurkSoft.GibPortalApi.Controllers
                     Email = src.Customer.Email,
                     TaxNo = src.Customer.TaxNo,
                     TaxOffice = src.Customer.TaxOffice
-                    // İstersen BaseEntity alanlarını da kopyalayabilirsin
                 };
             }
 
-            // --- Invoice (root) ---
             var invoice = new Invoice
             {
                 Id = src.Id,
@@ -416,21 +431,17 @@ namespace TurkSoft.GibPortalApi.Controllers
                 InvoiceDate = src.InvoiceDate,
                 Currency = src.Currency,
                 Total = src.Total
-                // Diğer navigation koleksiyonları (Tourists, SgkRecords vs.) şimdilik boş bırakıyoruz
             };
 
-            // --- Cache: Aynı Unit / Item tekrar tekrar oluşturma ---
             var unitCache = new Dictionary<long, Unit>();
             var itemCache = new Dictionary<long, Item>();
 
-            // --- InvoicesItems + Item + Unit ---
             var invItems = new List<InvoicesItem>();
 
             if (src.InvoicesItems != null)
             {
                 foreach (var li in src.InvoicesItems)
                 {
-                    // Unit
                     Unit? unit = null;
                     if (li.Item?.Unit != null)
                     {
@@ -453,7 +464,6 @@ namespace TurkSoft.GibPortalApi.Controllers
                         }
                     }
 
-                    // Item
                     Item? item = null;
                     if (li.Item != null)
                     {
@@ -471,7 +481,7 @@ namespace TurkSoft.GibPortalApi.Controllers
                                 Code = it.Code,
                                 BrandId = it.BrandId,
                                 UnitId = it.UnitId,
-                                Unit = unit, // yukarıda oluşturduğumuz unit
+                                Unit = unit,
                                 Price = it.Price,
                                 Currency = it.Currency
                             };
@@ -481,7 +491,6 @@ namespace TurkSoft.GibPortalApi.Controllers
                         }
                     }
 
-                    // InvoicesItem
                     var invItem = new InvoicesItem
                     {
                         Id = li.Id,
@@ -500,7 +509,6 @@ namespace TurkSoft.GibPortalApi.Controllers
 
             invoice.InvoicesItems = invItems;
 
-            // --- InvoicesTaxes ---
             var invTaxes = new List<InvoicesTax>();
             if (src.InvoicesTaxes != null)
             {
@@ -525,45 +533,51 @@ namespace TurkSoft.GibPortalApi.Controllers
             return invoice;
         }
 
-
         // -------- StaticList --------
         [HttpGet("static/unit")]
-        public async Task<IActionResult> GetUnitList(CancellationToken ct = default)
+        public async Task<IActionResult> GetUnitList([FromQuery] long userId, CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetStaticListUnitAsync(ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         [HttpGet("static/taxexemption")]
-        public async Task<IActionResult> GetTaxExemption(CancellationToken ct = default)
+        public async Task<IActionResult> GetTaxExemption([FromQuery] long userId, CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetStaticListTaxExemptionReasonsAsync(ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         [HttpGet("static/withholding")]
-        public async Task<IActionResult> GetWithholding(CancellationToken ct = default)
+        public async Task<IActionResult> GetWithholding([FromQuery] long userId, CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetStaticListWithHoldingAsync(ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         // -------- e-Fatura Outbox --------
         [HttpPost("einvoice/send-json/{id:long}")]
-        public async Task<IActionResult> SendEInvoiceJson(long id, bool isExport = false, CancellationToken ct = default)
+        public async Task<IActionResult> SendEInvoiceJson(
+            long id,
+            [FromQuery] long userId,
+            bool isExport = false,
+            CancellationToken ct = default)
         {
-            var inv = await LoadInvoiceAsync(id, ct);
-            if (inv == null) return NotFound();
-            //Invoice inv = id switch
-            //{
-            //    1 => TestInvoices.CreateInvoice1(),
-            //    2 => TestInvoices.CreateInvoice2(),
-            //    3 => TestInvoices.CreateInvoice3(),
-            //    4 => TestInvoices.CreateInvoice4(),
-            //    _ => TestInvoices.CreateInvoice1()
-            //};
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
 
-            // İhracat için isExport parametresini Invoice4 ile beraber true gönderebilirsin
+            var inv = await LoadInvoiceAsync(id, ct);
+            if (inv == null) return NotFound($"Invoice {id} bulunamadı.");
+
             if (id == 4)
                 isExport = true;
 
@@ -575,13 +589,17 @@ namespace TurkSoft.GibPortalApi.Controllers
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> SendEInvoiceUbl(
             [FromForm] SendEInvoiceUblRequest request,
+            [FromQuery] long userId,
             CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             if (request.InvoiceFile == null || request.InvoiceFile.Length == 0)
                 return BadRequest("UBL dosyası gerekli.");
 
             var inv = await LoadInvoiceAsync(request.InvoiceId, ct);
-            if (inv == null) return NotFound();
+            if (inv == null) return NotFound($"Invoice {request.InvoiceId} bulunamadı.");
 
             await using var ms = new System.IO.MemoryStream();
             await request.InvoiceFile.CopyToAsync(ms, ct);
@@ -607,103 +625,182 @@ namespace TurkSoft.GibPortalApi.Controllers
         }
 
         [HttpGet("einvoice/outbox/pdf/{ettn:guid}")]
-        public async Task<IActionResult> GetEInvoiceOutboxPdf(Guid ettn, bool standardXslt = true, CancellationToken ct = default)
+        public async Task<IActionResult> GetEInvoiceOutboxPdf(
+            Guid ettn,
+            [FromQuery] long userId,
+            bool standardXslt = true,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetEInvoiceOutboxPdfAsync(ettn, standardXslt, ct);
             if (!res.Ok) return StatusCode(res.StatusCode, res.Error);
             return File(res.Data!, "application/pdf", $"{ettn}.pdf");
         }
+
         [HttpGet("einvoice/outbox/ubl/{ettn:guid}")]
-        public async Task<IActionResult> GetEInvoiceOutboxUbl(Guid ettn, bool standardXslt = true, CancellationToken ct = default)
+        public async Task<IActionResult> GetEInvoiceOutboxUbl(
+            Guid ettn,
+            [FromQuery] long userId,
+            bool standardXslt = true,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetEInvoiceOutboxUblAsync(ettn, ct);
             if (!res.Ok) return StatusCode(res.StatusCode, res.Error);
-            
-            // UBL genelde XML olarak döner
+
             return File(res.Data, "application/xml", $"{ettn}.xml");
         }
+
         // -------- e-Fatura Inbox --------
         [HttpGet("einvoice/inbox/list")]
-        public async Task<IActionResult> GetInboxList(DateTime start, DateTime end, int pageIndex = 1, int pageSize = 100, bool isNew = true, CancellationToken ct = default)
+        public async Task<IActionResult> GetInboxList(
+            DateTime start,
+            DateTime end,
+            [FromQuery] long userId,
+            int pageIndex = 1,
+            int pageSize = 100,
+            bool isNew = true,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetEInvoiceInboxAsync(start, end, pageIndex, pageSize, isNew, ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         [HttpGet("einvoice/inbox/pdf/{ettn:guid}")]
-        public async Task<IActionResult> GetEInvoiceInboxPdf(Guid ettn, bool standardXslt = true, CancellationToken ct = default)
+        public async Task<IActionResult> GetEInvoiceInboxPdf(
+            Guid ettn,
+            [FromQuery] long userId,
+            bool standardXslt = true,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetEInvoiceInboxPdfAsync(ettn, standardXslt, ct);
             if (!res.Ok) return StatusCode(res.StatusCode, res.Error);
             return File(res.Data!, "application/pdf", $"{ettn}.pdf");
         }
-          [HttpGet("einvoice/inbox/ubl/{ettn:guid}")]
-        public async Task<IActionResult> GetEInvoiceInboxUBL(Guid ettn, CancellationToken ct = default)
+
+        [HttpGet("einvoice/inbox/ubl/{ettn:guid}")]
+        public async Task<IActionResult> GetEInvoiceInboxUBL(
+            Guid ettn,
+            [FromQuery] long userId,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetEInvoiceInboxUblAsync(ettn, ct);
             if (!res.Ok) return StatusCode(res.StatusCode, res.Error);
-            return File(res.Data!, "application/pdf", $"{ettn}.pdf");
+            return File(res.Data!, "application/xml", $"{ettn}.xml");
         }
+
         [HttpPost("einvoice/response")]
-        public async Task<IActionResult> SendInvoiceResponse([FromBody] InvoiceResponseRequest request, CancellationToken ct = default)
+        public async Task<IActionResult> SendInvoiceResponse(
+            [FromBody] InvoiceResponseRequest request,
+            [FromQuery] long userId,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.SendInvoiceResponseAsync(request, ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         // -------- e-Arşiv --------
         [HttpPost("earchive/send-json/{id:long}")]
-        public async Task<IActionResult> SendEArchiveJson(long id, CancellationToken ct = default)
+        public async Task<IActionResult> SendEArchiveJson(
+            long id,
+            [FromQuery] long userId,
+            CancellationToken ct = default)
         {
-            //var inv = await LoadInvoiceAsync(id, ct);
-            //if (inv == null) return NotFound();
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             Invoice inv = id switch
             {
-                1 => TestInvoices.CreateInvoice1(), // Basit perakende
-                2 => TestInvoices.CreateInvoice2(), // Hizmet
-                3 => TestInvoices.CreateInvoice3(), // Çok kalemli
-                4 => TestInvoices.CreateInvoice4(), // İhracat (e-Arşiv de test edebilirsin)
+                1 => TestInvoices.CreateInvoice1(),
+                2 => TestInvoices.CreateInvoice2(),
+                3 => TestInvoices.CreateInvoice3(),
+                4 => TestInvoices.CreateInvoice4(),
                 _ => TestInvoices.CreateInvoice1()
             };
-
 
             var res = await _gib.SendEArchiveJsonAsync(inv, true, inv.Customer?.TaxNo, ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         [HttpPost("earchive/send-json-raw")]
-        public async Task<IActionResult> SendEArchiveJsonRaw([FromBody] JsonElement body, CancellationToken ct = default)
+        public async Task<IActionResult> SendEArchiveJsonRaw(
+            [FromBody] JsonElement body,
+            [FromQuery] long userId,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.SendEArchiveJsonRawAsync(body, true, null, ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         [HttpGet("earchive/pdf/{ettn:guid}")]
-        public async Task<IActionResult> GetEArchivePdf(Guid ettn, bool standardXslt = true, CancellationToken ct = default)
+        public async Task<IActionResult> GetEArchivePdf(
+            Guid ettn,
+            [FromQuery] long userId,
+            bool standardXslt = true,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetEArchivePdfAsync(ettn, standardXslt, ct);
             if (!res.Ok) return StatusCode(res.StatusCode, res.Error);
             return File(res.Data!, "application/pdf", $"{ettn}.pdf");
         }
 
         [HttpPost("earchive/retry-mail/{id:guid}")]
-        public async Task<IActionResult> RetryEArchiveMail(Guid id, CancellationToken ct = default)
+        public async Task<IActionResult> RetryEArchiveMail(
+            Guid id,
+            [FromQuery] long userId,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.RetryEArchiveMailAsync(id, ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         [HttpPost("earchive/retry-mail-custom")]
-        public async Task<IActionResult> RetryEArchiveMailCustom([FromBody] EArchiveMailRetryRequest req, CancellationToken ct = default)
+        public async Task<IActionResult> RetryEArchiveMailCustom(
+            [FromBody] EArchiveMailRetryRequest req,
+            [FromQuery] long userId,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.RetryEArchiveMailToAddressesAsync(req, ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
         // -------- GIB User --------
         [HttpGet("gibuser/recipient-zip")]
-        public async Task<IActionResult> GetGibUserRecipientZip(CancellationToken ct = default)
+        public async Task<IActionResult> GetGibUserRecipientZip(
+            [FromQuery] long userId,
+            CancellationToken ct = default)
         {
+            var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
+            if (applyResult != null) return applyResult;
+
             var res = await _gib.GetGibUserRecipientZipAsync(ct);
             if (!res.Ok) return StatusCode(res.StatusCode, res.Error);
             return File(res.Data!, "application/zip", "gibuser-recipient.zip");
