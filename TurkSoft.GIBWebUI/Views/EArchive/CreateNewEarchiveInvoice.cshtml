@@ -840,4 +840,24 @@
 @section Scripts {
     <script src="~/apps/listdata.js"></script>
     <script src="~/apps/earchiveinvoice.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                var raw = sessionStorage.getItem('SelectedMukellefForEArchive');
+                if (!raw) return;
+
+                var data = JSON.parse(raw) || {};
+                var identifier = data.Identifier || '';
+
+                var idEl = document.getElementById('txtIdentificationID');
+                if (idEl && identifier) {
+                    idEl.value = identifier;
+                }
+
+                sessionStorage.removeItem('SelectedMukellefForEArchive');
+            } catch (e) {
+                console.error('SelectedMukellefForEArchive okunamadı:', e);
+            }
+        });
+    </script>
 }

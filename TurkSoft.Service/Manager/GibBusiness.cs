@@ -40,7 +40,7 @@ namespace TurkSoft.Service.Manager
         private sealed class OutboxInvoiceCreateRequest
         {
             [JsonPropertyName("recordType")] public int RecordType { get; set; } = 1; // 1: e-Fatura
-            [JsonPropertyName("status")] public int Status { get; set; } = 0;
+            [JsonPropertyName("status")] public int Status { get; set; } = 20;
             [JsonPropertyName("xsltCode")] public string? XsltCode { get; set; }
             [JsonPropertyName("localReferenceId")] public string? LocalReferenceId { get; set; }
             [JsonPropertyName("useManualInvoiceId")] public bool UseManualInvoiceId { get; set; }
@@ -337,14 +337,35 @@ namespace TurkSoft.Service.Manager
         }
 
         // ---------- Mapping (Invoice -> JSON) ----------
-        private OutboxInvoiceCreateRequest MapToEInvoiceRequest(Invoice inv, bool isExport)
+        // ---------- Mapping (Invoice -> e-Fatura JSON) ----------
+        private OutboxInvoiceCreateRequest MapToEInvoiceRequest(Invoice inv, bool isExport, string? targetAlias = null)
         {
-            // Müşteri & VKN
-            var customer = inv.Customer;
-            var vkn = customer?.TaxNo ?? _opt.TestSenderVkn;
+            if (inv == null)
+                throw new ArgumentNullException(nameof(inv));
 
-            // Alias – test ortamında genelde sabit
-            var alias = _opt.TestInboxAlias;
+            var customer = inv.Customer;
+
+            // VKN/TCKN zorunlu
+            var vkn = (customer?.TaxNo ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(vkn))
+                throw new InvalidOperationException("Invoice.Customer.TaxNo (VKN/TCKN) boş. e-Fatura gönderimi için zorunlu alandır.");
+
+            // Alias – şimdilik Options üzerinden (UpdateUserOptions ile güncelliyorsun)
+            // Eğer sonradan Customer veya Invoice içine Alias alanı eklenirse buraya map edebilirsin.
+            var alias = targetAlias;
+
+            // Adres bilgisi – customer.Addresses içinden ilk kayıt
+            var addr = customer?.Addresses?.FirstOrDefault();
+
+            var fullName = $"{(customer?.Name ?? "").Trim()} {(customer?.Surname ?? "").Trim()}".Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+                fullName = customer?.Name?.Trim() ?? string.Empty; // En azından Name dolu kalır
+
+            var receiverStreet = addr?.Street;
+            var receiverDistrict = addr?.District;
+            var receiverCity = addr?.City;
+            var receiverCountry = addr?.Country;
+            var receiverZip = addr?.PostCode;
 
             // Satırları hesapla
             var lines = new List<InvoiceLine>();
@@ -352,7 +373,7 @@ namespace TurkSoft.Service.Manager
             decimal vatTotal = 0m;
 
             // Eğer invoice üzerinde vergi satırı yoksa:
-            var defaultVatRate = inv.InvoicesTaxes != null && inv.InvoicesTaxes.Any()
+            var defaultVatRate = (inv.InvoicesTaxes != null && inv.InvoicesTaxes.Any())
                 ? inv.InvoicesTaxes.First().Rate
                 : (isExport ? 0m : 18m);
 
@@ -376,11 +397,10 @@ namespace TurkSoft.Service.Manager
                         it.Item?.Unit?.Name ??
                         "C62";
 
-                    // 🔴 SADECE İHRACAT İÇİN: KDV 0 ise istisna kodu zorunlu
+                    // İhracat için KDV 0 ise istisna kodu zorunlu
                     string? vatExemptionReasonCode = null;
                     if (isExport && vatRate == 0m)
                     {
-                        // Dokümana uygun bir ihracat/istisna kodu
                         // Örnek: 301 – İhracat KDV istisnası
                         vatExemptionReasonCode = "301";
                     }
@@ -402,7 +422,9 @@ namespace TurkSoft.Service.Manager
                         Note = null,
                         SellersItemIdentification = it.Item?.Code,
                         BuyersItemIdentification = null,
-                        ManufacturersItemIdentification = null
+                        ManufacturersItemIdentification = null,
+
+                        Taxes = null // İstersen InvoicesTaxes’e göre detay doldurabilirsin
                     });
                 }
             }
@@ -417,60 +439,65 @@ namespace TurkSoft.Service.Manager
             var taxInclusive = taxExclusive + vatTotal;
             var payable = inv.Total != 0 ? inv.Total : taxInclusive;
 
-            var issueDate = inv.InvoiceDate == default ? DateTime.Now : inv.InvoiceDate;
+            var issueDate = inv.InvoiceDate == default
+                ? DateTime.Now
+                : inv.InvoiceDate;
 
             // Fatura tipi – SATIŞ / İHRACAT vs.
-            // 1: SATIS, 2: IADE, 7: IHRACKAYITLI vb. – dokümana göre ayarlayabilirsin
+            // 1: SATIS, 2: IADE, 7: IHRACKAYITLI vb. – dokümana göre daha detaylı ayarlayabilirsin
             var type = isExport ? 7 : 1;
 
-            var currency = string.IsNullOrWhiteSpace(inv.Currency) ? "TRY" : inv.Currency;
-            var exchangeRate = currency == "TRY" ? 0m : 1m; // TRY dışında gerçek kur set edebilirsin
+            var currency = string.IsNullOrWhiteSpace(inv.Currency) ? "TRY" : inv.Currency.Trim();
+            // TRY harici durumlarda gerçek kur bilgini Invoice içine eklediysen burayı ona göre güncelle
+            var exchangeRate = currency == "TRY" ? 0m : 1m;
 
             return new OutboxInvoiceCreateRequest
             {
                 // Üst alanlar
                 RecordType = 1, // e-Fatura
-                Status = 0,
+                Status = 20,
                 XsltCode = null,
                 LocalReferenceId = !string.IsNullOrWhiteSpace(inv.InvoiceNo)
-                    ? inv.InvoiceNo
-                    : inv.Id.ToString(CultureInfo.InvariantCulture),
-                UseManualInvoiceId = false,
-                Note = null,
+                                    ? inv.InvoiceNo
+                                    : inv.Id.ToString(CultureInfo.InvariantCulture),
+                UseManualInvoiceId = false,      // İstersen InvoiceNo’yu manuel kullanmak için true + InvoiceNumber doldur
+                Note = null,        // Invoice üzerinde Note alanı tanımlarsan buraya map edebilirsin
                 Notes = new List<string>(),
 
-                // Adres bilgileri – 422'de şikâyet edilen tüm alanlar dolduruluyor
+                // Alıcı adres bilgileri – Tamamı Invoice.Customer + Customer.Addresses’den
                 AddressBook = new AddressBook
                 {
-                    Name = $"{customer?.Name} {customer?.Surname}".Trim(),
+                    Name = fullName,
                     ReceiverPersonSurName = customer?.Surname,
                     IdentificationNumber = vkn,
                     Alias = alias,
 
-                    RegisterNumber = "11112222333444",
-                    ReceiverStreet = "Bulvar / cadde / sokak",
-                    ReceiverBuildingName = "Bina adı",
-                    ReceiverBuildingNumber = "1",
-                    ReceiverDoorNumber = "11",
-                    ReceiverSmallTown = "Kasaba / Köy",
-                    ReceiverDistrict = "Üsküdar",   // 🔴 boş bırakmıyoruz
-                    ReceiverZipCode = "34000",
-                    ReceiverCity = "İstanbul",      // 🔴 boş bırakmıyoruz
-                    ReceiverCountry = "Türkiye",    // 🔴 boş bırakmıyoruz
-                    ReceiverPhoneNumber = customer?.Phone ?? "02121234567",
-                    ReceiverFaxNumber = "02129876543",
-                    ReceiverEmail = customer?.Email ?? "test@example.com",
-                    ReceiverWebSite = "www.testfirma.com",
-                    ReceiverTaxOffice = customer?.TaxOffice ?? "Üsküdar vergi dairesi"
+                    // Ticaret sicil / mersis vb. için ileride Customer/Address’e alan eklersen buraya map edebilirsin
+                    RegisterNumber = null,
+
+                    ReceiverStreet = receiverStreet,
+                    ReceiverBuildingName = null,
+                    ReceiverBuildingNumber = null,
+                    ReceiverDoorNumber = null,
+                    ReceiverSmallTown = null,
+                    ReceiverDistrict = receiverDistrict,
+                    ReceiverZipCode = receiverZip,
+                    ReceiverCity = receiverCity,
+                    ReceiverCountry = receiverCountry,
+                    ReceiverPhoneNumber = customer?.Phone,
+                    ReceiverFaxNumber = null,
+                    ReceiverEmail = customer?.Email,
+                    ReceiverWebSite = null,
+                    ReceiverTaxOffice = customer?.TaxOffice
                 },
 
                 // Genel bilgiler
                 GeneralInfoModel = new GeneralInfoModel
                 {
-                    Ettn = null,
-                    Prefix = "",                     // gerekirse TST gibi prefix verebilirsin
-                    InvoiceNumber = null,            // UseManualInvoiceId=false olduğu için null
-                    InvoiceProfileType = 1,          // 1: Ticari – böylece /einvoice/response ile yanıt verebilirsin
+                    Ettn = null,    // Eğer Invoice içine Ettn (Guid/string) alanı eklediysen burada parse edebilirsin
+                    Prefix = null,    // UI’daki Fatura Ön Eki’ni Invoice’a ekleyip buraya map edebilirsin
+                    InvoiceNumber = null,    // UseManualInvoiceId = true yaparsan buraya inv.InvoiceNo vermelisin
+                    InvoiceProfileType = 1,      // 1: Ticari – böylece /einvoice/response ile yanıt verebilirsin
                     IssueDate = issueDate,
                     Type = type,
                     ReturnInvoiceNumber = null,
@@ -483,6 +510,7 @@ namespace TurkSoft.Service.Manager
                 InvoiceLines = lines
             };
         }
+
 
         private EArchiveInvoiceCreateRequest MapToEArchiveRequest(Invoice inv)
         {
@@ -734,9 +762,9 @@ namespace TurkSoft.Service.Manager
         }
 
         // ---------- e-Fatura Outbox ----------
-        public async Task<HttpResult<object>> SendEInvoiceJsonAsync(Invoice inv, bool isExport = false, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
+        public async Task<HttpResult<object>> SendEInvoiceJsonAsync(Invoice inv, bool isExport = false, bool consumeKontor = true, string? kontorVkn = null, string? targetAlias = null, CancellationToken ct = default)
         {
-            var payload = MapToEInvoiceRequest(inv, isExport);
+            var payload = MapToEInvoiceRequest(inv, isExport, targetAlias);
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/outboxinvoice/create", ct);
             req.Content = JsonContent.Create(payload);
             var res = await SendAsync<object>(_http, req, ct);

@@ -1,4 +1,6 @@
-﻿using TurkSoft.GIBWebUI.AppSettings;
+﻿using System.IO;
+using Microsoft.AspNetCore.DataProtection;
+using TurkSoft.GIBWebUI.AppSettings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,8 +8,23 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("Api"));
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-// 🔥 IHttpClientFactory kaydı (LoginController'da kullanıyorsun)
+// IHttpClientFactory
 builder.Services.AddHttpClient();
+
+// 🔐 DataProtection key'lerini diske persist et (antiforgery hatası için KRİTİK)
+var keysDir = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys");
+Directory.CreateDirectory(keysDir);
+
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+    .SetApplicationName("TurkSoft.GIBWebUI");
+
+// Antiforgery cookie ismini değiştir – eski bozuk cookie’ler devre dışı kalsın
+builder.Services.AddAntiforgery(o =>
+{
+    o.Cookie.Name = "Nox.Xsrf"; // eskisinden farklı bir isim
+});
 
 // MVC / Razor desteği
 builder.Services.AddControllersWithViews();
@@ -25,7 +42,10 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
+
+app.UseAuthentication(); // varsa
 app.UseAuthorization();
 
 // Varsayılan route

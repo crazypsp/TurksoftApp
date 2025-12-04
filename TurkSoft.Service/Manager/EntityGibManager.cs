@@ -48,15 +48,15 @@ namespace TurkSoft.Service.Manager
                 { "Unit",               new[] { "ShortName", "Name" } },
                 { "Warehouse",          new[] { "Name" } },
                 { "UserRole",           new[] { "RoleId" } },
-                // Bank, PaymentType, PaymentAccount da Name üzerinden benzersiz
                 { "Bank",               new[] { "Name" } },
                 { "PaymentType",        new[] { "Name" } },
                 { "PaymentAccount",     new[] { "Name" } },
-                // Customer’da TaxNo varsa onu tercih et, yoksa Name
                 { "Customer",           new[] { "TaxNo", "Name" } },
+                // İstersen buraya "Identifiers" -> "Uuid" da ekleyebilirsin;
+                // şu an için Identifiers'ı yeni kayıt olarak ele alıyoruz.
             };
 
-        // >>> YENİ: SQL decimal(18,2) için kaba max limit
+        // SQL decimal(18,2) için max limit
         private const decimal SqlDecimal18_2Max = 9999999999999999.99m;
 
         public EntityGibManager(GibAppDbContext db)
@@ -86,6 +86,11 @@ namespace TurkSoft.Service.Manager
             return await query.ToListAsync(ct);
         }
 
+        /// <summary>
+        /// Generic Add.
+        /// - Eğer TEntity = Invoice ise, FixInvoiceGraphAsync ile graph normalize edilir.
+        /// - UserId + iş anahtarına göre duplicate kontrolü yapılır.
+        /// </summary>
         public async Task<TEntity> AddAsync(TEntity entity, CancellationToken ct = default)
         {
             var prevTimeout = _db.Database.GetCommandTimeout();
@@ -131,7 +136,7 @@ namespace TurkSoft.Service.Manager
                 {
                     await FixInvoiceGraphAsync(inv, utcNow, ct);
 
-                    // >>> YENİ: Invoice grafındaki tüm decimal alanları SQL decimal aralığına göre doğrula
+                    // Invoice grafındaki tüm decimal alanları SQL decimal aralığına göre doğrula
                     ValidateInvoiceDecimalRanges(inv);
                 }
 
@@ -477,6 +482,14 @@ namespace TurkSoft.Service.Manager
             TouchAudit(u, utcNow);
         }
 
+        private static void NormalizeCategory(Category c, DateTimeOffset utcNow)
+        {
+            c.Name = string.IsNullOrWhiteSpace(c.Name) ? "GENEL KATEGORI" : c.Name.Trim();
+            c.Desc = (c.Desc ?? string.Empty).Trim();
+
+            TouchAudit(c, utcNow);
+        }
+
         private static void NormalizePaymentType(PaymentType pt, DateTimeOffset utcNow)
         {
             pt.Name = string.IsNullOrWhiteSpace(pt.Name) ? "NAKIT" : pt.Name.Trim();
@@ -683,6 +696,41 @@ namespace TurkSoft.Service.Manager
             unit.Items = null;
         }
 
+        private async Task AttachOrCreateCategoryAsync(ItemsCategory ic, CancellationToken ct, DateTimeOffset utcNow)
+        {
+            var cat = ic.Category;
+            if (cat == null) return;
+
+            PropagateUserId(ic, cat);
+
+            if (cat.Id > 0)
+            {
+                var existing = await _db.Set<Category>().FindAsync(new object[] { cat.Id }, ct);
+                if (existing != null)
+                {
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    ic.Category = existing;
+                    ic.CategoryId = existing.Id;
+                    return;
+                }
+            }
+
+            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, cat, ct);
+            if (existingByKey != null)
+            {
+                _db.Attach(existingByKey);
+                _db.Entry(existingByKey).State = EntityState.Unchanged;
+                ic.Category = existingByKey;
+                ic.CategoryId = existingByKey.Id;
+                return;
+            }
+
+            ResetIdentityId(cat);
+            NormalizeCategory(cat, utcNow);
+            cat.ItemsCategories = null;
+        }
+
         private async Task AttachOrCreatePaymentTypeAsync(Payment p, CancellationToken ct, DateTimeOffset utcNow)
         {
             var pt = p.PaymentType;
@@ -790,15 +838,13 @@ namespace TurkSoft.Service.Manager
         }
 
         // ======================================================
-        // Decimal range validator (YENİ)
+        // Decimal range validator
         // ======================================================
 
         private static void EnsureDecimalInSqlRange(decimal value, string context, string propertyName)
         {
             if (value > SqlDecimal18_2Max || value < -SqlDecimal18_2Max)
             {
-                // Burada istersen throw yerine CLAMP de yapabilirsin ama önerilmez:
-                // value = Math.Clamp(value, -SqlDecimal18_2Max, SqlDecimal18_2Max);
                 throw new ArgumentOutOfRangeException(
                     $"{context}.{propertyName}",
                     value,
@@ -846,8 +892,20 @@ namespace TurkSoft.Service.Manager
                 foreach (var li in inv.InvoicesItems)
                 {
                     ValidateDecimalProperties(li, "Invoice.InvoicesItems");
+
                     if (li.Item != null)
+                    {
                         ValidateDecimalProperties(li.Item, "Invoice.InvoicesItems.Item");
+
+                        // Item.ItemsDiscounts (Amount/Rate)
+                        if (li.Item.ItemsDiscounts != null)
+                        {
+                            foreach (var idisc in li.Item.ItemsDiscounts)
+                            {
+                                ValidateDecimalProperties(idisc, "Invoice.InvoicesItems.Item.ItemsDiscounts");
+                            }
+                        }
+                    }
                 }
             }
 
@@ -880,13 +938,14 @@ namespace TurkSoft.Service.Manager
         // ======================================================
         // Invoice Graph Fixer
         // ======================================================
-
         private async Task FixInvoiceGraphAsync(Invoice inv, DateTimeOffset utcNow, CancellationToken ct)
         {
             // Root
             TouchAudit(inv, utcNow);
 
+            // ---------------------------
             // 1) CUSTOMER
+            // ---------------------------
             Customer? cust = inv.Customer;
             long customerId = inv.CustomerId;
 
@@ -898,6 +957,7 @@ namespace TurkSoft.Service.Manager
             if (cust != null && cust.Id > 0 && customerId == 0)
                 customerId = cust.Id;
 
+            // Önce Id ile kontrol
             if (customerId > 0)
             {
                 var existingById = await _db.Set<Customer>().FindAsync(new object[] { customerId }, ct);
@@ -914,6 +974,7 @@ namespace TurkSoft.Service.Manager
                 }
             }
 
+            // Id bulunamadıysa; key'e göre veya yeni müşteri
             if (inv.CustomerId == 0)
             {
                 if (cust == null)
@@ -933,15 +994,20 @@ namespace TurkSoft.Service.Manager
                 }
                 else
                 {
+                    // Yeni müşteri
                     ResetIdentityId(cust);
                     NormalizeCustomer(cust, utcNow);
-                    cust.Addresses = null;
-                    cust.CustomersGroups = null;
+                    inv.CustomerId = 0;
+
+                    // Customer master verisini sade tutmak için;
+                    // İstersen bunları da ayrı senaryoda yönetebilirsin
                     cust.Invoices = null;
                 }
             }
 
+            // ---------------------------
             // 2) Koleksiyon init
+            // ---------------------------
             inv.InvoicesItems ??= new List<InvoicesItem>();
             inv.InvoicesTaxes ??= new List<InvoicesTax>();
             inv.InvoicesDiscounts ??= new List<InvoicesDiscount>();
@@ -950,8 +1016,12 @@ namespace TurkSoft.Service.Manager
             inv.ServicesProviders ??= new List<ServicesProvider>();
             inv.Returns ??= new List<Returns>();
             inv.InvoicesPayments ??= new List<InvoicesPayment>();
+            inv.GibInvoiceOperationLogs ??= new List<GibInvoiceOperationLog>();
+            inv.GibUserCreditTransactions ??= new List<GibUserCreditTransaction>();
 
-            // 3) ITEMS
+            // ---------------------------
+            // 3) ITEMS (InvoicesItem -> Item + alt nav'lar)
+            // ---------------------------
             foreach (var li in inv.InvoicesItems)
             {
                 PropagateUserId(inv, li);
@@ -959,11 +1029,11 @@ namespace TurkSoft.Service.Manager
                 li.Invoice = null;
 
                 var it = li.Item;
-
                 if (it != null)
                 {
                     PropagateUserId(inv, it);
 
+                    // Var olan Item Id'si varsa önce ona bak
                     if (it.Id > 0)
                     {
                         var existingItem = await _db.Set<Item>().FindAsync(new object[] { it.Id }, ct);
@@ -981,6 +1051,7 @@ namespace TurkSoft.Service.Manager
                         }
                     }
 
+                    // İş anahtarına göre Item
                     if (it.Id == 0)
                     {
                         var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, it, ct);
@@ -994,11 +1065,13 @@ namespace TurkSoft.Service.Manager
                         }
                     }
 
+                    // Yeni Item
                     if (it.Id == 0)
                     {
                         ResetIdentityId(it);
                         NormalizeItem(it, inv.Currency, utcNow);
 
+                        // BRAND
                         if (it.Brand != null)
                             await AttachOrCreateBrandAsync(it, ct, utcNow);
                         else if (it.BrandId > 0)
@@ -1012,6 +1085,7 @@ namespace TurkSoft.Service.Manager
                             }
                         }
 
+                        // UNIT
                         if (it.Unit != null)
                             await AttachOrCreateUnitAsync(it, ct, utcNow);
                         else if (it.UnitId > 0)
@@ -1025,9 +1099,68 @@ namespace TurkSoft.Service.Manager
                             }
                         }
 
-                        it.ItemsCategories = null;
-                        it.ItemsDiscounts = null;
-                        it.Identifiers = null;
+                        // ItemsCategory -> Category
+                        if (it.ItemsCategories != null)
+                        {
+                            foreach (var ic in it.ItemsCategories)
+                            {
+                                PropagateUserId(it, ic);
+                                TouchAudit(ic, utcNow);
+
+                                // Item tarafındaki navigation döngüsünü kırmak istersen:
+                                // EF, Item.ItemsCategories üzerinden zaten ilişki kuracak
+                                ic.Item = null;
+
+                                if (ic.Category != null)
+                                {
+                                    await AttachOrCreateCategoryAsync(ic, ct, utcNow);
+                                }
+                                else if (ic.CategoryId > 0)
+                                {
+                                    var existingCat = await _db.Set<Category>().FindAsync(new object[] { ic.CategoryId }, ct);
+                                    if (existingCat != null)
+                                    {
+                                        _db.Attach(existingCat);
+                                        _db.Entry(existingCat).State = EntityState.Unchanged;
+                                        ic.Category = existingCat;
+                                    }
+                                }
+                            }
+                        }
+
+                        // ItemsDiscounts (Item bazlı, InvoiceId içeren discount kayıtları)
+                        if (it.ItemsDiscounts != null)
+                        {
+                            foreach (var idisc in it.ItemsDiscounts)
+                            {
+                                PropagateUserId(inv, idisc);
+                                TouchAudit(idisc, utcNow);
+
+                                // Bu discount'un hangi invoice'a ait olduğu:
+                                if (idisc.Invoice == null)
+                                    idisc.Invoice = inv;     // navigation
+                                if (idisc.InvoiceId == 0)
+                                    idisc.InvoiceId = inv.Id; // yeni kayıt = 0, EF sonrası günceller
+
+                                // Burada deduplikasyon yapmıyoruz; her invoice için ayrı discount kaydı
+                                ResetIdentityId(idisc);
+                            }
+                        }
+
+                        // Identifiers (Item kimlikleri – GTIN, barkod vs.)
+                        if (it.Identifiers != null)
+                        {
+                            foreach (var ident in it.Identifiers)
+                            {
+                                PropagateUserId(it, ident);
+                                TouchAudit(ident, utcNow);
+
+                                // Item nav'ını kırabilirsin; Item.Identifiers koleksiyonu üzerinden ilişki zaten kurulacak
+                                ident.Item = null;
+
+                                ResetIdentityId(ident);
+                            }
+                        }
                     }
                 }
                 else if (li.ItemId > 0)
@@ -1041,6 +1174,7 @@ namespace TurkSoft.Service.Manager
                     }
                 }
 
+                // Fiyat/Toplam normalize
                 if (li.Price <= 0 && li.Item != null)
                     li.Price = li.Item.Price;
 
@@ -1048,7 +1182,9 @@ namespace TurkSoft.Service.Manager
                     li.Total = li.Quantity * li.Price;
             }
 
-            // 4) TAXES (InvoicesTax) - duplicate kontrollü
+            // ---------------------------
+            // 4) TAXES (InvoicesTax)
+            // ---------------------------
             if (inv.InvoicesTaxes != null && inv.InvoicesTaxes.Count > 0)
             {
                 var normalizedTaxes = new List<InvoicesTax>();
@@ -1089,7 +1225,9 @@ namespace TurkSoft.Service.Manager
                 inv.InvoicesTaxes = normalizedTaxes;
             }
 
-            // 5) DISCOUNTS (InvoicesDiscount) - duplicate kontrollü
+            // ---------------------------
+            // 5) DISCOUNTS (InvoicesDiscount)
+            // ---------------------------
             if (inv.InvoicesDiscounts != null && inv.InvoicesDiscounts.Count > 0)
             {
                 var firstItem = inv.InvoicesItems.FirstOrDefault()?.Item;
@@ -1131,7 +1269,9 @@ namespace TurkSoft.Service.Manager
                 inv.InvoicesDiscounts = normalizedDiscounts;
             }
 
+            // ---------------------------
             // 6) SGK / SP / RETURNS / TOURISTS
+            // ---------------------------
             foreach (var sg in inv.SgkRecords)
             {
                 PropagateUserId(inv, sg);
@@ -1160,7 +1300,9 @@ namespace TurkSoft.Service.Manager
                 t.Invoice = null;
             }
 
-            // 7) PAYMENTS
+            // ---------------------------
+            // 7) PAYMENTS (InvoicesPayment -> Payment -> PaymentType/PaymentAccount/Bank)
+            // ---------------------------
             foreach (var link in inv.InvoicesPayments)
             {
                 PropagateUserId(inv, link);
@@ -1189,6 +1331,7 @@ namespace TurkSoft.Service.Manager
 
                 NormalizePayment(p, inv, utcNow);
 
+                // PaymentType
                 if (p.PaymentType != null)
                     await AttachOrCreatePaymentTypeAsync(p, ct, utcNow);
                 else if (p.PaymentTypeId > 0)
@@ -1202,6 +1345,7 @@ namespace TurkSoft.Service.Manager
                     }
                 }
 
+                // PaymentAccount + Bank
                 if (p.PaymentAccount != null)
                     await AttachOrCreatePaymentAccountAsync(p, ct, utcNow);
                 else if (p.PaymentAccountId > 0)
@@ -1218,7 +1362,69 @@ namespace TurkSoft.Service.Manager
                 p.InvoicesPayments = null;
             }
 
-            // 8) INVOICE temel
+            // ---------------------------
+            // 8) GİB LOG / CREDIT
+            // ---------------------------
+
+            // GibInvoiceOperationLog: BaseEntity değil, kendi CreatedAt ve UserId alanlarını yönetiyoruz.
+            if (inv.GibInvoiceOperationLogs != null)
+            {
+                foreach (var log in inv.GibInvoiceOperationLogs)
+                {
+                    ResetIdentityId(log); // int Id > 0 ise sıfırlar
+
+                    log.Invoice = inv;
+                    if (log.CreatedAt == default)
+                        log.CreatedAt = DateTime.UtcNow;
+
+                    if (!log.UserId.HasValue || log.UserId <= 0)
+                        log.UserId = inv.UserId;
+
+                    log.User = null;
+                }
+            }
+
+            // GibUserCreditTransaction: BaseEntity; UserId vs. propagate ediliyor
+            if (inv.GibUserCreditTransactions != null)
+            {
+                foreach (var tr in inv.GibUserCreditTransactions)
+                {
+                    PropagateUserId(inv, tr);
+                    TouchAudit(tr, utcNow);
+
+                    if (!tr.InvoiceId.HasValue || tr.InvoiceId == 0)
+                        tr.InvoiceId = inv.Id;   // yeni kayıt için 0; EF sonra güncelleyecek
+
+                    tr.Invoice = null;
+
+                    if (tr.GibUserCreditAccountId > 0)
+                    {
+                        var acc = await _db.Set<GibUserCreditAccount>()
+                                           .FindAsync(new object[] { tr.GibUserCreditAccountId }, ct);
+                        if (acc != null)
+                        {
+                            _db.Attach(acc);
+                            _db.Entry(acc).State = EntityState.Unchanged;
+                            tr.GibUserCreditAccount = acc;
+                        }
+                    }
+                    else
+                    {
+                        if (tr.GibUserCreditAccount != null)
+                        {
+                            var acc = tr.GibUserCreditAccount;
+                            PropagateUserId(inv, acc);
+                            ResetIdentityId(acc);
+                            TouchAudit(acc, utcNow);
+                            acc.Transactions = null;
+                        }
+                    }
+                }
+            }
+
+            // ---------------------------
+            // 9) INVOICE temel normalize + toplam
+            // ---------------------------
             NormalizeInvoice(inv, utcNow);
 
             if (inv.Total <= 0)
@@ -1228,7 +1434,7 @@ namespace TurkSoft.Service.Manager
                 inv.Total = itemsTotal + taxesTotal;
             }
 
-            // >>> YENİ: tüm decimal alanlar için son kontrol
+            // Son güvenlik: decimal alanlar
             ValidateInvoiceDecimalRanges(inv);
         }
     }

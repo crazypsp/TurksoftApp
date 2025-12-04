@@ -392,35 +392,455 @@ namespace TurkSoft.GibPortalApi.Controllers
             var dbInvoice = await _db.Set<Invoice>()
                 .IgnoreQueryFilters()
                 .AsNoTracking()
+
+                // -------- CUSTOMER + ADDRESS + GROUP --------
                 .Include(i => i.Customer)
+                    .ThenInclude(c => c.Addresses)
+                .Include(i => i.Customer)
+                    .ThenInclude(c => c.CustomersGroups)
+                        .ThenInclude(cg => cg.Group)
+
+                // -------- ITEM TARAFI (InvoiceLines) --------
                 .Include(i => i.InvoicesItems)
                     .ThenInclude(ii => ii.Item)
                         .ThenInclude(it => it.Unit)
+                .Include(i => i.InvoicesItems)
+                    .ThenInclude(ii => ii.Item)
+                        .ThenInclude(it => it.Brand)
+                .Include(i => i.InvoicesItems)
+                    .ThenInclude(ii => ii.Item)
+                        .ThenInclude(it => it.ItemsCategories)
+                            .ThenInclude(ic => ic.Category)
+                .Include(i => i.InvoicesItems)
+                    .ThenInclude(ii => ii.Item)
+                        .ThenInclude(it => it.ItemsDiscounts)
+                .Include(i => i.InvoicesItems)
+                    .ThenInclude(ii => ii.Item)
+                        .ThenInclude(it => it.Identifiers)
+
+                // -------- FATURA DÜZEYİ VERGİ / İSKONTO --------
                 .Include(i => i.InvoicesTaxes)
+                .Include(i => i.InvoicesDiscounts)
+                    .ThenInclude(d => d.Item)
+                        .ThenInclude(it => it.Unit)
+                .Include(i => i.InvoicesDiscounts)
+                    .ThenInclude(d => d.Item)
+                        .ThenInclude(it => it.Brand)
+
+                // -------- TURİST / SGK / HİZMET SAĞLAYICI / İADE --------
+                .Include(i => i.Tourists)
+                .Include(i => i.SgkRecords)
+                .Include(i => i.ServicesProviders)
+                .Include(i => i.Returns)
+
+                // -------- ÖDEME --------
+                .Include(i => i.InvoicesPayments)
+                    .ThenInclude(ip => ip.Payment)
+                        .ThenInclude(p => p.PaymentType)
+                .Include(i => i.InvoicesPayments)
+                    .ThenInclude(ip => ip.Payment)
+                        .ThenInclude(p => p.PaymentAccount)
+                            .ThenInclude(pa => pa.Bank)
+
+                // -------- LOG + KREDİ HESABI --------
+                .Include(i => i.GibInvoiceOperationLogs)
+                .Include(i => i.GibUserCreditTransactions)
+                    .ThenInclude(t => t.GibUserCreditAccount)
+                        .ThenInclude(a => a.GibFirm)
+
                 .FirstOrDefaultAsync(i => i.Id == id, ct);
 
             if (dbInvoice == null)
                 return null;
 
+            // EF tracking’den bağımsız, sade ama dolu bir graph’a çevir
             return MapToTestInvoiceShape(dbInvoice);
         }
 
+
         private static Invoice MapToTestInvoiceShape(Invoice src)
         {
+            // ---- Cache'ler (aynı entity tekrar tekrar oluşturulmasın diye) ----
+            var unitCache = new Dictionary<long, Unit>();
+            var brandCache = new Dictionary<long, Brand>();
+            var itemCache = new Dictionary<long, Item>();
+            var categoryCache = new Dictionary<long, Category>();
+            var payTypeCache = new Dictionary<long, PaymentType>();
+            var bankCache = new Dictionary<long, Bank>();
+            var payAccountCache = new Dictionary<long, PaymentAccount>();
+            var paymentCache = new Dictionary<long, Payment>();
+            var gibFirmCache = new Dictionary<long, GibFirm>();
+            var creditAccCache = new Dictionary<long, GibUserCreditAccount>();
+
+            // ==========================
+            //  LOCAL HELPER FONKSİYONLAR
+            // ==========================
+
+            Brand? GetBrand(Brand? b)
+            {
+                if (b == null) return null;
+                if (b.Id != 0 && brandCache.TryGetValue(b.Id, out var cached)) return cached;
+
+                var clone = new Brand
+                {
+                    Id = b.Id,
+                    Name = b.Name,
+                    Country = b.Country,
+                    Items = null
+                };
+
+                if (b.Id != 0)
+                    brandCache[b.Id] = clone;
+
+                return clone;
+            }
+
+            Unit? GetUnit(Unit? u)
+            {
+                if (u == null) return null;
+                if (u.Id != 0 && unitCache.TryGetValue(u.Id, out var cached)) return cached;
+
+                var clone = new Unit
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    ShortName = u.ShortName,
+                    Items = null
+                };
+
+                if (u.Id != 0)
+                    unitCache[u.Id] = clone;
+
+                return clone;
+            }
+
+            Category? GetCategory(Category? c)
+            {
+                if (c == null) return null;
+                if (c.Id != 0 && categoryCache.TryGetValue(c.Id, out var cached)) return cached;
+
+                var clone = new Category
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Desc = c.Desc,
+                    ItemsCategories = null
+                };
+
+                if (c.Id != 0)
+                    categoryCache[c.Id] = clone;
+
+                return clone;
+            }
+
+            Item GetItem(Item s)
+            {
+                if (s.Id != 0 && itemCache.TryGetValue(s.Id, out var cached)) return cached;
+
+                var brand = GetBrand(s.Brand);
+                var unit = GetUnit(s.Unit);
+
+                var clone = new Item
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Code = s.Code,
+                    BrandId = brand?.Id ?? s.BrandId,
+                    UnitId = unit?.Id ?? s.UnitId,
+                    Price = s.Price,
+                    Currency = s.Currency,
+                    Brand = brand,
+                    Unit = unit,
+                    ItemsCategories = new List<ItemsCategory>(),
+                    ItemsDiscounts = new List<ItemsDiscount>(),
+                    Identifiers = new List<Identifiers>()
+                };
+
+                // ItemCategories
+                if (s.ItemsCategories != null)
+                {
+                    foreach (var ic in s.ItemsCategories)
+                    {
+                        var cat = GetCategory(ic.Category);
+
+                        clone.ItemsCategories.Add(new ItemsCategory
+                        {
+                            Id = ic.Id,
+                            ItemId = clone.Id != 0 ? clone.Id : ic.ItemId,
+                            CategoryId = cat?.Id ?? ic.CategoryId,
+                            Item = clone,
+                            Category = cat
+                        });
+                    }
+                }
+
+                // Item bazlı iskonto kayıtları
+                if (s.ItemsDiscounts != null)
+                {
+                    foreach (var d in s.ItemsDiscounts)
+                    {
+                        clone.ItemsDiscounts.Add(new ItemsDiscount
+                        {
+                            Id = d.Id,
+                            InvoiceId = d.InvoiceId,
+                            Name = d.Name,
+                            Rate = d.Rate,
+                            Amount = d.Amount,
+                            Invoice = null
+                        });
+                    }
+                }
+
+                // Barkod / seri vb. tanımlayıcılar
+                if (s.Identifiers != null)
+                {
+                    foreach (var id in s.Identifiers)
+                    {
+                        clone.Identifiers.Add(new Identifiers
+                        {
+                            Id = id.Id,
+                            Uuid = id.Uuid,
+                            Desc = id.Desc,
+                            Value = id.Value,
+                            Type = id.Type,
+                            ItemId = clone.Id != 0 ? clone.Id : id.ItemId,
+                            Item = clone
+                        });
+                    }
+                }
+
+                if (s.Id != 0)
+                    itemCache[s.Id] = clone;
+
+                return clone;
+            }
+
+            PaymentType? GetPaymentType(PaymentType? s)
+            {
+                if (s == null) return null;
+                if (s.Id != 0 && payTypeCache.TryGetValue(s.Id, out var cached)) return cached;
+
+                var clone = new PaymentType
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Desc = s.Desc,
+                    Payments = null
+                };
+
+                if (s.Id != 0)
+                    payTypeCache[s.Id] = clone;
+
+                return clone;
+            }
+
+            Bank? GetBank(Bank? s)
+            {
+                if (s == null) return null;
+                if (s.Id != 0 && bankCache.TryGetValue(s.Id, out var cached)) return cached;
+
+                var clone = new Bank
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    SwiftCode = s.SwiftCode,
+                    Country = s.Country,
+                    City = s.City,
+                    PaymentAccounts = null
+                };
+
+                if (s.Id != 0)
+                    bankCache[s.Id] = clone;
+
+                return clone;
+            }
+
+            PaymentAccount? GetPaymentAccount(PaymentAccount? s)
+            {
+                if (s == null) return null;
+                if (s.Id != 0 && payAccountCache.TryGetValue(s.Id, out var cached)) return cached;
+
+                var bank = GetBank(s.Bank);
+
+                var clone = new PaymentAccount
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Desc = s.Desc,
+                    BankId = bank?.Id ?? s.BankId,
+                    AccountNo = s.AccountNo,
+                    Iban = s.Iban,
+                    Currency = s.Currency,
+                    Bank = bank,
+                    Payments = null
+                };
+
+                if (s.Id != 0)
+                    payAccountCache[s.Id] = clone;
+
+                return clone;
+            }
+
+            Payment? GetPayment(Payment? s)
+            {
+                if (s == null) return null;
+                if (s.Id != 0 && paymentCache.TryGetValue(s.Id, out var cached)) return cached;
+
+                var pt = GetPaymentType(s.PaymentType);
+                var pa = GetPaymentAccount(s.PaymentAccount);
+
+                var clone = new Payment
+                {
+                    Id = s.Id,
+                    PaymentTypeId = pt?.Id ?? s.PaymentTypeId,
+                    PaymentAccountId = pa?.Id ?? s.PaymentAccountId,
+                    Amount = s.Amount,
+                    Currency = s.Currency,
+                    Date = s.Date,
+                    Note = s.Note,
+                    PaymentType = pt,
+                    PaymentAccount = pa,
+                    InvoicesPayments = new List<InvoicesPayment>()
+                };
+
+                if (s.Id != 0)
+                    paymentCache[s.Id] = clone;
+
+                return clone;
+            }
+
+            GibFirm? GetGibFirm(GibFirm? s)
+            {
+                if (s == null) return null;
+                if (s.Id != 0 && gibFirmCache.TryGetValue(s.Id, out var cached)) return cached;
+
+                var clone = new GibFirm
+                {
+                    Id = s.Id,
+                    Title = s.Title,
+                    TaxNo = s.TaxNo,
+                    TaxOffice = s.TaxOffice,
+                    CommercialRegistrationNo = s.CommercialRegistrationNo,
+                    MersisNo = s.MersisNo,
+                    AddressLine = s.AddressLine,
+                    City = s.City,
+                    District = s.District,
+                    Country = s.Country,
+                    PostalCode = s.PostalCode,
+                    Phone = s.Phone,
+                    Email = s.Email,
+                    GibAlias = s.GibAlias,
+                    ApiKey = s.ApiKey,
+                    IsEInvoiceRegistered = s.IsEInvoiceRegistered,
+                    IsEArchiveRegistered = s.IsEArchiveRegistered,
+                    Invoices = null,
+                    CreditAccounts = null
+                };
+
+                if (s.Id != 0)
+                    gibFirmCache[s.Id] = clone;
+
+                return clone;
+            }
+
+            GibUserCreditAccount? GetCreditAccount(GibUserCreditAccount? s)
+            {
+                if (s == null) return null;
+                if (s.Id != 0 && creditAccCache.TryGetValue(s.Id, out var cached)) return cached;
+
+                var firm = GetGibFirm(s.GibFirm);
+
+                var clone = new GibUserCreditAccount
+                {
+                    Id = s.Id,
+                    GibFirmId = firm?.Id ?? s.GibFirmId,
+                    TotalCredits = s.TotalCredits,
+                    UsedCredits = s.UsedCredits,
+                    GibFirm = firm,
+                    Transactions = null
+                };
+
+                if (s.Id != 0)
+                    creditAccCache[s.Id] = clone;
+
+                return clone;
+            }
+
+            // ==========================
+            //  CUSTOMER + ADRESLER
+            // ==========================
+
             Customer? customer = null;
+
             if (src.Customer != null)
             {
+                var c = src.Customer;
+
                 customer = new Customer
                 {
-                    Id = src.Customer.Id,
-                    Name = src.Customer.Name,
-                    Surname = src.Customer.Surname,
-                    Phone = src.Customer.Phone,
-                    Email = src.Customer.Email,
-                    TaxNo = src.Customer.TaxNo,
-                    TaxOffice = src.Customer.TaxOffice
+                    Id = c.Id,
+                    Name = c.Name,
+                    Surname = c.Surname,
+                    Phone = c.Phone,
+                    Email = c.Email,
+                    TaxNo = c.TaxNo,
+                    TaxOffice = c.TaxOffice,
+                    CustomersGroups = new List<CustomersGroup>(),
+                    Addresses = new List<Address>(),
+                    Invoices = null
                 };
+
+                // Adres listesi
+                if (c.Addresses != null)
+                {
+                    foreach (var a in c.Addresses)
+                    {
+                        customer.Addresses.Add(new Address
+                        {
+                            Id = a.Id,
+                            CustomerId = customer.Id != 0 ? customer.Id : a.CustomerId,
+                            Country = a.Country,
+                            City = a.City,
+                            District = a.District,
+                            Street = a.Street,
+                            PostCode = a.PostCode,
+                            Customer = customer
+                        });
+                    }
+                }
+
+                // Müşteri grupları
+                if (c.CustomersGroups != null)
+                {
+                    foreach (var cg in c.CustomersGroups)
+                    {
+                        Group? grp = null;
+                        if (cg.Group != null)
+                        {
+                            grp = new Group
+                            {
+                                Id = cg.Group.Id,
+                                Name = cg.Group.Name,
+                                Desc = cg.Group.Desc,
+                                CustomersGroups = null
+                            };
+                        }
+
+                        customer.CustomersGroups.Add(new CustomersGroup
+                        {
+                            Id = cg.Id,
+                            CustomerId = customer.Id != 0 ? customer.Id : cg.CustomerId,
+                            GroupId = grp?.Id ?? cg.GroupId,
+                            Customer = customer,
+                            Group = grp
+                        });
+                    }
+                }
             }
+
+            // ==========================
+            //  ROOT INVOICE
+            // ==========================
 
             var invoice = new Invoice
             {
@@ -429,92 +849,58 @@ namespace TurkSoft.GibPortalApi.Controllers
                 Customer = customer,
                 InvoiceNo = src.InvoiceNo,
                 InvoiceDate = src.InvoiceDate,
+                Total = src.Total,
                 Currency = src.Currency,
-                Total = src.Total
+
+                InvoicesItems = new List<InvoicesItem>(),
+                InvoicesTaxes = new List<InvoicesTax>(),
+                InvoicesDiscounts = new List<InvoicesDiscount>(),
+                Tourists = new List<Tourist>(),
+                SgkRecords = new List<Sgk>(),
+                ServicesProviders = new List<ServicesProvider>(),
+                Returns = new List<Returns>(),
+                InvoicesPayments = new List<InvoicesPayment>(),
+                GibInvoiceOperationLogs = new List<GibInvoiceOperationLog>(),
+                GibUserCreditTransactions = new List<GibUserCreditTransaction>()
             };
 
-            var unitCache = new Dictionary<long, Unit>();
-            var itemCache = new Dictionary<long, Item>();
-
-            var invItems = new List<InvoicesItem>();
+            // ==========================
+            //  KALEMLER (InvoicesItem + Item)
+            // ==========================
 
             if (src.InvoicesItems != null)
             {
                 foreach (var li in src.InvoicesItems)
                 {
-                    Unit? unit = null;
-                    if (li.Item?.Unit != null)
-                    {
-                        var u = li.Item.Unit;
-                        if (u.Id != 0 && unitCache.TryGetValue(u.Id, out var cachedUnit))
-                        {
-                            unit = cachedUnit;
-                        }
-                        else
-                        {
-                            unit = new Unit
-                            {
-                                Id = u.Id,
-                                Name = u.Name,
-                                ShortName = u.ShortName
-                            };
-
-                            if (u.Id != 0)
-                                unitCache[u.Id] = unit;
-                        }
-                    }
-
-                    Item? item = null;
+                    Item? itemClone = null;
                     if (li.Item != null)
-                    {
-                        var it = li.Item;
-                        if (it.Id != 0 && itemCache.TryGetValue(it.Id, out var cachedItem))
-                        {
-                            item = cachedItem;
-                        }
-                        else
-                        {
-                            item = new Item
-                            {
-                                Id = it.Id,
-                                Name = it.Name,
-                                Code = it.Code,
-                                BrandId = it.BrandId,
-                                UnitId = it.UnitId,
-                                Unit = unit,
-                                Price = it.Price,
-                                Currency = it.Currency
-                            };
-
-                            if (it.Id != 0)
-                                itemCache[it.Id] = item;
-                        }
-                    }
+                        itemClone = GetItem(li.Item);
 
                     var invItem = new InvoicesItem
                     {
                         Id = li.Id,
                         InvoiceId = invoice.Id,
                         Invoice = invoice,
-                        ItemId = item?.Id ?? li.ItemId,
-                        Item = item,
+                        ItemId = itemClone?.Id ?? li.ItemId,
+                        Item = itemClone,
                         Quantity = li.Quantity,
                         Price = li.Price,
                         Total = li.Total
                     };
 
-                    invItems.Add(invItem);
+                    invoice.InvoicesItems.Add(invItem);
                 }
             }
 
-            invoice.InvoicesItems = invItems;
+            // ==========================
+            //  VERGİLER
+            // ==========================
 
-            var invTaxes = new List<InvoicesTax>();
             if (src.InvoicesTaxes != null)
             {
                 foreach (var tx in src.InvoicesTaxes)
                 {
-                    var invTax = new InvoicesTax
+                    invoice.InvoicesTaxes.Add(new InvoicesTax
                     {
                         Id = tx.Id,
                         InvoiceId = invoice.Id,
@@ -522,16 +908,205 @@ namespace TurkSoft.GibPortalApi.Controllers
                         Name = tx.Name,
                         Rate = tx.Rate,
                         Amount = tx.Amount
-                    };
-
-                    invTaxes.Add(invTax);
+                    });
                 }
             }
 
-            invoice.InvoicesTaxes = invTaxes;
+            // ==========================
+            //  İSKONTOLAR (InvoicesDiscount)
+            // ==========================
+
+            if (src.InvoicesDiscounts != null)
+            {
+                foreach (var d in src.InvoicesDiscounts)
+                {
+                    Item? itemClone = null;
+                    if (d.Item != null)
+                        itemClone = GetItem(d.Item);
+                    else if (d.ItemId != 0 && itemCache.TryGetValue(d.ItemId, out var cachedItem))
+                        itemClone = cachedItem;
+
+                    invoice.InvoicesDiscounts.Add(new InvoicesDiscount
+                    {
+                        Id = d.Id,
+                        ItemId = itemClone?.Id ?? d.ItemId,
+                        Name = d.Name,
+                        Desc = d.Desc,
+                        Base = d.Base,
+                        Rate = d.Rate,
+                        Amount = d.Amount,
+                        Item = itemClone
+                    });
+                }
+            }
+
+            // ==========================
+            //  TURİST BİLGİLERİ
+            // ==========================
+
+            if (src.Tourists != null)
+            {
+                foreach (var t in src.Tourists)
+                {
+                    invoice.Tourists.Add(new Tourist
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        Surname = t.Surname,
+                        PassportNo = t.PassportNo,
+                        PassportDate = t.PassportDate,
+                        Country = t.Country,
+                        City = t.City,
+                        District = t.District,
+                        AccountNo = t.AccountNo,
+                        Bank = t.Bank,
+                        Currency = t.Currency,
+                        Note = t.Note,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice
+                    });
+                }
+            }
+
+            // ==========================
+            //  SGK
+            // ==========================
+
+            if (src.SgkRecords != null)
+            {
+                foreach (var s in src.SgkRecords)
+                {
+                    invoice.SgkRecords.Add(new Sgk
+                    {
+                        Id = s.Id,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice,
+                        Type = s.Type,
+                        Code = s.Code,
+                        Name = s.Name,
+                        No = s.No,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate
+                    });
+                }
+            }
+
+            // ==========================
+            //  HİZMET SAĞLAYICI
+            // ==========================
+
+            if (src.ServicesProviders != null)
+            {
+                foreach (var sp in src.ServicesProviders)
+                {
+                    invoice.ServicesProviders.Add(new ServicesProvider
+                    {
+                        Id = sp.Id,
+                        No = sp.No,
+                        SystemUser = sp.SystemUser,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice
+                    });
+                }
+            }
+
+            // ==========================
+            //  İADE / İADE FATURA BİLGİSİ
+            // ==========================
+
+            if (src.Returns != null)
+            {
+                foreach (var r in src.Returns)
+                {
+                    invoice.Returns.Add(new Returns
+                    {
+                        Id = r.Id,
+                        Number = r.Number,
+                        Date = r.Date,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice
+                    });
+                }
+            }
+
+            // ==========================
+            //  ÖDEMELER
+            // ==========================
+
+            if (src.InvoicesPayments != null)
+            {
+                foreach (var ip in src.InvoicesPayments)
+                {
+                    var paymentClone = GetPayment(ip.Payment);
+
+                    invoice.InvoicesPayments.Add(new InvoicesPayment
+                    {
+                        Id = ip.Id,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice,
+                        PaymentId = paymentClone?.Id ?? ip.PaymentId,
+                        Payment = paymentClone
+                    });
+
+                    if (paymentClone != null)
+                        paymentClone.InvoicesPayments.Add(ip); // ters navigation lazım değilse kaldırabilirsin
+                }
+            }
+
+            // ==========================
+            //  GİB LOG
+            // ==========================
+
+            if (src.GibInvoiceOperationLogs != null)
+            {
+                foreach (var log in src.GibInvoiceOperationLogs)
+                {
+                    invoice.GibInvoiceOperationLogs.Add(new GibInvoiceOperationLog
+                    {
+                        Id = log.Id,
+                        InvoiceId = invoice.Id,
+                        Invoice = invoice,
+                        ExternalInvoiceId = log.ExternalInvoiceId,
+                        InvoiceNumber = log.InvoiceNumber,
+                        OperationName = log.OperationName,
+                        IsSuccess = log.IsSuccess,
+                        ErrorCode = log.ErrorCode,
+                        ErrorMessage = log.ErrorMessage,
+                        RawResponseJson = log.RawResponseJson,
+                        UserId = log.UserId,
+                        User = null, // User entity'sini burada taşımaya gerek yok
+                        CreatedAt = log.CreatedAt
+                    });
+                }
+            }
+
+            // ==========================
+            //  KONTÖR HAREKETLERİ
+            // ==========================
+
+            if (src.GibUserCreditTransactions != null)
+            {
+                foreach (var tr in src.GibUserCreditTransactions)
+                {
+                    var acc = GetCreditAccount(tr.GibUserCreditAccount);
+
+                    invoice.GibUserCreditTransactions.Add(new GibUserCreditTransaction
+                    {
+                        Id = tr.Id,
+                        GibUserCreditAccountId = acc?.Id ?? tr.GibUserCreditAccountId,
+                        InvoiceId = invoice.Id,
+                        TransactionType = tr.TransactionType,
+                        Quantity = tr.Quantity,
+                        Description = tr.Description,
+                        GibUserCreditAccount = acc,
+                        Invoice = invoice
+                    });
+                }
+            }
 
             return invoice;
         }
+
 
         // -------- StaticList --------
         [HttpGet("static/unit")]
@@ -570,6 +1145,7 @@ namespace TurkSoft.GibPortalApi.Controllers
             long id,
             [FromQuery] long userId,
             bool isExport = false,
+           [FromQuery(Name = "alias")] string? targetAlias = null,
             CancellationToken ct = default)
         {
             var applyResult = await ApplyGibFirmForUserAsync(userId, ct);
@@ -581,7 +1157,27 @@ namespace TurkSoft.GibPortalApi.Controllers
             if (id == 4)
                 isExport = true;
 
-            var res = await _gib.SendEInvoiceJsonAsync(inv, isExport, true, inv.Customer?.TaxNo, ct);
+            var res = await _gib.SendEInvoiceJsonAsync(inv, isExport, true, inv.Customer?.TaxNo, targetAlias, ct);
+            // 🔹 GİB servisini ÇAĞIRMADAN, sanki 200 OK dönmüş gibi fake response oluşturuyoruz
+            //var fakeData = new
+            //{
+            //    Id = "string",              // burada istersen test GUID vs. verebilirsin
+            //    InvoiceNumber = "string"    // burada da test fatura numarası
+            //};
+
+            //var res = new HttpResult<object>
+            //{
+            //    Ok = true,
+            //    StatusCode = 200,
+            //    Data = fakeData,
+            //    Error = null
+            //};
+            await LogGibSendInvoiceResultAsync(
+        inv,
+        res,
+        operationName: "SendEInvoiceJson",
+        currentUserId: userId,
+        ct: ct);
             return res.Ok ? Ok(res.Data) : StatusCode(res.StatusCode, res.Error);
         }
 
@@ -805,5 +1401,184 @@ namespace TurkSoft.GibPortalApi.Controllers
             if (!res.Ok) return StatusCode(res.StatusCode, res.Error);
             return File(res.Data!, "application/zip", "gibuser-recipient.zip");
         }
+
+        private async Task LogGibSendInvoiceResultAsync(
+          Invoice invoice,
+          HttpResult<object> res,
+          string operationName,
+          long? currentUserId,
+          CancellationToken ct)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var ownerUserId = currentUserId ?? invoice.UserId;
+
+            // --------- OPERASYON LOGU ---------
+            var log = new GibInvoiceOperationLog
+            {
+                InvoiceId = invoice.Id,
+                Invoice = null, // büyük grafiği bağlamaya gerek yok
+
+                OperationName = string.IsNullOrWhiteSpace(operationName)
+                    ? "Unknown"
+                    : operationName,
+
+                IsSuccess = res.Ok,
+
+                UserId = ownerUserId > 0 ? ownerUserId : null,
+                CreatedAt = now.UtcDateTime,
+
+                // 🔹 NULL GÖNDERME!
+                ExternalInvoiceId = string.Empty,
+                InvoiceNumber = string.Empty,
+                ErrorCode = res.StatusCode.ToString(), // 200, 422 vs.
+                ErrorMessage = string.Empty,
+                RawResponseJson = string.Empty
+            };
+
+            // Bu çağrıda oluşacak kontör hareketi (başarılıysa)
+            GibUserCreditTransaction? creditTrx = null;
+
+            // ==============================
+            //   SUCCESS (HTTP 200)
+            // ==============================
+            if (res.Ok && res.Data is not null)
+            {
+                // Data genelde JsonElement (Id, InvoiceNumber içeriyor)
+                if (res.Data is JsonElement elem)
+                {
+                    if (elem.TryGetProperty("Id", out var idProp) &&
+                        idProp.ValueKind == JsonValueKind.String)
+                    {
+                        log.ExternalInvoiceId = idProp.GetString() ?? string.Empty;
+                    }
+
+                    if (elem.TryGetProperty("InvoiceNumber", out var invNoProp) &&
+                        invNoProp.ValueKind == JsonValueKind.String)
+                    {
+                        log.InvoiceNumber = invNoProp.GetString() ?? string.Empty;
+                    }
+
+                    log.RawResponseJson = elem.GetRawText();
+                }
+                else
+                {
+                    // Tip beklediğimiz gibi değilse yine de JSON’a çevirip saklayalım
+                    log.RawResponseJson = JsonSerializer.Serialize(res.Data);
+                }
+
+                // --------- KONTÖR HESABI (GibUserCreditAccount) & HAREKETİ (GibUserCreditTransaction) ---------
+                if (ownerUserId > 0)
+                {
+                    // Bu kullanıcıya ait aktif kontör hesabı
+                    var creditAccount = await _db.Set<GibUserCreditAccount>()
+                        .FirstOrDefaultAsync(a => a.UserId == ownerUserId && a.IsActive, ct);
+
+                    if (creditAccount != null)
+                    {
+                        // UsedCredits +1
+                        creditAccount.UsedCredits += 1;
+                        creditAccount.UpdatedAt = now;
+                        creditAccount.UpdatedByUserId = ownerUserId;
+                        creditAccount.IsActive = true;
+                        // RowVersion: DB tarafında rowversion/timestamp üretildiği için burada set etmiyoruz.
+
+                        // Yeni kontör hareketi
+                        creditTrx = new GibUserCreditTransaction
+                        {
+                            GibUserCreditAccountId = creditAccount.Id,
+                            GibUserCreditAccount = creditAccount,
+
+                            InvoiceId = invoice.Id,
+                            Invoice = null, // büyük grafiği bağlamaya gerek yok
+
+                            TransactionType = GibCreditTransactionType.Usage,
+                            Quantity = 1,
+                            Description = $"Invoice {invoice.InvoiceNo ?? invoice.Id.ToString()} için 1 kontör kullanıldı.",
+
+                            // BaseEntity alanları
+                            UserId = ownerUserId,
+                            IsActive = true,
+                            DeleteDate = null,
+                            DeletedByUserId = null,
+                            CreatedAt = now,
+                            UpdatedAt = now,
+                            CreatedByUserId = ownerUserId,
+                            UpdatedByUserId = ownerUserId,
+                            // RowVersion: yeni kayıtta DB rowversion üreteceği için null bırakıyoruz
+                            RowVersion = null
+                        };
+
+                        _db.Set<GibUserCreditTransaction>().Add(creditTrx);
+                    }
+                    // Eğer kontör hesabı yoksa şimdilik sessiz geçiyoruz;
+                    // istersen burada exception/log ekleyebilirsin.
+                }
+            }
+            // ==============================
+            //   HATA (ör: HTTP 422)
+            // ==============================
+            else
+            {
+                log.IsSuccess = false;
+                log.ErrorCode = res.StatusCode.ToString(); // zaten yukarıda set edildi, tekrar yazmak sorun değil
+
+                var raw = res.Error ?? string.Empty;
+                log.RawResponseJson = raw;
+
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(raw))
+                    {
+                        using var doc = JsonDocument.Parse(raw);
+                        var root = doc.RootElement;
+
+                        if (root.TryGetProperty("Error", out var err))
+                        {
+                            string? detail = null;
+                            if (err.TryGetProperty("detail", out var detailProp) &&
+                                detailProp.ValueKind == JsonValueKind.String)
+                            {
+                                detail = detailProp.GetString();
+                            }
+
+                            string? title = null;
+                            if (err.TryGetProperty("title", out var titleProp) &&
+                                titleProp.ValueKind == JsonValueKind.String)
+                            {
+                                title = titleProp.GetString();
+                            }
+
+                            log.ErrorMessage = !string.IsNullOrWhiteSpace(detail)
+                                ? detail!
+                                : (!string.IsNullOrWhiteSpace(title) ? title! : raw);
+                        }
+                        else
+                        {
+                            log.ErrorMessage = raw;
+                        }
+                    }
+                }
+                catch
+                {
+                    // JSON parse edilemezse ham mesajı yazalım
+                    log.ErrorMessage = raw;
+                }
+            }
+
+            // Her durumda operasyon log’u kaydet
+            _db.Set<GibInvoiceOperationLog>().Add(log);
+
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                // burada gerçek loglama yapman daha sağlıklı olur
+                // örn: _logger.LogError(ex, "GibInvoiceOperationLog insert hatası");
+                ex.ToString();
+            }
+        }
+
     }
 }

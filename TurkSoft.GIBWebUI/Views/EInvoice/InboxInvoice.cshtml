@@ -86,7 +86,8 @@
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="IssueDateStart" type="text" class="form-control datepicker" autocomplete="off">
+                                        <!-- TEXT + datepicker yerine datetime-local -->
+                                        <input id="IssueDateStart" type="datetime-local" class="form-control" autocomplete="off">
                                     </div>
                                 </div>
                             </div>
@@ -110,7 +111,8 @@
                                 <div class="col-sm-6 inputPadding">
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                                        <input id="IssueDateStartEnd" type="text" class="form-control datepicker" autocomplete="off">
+                                        <!-- TEXT + datepicker yerine datetime-local -->
+                                        <input id="IssueDateStartEnd" type="datetime-local" class="form-control" autocomplete="off">
                                     </div>
                                 </div>
                             </div>
@@ -470,345 +472,450 @@
                 </div>
             </div>
 
-          
-
         </div>
     </div>
 
     <script>
-        (function(){
-            // ===== Utils =====
-            var TR_DATE = {
-                closeText:"Kapat",prevText:"Önceki",nextText:"Sonraki",currentText:"Bugün",
-                monthNames:["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"],
-                monthNamesShort:["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
-                dayNames:["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"],
-                dayNamesShort:["Paz","Pts","Sal","Çar","Per","Cum","Cts"],
-                dayNamesMin:["Pz","Pt","Sa","Ça","Pe","Cu","Ct"],
-                dateFormat:"dd.mm.yy", firstDay:1, isRTL:false
-            };
-            function toApiDate(str){ if(!str) return ""; var p=str.split("."); if(p.length!==3) return ""; return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0"); }
-            function num(v){ v=(v==null?0:v); var n=+v; return isNaN(n)?0:n; }
-            function fmtMoney(n,c,d,t){ c=isNaN(c=Math.abs(c))?2:c; d=(d===undefined)?",":d; t=(t===undefined)?".":t;
-                var s=n<0?"-":"", i=String(parseInt(Math.abs(Number(n)||0).toFixed(c))), j=(j=i.length)>3?j%3:0;
-                return s+(j?i.substr(0,j)+t:"")+i.substr(j).replace(/(\d{3})(?=\d)/g,"$1"+t)+(c?d+Math.abs(n-i).toFixed(c).slice(2):""); }
-            function notifyOk(m){ if(window.toastr&&toastr.success) toastr.success(m); else alert(m); }
-            function notifyErr(m){ if(window.toastr&&toastr.error) toastr.error(m); else alert(m); }
+        // Önce gridSearch / clearSearch stub olsun ki onclick çağrıları patlamasın
+        window.gridSearch = window.gridSearch || function () {
+            console.warn("gridSearch henüz hazır değil.");
+        };
+        window.clearSearchInputs = window.clearSearchInputs || function () {
+            console.warn("clearSearchInputs henüz hazır değil.");
+        };
 
-            // ===== Datepicker =====
-            function initDatepicker(){
-                if($.fn.datepicker){
-                    $.datepicker.setDefaults(TR_DATE);
-                    $('.datepicker').datepicker({ changeMonth:true, changeYear:true, showAnim:"fadeIn" });
-                    // yyyy-mm-dd gerektiren alanlar için
-                    $('.datepicker-yyyy-mm-dd').datepicker({ dateFormat:'yy-mm-dd', changeMonth:true, changeYear:true });
-                }else{
-                    $('.datepicker').attr('placeholder','gg.aa.yyyy');
+        (function () {
+            "use strict";
+
+            // ---------- Genel küçük helper'lar ----------
+            function num(v) {
+                v = (v == null ? 0 : v);
+                var n = +v;
+                return isNaN(n) ? 0 : n;
+            }
+
+            function fmtMoney(n, c, d, t) {
+                c = isNaN(c = Math.abs(c)) ? 2 : c;
+                d = (d === undefined) ? "," : d;
+                t = (t === undefined) ? "." : t;
+                var s = n < 0 ? "-" : "",
+                    i = String(parseInt(Math.abs(Number(n) || 0).toFixed(c))),
+                    j = (j = i.length) > 3 ? j % 3 : 0;
+                return s +
+                    (j ? i.substr(0, j) + t : "") +
+                    i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) +
+                    (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
+            }
+
+            function notifyOk(m) {
+                if (window.toastr && toastr.success) toastr.success(m);
+                else alert(m);
+            }
+
+            function notifyErr(m) {
+                if (window.toastr && toastr.error) toastr.error(m);
+                else alert(m);
+            }
+
+            // datetime-local => "yyyy-MM-dd HH:mm:ss"
+            function normalizeHtmlDateTime(v, isEnd) {
+                if (!v) return "";
+                if (v.indexOf("T") >= 0) {
+                    var parts = v.split("T");
+                    var date = parts[0];
+                    var time = parts[1] || "";
+                    if (time.length === 5) { // HH:mm
+                        time += ":00";
+                    }
+                    return date + " " + time;
                 }
+                return v + (isEnd ? " 23:59:59" : " 00:00:00");
             }
-            initDatepicker();
-            function linkRange($s,$e){
-                if(!$.fn.datepicker) return;
-                $s.on('change',function(){ var d=$s.datepicker('getDate'); if(d) $e.datepicker('option','minDate',d); });
-                $e.on('change',function(){ var d=$e.datepicker('getDate'); if(d) $s.datepicker('option','maxDate',d); });
-            }
-            linkRange($('#IssueDateStart'), $('#IssueDateStartEnd'));
-            linkRange($('#CreatedDateStart'), $('#CreatedDateEnd'));
 
-            // ===== Select2 (varsa) =====
-            if($.fn.select2){ $('#CurrencyCode').select2({width:'100%'}); }
+            function getCurrentUserIdForGib($) {
+                var userId = 0;
 
-            // ===== Detaylı Arama ikon toggle =====
-            $('#btnDetayliArama').on('click', function(){
-                var $i=$(this).find('.myCollapseIcon'); setTimeout(function(){ $i.toggleClass('fa-plus fa-minus'); },150);
-            });
-
-            // ===== Yıl/Ay =====
-            function yearChange(){
-                var now=new Date(), selY=+$('#IntegrationYear').val();
-                if(selY===now.getFullYear()){ $('#IntegrationMonth').val(String(now.getMonth()+1)); }
-                else { $('#IntegrationMonth').val('-1'); }
-            }
-            $('#IntegrationYear').on('change', yearChange); yearChange();
-
-            // ===== Çoklu VKN/TCKN =====
-            window.vknAyracChk = function(){
-                var multi = $('#TargetIdentifierChk').is(':checked');
-                var $inp = $('#TargetIdentifier'); $inp.val('');
-                if(multi){ $inp.attr('maxlength','400').attr('placeholder','111...,222...,333...'); }
-                else { $inp.attr('maxlength','11').attr('placeholder','11 hane'); }
-            };
-
-            // ===== DataTable =====
-            var table;
-            function buildFilters(){
-                var ids = $('#TargetIdentifier').val() || "";
-                if($('#TargetIdentifierChk').is(':checked')){
-                    ids = ids.split(',').map(function(s){return $.trim(s);}).filter(Boolean);
+                var $userHidden = $("#hdnUserId");
+                if ($userHidden.length) {
+                    var parsed = parseInt($userHidden.val(), 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        userId = parsed;
+                    }
                 }
-                return {
-                    IsArchive: $('#IsArchive').val(),
-                    ApplicationResponseCode: $('#ApplicationResponseCode').val(),
-                    IssueDateStart: toApiDate($('#IssueDateStart').val()),
-                    IssueDateEnd: toApiDate($('#IssueDateStartEnd').val()),
-                    DocumentId: $('#DocumentId').val(),
-                    UUID: $('#UUID').val(),
-                    TargetIdentifier: ids,       // Gönderici VKN/TCKN
-                    TargetTitle: $('#TargetTitle').val(), // Gönderici Unvan
-                    CreatedDateStart: toApiDate($('#CreatedDateStart').val()),
-                    CreatedDateEnd: toApiDate($('#CreatedDateEnd').val()),
-                    ProfileId: $('#ProfileId').val(),
-                    InvoiceTypeCode: $('#InvoiceTypeCode').val(),
-                    CurrencyCode: $('#CurrencyCode').val(),
-                    IsCancelled: $('#IsCancelled').val(),
-                    PayableAmountMin: $('#PayableAmount').val(),
-                    IsPrinted: $('#IsPrinted').val(),
-                    Status: $('#Status').val(),
-                    IsAccount: $('#IsAccount').val(),
-                    IsPaid: $('#IsPaid').val(),
-                    PostaKutusuEtiketi: $('#PostaKutusuEtiketi').val(),
-                    Year: $('#IntegrationYear').val(),
-                    Month: $('#IntegrationMonth').val()
-                };
+
+                if (!userId && typeof window.currentUserId === "number" && window.currentUserId > 0) {
+                    userId = window.currentUserId;
+                }
+
+                if (!userId && typeof sessionStorage !== "undefined") {
+                    try {
+                        var stored =
+                            sessionStorage.getItem("CurrentUserId") ||
+                            sessionStorage.getItem("currentUserId") ||
+                            sessionStorage.getItem("UserId");
+
+                        if (stored) {
+                            var parsed2 = parseInt(stored, 10);
+                            if (!isNaN(parsed2) && parsed2 > 0) {
+                                userId = parsed2;
+                                console.log("[InboxInvoice] userId sessionStorage'dan okundu:", userId);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("[InboxInvoice] CurrentUserId sessionStorage'dan okunamadı:", e);
+                    }
+                }
+
+                if (!userId) {
+                    throw new Error("Kullanıcı Id (userId) bulunamadı. Lütfen oturumu kontrol edin.");
+                }
+
+                return userId;
             }
-            function updateFooters(t){
-                if(t){
-                    $('#totalKDVTaxableAmount').text(fmtMoney(num(t.totalKdvTaxable),2,",",".")+" TL");
-                    $('#totalKDVAmount').text(fmtMoney(num(t.totalKdv),2,",",".")+" TL");
-                    $('#totalPayableAmount').text(fmtMoney(num(t.totalPayable),2,",",".")+" TL");
+
+            // ---------- ASIL INIT FONKSİYONU ----------
+            function initInboxInvoice() {
+                // jQuery yüklü mü kontrol et
+                if (!window.jQuery) {
+                    console.error("[InboxInvoice] jQuery (window.jQuery) bulunamadı. Script çalışmayacak.");
                     return;
                 }
-                var kdv=0,pay=0,mat=0;
-                table.rows({page:'current'}).every(function(){
-                    var d=this.data();
-                    kdv += num(d.KdvAmount||d.kdv||d.KDV);
-                    pay += num(d.PayableAmount||d.payable||d.OdenecekTutar);
-                    mat += num(d.KdvTaxable||d.kdvMatrah||d.KDVMatrah);
-                });
-                $('#totalKDVTaxableAmount').text(fmtMoney(mat,2,",",".")+" TL");
-                $('#totalKDVAmount').text(fmtMoney(kdv,2,",",".")+" TL");
-                $('#totalPayableAmount').text(fmtMoney(pay,2,",",".")+" TL");
-            }
-            function initTable(){
-                if($.fn.DataTable.isDataTable('#myDataTable')){ table.destroy(); $('#myDataTable tbody').empty(); }
-                table = $('#myDataTable').DataTable({
-                    processing:true, serverSide:true, deferRender:true,
-                    order:[[6,'desc']], // İşlem Tarihi
-                    pageLength:25,
-                    lengthMenu:[[25,50,75,100,250,500,1000],[25,50,75,100,250,500,"1.000"]],
-                    language:{ url:'//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
-                    ajax:{
-                        url:'/api/efatura/inbox/search',
-                        type:'POST',
-                        contentType:'application/json',
-                        data: function(d){ return JSON.stringify({ dt:d, filters: buildFilters() }); },
-                        dataSrc: function(res){ if(res && res.totals) updateFooters(res.totals); else updateFooters(null); return (res && res.data) ? res.data : []; },
-                        error: function(){ notifyErr('Liste alınamadı.'); }
-                    },
-                    columns:[
-                        { data:null, orderable:false, searchable:false,
-                          render:function(d,t,r){ return '<input type="checkbox" class="rowchk" data-id="'+(r.UUID||'')+'">'; } },
-                        { data:null, render:function(d){ return (d.DocumentId||'')+(d.UUID?'<br><small>'+d.UUID+'</small>':''); } },
-                        { data:null, render:function(d){ return d.SenderTitle||d.SourceTitle||d.TargetTitle||''; } },
-                        { data:null, render:function(d){ return d.SenderIdentifier||d.SourceIdentifier||d.TargetIdentifier||''; } },
-                        { data:null, render:function(d){ var it=d.InvoiceTypeCode||''; var pr=d.ProfileId||''; return it+(pr?('/'+pr):''); } },
-                        { data:'IssueDate', render:function(v){ return v?String(v).substr(0,10):''; } },
-                        { data:'CreatedDate', render:function(v){ return v?String(v).replace('T',' ').substr(0,16):''; } },
-                        { data:'KdvAmount', className:'text-right', render:function(v){ return fmtMoney(num(v),2,",","."); } },
-                        { data:'PayableAmount', className:'text-right', render:function(v){ return fmtMoney(num(v),2,",","."); } },
-                        { data:'IsAccount', className:'text-center', render:function(v){ return v==='YES'?'Evet':'Hayır'; } },
-                        { data:null, className:'text-center', render:function(d){ var s=d.Status||''; var a=d.ApplicationResponseCode||''; return s+(a?(' / '+a):''); } },
-                        { data:null, orderable:false, searchable:false, render:function(d){
-                            var uid=d.UUID||''; var doc=d.DocumentId||'';
-                            return ''+
-                             '<div class="btn-group btn-group-xs">'+
-                             '<button class="btn btn-info" title="Önizle" onclick="invoicePreview(\''+uid+'\')"><i class="fa fa-eye"></i></button>'+
-                             '<button class="btn btn-primary" title="Mail" onclick="invoiceSendMailModalCol([\\''+uid+'\\'], false)"><i class="fa fa-envelope"></i></button>'+
-                             '<button class="btn btn-warning" title="Cevapla (Kabul/Red)" onclick="openCevaplaModal(\''+uid+'\')"><i class="fa fa-reply"></i></button>'+
-                             '<button class="btn btn-danger" title="GİB İptal/İtiraz işareti" onclick="openGibCancel(\''+doc+'\', \''+uid+'\')"><i class="fa fa-times"></i></button>'+
-                             '</div>';
-                        } }
-                    ],
-                    drawCallback:function(){ $('#chkAll').prop('checked', false); }
-                });
 
-                // header select all
-                $('#myDataTable').on('change','#chkAll',function(){ var c=$(this).is(':checked'); $('#myDataTable .rowchk').prop('checked', c); });
-            }
-            initTable();
+                var $ = window.jQuery;
 
-            // ===== Arama / Temizle =====
-            window.gridSearch = function(){ if(table){ table.ajax.reload(); } };
-            window.clearSearchInputs = function(){
-                $('#IsArchive,#ApplicationResponseCode,#ProfileId,#InvoiceTypeCode,#CurrencyCode,#IsCancelled,#IsPrinted,#Status,#IsAccount,#IsPaid,#PostaKutusuEtiketi').val('');
-                $('#IssueDateStart,#IssueDateStartEnd,#CreatedDateStart,#CreatedDateEnd').val('');
-                $('#DocumentId,#UUID,#TargetIdentifier,#TargetTitle').val('');
-                $('#TargetIdentifierChk').prop('checked',false); vknAyracChk();
-                $('#IntegrationMonth').val('-1'); yearChange();
-                if($.fn.select2){ $('#CurrencyCode').trigger('change'); }
-                gridSearch();
-            };
-            // Enter ile arama
-            $('#btnAramaYapEnter').on('keypress','input',function(e){ if(e.which===13){ e.preventDefault(); gridSearch(); } });
-
-            // ===== Seçim =====
-            function getSelectedUUIDs(){
-                var ids=[]; $('#myDataTable .rowchk:checked').each(function(){ ids.push($(this).data('id')); }); return ids;
-            }
-
-            // ===== Toplu İşlemler (Inbox) =====
-            window.invoiceTopluArsivIslem = function(val){
-                var uuids = getSelectedUUIDs(); if(!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
-                $.ajax({ url:'/api/efatura/inbox/archive', method:'POST', contentType:'application/json', data: JSON.stringify({ uuids:uuids, value: !!val }) })
-                 .done(function(){ notifyOk('Arşiv durumu güncellendi.'); gridSearch(); })
-                 .fail(function(xhr){ notifyErr('Hata: '+(xhr.responseText||'')); });
-            };
-            window.invoiceTopluOkunduIslem = function(val){
-                var uuids = getSelectedUUIDs(); if(!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
-                $.ajax({ url:'/api/efatura/inbox/read', method:'POST', contentType:'application/json', data: JSON.stringify({ uuids:uuids, value: !!val }) })
-                 .done(function(){ notifyOk('Okunma durumu güncellendi.'); gridSearch(); })
-                 .fail(function(xhr){ notifyErr('Hata: '+(xhr.responseText||'')); });
-            };
-            window.invoiceTopluOdendiIslem = function(val){
-                var uuids = getSelectedUUIDs(); if(!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
-                $.ajax({ url:'/api/efatura/inbox/paid', method:'POST', contentType:'application/json', data: JSON.stringify({ uuids:uuids, value: !!val }) })
-                 .done(function(){ notifyOk('Ödeme durumu güncellendi.'); gridSearch(); })
-                 .fail(function(xhr){ notifyErr('Hata: '+(xhr.responseText||'')); });
-            };
-
-            // ===== Önizleme / İndirme / Yazdırma =====
-            window.invoicePreview = function(uuid){ window.open('/api/efatura/inbox/preview?uuid='+encodeURIComponent(uuid),'_blank'); };
-            window.getInvoiceTopluPrint = function(){
-                var uuids=getSelectedUUIDs(); if(!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
-                window.open('/api/efatura/inbox/print?uuids='+encodeURIComponent(uuids.join(',')),'_blank');
-            };
-            window.getDownloadFileAll = function(type){
-                var uuids=getSelectedUUIDs(); if(!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
-                window.open('/api/efatura/inbox/download?type='+encodeURIComponent(type)+'&uuids='+encodeURIComponent(uuids.join(',')),'_blank');
-            };
-
-            // ===== Mail =====
-            function checkMailRequired(dto){
-                if(!dto.ReceiverMail || !dto.Title || !dto.ReceiverFirstnameLastname){ notifyErr('E-posta, konu ve alıcı adı zorunlu.'); return false; }
-                if(!dto.AttachXml && !dto.AttachPdf){ notifyErr('En az bir ek (XML/PDF) seçmelisiniz.'); return false; }
-                return true;
-            }
-            window.invoiceSendMailModalCol = function(uuids, fromBulk){
-                if(fromBulk){ uuids = getSelectedUUIDs(); if(!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.'); }
-                $('#modal-mail').data('uuids', uuids||[]).modal('show');
-            };
-            window.checkChecked = function(which){
-                var on = $('#sendXml').is(':checked') || $('#sendPdf').is(':checked');
-                $('#sendMailBtn').prop('disabled', !on);
-            };
-            window.sendMailDocument = function(){
-                var uuids = $('#modal-mail').data('uuids') || [];
-                if(!uuids.length){ return notifyErr('Lütfen en az bir kayıt seçin.'); }
-                var dto = {
-                    Uuids: uuids,
-                    ReceiverMail: $('#ReceiverMail').val(),
-                    Title: $('#Title').val(),
-                    ReceiverFirstnameLastname: $('#ReceiverFirstnameLastname').val(),
-                    AttachXml: $('#sendXml').is(':checked'),
-                    AttachPdf: $('#sendPdf').is(':checked')
-                };
-                if(!checkMailRequired(dto)) return;
-                $.ajax({ url:'/api/efatura/inbox/send-mail', method:'POST', contentType:'application/json', data: JSON.stringify(dto) })
-                 .done(function(){ notifyOk('E-posta gönderildi.'); $('#modal-mail').modal('hide'); })
-                 .fail(function(xhr){ notifyErr('E-posta gönderilemedi: '+(xhr.responseText||'')); });
-            };
-
-            // ===== Excel Aktarım =====
-            window.invoiceExcelAktarModal = function(all){
-                $('#modal-exceleaktar').data('all', !!all).modal('show');
-            };
-            window.excelaktar = function(){
-                var all = $('#modal-exceleaktar').data('all');
-                var uuids = all ? [] : getSelectedUUIDs();
-                if(!all && !uuids.length){ return notifyErr('Lütfen en az bir kayıt seçin.'); }
-                var dto = {
-                    All: !!all, Uuids: uuids,
-                    IssueStart: toApiDate($('#faturaBaslangicTarihi').val()),
-                    IssueEnd: toApiDate($('#faturaBitisTarihi').val()),
-                    ProcStart: toApiDate($('#faturaIslemeBaslamaTarihi').val()),
-                    ProcEnd: toApiDate($('#faturaIslemBitisTarihi').val()),
-                    IsArchive: $('#isArchive').val(),
-                    ReceiverIdentifier: $('#receiverIdentifier').val(),
-                    ReceiverTitle: $('#receiverTitle').val(),
-                    IsCancel: $('#isCancel').val(),
-                    Year: $('#IntegrationYearExcel').val(),
-                    SumKdv: $('#sumKdv').val()
-                };
-                $.ajax({ url:'/api/efatura/inbox/export-excel', method:'POST', contentType:'application/json', data: JSON.stringify(dto) })
-                 .done(function(resp){ notifyOk('Excel hazırlanıyor/indirildi.'); if(resp && resp.fileUrl){ window.location=resp.fileUrl; } $('#modal-exceleaktar').modal('hide'); })
-                 .fail(function(xhr){ notifyErr('Excel aktarım hatası: '+(xhr.responseText||'')); });
-            };
-
-            // ===== GİB İptal/İtiraz İşareti =====
-            window.openGibCancel = function(docNo, uuid){
-                $('#modalGibIptal').text(docNo||'');
-                function setBtns(){ var ok=$('#uyariyiOkudumGibIptalchk').is(':checked'); $('#iptalEtGibBtn,#iptalKaldirGibBtn').prop('disabled', !ok); }
-                $('#uyariyiOkudumGibIptalchk').off('change').on('change', setBtns); setBtns();
-                // butonlar
-                $('#iptalEtGibBtn').off('click').on('click', function(){ invoiceCancelGibSend(1, uuid); });
-                $('#iptalKaldirGibBtn').off('click').on('click', function(){ invoiceCancelGibSend(0, uuid); });
-                $('#modal-cancel').modal('show');
-            };
-            window.invoiceCancelGibSend = function(val, uuid){
-                $.ajax({ url:'/api/efatura/inbox/gib-cancel-flag', method:'POST', contentType:'application/json', data: JSON.stringify({ UUID: uuid, Value: !!val }) })
-                 .done(function(){ notifyOk('GİB iptal/itiraz işareti güncellendi.'); $('#modal-cancel').modal('hide'); gridSearch(); })
-                 .fail(function(xhr){ notifyErr('İşlem başarısız: '+(xhr.responseText||'')); });
-            };
-
-            // ===== Cevapla (Kabul/Red) =====
-            window.openCevaplaModal = function(uuid){
-                $('#modal-cevapla').data('uuid', uuid).modal('show');
-            };
-            window.sendApplicationResponse = function(){
-                var uuid = $('#modal-cevapla').data('uuid');
-                if(!uuid) return notifyErr('Kayıt seçilemedi.');
-                var dto = {
-                    UUID: uuid,
-                    ReceiverAlias: $('#AliciBirimEtiketi_').val(),
-                    SourceAlias: $('#SourceAlias_').val(),
-                    ResponseCode: $('#kabulRed').val(),
-                    ResponseDescription: $('#ResponseDescription').val()
-                };
-                if(!dto.ReceiverAlias || !dto.SourceAlias || !dto.ResponseCode) return notifyErr('Zorunlu alanları doldurunuz.');
-                $.ajax({ url:'/api/efatura/inbox/app-response', method:'POST', contentType:'application/json', data: JSON.stringify(dto) })
-                 .done(function(){ notifyOk('Uygulama yanıtı gönderildi.'); $('#modal-cevapla').modal('hide'); gridSearch(); })
-                 .fail(function(xhr){ notifyErr('Yanıt gönderilemedi: '+(xhr.responseText||'')); });
-            };
-
-            // ===== Doğrudan İade =====
-            // IadeFaturaTarihi bugün değilse set edelim
-            if(!$('#IadeFaturaTarihi').val()){
-                var dt = new Date(), y=dt.getFullYear(), m=('0'+(dt.getMonth()+1)).slice(-2), d=('0'+dt.getDate()).slice(-2);
-                $('#IadeFaturaTarihi').val(y+'-'+m+'-'+d);
-            }
-            window.sendInvoiceDogrudanIade = function(){
-                var dto = {
-                    UUID: $('#IadeFormUUID').val(),
-                    BranchCode: $('#SubeKodu').val(),
-                    SenderAlias: $('#GondericiBirimEtiketi').val(),
-                    ReceiverAlias: $('#AliciBirimEtiketi').val(),
-                    Xslt: $('#Xslt').val(),
-                    Prefix: $('#FaturaOnek').val(),
-                    IssueDate: $('#IadeFaturaTarihi').val(), // yyyy-MM-dd
-                    Note: $('#note').val()
-                };
-                if(!dto.BranchCode || !dto.SenderAlias || !dto.ReceiverAlias || !dto.Xslt || !dto.Prefix || !dto.IssueDate){
-                    return notifyErr('Zorunlu alanları doldurunuz.');
+                // Yıl/Ay ilk ayar
+                function yearChange() {
+                    var now = new Date(),
+                        selY = +$("#IntegrationYear").val();
+                    if (selY === now.getFullYear()) {
+                        $("#IntegrationMonth").val(String(now.getMonth() + 1));
+                    } else {
+                        $("#IntegrationMonth").val("-1");
+                    }
                 }
-                $.ajax({ url:'/api/efatura/inbox/direct-refund', method:'POST', contentType:'application/json', data: JSON.stringify(dto) })
-                 .done(function(){ notifyOk('İade süreci başlatıldı.'); $('#modal-dogrudanIade').modal('hide'); gridSearch(); })
-                 .fail(function(xhr){ notifyErr('İade oluşturulamadı: '+(xhr.responseText||'')); });
-            };
+                $("#IntegrationYear").on("change", yearChange);
+                yearChange();
 
-            // ===== Diğer stublar =====
-            window.sendLucaToplu = function(){ var uuids=getSelectedUUIDs(); if(!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.'); notifyOk('Luca aktarım isteği gönderildi ('+uuids.length+' kayıt).'); };
-            window.muhasebeyeTopluAktar = function(){ $('#muhasebeFisiModal').modal('show'); };
+                // Fatura tarihlerini varsayılan doldur (ayın 1'i - bugün)
+                (function initDefaultIssueDates() {
+                    var now = new Date();
+                    var y = now.getFullYear();
+                    var m = ("0" + (now.getMonth() + 1)).slice(-2);
+                    var dNow = ("0" + now.getDate()).slice(-2);
+                    $("#IssueDateStart").val(y + "-" + m + "-01T00:00");
+                    $("#IssueDateStartEnd").val(y + "-" + m + "-" + dNow + "T23:59");
+                })();
 
+                // Çoklu VKN/TCKN kutucuğu
+                window.vknAyracChk = function () {
+                    var multi = $("#TargetIdentifierChk").is(":checked");
+                    var $inp = $("#TargetIdentifier");
+                    $inp.val("");
+                    if (multi) {
+                        $inp.attr("maxlength", "400").attr("placeholder", "111...,222...,333...");
+                    } else {
+                        $inp.attr("maxlength", "11").attr("placeholder", "11 hane");
+                    }
+                };
+
+                // Detaylı arama ikon toggle
+                $("#btnDetayliArama").on("click", function () {
+                    var $i = $(this).find(".myCollapseIcon");
+                    setTimeout(function () { $i.toggleClass("fa-plus fa-minus"); }, 150);
+                });
+
+                // GİB userId
+                var gibUserId = 0;
+                try {
+                    gibUserId = getCurrentUserIdForGib($);
+                } catch (e) {
+                    console.error(e);
+                    gibUserId = 0;
+                }
+
+                // Base URL
+                var baseUrl = window.gibPortalApiBaseUrl || "/api/";
+                if (!baseUrl.endsWith("/")) baseUrl += "/";
+                var normBase = baseUrl; // örn: https://localhost:7151/api/
+
+                // API endpoint URL builder
+                // GET /api/TurkcellEFatura/einvoice/inbox/list?start=...&end=...&userId=...&pageIndex=1&pageSize=100&isNew=true
+                function buildInboxListUrl() {
+                    var params = {
+                        pageIndex: 1,
+                        pageSize: 100,
+                        isNew: true
+                    };
+
+                    if (gibUserId) {
+                        params.userId = gibUserId;
+                    }
+
+                    var issueStartRaw = $("#IssueDateStart").val();
+                    var issueEndRaw = $("#IssueDateStartEnd").val();
+                    var startStr = normalizeHtmlDateTime(issueStartRaw, false);
+                    var endStr = normalizeHtmlDateTime(issueEndRaw, true);
+
+                    if (startStr) params.start = startStr;
+                    if (endStr) params.end = endStr;
+
+                    var qsParts = [];
+                    for (var k in params) {
+                        if (!params.hasOwnProperty(k)) continue;
+                        var val = params[k];
+                        if (val === undefined || val === null || val === "") continue;
+                        qsParts.push(encodeURIComponent(k) + "=" + encodeURIComponent(String(val)));
+                    }
+
+                    var url = normBase + "TurkcellEFatura/einvoice/inbox/list";
+                    if (qsParts.length) {
+                        url += "?" + qsParts.join("&");
+                    }
+                    return url;
+                }
+
+                // Gelen items listesini tabloya bas
+                function renderTableRows(items) {
+                    var $tbody = $("#myDataTable tbody");
+                    $tbody.empty();
+
+                    var kdvToplam = 0;
+                    var odemeToplam = 0;
+                    var matrahToplam = 0; // matrah bilgisi yok
+
+                    (items || []).forEach(function (row) {
+                        row = row || {};
+                        var key = row.id || row.envelopeId || row.invoiceNumber || "";
+
+                        var no = row.invoiceNumber || "";
+                        var ettn = row.envelopeId || row.id || "";
+                        var firma = row.targetTitle || "";
+                        var vkn = row.targetVknTckn || "";
+                        var tip = row.tipType || "";
+                        var type = row.type || "";
+                        var faturaTip = tip + (type ? " / " + type : "");
+
+                        var faturaTarihi = row.executionDate ? String(row.executionDate).substring(0, 10) : "";
+                        var islemTarihi = row.createdDate
+                            ? String(row.createdDate).replace("T", " ").substring(0, 16)
+                            : "";
+
+                        var total = num(row.totalAmount);
+                        var payable = num(row.payableAmount);
+                        var kdv = total - payable;
+                        if (kdv < 0) kdv = 0;
+
+                        kdvToplam += kdv;
+                        odemeToplam += payable;
+
+                        var muhasebe;
+                        if (row.isAccount === true || row.isAccount === "YES") muhasebe = "Evet";
+                        else if (row.isAccount === false || row.isAccount === "NO") muhasebe = "Hayır";
+                        else muhasebe = "-";
+
+                        var durum = (row.status || "");
+                        if (row.envelope && row.envelope.status) {
+                            durum += (durum ? " / " : "") + row.envelope.status;
+                        }
+
+                        var trHtml =
+                            "<tr>" +
+                            '<td><input type="checkbox" class="rowchk" data-id="' + key + '"></td>' +
+                            "<td>" + no + (ettn ? "<br><small>" + ettn + "</small>" : "") + "</td>" +
+                            "<td>" + (firma || "") + "</td>" +
+                            "<td>" + (vkn || "") + "</td>" +
+                            "<td>" + (faturaTip || "") + "</td>" +
+                            "<td>" + (faturaTarihi || "") + "</td>" +
+                            "<td>" + (islemTarihi || "") + "</td>" +
+                            '<td class="text-right">' + fmtMoney(kdv, 2, ",", ".") + "</td>" +
+                            '<td class="text-right">' + fmtMoney(payable, 2, ",", ".") + "</td>" +
+                            '<td class="text-center">' + muhasebe + "</td>" +
+                            '<td class="text-center">' + (durum || "") + "</td>" +
+                            '<td class="text-center">' +
+                            '<div class="btn-group btn-group-xs">' +
+                            '<button type="button" class="btn btn-info" title="Detay" onclick="console.log(\'Detay\', \'' + key + '\')">' +
+                            '<i class="fa fa-eye"></i>' +
+                            "</button>" +
+                            "</div>" +
+                            "</td>" +
+                            "</tr>";
+
+                        $tbody.append(trHtml);
+                    });
+
+                    $("#totalKDVTaxableAmount").text(fmtMoney(matrahToplam, 2, ",", ".") + " TL");
+                    $("#totalKDVAmount").text(fmtMoney(kdvToplam, 2, ",", ".") + " TL");
+                    $("#totalPayableAmount").text(fmtMoney(odemeToplam, 2, ",", ".") + " TL");
+
+                    $("#chkAll").prop("checked", false);
+                }
+
+                // Tümünü seç checkbox
+                $("#chkAll").on("change", function () {
+                    var c = $(this).is(":checked");
+                    $("#myDataTable .rowchk").prop("checked", c);
+                });
+
+                // ---- ASIL: Arama Yap butonunun çağırdığı fonksiyon ----
+                window.gridSearch = function () {
+                    var url = buildInboxListUrl();
+                    console.log("[InboxInvoice] İstek:", url);
+
+                    $.ajax({
+                        url: url,
+                        method: "GET",
+                        dataType: "json"
+                    })
+                        .done(function (json) {
+                            var items = (json && json.items) ? json.items : [];
+                            if (items && !Array.isArray(items)) {
+                                items = [items];
+                            }
+                            items = items || [];
+                            renderTableRows(items);
+                        })
+                        .fail(function (xhr, status, err) {
+                            console.error("Inbox list hatası:", status, err, xhr);
+                            notifyErr("Gelen faturalar alınamadı.");
+                            renderTableRows([]);
+                        });
+                };
+
+                window.clearSearchInputs = function () {
+                    $("#IsArchive,#ApplicationResponseCode,#ProfileId,#InvoiceTypeCode,#CurrencyCode,#IsCancelled,#IsPrinted,#Status,#IsAccount,#IsPaid,#PostaKutusuEtiketi").val("");
+                    $("#DocumentId,#UUID,#TargetIdentifier,#TargetTitle").val("");
+                    $("#TargetIdentifierChk").prop("checked", false);
+                    window.vknAyracChk();
+
+                    // Fatura tarihlerini reset
+                    var now = new Date();
+                    var y = now.getFullYear();
+                    var m = ("0" + (now.getMonth() + 1)).slice(-2);
+                    var dNow = ("0" + now.getDate()).slice(-2);
+                    $("#IssueDateStart").val(y + "-" + m + "-01T00:00");
+                    $("#IssueDateStartEnd").val(y + "-" + m + "-" + dNow + "T23:59");
+
+                    $("#CreatedDateStart,#CreatedDateEnd").val("");
+                    $("#IntegrationMonth").val("-1");
+                    yearChange();
+
+                    gridSearch();
+                };
+
+                // Enter ile arama
+                $("#btnAramaYapEnter").on("keypress", "input", function (e) {
+                    if (e.which === 13) {
+                        e.preventDefault();
+                        gridSearch();
+                    }
+                });
+
+                // Seçilen satır anahtarları
+                function getSelectedUUIDs() {
+                    var ids = [];
+                    $("#myDataTable .rowchk:checked").each(function () {
+                        ids.push($(this).data("id"));
+                    });
+                    return ids;
+                }
+
+                // Toplu işlem stub'ları (onclick'ler boşa düşmesin diye)
+                window.invoiceTopluArsivIslem = function (val) {
+                    var uuids = getSelectedUUIDs();
+                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
+                    console.log("Toplu Arşiv (stub):", val, uuids);
+                };
+
+                window.invoiceTopluOkunduIslem = function (val) {
+                    var uuids = getSelectedUUIDs();
+                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
+                    console.log("Toplu Okundu (stub):", val, uuids);
+                };
+
+                window.invoiceTopluOdendiIslem = function (val) {
+                    var uuids = getSelectedUUIDs();
+                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
+                    console.log("Toplu Ödendi (stub):", val, uuids);
+                };
+
+                window.invoicePreview = function (uuid) {
+                    console.log("Önizleme (stub):", uuid);
+                };
+
+                window.getInvoiceTopluPrint = function () {
+                    var uuids = getSelectedUUIDs();
+                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
+                    console.log("Toplu Yazdır (stub):", uuids);
+                };
+
+                window.getDownloadFileAll = function (type) {
+                    var uuids = getSelectedUUIDs();
+                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
+                    console.log("Toplu Download (stub):", type, uuids);
+                };
+
+                window.invoiceSendMailModalCol = function (uuids, fromBulk) {
+                    if (fromBulk) {
+                        uuids = getSelectedUUIDs();
+                        if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
+                    }
+                    console.log("Mail Modal (stub):", uuids);
+                };
+
+                window.invoiceExcelAktarModal = function (all) {
+                    console.log("Excel Aktar (stub):", all);
+                };
+
+                window.sendLucaToplu = function () {
+                    var uuids = getSelectedUUIDs();
+                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
+                    console.log("Luca Toplu (stub):", uuids);
+                };
+
+                window.muhasebeyeTopluAktar = function () {
+                    console.log("Muhasebeye Toplu Aktar (stub)");
+                };
+
+                window.openGibCancel = function (docNo, uuid) {
+                    console.log("GİB Cancel (stub):", docNo, uuid);
+                };
+
+                window.invoiceCancelGibSend = function (val, uuid) {
+                    console.log("GİB Cancel Gönder (stub):", val, uuid);
+                };
+
+                window.openCevaplaModal = function (uuid) {
+                    console.log("Cevapla Modal (stub):", uuid);
+                };
+
+                window.sendApplicationResponse = function () {
+                    console.log("Uygulama Yanıtı Gönder (stub)");
+                };
+
+                window.sendInvoiceDogrudanIade = function () {
+                    console.log("Doğrudan İade (stub)");
+                };
+
+                // Sayfa açılınca ilk liste
+                window.gridSearch();
+            }
+
+            // ---------- jQuery + DOM hazır olunca initInboxInvoice çağır ----------
+            function onReady() {
+                try {
+                    initInboxInvoice();
+                } catch (e) {
+                    console.error("[InboxInvoice] initInboxInvoice hata:", e);
+                }
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", onReady);
+            } else {
+                onReady();
+            }
         })();
     </script>
+
+
 </section>

@@ -76,7 +76,7 @@ namespace TurkSoft.Service.Interface
         #endregion
 
         #region e-Fatura Outbox
-        Task<HttpResult<object>> SendEInvoiceJsonAsync(Invoice inv, bool isExport = false, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
+        Task<HttpResult<object>> SendEInvoiceJsonAsync(Invoice inv, bool isExport = false, bool consumeKontor = true, string? kontorVkn = null, string? targetAlias = null, CancellationToken ct = default);
 
         Task<HttpResult<object>> SendEInvoiceUblAsync(Stream fileStream, string fileName,
             int appType, int status, bool useManualInvoiceId,

@@ -217,8 +217,8 @@ async function triggerMukellefRefreshOnServer(userId) {
         const url = '/Login/RefreshMukellef?userId=' + encodeURIComponent(userId);
         console.log('[Login] Mükellef yenileme isteği gönderiliyor:', url);
 
-        // Controller büyük ZIP işini Task.Run ile arkada yapıyor,
-        // biz sadece isteğin başarılı dönmesini bekliyoruz.
+         //Controller büyük ZIP işini Task.Run ile arkada yapıyor,
+         //biz sadece isteğin başarılı dönmesini bekliyoruz.
         const resp = await fetch(url, {
             method: 'GET',
             headers: { 'Accept': 'application/json' }
@@ -296,7 +296,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const currentUserId = getUserIdFlexible(signedUser);
 
             console.log('Login sonrası userId:', currentUserId, 'user:', signedUser);
-
+            if (currentUserId) {
+                try {
+                    sessionStorage.setItem('CurrentUserId', String(currentUserId));
+                    sessionStorage.setItem('currentUserId', String(currentUserId));
+                    console.log('[Login] CurrentUserId sessionStorage\'a yazıldı:', currentUserId);
+                } catch (e) {
+                    console.warn('[Login] CurrentUserId sessionStorage\'a yazılamadı:', e);
+                }
+            }
             if (typeof window !== 'undefined' && currentUserId) {
                 window.currentUserId = currentUserId;
             }
@@ -319,7 +327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             storeFirmaToSession(res, byFirma);
 
             // 5) Mükellef yenileme isteğini backend'e at (arka planda)
-            await triggerMukellefRefreshOnServer(currentUserId);
+            //await triggerMukellefRefreshOnServer(currentUserId);
 
             // 6) Son e-posta'yı sakla
             try { sessionStorage.setItem('lastLoginEmail', email); } catch { }
@@ -352,7 +360,16 @@ function storeFirmaToSession(result, firmaList) {
         console.warn('storeFirmaToSession: userId alınamadı. user:', user);
         return;
     }
-
+    // 🔹 Kullanıcı Id'sini sessionStorage'a yaz (diğer sayfalarda kullanmak için)
+    if (currentUserId) {
+        try {
+            sessionStorage.setItem('CurrentUserId', String(currentUserId));
+            sessionStorage.setItem('currentUserId', String(currentUserId));
+            console.log('[Login] CurrentUserId sessionStorage\'a yazıldı:', currentUserId);
+        } catch (e) {
+            console.warn('[Login] CurrentUserId sessionStorage\'a yazılamadı:', e);
+        }
+    }
     const firma = Array.isArray(firmaList)
         ? firmaList.find(f => {
             const fid =

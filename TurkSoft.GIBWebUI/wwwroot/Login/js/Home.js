@@ -178,12 +178,13 @@ async function searchMukellefOnServer(query, page, pageSize) {
 
 // ============================================
 //  Fatura Oluştur modalı için Mükellef arama
-//  (SearchMukellef ile datalist doldurur)
+//  (artık sadece VKN/TCKN ile çalışıyor)
 // ============================================
 
 // Aynı anda birden fazla istek olursa, en son isteğin sonucu kullanılsın diye
 var _mukellefDatalistRequestId = 0;
 
+// İstersen ileride tekrar text arama için kullanırsın, şu an modalda otomatik çağırmıyoruz
 async function fillMusteriCariDatalistFromServer(filterText) {
     var dataList = document.getElementById('MusteriCariList');
     if (!dataList) {
@@ -242,57 +243,96 @@ async function fillMusteriCariDatalistFromServer(filterText) {
 }
 
 /**
- * Seçili mükellefi datalist'ten bulup sessionStorage'a yazar
- * ve yeni fatura sayfasına yönlendirir.
+ * Girilen Identifier'a göre E-Fatura / E-Arşiv'e yönlendirme
+ * - JSON'da varsa => E-Fatura, alias & title set
+ * - JSON'da yoksa => E-Arşiv, sadece identifier set
  */
-function openCreateInvoiceWithSelectedMukellef(e) {
+async function routeByIdentifier(identifierInput) {
+    var vkn = (identifierInput || '').replace(/\D/g, '').slice(0, 11);
+    if (vkn.length !== 10 && vkn.length !== 11) {
+        alert('Lütfen 10 veya 11 haneli VKN/TCKN giriniz.');
+        return;
+    }
+
+    try {
+        var url = '/Home/GetMukellefByIdentifier?identifier=' + encodeURIComponent(vkn);
+        console.log('[Mükellef] GetMukellefByIdentifier istek:', url);
+
+        var resp = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-cache'
+        });
+
+        if (!resp.ok) {
+            console.error('[Mükellef] GetMukellefByIdentifier hata:', resp.status, resp.statusText);
+            alert('Mükellef kontrolü sırasında bir hata oluştu.');
+            return;
+        }
+
+        var data = await resp.json();
+        console.log('[Mükellef] GetMukellefByIdentifier yanıt:', data);
+
+        if (data && data.found) {
+            var identifier = (data.Identifier || data.identifier || vkn || '').toString().trim();
+            var title = (data.Title || data.title || '').toString().trim();
+            var alias = (data.Alias || data.alias || '').toString().trim();
+
+            var payload = { Identifier: identifier, Title: title, Alias: alias };
+
+            try {
+                sessionStorage.setItem('SelectedMukellefForInvoice', JSON.stringify(payload));
+            } catch (e) {
+                console.error('SelectedMukellefForInvoice yazılamadı:', e);
+            }
+
+            console.log('[Mükellef] E-Fatura mükellefi bulundu, /EInvoice/CreateNewInvoice yönleniyor...');
+            window.location.href = '/EInvoice/CreateNewInvoice';
+            return;
+        }
+
+        // found:false => E-Arşiv
+        var eaPayload = { Identifier: vkn };
+        try {
+            sessionStorage.setItem('SelectedMukellefForEArchive', JSON.stringify(eaPayload));
+        } catch (e) {
+            console.error('SelectedMukellefForEArchive yazılamadı:', e);
+        }
+
+        console.log('[Mükellef] Mükellef listede yok, /EArchive/CreateNewEarchiveInvoice yönleniyor...');
+        window.location.href = '/EArchive/CreateNewEarchiveInvoice';
+    } catch (err) {
+        console.error('[Mükellef] routeByIdentifier exception:', err);
+        alert('Mükellef kontrolü sırasında bir hata oluştu.');
+    }
+}
+
+
+/**
+ * checkInput içindeki sayıya göre E-Fatura / E-Arşiv'e git
+ */
+async function openCreateInvoiceWithSelectedMukellef(e) {
     if (e && e.preventDefault) e.preventDefault();
 
     var input = document.getElementById('checkInput');
-    var dataList = document.getElementById('MusteriCariList');
-
-    if (!input || !dataList) {
-        alert('Mükellef arama alanı bulunamadı.');
+    if (!input) {
+        alert('VKN/TCKN alanı bulunamadı.');
         return;
     }
 
-    var inputVal = (input.value || '').trim();
-    if (!inputVal) {
-        alert('Lütfen VKN/TCKN veya Ünvan girerek bir mükellef seçiniz.');
+    // Sadece rakamları al, 11 haneye kadar
+    var digits = (input.value || '').replace(/\D/g, '').slice(0, 11);
+    input.value = digits;
+
+    if (digits.length !== 10 && digits.length !== 11) {
+        alert('Lütfen 10 veya 11 haneli VKN/TCKN giriniz.');
         return;
     }
 
-    var selected = null;
-    var options = dataList.options;
-    for (var i = 0; i < options.length; i++) {
-        if ((options[i].value || '').trim() === inputVal) {
-            selected = options[i];
-            break;
-        }
-    }
-
-    if (!selected) {
-        alert('Girilen değere uygun mükellef bulunamadı. Lütfen listeden birini seçiniz.');
-        return;
-    }
-
-    var payload = {
-        Identifier: selected.getAttribute('data-vkn') || '',
-        Title: selected.getAttribute('data-title') || '',
-        Alias: selected.getAttribute('data-alias') || ''
-    };
-
-    try {
-        sessionStorage.setItem('SelectedMukellefForInvoice', JSON.stringify(payload));
-        console.log('[Mükellef] SelectedMukellefForInvoice kaydedildi:', payload);
-    } catch (err) {
-        console.error('[Mükellef] SelectedMukellefForInvoice kaydedilemedi:', err);
-    }
-
-    window.location.href = '/EInvoice/CreateNewInvoice';
+    await routeByIdentifier(digits);
 }
 
-// Eski inline kullanım için global export (ihtiyaç olursa)
+// Eski inline kullanım için global export
 window.checkFatura = openCreateInvoiceWithSelectedMukellef;
 
 /* ============================================
@@ -437,11 +477,10 @@ function applyCreditFromSession() {
     });
 }
 
-
-
 // ============================================
 //  DOMContentLoaded
 // ============================================
+
 document.addEventListener('DOMContentLoaded', function () {
 
     // 0) İlk mükellef datası (isteğe bağlı preload)
@@ -587,8 +626,9 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // ============================================
-//  jQuery – global modallar + örnek arama
+//  jQuery – global modallar
 // ============================================
+
 $(function () {
     $('#createInvoice').on('click', function (e) {
         e.preventDefault();
@@ -602,25 +642,32 @@ $(function () {
 
     $('[data-toggle="tooltip"]').tooltip();
 
-    // Fatura Oluştur modalındaki VKN / Ünvan arama alanı
+    // Fatura Oluştur modalındaki VKN / TCKN alanı
     var $checkInput = $('#checkInput');
     if ($checkInput.length) {
-        // İlk odaklandığında boş term ile küçük bir listeyi doldur
-        $checkInput.on('focus', function () {
-            fillMusteriCariDatalistFromServer('');
-        });
-
-        // Yazdıkça SearchMukellef'e sorgu atan debounce
-        var searchTimeout = null;
+        // input sadece rakam, max 11 hane
         $checkInput.on('input', function (e) {
-            var val = e.target.value || '';
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function () {
-                fillMusteriCariDatalistFromServer(val);
-            }, 250);
+            var val = (e.target.value || '').replace(/\D/g, '');
+            if (val.length > 11) {
+                val = val.slice(0, 11);
+            }
+            e.target.value = val;
+
+            // 10 veya 11 hane olunca otomatik kontrol et
+            if (val.length === 10 || val.length === 11) {
+                // Aynı değere tekrar tekrar istek atmayalım
+                if (e.target.dataset.lastChecked === val) {
+                    return;
+                }
+                e.target.dataset.lastChecked = val;
+                routeByIdentifier(val);
+            } else {
+                // Uzunluk değiştiyse önceki kontrolü sıfırla
+                e.target.dataset.lastChecked = '';
+            }
         });
     }
 
-    // Fatura Oluştur butonu
+    // Fatura Oluştur butonu (yedek – kullanıcı isterse butona basarak da tetikleyebilir)
     $('#checkFatura, #btnCreateInvoiceFromModal').on('click', openCreateInvoiceWithSelectedMukellef);
 });
