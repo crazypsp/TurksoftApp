@@ -710,4 +710,176 @@ namespace TurkSoft.Data.GibData
             }
         }
     }
+
+    // ======================
+    // 🔹 YENİ: GİB Ayarlar ENTİTY CONFIG'LARI
+    // ======================
+    public class DbConnectionSettingConfiguration : BaseGibEntityConfig<DbConnectionSetting>
+    {
+        public override void Configure(EntityTypeBuilder<DbConnectionSetting> b)
+        {
+            b.ToTable("DbConnectionSetting");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name).HasMaxLength(128).IsRequired();
+            b.Property(x => x.Provider).HasMaxLength(64).IsRequired();
+            b.Property(x => x.Server).HasMaxLength(256).IsRequired();
+            b.Property(x => x.Database).HasMaxLength(256).IsRequired();
+            b.Property(x => x.UserName).HasMaxLength(128);
+            b.Property(x => x.Password).HasMaxLength(256);
+
+            // Aynı kullanıcı için aynı isimde tek aktif profil
+            b.HasIndex(x => new { x.UserId, x.Name })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
+
+    public class InvoiceDesignTemplateConfiguration : BaseGibEntityConfig<InvoiceDesignTemplate>
+    {
+        public override void Configure(EntityTypeBuilder<InvoiceDesignTemplate> b)
+        {
+            b.ToTable("InvoiceDesignTemplate");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name).HasMaxLength(128).IsRequired();
+            b.Property(x => x.TemplateType).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Content).IsRequired();
+
+            b.HasOne(x => x.DocumentType)
+             .WithMany()
+             .HasForeignKey(x => x.DocumentTypeId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Aynı kullanıcı için aynı isimde tek şablon
+            b.HasIndex(x => new { x.UserId, x.Name })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
+
+    public class EmailSettingConfiguration : BaseGibEntityConfig<EmailSetting>
+    {
+        public override void Configure(EntityTypeBuilder<EmailSetting> b)
+        {
+            b.ToTable("EmailSetting");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name).HasMaxLength(128).IsRequired();
+            b.Property(x => x.SmtpServer).HasMaxLength(256).IsRequired();
+            b.Property(x => x.UserName).HasMaxLength(128);
+            b.Property(x => x.Password).HasMaxLength(256);
+            b.Property(x => x.FromAddress).HasMaxLength(256).IsRequired();
+            b.Property(x => x.FromDisplayName).HasMaxLength(128);
+
+            // Aynı kullanıcı için aynı isimde tek profil
+            b.HasIndex(x => new { x.UserId, x.Name })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
+
+    public class InvoiceNumberSettingConfiguration : BaseGibEntityConfig<InvoiceNumberSetting>
+    {
+        public override void Configure(EntityTypeBuilder<InvoiceNumberSetting> b)
+        {
+            b.ToTable("InvoiceNumberSetting");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Prefix).HasMaxLength(32).IsRequired();
+
+            b.HasOne(x => x.DocumentType)
+             .WithMany()
+             .HasForeignKey(x => x.DocumentTypeId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(x => x.Warehouse)
+             .WithMany()
+             .HasForeignKey(x => x.WarehouseId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(x => x.ScopedUser)
+             .WithMany()
+             .HasForeignKey(x => x.ScopedUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Aynı kullanıcı için aynı (Depo, BelgeTipi, Yıl, Prefix, ScopedUser) kombinasyonu tekil
+            b.HasIndex(x => new { x.UserId, x.WarehouseId, x.DocumentTypeId, x.Year, x.Prefix, x.ScopedUserId })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
+
+    public class NotificationSettingConfiguration : BaseGibEntityConfig<NotificationSetting>
+    {
+        public override void Configure(EntityTypeBuilder<NotificationSetting> b)
+        {
+            b.ToTable("NotificationSetting");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name).HasMaxLength(128).IsRequired();
+            b.Property(x => x.EventKey).HasMaxLength(64).IsRequired();
+            b.Property(x => x.SubjectTemplate).HasMaxLength(256);
+
+            // Aynı kullanıcı için aynı EventKey tekil
+            b.HasIndex(x => new { x.UserId, x.EventKey })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
+
+    public class UserInvoiceInboxSettingConfiguration : BaseGibEntityConfig<UserInvoiceInboxSetting>
+    {
+        public override void Configure(EntityTypeBuilder<UserInvoiceInboxSetting> b)
+        {
+            b.ToTable("UserInvoiceInboxSetting");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.InboxAlias).HasMaxLength(256).IsRequired();
+            b.Property(x => x.VknTckn).HasMaxLength(20);
+            b.Property(x => x.InboxType).HasMaxLength(32).IsRequired();
+
+            // Aynı kullanıcı için aynı InboxAlias tekil
+            b.HasIndex(x => new { x.UserId, x.InboxAlias })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
+
+    public class ParameterSettingConfiguration : BaseGibEntityConfig<ParameterSetting>
+    {
+        public override void Configure(EntityTypeBuilder<ParameterSetting> b)
+        {
+            b.ToTable("ParameterSetting");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(128);
+            b.Property(x => x.DataType).HasMaxLength(32);
+            b.Property(x => x.Group).HasMaxLength(64);
+
+            // Aynı kullanıcı için aynı Code tekil
+            b.HasIndex(x => new { x.UserId, x.Code })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
+
+    public class UserVerificationDeviceConfiguration : BaseGibEntityConfig<UserVerificationDevice>
+    {
+        public override void Configure(EntityTypeBuilder<UserVerificationDevice> b)
+        {
+            b.ToTable("UserVerificationDevice");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.DeviceName).HasMaxLength(128).IsRequired();
+            b.Property(x => x.DeviceType).HasMaxLength(64).IsRequired();
+            b.Property(x => x.DeviceIdentifier).HasMaxLength(256).IsRequired();
+
+            // Aynı kullanıcı için aynı DeviceIdentifier tekil
+            b.HasIndex(x => new { x.UserId, x.DeviceIdentifier })
+             .IsUnique()
+             .HasFilter("[IsActive] = 1");
+        }
+    }
 }

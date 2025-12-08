@@ -145,6 +145,15 @@ namespace TurkSoft.Service.Interface.Gib
     /// <summary> GibInvoiceOperationLog varlığı için GIB servis sözleşmesi. </summary>
     public partial interface IGibGibInvoiceOperationLogService : IEntityGibService<GibInvoiceOperationLog, long> { }
 
+    public partial interface IGibInvoiceDesignTemplateService : IEntityGibService<InvoiceDesignTemplate, long> { }
+    public partial interface IGibDbConnectionSettingService : IEntityGibService<DbConnectionSetting, long> { }
+    public partial interface IGibEmailSettingService : IEntityGibService<EmailSetting, long> { }
+    public partial interface IGibInvoiceNumberSettingService : IEntityGibService<InvoiceNumberSetting, long> { }
+    public partial interface IGibNotificationSettingService : IEntityGibService<NotificationSetting, long> { }
+    public partial interface IGibParameterSettingService : IEntityGibService<ParameterSetting, long> { }
+    public partial interface IGibUserInvoiceInboxSettingService : IEntityGibService<UserInvoiceInboxSetting, long> { }
+    public partial interface IGibUserVerificationDeviceService : IEntityGibService<UserVerificationDevice, long> { }
+
 }
 
 namespace TurkSoft.Service.Manager.Gib
@@ -825,4 +834,85 @@ namespace TurkSoft.Service.Manager.Gib
 
         partial void OnConstructed();
     }
+
+    public partial class GibDbConnectionSettingManager : EntityGibManager<DbConnectionSetting, long>, IGibDbConnectionSettingService
+    {
+        public GibDbConnectionSettingManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibEmailSettingManager : EntityGibManager<EmailSetting, long>, IGibEmailSettingService
+    {
+        public GibEmailSettingManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibInvoiceDesignTemplateManager : EntityGibManager<InvoiceDesignTemplate, long>, IGibInvoiceDesignTemplateService
+    {
+        public GibInvoiceDesignTemplateManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibInvoiceNumberSettingManager : EntityGibManager<InvoiceNumberSetting, long>, IGibInvoiceNumberSettingService
+    {
+        public GibInvoiceNumberSettingManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibNotificationSettingManager : EntityGibManager<NotificationSetting, long>, IGibNotificationSettingService
+    {
+        public GibNotificationSettingManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibParameterSettingManager : EntityGibManager<ParameterSetting, long>, IGibParameterSettingService
+    {
+        public GibParameterSettingManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibUserInvoiceInboxSettingManager : EntityGibManager<UserInvoiceInboxSetting, long>, IGibUserInvoiceInboxSettingService
+    {
+        public GibUserInvoiceInboxSettingManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
+    public partial class GibUserVerificationDeviceManager : EntityGibManager<UserVerificationDevice, long>, IGibUserVerificationDeviceService
+    {
+        public GibUserVerificationDeviceManager(GibAppDbContext db) : base(db)
+        {
+            OnConstructed();
+        }
+
+        partial void OnConstructed();
+    }
+
 }

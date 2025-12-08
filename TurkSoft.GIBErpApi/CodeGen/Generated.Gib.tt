@@ -27,7 +27,9 @@ namespace TurkSoft.GibErpApi.Controllers
     "Setting","Sgk","Stock","StockMovement","Supplier","Tax","Tourist","Unit","User","UserAnnouncementRead","UserRole",
     "Users","Warehouse",
     // 🔹 Eksik olanlar eklendi
-    "GibFirm","GibInvoiceScenario","GibInvoiceType","GibUserCreditAccount","GibUserCreditTransaction","GibInvoiceOperationLog"
+    "GibFirm","GibInvoiceScenario","GibInvoiceType","GibUserCreditAccount","GibUserCreditTransaction","GibInvoiceOperationLog",
+    "DbConnectionSetting","EmailSetting","InvoiceDesignTemplate","InvoiceNumberSetting","NotificationSetting","ParameterSetting",
+    "UserInvoiceInboxSetting","UserVerificationDevice"
     };
     foreach (var e in gib) {
 #>

@@ -6,6 +6,7 @@
 // </auto-generated>
 
 using Microsoft.AspNetCore.Mvc;
+using TurkSoft.GibErpApi.Controllers;        // GibCrudController
 using TurkSoft.Entities.GIBEntityDB;                // GIB entities
 using TurkSoft.Service.Interface.Gib;
 using TurkSoft.GIBErpApi.Controllers.Common;               // IGib{Entity}Service
@@ -568,6 +569,78 @@ namespace TurkSoft.GibErpApi.Controllers
     public partial class GibGibInvoiceOperationLogController : GibCrudController<GibInvoiceOperationLog, IGibGibInvoiceOperationLogService>
     {
         public GibGibInvoiceOperationLogController(IGibGibInvoiceOperationLogService service) : base(service) { }
+    }
+
+    /// <summary>GIB DbConnectionSetting CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibDbConnectionSettingController : GibCrudController<DbConnectionSetting, IGibDbConnectionSettingService>
+    {
+        public GibDbConnectionSettingController(IGibDbConnectionSettingService service) : base(service) { }
+    }
+
+    /// <summary>GIB EmailSetting CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibEmailSettingController : GibCrudController<EmailSetting, IGibEmailSettingService>
+    {
+        public GibEmailSettingController(IGibEmailSettingService service) : base(service) { }
+    }
+
+    /// <summary>GIB InvoiceDesignTemplate CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibInvoiceDesignTemplateController : GibCrudController<InvoiceDesignTemplate, IGibInvoiceDesignTemplateService>
+    {
+        public GibInvoiceDesignTemplateController(IGibInvoiceDesignTemplateService service) : base(service) { }
+    }
+
+    /// <summary>GIB InvoiceNumberSetting CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibInvoiceNumberSettingController : GibCrudController<InvoiceNumberSetting, IGibInvoiceNumberSettingService>
+    {
+        public GibInvoiceNumberSettingController(IGibInvoiceNumberSettingService service) : base(service) { }
+    }
+
+    /// <summary>GIB NotificationSetting CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibNotificationSettingController : GibCrudController<NotificationSetting, IGibNotificationSettingService>
+    {
+        public GibNotificationSettingController(IGibNotificationSettingService service) : base(service) { }
+    }
+
+    /// <summary>GIB ParameterSetting CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibParameterSettingController : GibCrudController<ParameterSetting, IGibParameterSettingService>
+    {
+        public GibParameterSettingController(IGibParameterSettingService service) : base(service) { }
+    }
+
+    /// <summary>GIB UserInvoiceInboxSetting CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibUserInvoiceInboxSettingController : GibCrudController<UserInvoiceInboxSetting, IGibUserInvoiceInboxSettingService>
+    {
+        public GibUserInvoiceInboxSettingController(IGibUserInvoiceInboxSettingService service) : base(service) { }
+    }
+
+    /// <summary>GIB UserVerificationDevice CRUD</summary>
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiController]
+    public partial class GibUserVerificationDeviceController : GibCrudController<UserVerificationDevice, IGibUserVerificationDeviceService>
+    {
+        public GibUserVerificationDeviceController(IGibUserVerificationDeviceService service) : base(service) { }
     }
 
 }

@@ -17,3 +17,13 @@ export * as RoleApi from './Role.js';
 export * as FirmaApi from './Firma.js';
 export * as GibUserCreditAccountApi from './GibUserCreditAccount.js';
 
+export * as DbConnectionSettingApi from './DbConnectionSetting.js';
+export * as EmailSettingApi from './EmailSetting.js';
+export * as InvoiceDesignTemplateApi from './InvoiceDesignTemplate.js';
+export * as InvoiceNumberSettingApi from './InvoiceNumberSetting.js';
+export * as NotificationSettingApi from './NotificationSetting.js';
+export * as ParameterSettingApi from './ParameterSetting.js';
+export * as UserInvoiceInboxSettingApi from './UserInvoiceInboxSetting.js';
+export * as UserVerificationDeviceApi from './UserVerificationDevice.js';
+export * as SettingApi from './Setting.js';
+

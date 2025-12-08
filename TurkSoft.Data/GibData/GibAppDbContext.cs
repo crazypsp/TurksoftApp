@@ -89,6 +89,15 @@ namespace TurkSoft.Data.GibData
         public DbSet<GibUserCreditTransaction> GibUserCreditTransaction { get; set; } = default!;
         public DbSet<GibInvoiceOperationLog> GibInvoiceOperationLog { get; set; } = default!;
 
+        // 🔹 Yeni ayar tablolari
+        public DbSet<DbConnectionSetting> DbConnectionSetting { get; set; } = default!;
+        public DbSet<InvoiceDesignTemplate> InvoiceDesignTemplate { get; set; } = default!;
+        public DbSet<EmailSetting> EmailSetting { get; set; } = default!;
+        public DbSet<InvoiceNumberSetting> InvoiceNumberSetting { get; set; } = default!;
+        public DbSet<NotificationSetting> NotificationSetting { get; set; } = default!;
+        public DbSet<UserInvoiceInboxSetting> UserInvoiceInboxSetting { get; set; } = default!;
+        public DbSet<ParameterSetting> ParameterSetting { get; set; } = default!;
+        public DbSet<UserVerificationDevice> UserVerificationDevice { get; set; } = default!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
