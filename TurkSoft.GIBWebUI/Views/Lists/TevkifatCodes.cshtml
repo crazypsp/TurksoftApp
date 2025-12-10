@@ -4,172 +4,267 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+@section Styles {
+    <style>
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: 220px;
+        }
 
-@section Styles{
-        <style>
-            .dataTables_wrapper .dataTables_filter input {
-                min-width: 220px;
-            }
+        .box.box-primary {
+            border-top-color: #3c8dbc;
+        }
 
-            .box.box-primary {
-                border-top-color: #3c8dbc;
-            }
+        .dt-head-center thead th {
+            text-align: center;
+        }
 
-            .dt-head-center thead th {
-                text-align: center;
-            }
-
-            td pre {
-                white-space: pre-wrap;
-                margin: 0;
-                font-family: inherit;
-            }
-        </style>
+        td pre {
+            white-space: pre-wrap;
+            margin: 0;
+            font-family: inherit;
+        }
+    </style>
 }
 
-    <section class="content">
-        <h2>Tevkifat Kod Listesi</h2>
+<section class="content">
+    <h2>Tevkifat Kod Listesi</h2>
 
-        <div class="box box-primary">
-            <div class="box-body">
-                <table id="grid_Tevkifat" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
-                    <thead>
-                        <tr>
-                            <th style="width:20%">Tevkifat Kodu</th>
-                            <th style="width:80%">Tevkifat Adı</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model != null && Model.Any())
-                        {
-                            foreach (var r in Model)
-                            {
-                                <tr>
-                                    <td><pre>@(r.Code)</pre></td>
-                                    <td><pre>@(r.Name)</pre></td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <!-- JS ile doldurulacak -->
-                        }
-                    </tbody>
-                </table>
-            </div>
+    <div class="box box-primary">
+        <div class="box-body">
+            <table id="grid_Tevkifat" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
+                <thead>
+                    <tr>
+                        <th style="width:20%">Tevkifat Kodu</th>
+                        <th style="width:80%">Tevkifat Adı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>601</td>
+                        <td>YAPIM İŞLERİ İLE BU İŞLERLE BİRLİKTE İFA EDİLEN M&#220;HENDİSLİKMİMARLIK VE ET&#220;T-PROJE HİZMETLERİ *GT 117-B&#246;l&#252;m (3.2.1)+</td>
+                    </tr>
+                    <tr>
+                        <td>602</td>
+                        <td>ET&#220;T, PLAN-PROJE,  DANIŞMANLIK,  DENETİM   VE BENZERİ HİZMETLER *GT 117-B&#246;l&#252;m (3.2.2)</td>
+                    </tr>
+                    <tr>
+                        <td>603</td>
+                        <td>MAKİNE, TE&#199;HİZAT, DEMİRBAŞ VE TAŞITLARA AİT TADİL, BAKIM VE ONARIM HİZMETLERİ *GT 117-B&#246;l&#252;m (3.2.3)+ </td>
+                    </tr>
+                    <tr>
+                        <td>604</td>
+                        <td>YEMEK SERVİS HİZMETİ *GT 117-B&#246;l&#252;m (3.2.4)</td>
+                    </tr>
+                    <tr>
+                        <td>605</td>
+                        <td>ORGANİZASYON HİZMETİ *GT 117-B&#246;l&#252;m (3.2.4)</td>
+                    </tr>
+                    <tr>
+                        <td>606</td>
+                        <td>İŞG&#220;C&#220; TEMİN HİZMETLERİ *GT 117-B&#246;l&#252;m (3.2.5)</td>
+                    </tr>
+                    <tr>
+                        <td>607</td>
+                        <td>&#214;ZEL G&#220;VENLİK HİZMETİ *GT 117-B&#246;l&#252;m (3.2.5)</td>
+                    </tr>
+                    <tr>
+                        <td>608</td>
+                        <td>YAPI DENETİM HİZMETLERİ *GT 117-B&#246;l&#252;m (3.2.6)</td>
+                    </tr>
+                    <tr>
+                        <td>609</td>
+                        <td>FASON OLARAK YAPTIRILAN TEKSTİL VE KONFEKSİYON İŞLERİ, &#199;ANTA VE AYAKKABI DİKİM İŞLERİ VE BU İŞLERE ARACILIK HİZMETLERİ *GT 117-B&#246;l&#252;m (3.2.7)+ </td>
+                    </tr>
+                    <tr>
+                        <td>610</td>
+                        <td>TURİSTİK MAĞAZALARA VERİLEN M&#220;ŞTERİ BULMA/G&#214;T&#220;RME HİZMETLERİ *GT 117-B&#246;l&#252;m (3.2.8)</td>
+                    </tr>
+                    <tr>
+                        <td>611</td>
+                        <td>SPOR KUL&#220;PLERİNİN YAYIN, REKL&#194;M VE İSİM HAKKI GELİRLERİNE KONU İŞLEMLERİ *GT 117-B&#246;l&#252;m (3.2.9)+ </td>
+                    </tr>
+                    <tr>
+                        <td>612</td>
+                        <td>TEMİZLİK HİZMETİ *GT 117-B&#246;l&#252;m (3.2.10)</td>
+                    </tr>
+                    <tr>
+                        <td>613</td>
+                        <td>&#199;EVRE VE BAH&#199;E BAKIM HİZMETLERİ *GT 117- B&#246;l&#252;m (3.2.10)</td>
+                    </tr>
+                    <tr>
+                        <td>614</td>
+                        <td>SERVİS TAŞIMACILIĞI HİZMETİ *GT 117-B&#246;l&#252;m (3.2.11)</td>
+                    </tr>
+                    <tr>
+                        <td>615</td>
+                        <td>HER T&#220;RL&#220; BASKI VE BASIM HİZMETLERİ *GT 117- B&#246;l&#252;m (3.2.12)</td>
+                    </tr>
+                    <tr>
+                        <td>616</td>
+                        <td>5018 SAYILI KANUNA EKLİ CETVELLERDEKİ İDARE, KURUM VE KURUŞLARA YAPILAN DİĞER HİZMETLER *GT 117-B&#246;l&#252;m (3.2.13)+ </td>
+                    </tr>
+                    <tr>
+                        <td>617</td>
+                        <td>HURDA METALDEN ELDE EDİLEN K&#220;L&#199;E TESLİMLERİ *GT 117-B&#246;l&#252;m (3.3.1)</td>
+                    </tr>
+                    <tr>
+                        <td>618</td>
+                        <td>HURDA METALDEN ELDE EDİLENLER DIŞINDAKİ BAKIR, &#199;İNKO VE AL&#220;MİNYUM K&#220;L&#199;E TESLİMLERİ *GT 117-B&#246;l&#252;m (3.3.1)+ </td>
+                    </tr>
+                    <tr>
+                        <td>619</td>
+                        <td>BAKIR, &#199;İNKO VE AL&#220;MİNYUM &#220;R&#220;NLERİNİN TESLİMİ *GT 117-B&#246;l&#252;m (3.3.2)</td>
+                    </tr>
+                    <tr>
+                        <td>620</td>
+                        <td>İSTİSNADAN VAZGE&#199;ENLERİN HURDA VE ATIK TESLİMİ *GT 117-B&#246;l&#252;m (3.3.3)</td>
+                    </tr>
+                    <tr>
+                        <td>621</td>
+                        <td>METAL, PLASTİK, LASTİK, KAU&#199;UK, K&#194;ĞIT VE CAM HURDA VE ATIKLARDAN ELDE EDİLEN HAMMADDE TESLİMİ *GT 117-B&#246;l&#252;m (3.3.4)] </td>
+                    </tr>
+                    <tr>
+                        <td>622</td>
+                        <td>PAMUK, TİFTİK, Y&#220;N VE YAPAĞI İLE HAM POST VE DERİ TESLİMLERİ *GT 117-B&#246;l&#252;m (3.3.5)</td>
+                    </tr>
+                    <tr>
+                        <td>623</td>
+                        <td>AĞA&#199; VE ORMAN &#220;R&#220;NLERİ TESLİMİ *GT 117- B&#246;l&#252;m (3.3.6)</td>
+                    </tr>
+                    <tr>
+                        <td>624</td>
+                        <td>Y&#220;K TAŞIMACILIĞI HİZMETİ [KDVGUT-(I/C-2.1.3.2.11)] </td>
+                    </tr>
+                    <tr>
+                        <td>625</td>
+                        <td>TİCARİ REKLAM HİZMETLERİ [KDVGUT-(I/C-2.1.3.2.15)]</td>
+                    </tr>
+                    <tr>
+                        <td>626</td>
+                        <td>DİĞER TESLİMLER [KDVGUT-(I/C-2.1.3.3.7.)] </td>
+                    </tr>
+                    <tr>
+                        <td>627</td>
+                        <td>DEMİR-&#199;ELİK &#220;R&#220;NLERİNİN TESLİMİ [KDVGUT-(I/C-2.1.3.3.8)]”</td>
+                    </tr>
+                    <tr>
+                        <td>801</td>
+                        <td>Yapım İşleri ile Bu İşlerle Birlikte İfa Edilen M&#252;hendislik-Mimarlık ve Et&#252;t-Proje Hizmetleri[KDVGUT-(I/C-2.1.3.2.1)]</td>
+                    </tr>
+                    <tr>
+                        <td>802</td>
+                        <td>Et&#252;t, Plan-Proje, Danışmanlık, Denetim ve Benzeri Hizmetler[KDVGUT-(I/C-2.1.3.2.2)]</td>
+                    </tr>
+                    <tr>
+                        <td>803</td>
+                        <td>Makine, Te&#231;hizat, Demirbaş ve Taşıtlara Ait Tadil, Bakım ve Onarım Hizmetleri[KDVGUT- (I/C-2.1.3.2.3)]</td>
+                    </tr>
+                    <tr>
+                        <td>804</td>
+                        <td>Yemek Servis Hizmeti[KDVGUT-(I/C-2.1.3.2.4)]</td>
+                    </tr>
+                    <tr>
+                        <td>805</td>
+                        <td>Organizasyon Hizmeti[KDVGUT-(I/C-2.1.3.2.4)]</td>
+                    </tr>
+                    <tr>
+                        <td>806</td>
+                        <td>İşg&#252;c&#252; Temin Hizmetleri[KDVGUT-(I/C-2.1.3.2.5)]</td>
+                    </tr>
+                    <tr>
+                        <td>807</td>
+                        <td>&#214;zel G&#252;venlik Hizmeti[KDVGUT-(I/C-2.1.3.2.5)]</td>
+                    </tr>
+                    <tr>
+                        <td>808</td>
+                        <td>Yapı Denetim Hizmetleri[KDVGUT-(I/C-2.1.3.2.6)]</td>
+                    </tr>
+                    <tr>
+                        <td>809</td>
+                        <td>Fason Olarak Yaptırılan Tekstil ve Konfeksiyon İşleri, &#199;anta ve Ayakkabı Dikim İşleri ve Bu İşlere Aracılık Hizmetleri[KDVGUT-(I/C-2.1.3.2.7)]</td>
+                    </tr>
+                    <tr>
+                        <td>810</td>
+                        <td>Turistik Mağazalara Verilen M&#252;şteri Bulma/ G&#246;t&#252;rme Hizmetleri[KDVGUT-(I/C-2.1.3.2.8)]</td>
+                    </tr>
+                    <tr>
+                        <td>811</td>
+                        <td>Spor Kul&#252;plerinin Yayın, Rekl&#226;m ve İsim Hakkı Gelirlerine Konu İşlemleri[KDVGUT-(I/C-2.1.3.2.9)]</td>
+                    </tr>
+                    <tr>
+                        <td>812</td>
+                        <td>Temizlik Hizmeti[KDVGUT-(I/C-2.1.3.2.10)]</td>
+                    </tr>
+                    <tr>
+                        <td>813</td>
+                        <td>&#199;evre ve Bah&#231;e Bakım Hizmetleri[KDVGUT-(I/C-2.1.3.2.10)]</td>
+                    </tr>
+                    <tr>
+                        <td>814</td>
+                        <td>Servis Taşımacılığı Hizmeti[KDVGUT-(I/C-2.1.3.2.11)]</td>
+                    </tr>
+                    <tr>
+                        <td>815</td>
+                        <td>Her T&#252;rl&#252; Baskı ve Basım Hizmetleri[KDVGUT-(I/C-2.1.3.2.12)]</td>
+                    </tr>
+                    <tr>
+                        <td>816</td>
+                        <td>Hurda Metalden Elde Edilen K&#252;l&#231;e Teslimleri[KDVGUT-(I/C-2.1.3.3.1)]</td>
+                    </tr>
+                    <tr>
+                        <td>817</td>
+                        <td>Hurda Metalden Elde Edilenler Dışındaki Bakır, &#199;inko, Demir &#199;elik, Al&#252;minyum ve Kurşun K&#252;l&#231;e Teslimi [KDVGUT-(I/C-2.1.3.3.1)]</td>
+                    </tr>
+                    <tr>
+                        <td>818</td>
+                        <td>Bakır, &#199;inko, Al&#252;minyum ve Kurşun &#220;r&#252;nlerinin Teslimi[KDVGUT-(I/C-2.1.3.3.2)]</td>
+                    </tr>
+                    <tr>
+                        <td>819</td>
+                        <td>İstisnadan Vazge&#231;enlerin Hurda ve Atık Teslimi[KDVGUT-(I/C-2.1.3.3.3)]</td>
+                    </tr>
+                    <tr>
+                        <td>820</td>
+                        <td>Metal, Plastik, Lastik, Kau&#231;uk, K&#226;ğıt ve Cam Hurda ve Atıklardan Elde Edilen Hammadde Teslimi[KDVGUT-(I/C-2.1.3.3.4)]</td>
+                    </tr>
+                    <tr>
+                        <td>821</td>
+                        <td>Pamuk, Tiftik, Y&#252;n ve Yapağı İle Ham Post ve Deri Teslimleri[KDVGUT-(I/C-2.1.3.3.5)]</td>
+                    </tr>
+                    <tr>
+                        <td>822</td>
+                        <td>Ağa&#231; ve Orman &#220;r&#252;nleri Teslimi[KDVGUT-(I/C-2.1.3.3.6)]</td>
+                    </tr>
+                    <tr>
+                        <td>823</td>
+                        <td>Y&#252;k Taşımacılığı Hizmeti [KDVGUT-(I/C-2.1.3.2.11)]</td>
+                    </tr>
+                    <tr>
+                        <td>824</td>
+                        <td>Ticari Reklam Hizmetleri [KDVGUT-(I/C-2.1.3.2.15)]</td>
+                    </tr>
+                    <tr>
+                        <td>825</td>
+                        <td>Demir-&#199;elik &#220;r&#252;nlerinin Teslimi [KDVGUT-(I/C-2.1.3.3.8)]</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-    </section>
+    </div>
+</section>
 
-@section Scripts{
-        <script>
-            (function () {
-
-                // Verdiğiniz liste: API gelmezse kullanılacak fallback
-                var fallbackTevkifat = [
-                    { code: 623, name: "Ağaç Ve Orman Ürünleri Teslimi" },
-                    { code: 822, name: "Ağaç ve Orman Ürünleri Teslimi[KDVGUT-(I/C-2.1.3.3.6)]" },
-                    { code: 619, name: "Bakir, Çinko Ve Alüminyum Ürünlerinin Teslimi" },
-                    { code: 818, name: "Bakır, Çinko, Alüminyum ve Kurşun Ürünlerinin Teslimi[KDVGUT-(I/C-2.1.3.3.2)]" },
-                    { code: 627, name: "Demir-Çelik Ürünlerinin Teslimi [Kdvgut-(I/C-2.1.3.3.8)]" },
-                    { code: 825, name: "Demir-Çelik Ürünlerinin Teslimi [KDVGUT-(I/C-2.1.3.3.8)]" },
-                    { code: 616, name: "Diğer Hizmetler [Kdvgut-(I/C-2.1.3.2.13)]" },
-                    { code: 626, name: "Diğer Teslimler [Kdvgut-(I/C-2.1.3.3.7.)]" },
-                    { code: 602, name: "Etüt, Plan-Proje, Danişmanlik, Denetim Ve Benzeri Hizmetler" },
-                    { code: 802, name: "Etüt, Plan-Proje, Danışmanlık, Denetim ve Benzeri Hizmetler[KDVGUT-(I/C-2.1.3.2.2)]" },
-                    { code: 609, name: "Fason Olarak Yaptirilan Tekstil Ve Konfeksiyon İşleri, Çanta Ve Ayakkabi Dikim İşleri Ve Bu İşlere Aracilik Hizmetleri" },
-                    { code: 809, name: "Fason Olarak Yaptırılan Tekstil ve Konfeksiyon İşleri, Çanta ve Ayakkabı Dikim İşleri ve Bu İşlere Aracılık Hizmetleri[KDVGUT-(I/C-2.1.3.2.7)]" },
-                    { code: 615, name: "Her Türlü Baski Ve Basim Hizmetleri" },
-                    { code: 815, name: "Her Türlü Baskı ve Basım Hizmetleri[KDVGUT-(I/C-2.1.3.2.12)]" },
-                    { code: 617, name: "Hurda Metalden Elde Edilen Külçe Teslimleri" },
-                    { code: 816, name: "Hurda Metalden Elde Edilen Külçe Teslimleri[KDVGUT-(I/C-2.1.3.3.1)]" },
-                    { code: 618, name: "Hurda Metalden Elde Edilenler Dişindaki Bakir, Çinko Demir ; Çelik Alüminyum Ve Kurşun Külçe Teslimleri [Kdvgut-(I/C-2.1.3.3.1)]" },
-                    { code: 817, name: "Hurda Metalden Elde Edilenler Dışındaki Bakır, Çinko, Demir Çelik, Alüminyum ve Kurşun Külçe Teslimi [KDVGUT-(I/C-2.1.3.3.1)]" },
-                    { code: 620, name: "İstisnadan Vazgeçenlerin Hurda Ve Atik Teslimi" },
-                    { code: 819, name: "İstisnadan Vazgeçenlerin Hurda ve Atık Teslimi[KDVGUT-(I/C-2.1.3.3.3)]" },
-                    { code: 606, name: "İşgücü Temin Hizmetleri" },
-                    { code: 806, name: "İşgücü Temin Hizmetleri[KDVGUT-(I/C-2.1.3.2.5)]" },
-                    { code: 603, name: "Makine, Teçhizat, Demirbaş Ve Taşitlara Ait Tadil, Bakim Ve Onarim Hizmetleri" },
-                    { code: 803, name: "Makine, Teçhizat, Demirbaş ve Taşıtlara Ait Tadil, Bakım ve Onarım Hizmetleri[KDVGUT- (I/C-2.1.3.2.3)]" },
-                    { code: 621, name: "Metal, Plastik, Lastik, Kauçuk, Kâğit Ve Cam Hurda Ve Atiklardan Elde Edilen Hammadde Teslimi" },
-                    { code: 820, name: "Metal, Plastik, Lastik, Kauçuk, Kâğıt ve Cam Hurda ve Atıklardan Elde Edilen Hammadde Teslimi[KDVGUT-(I/C-2.1.3.3.4)]" },
-                    { code: 605, name: "Organizasyon Hizmeti" },
-                    { code: 805, name: "Organizasyon Hizmeti[KDVGUT-(I/C-2.1.3.2.4)]" },
-                    { code: 622, name: "Pamuk, Tiftik, Yün Ve Yapaği İle Ham Post Ve Deri Teslimleri" },
-                    { code: 821, name: "Pamuk, Tiftik, Yün ve Yapağı İle Ham Post ve Deri Teslimleri[KDVGUT-(I/C-2.1.3.3.5)]" },
-                    { code: 614, name: "Servis Taşimaciliği Hizmeti" },
-                    { code: 814, name: "Servis Taşımacılığı Hizmeti[KDVGUT-(I/C-2.1.3.2.11)]" },
-                    { code: 611, name: "Spor Kulüplerinin Yayin, Reklâm Ve İsim Hakki Gelirlerine Konu İşlemleri" },
-                    { code: 811, name: "Spor Kulüplerinin Yayın, Reklâm ve İsim Hakkı Gelirlerine Konu İşlemleri[KDVGUT-(I/C-2.1.3.2.9)]" },
-                    { code: 612, name: "Temizlik Hizmeti" },
-                    { code: 812, name: "Temizlik Hizmeti[KDVGUT-(I/C-2.1.3.2.10)]" },
-                    { code: 625, name: "Ticari Reklam Hizmetleri [Kdvgut-(I/C-2.1.3.2.15)]" },
-                    { code: 824, name: "Ticari Reklam Hizmetleri [KDVGUT-(I/C-2.1.3.2.15)]" },
-                    { code: 610, name: "Turistik Mağazalara Verilen Müşteri Bulma / Götürme Hizmetleri" },
-                    { code: 810, name: "Turistik Mağazalara Verilen Müşteri Bulma/ Götürme Hizmetleri[KDVGUT-(I/C-2.1.3.2.8)]" },
-                    { code: 608, name: "Yapi Denetim Hizmetleri" },
-                    { code: 601, name: "Yapim İşleri İle Bu İşlerle Birlikte İfa Edilen Mühendislik-Mimarlik Ve Etüt-Proje Hizmetleri" },
-                    { code: 808, name: "Yapı Denetim Hizmetleri[KDVGUT-(I/C-2.1.3.2.6)]" },
-                    { code: 801, name: "Yapım İşleri ile Bu İşlerle Birlikte İfa Edilen Mühendislik-Mimarlık ve Etüt-Proje Hizmetleri[KDVGUT-(I/C-2.1.3.2.1)]" },
-                    { code: 604, name: "Yemek Servis Hizmeti" },
-                    { code: 804, name: "Yemek Servis Hizmeti[KDVGUT-(I/C-2.1.3.2.4)]" },
-                    { code: 624, name: "Yük Taşimaciliği Hizmeti [Kdvgut-(I/C-2.1.3.2.11)]" },
-                    { code: 823, name: "Yük Taşımacılığı Hizmeti [KDVGUT-(I/C-2.1.3.2.11)]" },
-                    { code: 613, name: "Çevre Ve Bahçe Bakim Hizmetleri" },
-                    { code: 813, name: "Çevre ve Bahçe Bakım Hizmetleri[KDVGUT-(I/C-2.1.3.2.10)]" }
-                ];
-
-                function renderRows(rows) {
-                    var $tbody = $('#grid_Tevkifat tbody');
-                    $tbody.empty();
-                    rows.forEach(function (r) {
-                        var tr = '<tr>'
-                            + '<td><pre>' + (r.code ?? r.Code) + '</pre></td>'
-            + '<td><pre>' + (r.name ?? r.Name) + '</pre></td>'
-                            + '</tr>';
-                        $tbody.append(tr);
-                    });
-                }
-
-                function initDataTable() {
-                    var $tbl = $('#grid_Tevkifat');
-                    if ($.fn.DataTable.isDataTable($tbl)) {
-                        $tbl.DataTable().destroy();
-                    }
-                    $tbl.DataTable({
-                        pageLength: 25,
-                        order: [[0, 'asc']],
-                        columnDefs: [{ targets: 0, type: 'num' }],
-                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
-                    });
-                }
-
-                $(function () {
-                    var hasServerRows = $('#grid_Tevkifat tbody tr').length > 0;
-
-                    if (hasServerRows) {
-                        initDataTable();
-                        return;
-                    }
-
-                    // Önce API'den dene, olmazsa fallback
-                    $.ajax({
-                        url: '/api/tevkifat-kodlari', // Beklenen çıktı: [{ code, name }]
-                        method: 'GET',
-                        dataType: 'json',
-                        timeout: 10000
-                    }).done(function (data) {
-                        if (Array.isArray(data) && data.length > 0) {
-                            renderRows(data);
-                        } else {
-                            renderRows(fallbackTevkifat);
-                        }
-                    }).fail(function () {
-                        renderRows(fallbackTevkifat);
-                    }).always(function () {
-                        initDataTable();
-                    });
-                });
-
-            })();
-        </script>
+@section Scripts {
+    <script>
+        $(function () {
+            $('#grid_Tevkifat').DataTable({
+                pageLength: 25,
+                lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "Tümü"]],
+                order: [[0, 'asc']],
+                columnDefs: [{ targets: 0, type: 'num' }],
+                deferRender: true,
+                stateSave: true,
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
+            });
+        });
+    </script>
 }

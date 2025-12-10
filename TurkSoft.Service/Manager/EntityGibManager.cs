@@ -88,6 +88,8 @@ namespace TurkSoft.Service.Manager
 
         /// <summary>
         /// Generic Add.
+        /// - Eğer TEntity = Item ise, FixItemGraphAsync ile graph normalize edilir.
+        /// - Eğer TEntity = Customer ise, FixCustomerGraphAsync ile graph normalize edilir.
         /// - Eğer TEntity = Invoice ise, FixInvoiceGraphAsync ile graph normalize edilir.
         /// - UserId + iş anahtarına göre duplicate kontrolü yapılır.
         /// </summary>
@@ -131,7 +133,19 @@ namespace TurkSoft.Service.Manager
                 // 1) Audit alanları (BaseEntity ise)
                 TouchAudit(entity, utcNow);
 
-                // 2) Invoice grafı ise ilişkileri düzelt / normalize et
+                // 2-a) Item grafı ise (Brand/Unit/Category/Identifiers normalize & dedupe)
+                if (entity is Item itemEntity)
+                {
+                    await FixItemGraphAsync(itemEntity, utcNow, ct);
+                }
+
+                // 2-b) Customer grafı ise (CustomersGroups / Addresses normalize & dedupe)
+                if (entity is Customer custEntity)
+                {
+                    await FixCustomerGraphAsync(custEntity, utcNow, ct);
+                }
+
+                // 2-c) Invoice grafı ise ilişkileri düzelt / normalize et
                 if (entity is Invoice inv)
                 {
                     await FixInvoiceGraphAsync(inv, utcNow, ct);
@@ -622,6 +636,25 @@ namespace TurkSoft.Service.Manager
             TouchAudit(inv, utcNow);
         }
 
+        private static void NormalizeGroup(Group g, DateTimeOffset utcNow)
+        {
+            g.Name = string.IsNullOrWhiteSpace(g.Name) ? "GENEL GRUP" : g.Name.Trim();
+            g.Desc = (g.Desc ?? string.Empty).Trim();
+
+            TouchAudit(g, utcNow);
+        }
+
+        private static void NormalizeAddress(Address a, DateTimeOffset utcNow)
+        {
+            a.Country = string.IsNullOrWhiteSpace(a.Country) ? "TÜRKİYE" : a.Country.Trim();
+            a.City = (a.City ?? string.Empty).Trim();
+            a.District = (a.District ?? string.Empty).Trim();
+            a.Street = (a.Street ?? string.Empty).Trim();
+            a.PostCode = (a.PostCode ?? string.Empty).Trim();
+
+            TouchAudit(a, utcNow);
+        }
+
         // ======================================================
         // Attach / Create Helpers
         // ======================================================
@@ -835,6 +868,41 @@ namespace TurkSoft.Service.Manager
             NormalizePaymentAccount(pa, p.Currency, utcNow);
             await AttachOrCreateBankAsync(pa, ct, utcNow);
             pa.Payments = null;
+        }
+
+        private async Task AttachOrCreateGroupAsync(CustomersGroup cg, CancellationToken ct, DateTimeOffset utcNow)
+        {
+            var grp = cg.Group;
+            if (grp == null) return;
+
+            PropagateUserId(cg, grp);
+
+            if (grp.Id > 0)
+            {
+                var existing = await _db.Set<Group>().FindAsync(new object[] { grp.Id }, ct);
+                if (existing != null)
+                {
+                    _db.Attach(existing);
+                    _db.Entry(existing).State = EntityState.Unchanged;
+                    cg.Group = existing;
+                    cg.GroupId = existing.Id;
+                    return;
+                }
+            }
+
+            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, grp, ct);
+            if (existingByKey != null)
+            {
+                _db.Attach(existingByKey);
+                _db.Entry(existingByKey).State = EntityState.Unchanged;
+                cg.Group = existingByKey;
+                cg.GroupId = existingByKey.Id;
+                return;
+            }
+
+            ResetIdentityId(grp);
+            NormalizeGroup(grp, utcNow);
+            grp.CustomersGroups = null;
         }
 
         // ======================================================
@@ -1436,6 +1504,152 @@ namespace TurkSoft.Service.Manager
 
             // Son güvenlik: decimal alanlar
             ValidateInvoiceDecimalRanges(inv);
+        }
+
+        // ======================================================
+        // Customer Graph Fixer (Customer API çağrıları için)
+        // ======================================================
+        private async Task FixCustomerGraphAsync(Customer c, DateTimeOffset utcNow, CancellationToken ct)
+        {
+            if (c == null) return;
+
+            // Temel normalize (Name/Surname/TaxNo + audit)
+            NormalizeCustomer(c, utcNow);
+
+            // Koleksiyon init
+            c.CustomersGroups ??= new List<CustomersGroup>();
+            c.Addresses ??= new List<Address>();
+
+            // CustomersGroups -> Group
+            foreach (var cg in c.CustomersGroups)
+            {
+                PropagateUserId(c, cg);
+                TouchAudit(cg, utcNow);
+                cg.Customer = null;
+
+                if (cg.Group != null)
+                {
+                    await AttachOrCreateGroupAsync(cg, ct, utcNow);
+                }
+                else if (cg.GroupId > 0)
+                {
+                    var existingGrp = await _db.Set<Group>().FindAsync(new object[] { cg.GroupId }, ct);
+                    if (existingGrp != null)
+                    {
+                        _db.Attach(existingGrp);
+                        _db.Entry(existingGrp).State = EntityState.Unchanged;
+                        cg.Group = existingGrp;
+                    }
+                }
+            }
+
+            // Addresses
+            foreach (var addr in c.Addresses)
+            {
+                PropagateUserId(c, addr);
+                NormalizeAddress(addr, utcNow);
+                addr.Customer = null;
+            }
+
+            // Customer endpoint'i üzerinden invoice grafı ile uğraşmayalım
+            c.Invoices = null;
+        }
+
+        // ======================================================
+        // Item Graph Fixer (Item API çağrıları için)
+        // ======================================================
+        private async Task FixItemGraphAsync(Item it, DateTimeOffset utcNow, CancellationToken ct)
+        {
+            if (it == null) return;
+
+            // Temel normalize (Name/Code/Currency + audit)
+            NormalizeItem(it, it.Currency, utcNow);
+
+            // BRAND
+            if (it.Brand != null)
+            {
+                await AttachOrCreateBrandAsync(it, ct, utcNow);
+            }
+            else if (it.BrandId > 0)
+            {
+                var existingBrand = await _db.Set<Brand>().FindAsync(new object[] { it.BrandId }, ct);
+                if (existingBrand != null)
+                {
+                    _db.Attach(existingBrand);
+                    _db.Entry(existingBrand).State = EntityState.Unchanged;
+                    it.Brand = existingBrand;
+                }
+            }
+
+            // UNIT  → UserId + ShortName'e göre dedupe (IX_Unit_UserId_ShortName için kritik)
+            if (it.Unit != null)
+            {
+                await AttachOrCreateUnitAsync(it, ct, utcNow);
+            }
+            else if (it.UnitId > 0)
+            {
+                var existingUnit = await _db.Set<Unit>().FindAsync(new object[] { it.UnitId }, ct);
+                if (existingUnit != null)
+                {
+                    _db.Attach(existingUnit);
+                    _db.Entry(existingUnit).State = EntityState.Unchanged;
+                    it.Unit = existingUnit;
+                }
+            }
+
+            // ItemsCategory -> Category
+            if (it.ItemsCategories != null)
+            {
+                foreach (var ic in it.ItemsCategories)
+                {
+                    PropagateUserId(it, ic);
+                    TouchAudit(ic, utcNow);
+
+                    // Item navigation'ı kırıyoruz; ilişki Item.ItemsCategories üzerinden kurulacak
+                    ic.Item = null;
+
+                    if (ic.Category != null)
+                    {
+                        await AttachOrCreateCategoryAsync(ic, ct, utcNow);
+                    }
+                    else if (ic.CategoryId > 0)
+                    {
+                        var existingCat = await _db.Set<Category>().FindAsync(new object[] { ic.CategoryId }, ct);
+                        if (existingCat != null)
+                        {
+                            _db.Attach(existingCat);
+                            _db.Entry(existingCat).State = EntityState.Unchanged;
+                            ic.Category = existingCat;
+                        }
+                    }
+                }
+            }
+
+            // ItemsDiscounts – Item ekranından normalde gelmez ama normalize edelim
+            if (it.ItemsDiscounts != null)
+            {
+                foreach (var idisc in it.ItemsDiscounts)
+                {
+                    PropagateUserId(it, idisc);
+                    TouchAudit(idisc, utcNow);
+
+                    idisc.Invoice = null;
+                    ResetIdentityId(idisc);
+                }
+            }
+
+            // Identifiers – barkod / GTIN vs.
+            if (it.Identifiers != null)
+            {
+                foreach (var ident in it.Identifiers)
+                {
+                    PropagateUserId(it, ident);
+                    TouchAudit(ident, utcNow);
+
+                    ident.Item = null;
+                    ResetIdentityId(ident);
+                }
+            }
         }
     }
 }

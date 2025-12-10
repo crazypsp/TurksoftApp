@@ -197,41 +197,38 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
      *  LİSTELERİ DOLDURMA (window.ListData)
      ***********************************************************/
     function fillSubeDropdown() {
-        const listData = getListData();
-        const subeList = listData.subeList || [];
         const $ddl = $("#ddlSubeKodu");
         if (!$ddl.length) return;
+
+        const firmaJson = sessionStorage.getItem("Firma");
+        if (!firmaJson) return;
+
+        const firma = JSON.parse(firmaJson);
 
         $ddl.empty();
         $ddl.append(new Option("Seçiniz", "0"));
 
-        subeList.forEach(s => {
-            const text = s.SubeAdi || ("Şube " + s.SubeKodu);
-            const opt = new Option(text, s.SubeKodu);
-            $(opt).attr("data-firmaid", s.FirmaId);
-            $ddl.append(opt);
-        });
+        const opt = new Option(firma.title, firma.id);
+        $(opt).attr("data-firmaid", firma.id);
+        $ddl.append(opt);
 
-        if (subeList.length > 0) {
-            $ddl.val(subeList[0].SubeKodu).trigger("change");
-        }
+        $ddl.val(firma.id).trigger("change");
     }
 
     function fillSourceUrnDropdown() {
-        const listData = getListData();
-        const arr = listData.GondericiEtiketList || [];
         const $ddl = $("#ddlSourceUrn");
         if (!$ddl.length) return;
+
+        const firmaJson = sessionStorage.getItem("Firma");
+        if (!firmaJson) return;
+        const firma = JSON.parse(firmaJson);
 
         $ddl.empty();
         $ddl.append(new Option("Seçiniz", ""));
 
-        arr.forEach(urn => {
-            $ddl.append(new Option(urn, urn));
-        });
-
-        if (arr.length > 0) {
-            $ddl.val(arr[0]).trigger("change");
+        if (firma.gibAlias) {
+            $ddl.append(new Option(firma.gibAlias, firma.gibAlias));
+            $ddl.val(firma.gibAlias).trigger("change");
         }
     }
 
@@ -272,21 +269,133 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     }
 
     function fillAliciEtiketiDropdown() {
-        const listData = getListData();
-        const arr = listData.KurumEtiketList || [];
-        const $ddl = $("#ddlAliciEtiketi");
-        if (!$ddl.length) return;
+        function fillAliciEtiketiDropdown() {
+            const $ddl = $("#ddlAliciEtiketi");
+            if (!$ddl.length) return;
 
-        $ddl.empty();
-        $ddl.append(new Option("Seçiniz", ""));
+            // -------------------------------------------------
+            // 1) HomeController'dan gelen mükellef var mı?
+            // -------------------------------------------------
+            let identifier = "";
+            let alias = "";
+            let title = "";
+            let hasSessionMukellef = false;
 
-        arr.forEach(urn => {
-            $ddl.append(new Option(urn, urn));
-        });
+            try {
+                const raw = sessionStorage.getItem("SelectedMukellefForInvoice");
+                if (raw) {
+                    const data = JSON.parse(raw) || {};
+                    console.log("[Invoice] SelectedMukellefForInvoice:", data);
 
-        if (arr.length > 0) {
-            $ddl.val(arr[0]).trigger("change");
+                    identifier = (data.Identifier || data.identifier || "").toString().trim();
+                    alias = (data.Alias || data.alias || "").toString().trim();
+                    title = (data.Title || data.title || "").toString().trim();
+
+                    hasSessionMukellef = !!(identifier || alias || title);
+                }
+            } catch (e) {
+                console.warn("[Invoice] SelectedMukellefForInvoice okunamadı:", e);
+            }
+
+            // -------------------------------------------------
+            // 2) VKN/TCKN ve Firma Adı alanlarını doldur
+            // -------------------------------------------------
+            if (identifier) {
+                $("#txtIdentificationID").val(identifier);
+            }
+
+            if (title) {
+                $("#txtPartyName").val(title);
+            }
+
+            // Ad / Soyad boşsa Ünvan'dan türet
+            const $firstName = $("#txtPersonFirstName");
+            const $lastName = $("#txtPersonLastName");
+
+            if (title && !$firstName.val() && !$lastName.val()) {
+                const parts = title.trim().split(/\s+/);
+                let first = "";
+                let last = "";
+
+                if (parts.length === 1) {
+                    first = parts[0];
+                    last = ".";
+                } else {
+                    last = parts.pop();
+                    first = parts.join(" ");
+                }
+
+                $firstName.val(first);
+                $lastName.val(last);
+            }
+
+            // -------------------------------------------------
+            // 3) Alıcı Etiketi dropdown'ını doldur
+            // -------------------------------------------------
+            $ddl.empty();
+
+            if (alias) {
+                // Eski tüm option'lar silindi, sadece gelen alias eklenecek
+                const opt = new Option(alias, alias);
+                $ddl.append(opt);
+                $ddl.val(alias).trigger("change");
+            } else {
+                // Home'dan alias gelmediyse: eski davranış (ListData.KurumEtiketList)
+                const listData = getListData();
+                const arr = listData.KurumEtiketList || [];
+
+                $ddl.append(new Option("Seçiniz", ""));
+
+                arr.forEach(urn => {
+                    if (!urn) return;
+                    $ddl.append(new Option(urn, urn));
+                });
+
+                if (arr.length > 0) {
+                    $ddl.val(arr[0]).trigger("change");
+                }
+            }
+
+            // -------------------------------------------------
+            // 4) invoiceModel içindeki Customer bilgisini güncelle
+            // -------------------------------------------------
+            try {
+                const flatCustomer = readCustomerFromUI();
+                invoiceModel.Customer = flatCustomer;
+                invoiceModel.customer = {
+                    customerParty: {
+                        IdentificationID: flatCustomer.IdentificationID,
+                        PartyName: flatCustomer.PartyName,
+                        TaxSchemeName: flatCustomer.TaxOffice,
+                        CountryName: flatCustomer.CountryName,
+                        CityName: flatCustomer.CityName,
+                        CitySubdivisionName: flatCustomer.CitySubdivisionName,
+                        StreetName: flatCustomer.StreetName,
+                        PostalZone: flatCustomer.PostalZone,
+                        ElectronicMail: flatCustomer.Email,
+                        Telephone: flatCustomer.Telephone,
+                        WebsiteURI: flatCustomer.WebsiteURI,
+                        Person_FirstName: flatCustomer.FirstName,
+                        Person_FamilyName: flatCustomer.LastName,
+                        ManuelCityAndSubdivision: flatCustomer.ManuelCityEntry
+                    }
+                };
+            } catch (e) {
+                console.warn("[Invoice] invoiceModel.Customer güncellenirken hata:", e);
+            }
+
+            // -------------------------------------------------
+            // 5) Tek seferlik kullanım için session key'i sil
+            // -------------------------------------------------
+            if (hasSessionMukellef) {
+                try {
+                    sessionStorage.removeItem("SelectedMukellefForInvoice");
+                } catch (e) {
+                    console.warn("[Invoice] SelectedMukellefForInvoice kaldırılamadı:", e);
+                }
+            }
         }
+
     }
 
     function fillParaBirimiDropdown() {

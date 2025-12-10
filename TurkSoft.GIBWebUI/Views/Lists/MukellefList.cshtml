@@ -71,8 +71,8 @@
                             <label>Tip</label>
                             <select id="Type" class="form-control">
                                 <option value="" selected>Tümü</option>
-                                <option value="PK">PK (Alıcı Birim Etiketi)</option>
-                                <option value="GB">GB (Gönderici Birim Etiketi)</option>
+                                <option value="1">PK (Alıcı Birim Etiketi)</option>
+                                <option value="2">GB (Gönderici Birim Etiketi)</option>
                             </select>
                         </div>
 
@@ -80,8 +80,8 @@
                             <label>Belge Tip</label>
                             <select id="DocType" class="form-control">
                                 <option value="" selected>Tümü</option>
-                                <option value="INVOICE">e-Fatura</option>
-                                <option value="DESPATCHADVICE">e-İrsaliye</option>
+                                <option value="1">e-Fatura</option>
+                                <option value="3">e-İrsaliye</option>
                             </select>
                         </div>
 
@@ -118,43 +118,7 @@
         </div>
     </div>
 
-    <!-- Detay Modal -->
-    <div class="modal fade" id="modal-mukellefDetail" tabindex="-1" role="dialog" aria-labelledby="mukellefDetailLabel">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <h4 class="modal-title" id="mukellefDetailLabel">
-                        <span id="detailFirmaTitle"></span>
-                        <small style="margin-left:10px;">(VKN/TCKN: <span id="detailFirmaVkn"></span>)</small>
-                    </h4>
-                    <div style="margin-top:5px;">
-                        <strong>Alias:</strong> <span id="detailFirmaAlias"></span>
-                    </div>
-                </div>
-                <div class="modal-body">
-                    <table id="mukellefDetail" class="table table-bordered table-striped" width="100%">
-                        <thead>
-                            <tr>
-                                <th>Alias</th>
-                                <th>Tip</th>
-                                <th>Belge Tipi</th>
-                                <th>İlk Kayıt Zamanı</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- JS ile doldurulacak -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Kapat</button>
-                </div>
-            </div>
-        </div>
-    </div>
+ 
 </section>
 
 @section Scripts {
@@ -176,6 +140,7 @@
             }
 
             // Sunucudan gelen kaydı normalize et
+            // Hem PascalCase hem camelCase isimleri destekliyoruz
             function normalizeMukellef(raw) {
                 raw = raw || {};
 
@@ -186,9 +151,11 @@
                     RegisterType: (raw.RegisterType || raw.registerType || '').toString().trim(),
                     Type: (raw.Type || raw.type || '').toString().trim(),
                     DocType: (raw.DocType || raw.docType || raw.DocumentType || raw.documentType || '').toString().trim(),
-                    FirstRegistrationTime: (raw.FirstRegistrationTime || raw.firstRegistrationTime ||
-                        raw.RegisterTime || raw.registerTime ||
-                        raw.CreatedAt || raw.createdAt || '').toString().trim()
+                    FirstRegistrationTime:
+                        (raw.FirstRegistrationTime || raw.firstRegistrationTime ||
+                            raw.RegisterTime || raw.registerTime ||
+                            raw.FirstCreationTime || raw.firstCreationTime ||
+                            raw.CreatedAt || raw.createdAt || '').toString().trim()
                 };
             }
 
@@ -204,8 +171,11 @@
                 else if (vkn) term = vkn;
                 else if (unvan) term = unvan;
 
-                var typeFilter = ($('#Type').val() || '').trim().toUpperCase();      // PK / GB / ''
-                var docFilter = ($('#DocType').val() || '').trim().toUpperCase();    // INVOICE / DESPATCHADVICE / ''
+                // Tip = GibAliasType (1: PK, 2: GB)
+                var typeFilter = ($('#Type').val() || '').trim();      // "","1","2"
+
+                // Belge Tip = AppType (1: e-Fatura, 3: e-İrsaliye)
+                var docFilter = ($('#DocType').val() || '').trim();    // "","1","3"
 
                 return {
                     term: term,
@@ -254,10 +224,10 @@
                             + '&pageSize=' + encodeURIComponent(pageSize);
 
                         if (search.type) {
-                            url += '&type=' + encodeURIComponent(search.type);
+                            url += '&type=' + encodeURIComponent(search.type);       // 1 / 2
                         }
                         if (search.docType) {
-                            url += '&docType=' + encodeURIComponent(search.docType);
+                            url += '&docType=' + encodeURIComponent(search.docType); // 1 / 3
                         }
 
                         fetch(url, {
@@ -369,11 +339,11 @@
                             render: function (d) { return html(d || ''); }
                         },
                         {
-                            data: 'Type',
+                            data: 'Type',      // PK / GB
                             render: function (d) { return html(d || ''); }
                         },
                         {
-                            data: 'DocType',
+                            data: 'DocType',   // e-Fatura / e-İrsaliye
                             render: function (d) { return html(d || ''); }
                         },
                         {

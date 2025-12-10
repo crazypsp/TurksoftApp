@@ -29,9 +29,9 @@ namespace TurkSoft.GIBWebUI.Controllers
             public string Identifier { get; set; }
             public string Title { get; set; }
             public string Alias { get; set; }
-            public string RegisterType { get; set; }
-            public string Type { get; set; }
-            public string DocType { get; set; }
+            public string RegisterType { get; set; }        // Özel / Kamu
+            public string Type { get; set; }                // PK / GB
+            public string DocType { get; set; }             // e-Fatura / e-İrsaliye
             public string FirstRegistrationTime { get; set; }
         }
 
@@ -70,6 +70,47 @@ namespace TurkSoft.GIBWebUI.Controllers
             return null;
         }
 
+        private static string MapGibUserType(string s)
+        {
+            return s switch
+            {
+                "1" => "Özel",
+                "2" => "Kamu",
+                _ => string.Empty
+            };
+        }
+
+        private static string MapGibAliasType(string s)
+        {
+            return s switch
+            {
+                "1" => "PK",
+                "2" => "GB",
+                _ => string.Empty
+            };
+        }
+
+        private static string MapAppType(string s)
+        {
+            return s switch
+            {
+                "1" => "e-Fatura",
+                "3" => "e-İrsaliye",
+                _ => string.Empty
+            };
+        }
+
+        private static string NormalizeDateTime(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return string.Empty;
+
+            if (DateTime.TryParse(raw, out var dt))
+                return dt.ToString("yyyy-MM-dd HH:mm:ss");
+
+            return raw.Replace('T', ' ');
+        }
+
         // ======================================================
         //  SEARCH MÜKELLEF  (streaming JSON)
         // ======================================================
@@ -100,8 +141,13 @@ namespace TurkSoft.GIBWebUI.Controllers
                 term = term.Trim();
                 bool hasTerm = term.Length > 0;
 
-                type = (type ?? string.Empty).Trim().ToUpperInvariant();
-                docType = (docType ?? string.Empty).Trim().ToUpperInvariant();
+                // Tip = GibAliasType (1: PK, 2: GB)
+                type = (type ?? string.Empty).Trim();
+                bool hasTypeFilter = !string.IsNullOrEmpty(type);
+
+                // Belge Tip = AppType (1: e-Fatura, 3: e-İrsaliye)
+                docType = (docType ?? string.Empty).Trim();
+                bool hasDocTypeFilter = !string.IsNullOrEmpty(docType);
 
                 bool hasPaging = page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0;
                 int skip = hasPaging ? (page.Value - 1) * pageSize.Value : 0;
@@ -126,9 +172,12 @@ namespace TurkSoft.GIBWebUI.Controllers
                         string identifier = GetStringCaseInsensitive(element, new[] { "Identifier", "identifier", "Vkn", "vkn" }) ?? "";
                         string title = GetStringCaseInsensitive(element, new[] { "Title", "title" }) ?? "";
                         string alias = GetStringCaseInsensitive(element, new[] { "Alias", "alias", "GibAlias", "gibAlias" }) ?? "";
-                        string registerType = GetStringCaseInsensitive(element, new[] { "RegisterType", "registerType" }) ?? "";
-                        string typeVal = GetStringCaseInsensitive(element, new[] { "Type", "type" }) ?? "";
-                        string docTypeVal = GetStringCaseInsensitive(element, new[] { "DocType", "docType", "DocumentType", "documentType" }) ?? "";
+
+                        // Yeni JSON alanları
+                        string gibUserType = GetStringCaseInsensitive(element, new[] { "GibUserType", "gibUserType" }) ?? "";
+                        string gibAliasType = GetStringCaseInsensitive(element, new[] { "GibAliasType", "gibAliasType" }) ?? "";
+                        string appType = GetStringCaseInsensitive(element, new[] { "AppType", "appType" }) ?? "";
+
                         string firstRegTime = GetStringCaseInsensitive(element, new[]
                         {
                             "FirstRegistrationTime", "firstRegistrationTime",
@@ -137,8 +186,7 @@ namespace TurkSoft.GIBWebUI.Controllers
                             "CreatedAt",             "createdAt"
                         }) ?? "";
 
-                        // ===== Filtreler =====
-
+                        // ===== term filtresi =====
                         if (hasTerm)
                         {
                             bool matchTerm =
@@ -152,52 +200,67 @@ namespace TurkSoft.GIBWebUI.Controllers
                                 continue;
                         }
 
-                        if (!string.IsNullOrEmpty(type))
+                        // ===== Tip filtresi (GibAliasType: 1 PK, 2 GB) =====
+                        if (hasTypeFilter)
                         {
-                            if (!string.Equals(typeVal ?? string.Empty, type, StringComparison.OrdinalIgnoreCase))
+                            if (!string.Equals(gibAliasType, type, StringComparison.OrdinalIgnoreCase))
                                 continue;
                         }
 
-                        if (!string.IsNullOrEmpty(docType))
+                        // ===== Belge Tip filtresi (AppType: 1 e-Fatura, 3 e-İrsaliye) =====
+                        if (hasDocTypeFilter)
                         {
-                            if (!string.Equals(docTypeVal ?? string.Empty, docType, StringComparison.OrdinalIgnoreCase))
+                            if (!string.Equals(appType, docType, StringComparison.OrdinalIgnoreCase))
                                 continue;
                         }
 
-                        // Bu noktaya geldiyse kayıt filtreye uyuyor
+                        // ===== Görünen metinler =====
+                        string registerType = MapGibUserType(gibUserType);
+                        if (string.IsNullOrEmpty(registerType))
+                        {
+                            // Eski JSON'da zaten yazılı ise kullan
+                            registerType = GetStringCaseInsensitive(element, new[] { "RegisterType", "registerType" }) ?? "";
+                        }
+
+                        string typeVal = MapGibAliasType(gibAliasType);
+                        if (string.IsNullOrEmpty(typeVal))
+                        {
+                            typeVal = GetStringCaseInsensitive(element, new[] { "Type", "type" }) ?? "";
+                        }
+
+                        string docTypeVal = MapAppType(appType);
+                        if (string.IsNullOrEmpty(docTypeVal))
+                        {
+                            docTypeVal = GetStringCaseInsensitive(element, new[] { "DocType", "docType", "DocumentType", "documentType" }) ?? "";
+                            if (string.Equals(docTypeVal, "INVOICE", StringComparison.OrdinalIgnoreCase))
+                                docTypeVal = "e-Fatura";
+                            else if (string.Equals(docTypeVal, "DESPATCHADVICE", StringComparison.OrdinalIgnoreCase))
+                                docTypeVal = "e-İrsaliye";
+                        }
+
+                        var slim = new MukellefSlim
+                        {
+                            Identifier = identifier,
+                            Title = title,
+                            Alias = alias,
+                            RegisterType = registerType,
+                            Type = typeVal,
+                            DocType = docTypeVal,
+                            FirstRegistrationTime = NormalizeDateTime(firstRegTime)
+                        };
+
                         if (hasPaging)
                         {
-                            // filteredCount: 0-based index
                             if (filteredCount >= skip && filteredCount < skip + take)
                             {
-                                resultItems.Add(new MukellefSlim
-                                {
-                                    Identifier = identifier,
-                                    Title = title,
-                                    Alias = alias,
-                                    RegisterType = registerType,
-                                    Type = typeVal,
-                                    DocType = docTypeVal,
-                                    FirstRegistrationTime = firstRegTime
-                                });
+                                resultItems.Add(slim);
                             }
 
                             filteredCount++;
                         }
                         else
                         {
-                            // Sayfalama yoksa en fazla 100 kayıt döndürelim
-                            resultItems.Add(new MukellefSlim
-                            {
-                                Identifier = identifier,
-                                Title = title,
-                                Alias = alias,
-                                RegisterType = registerType,
-                                Type = typeVal,
-                                DocType = docTypeVal,
-                                FirstRegistrationTime = firstRegTime
-                            });
-
+                            resultItems.Add(slim);
                             filteredCount++;
                             if (resultItems.Count >= 100)
                                 break;
@@ -281,12 +344,14 @@ namespace TurkSoft.GIBWebUI.Controllers
                         if (!string.Equals(xDigits, digits, StringComparison.Ordinal))
                             continue;
 
-                        // Eşleşme bulundu → diğer alanları da al
+                        // eşleşen kaydı slim'e map edelim
                         string title = GetStringCaseInsensitive(element, new[] { "Title", "title" }) ?? "";
                         string alias = GetStringCaseInsensitive(element, new[] { "Alias", "alias", "GibAlias", "gibAlias" }) ?? "";
-                        string registerType = GetStringCaseInsensitive(element, new[] { "RegisterType", "registerType" }) ?? "";
-                        string typeVal = GetStringCaseInsensitive(element, new[] { "Type", "type" }) ?? "";
-                        string docTypeVal = GetStringCaseInsensitive(element, new[] { "DocType", "docType", "DocumentType", "documentType" }) ?? "";
+
+                        string gibUserType = GetStringCaseInsensitive(element, new[] { "GibUserType", "gibUserType" }) ?? "";
+                        string gibAliasType = GetStringCaseInsensitive(element, new[] { "GibAliasType", "gibAliasType" }) ?? "";
+                        string appType = GetStringCaseInsensitive(element, new[] { "AppType", "appType" }) ?? "";
+
                         string firstRegTime = GetStringCaseInsensitive(element, new[]
                         {
                             "FirstRegistrationTime", "firstRegistrationTime",
@@ -294,6 +359,22 @@ namespace TurkSoft.GIBWebUI.Controllers
                             "FirstCreationTime",     "firstCreationTime",
                             "CreatedAt",             "createdAt"
                         }) ?? "";
+
+                        string registerType = MapGibUserType(gibUserType)
+                                              ?? GetStringCaseInsensitive(element, new[] { "RegisterType", "registerType" }) ?? "";
+
+                        string typeVal = MapGibAliasType(gibAliasType)
+                                         ?? GetStringCaseInsensitive(element, new[] { "Type", "type" }) ?? "";
+
+                        string docTypeVal = MapAppType(appType);
+                        if (string.IsNullOrEmpty(docTypeVal))
+                        {
+                            docTypeVal = GetStringCaseInsensitive(element, new[] { "DocType", "docType", "DocumentType", "documentType" }) ?? "";
+                            if (string.Equals(docTypeVal, "INVOICE", StringComparison.OrdinalIgnoreCase))
+                                docTypeVal = "e-Fatura";
+                            else if (string.Equals(docTypeVal, "DESPATCHADVICE", StringComparison.OrdinalIgnoreCase))
+                                docTypeVal = "e-İrsaliye";
+                        }
 
                         Console.WriteLine($"[GetMukellefByIdentifier] FOUND match for {digits}: {title}, {alias}");
 
@@ -306,7 +387,7 @@ namespace TurkSoft.GIBWebUI.Controllers
                             RegisterType = registerType,
                             Type = typeVal,
                             DocType = docTypeVal,
-                            FirstRegistrationTime = firstRegTime
+                            FirstRegistrationTime = NormalizeDateTime(firstRegTime)
                         });
                     }
                 }

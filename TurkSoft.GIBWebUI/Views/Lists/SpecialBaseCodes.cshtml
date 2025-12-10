@@ -4,7 +4,6 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-
 @section Styles {
     <style>
         .dataTables_wrapper .dataTables_filter input {
@@ -30,7 +29,7 @@
 <section class="content">
     <h2>Özel Matrah Kod Listesi</h2>
 
-    <div class="box box-primary" ng-app="myApp" ng-controller="ozelMatrahController">
+    <div class="box box-primary">
         <div class="box-body">
             <table id="grid_OzelMatrah" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
                 <thead>
@@ -40,12 +39,53 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr ng-repeat="r in rows" on-finish-render>
-                        <td><pre>{{r.code}}</pre></td>
-                        <td><pre>{{r.name}}</pre></td>
+                    <tr>
+                        <td><pre>805</pre></td>
+                        <td><pre>Altından mamül veya altın ihtiva eden ziynet eşyaları ile sikke altınların teslim ve ithali</pre></td>
                     </tr>
-                    <tr ng-if="!rows || rows.length===0">
-                        <td colspan="2" class="text-center">Kayıt bulunamadı.</td>
+                    <tr>
+                        <td><pre>802</pre></td>
+                        <td><pre>At yarışları ve diğer müşterek bahis ve talih oyunları</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>809</pre></td>
+                        <td><pre>Belediyeler tarafından yapılan şehiriçi yolcu taşımacılığında kullanılan biletlerin ve kartların bayiler tarafından satışı</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>807</pre></td>
+                        <td><pre>Gazete, dergi ve benzeri periyodik yayınlar</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>804</pre></td>
+                        <td><pre>Gümrük depolarında ve müzayede salonlarında yapılan satışlar</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>812</pre></td>
+                        <td><pre>İkinci el motorlu kara taşıtı veya taşınmaz ticaretiyle iştigal eden mükelleflerce, KDV mükellefi olmayanlardan (mükellef olanlardan istisna kapsamında yapılan alımlar dâhil) alınarak vasfında esaslı değişiklik yapılmaksızın ikinci el motorlu kara taşıtı veya taşınmaz teslimi</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>808</pre></td>
+                        <td><pre>Külçe gümüş ve gümüşten mamül eşya teslimleri</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>801</pre></td>
+                        <td><pre>Milli piyango, spor-toto ve benzeri Devletçe organize edilen organizasyonlar</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>803</pre></td>
+                        <td><pre>Profesyonel sanatçıların yer aldığı gösteriler ve konserler ile profesyonel sporcuların katıldığı sportif faaliyetler, maçlar ve yarışlar ve yarışmalar</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>810</pre></td>
+                        <td><pre>Telefon kartı ve jeton satışları</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>811</pre></td>
+                        <td><pre>Türkiye Şoförler ve Otomobilciler Federasyonu tarafından araç plakaları ile sürücü kurslarında kullanılan bir kısım evrakın basımı</pre></td>
+                    </tr>
+                    <tr>
+                        <td><pre>806</pre></td>
+                        <td><pre>Tütün mamülleri ve bazı alkollü içkiler</pre></td>
                     </tr>
                 </tbody>
             </table>
@@ -54,74 +94,21 @@
 </section>
 
 @section Scripts {
-   
     <script>
-        (function () {
-            var app;
-            try { app = angular.module('myApp'); }
-            catch (e) { app = angular.module('myApp', []); }
-
-            // ng-repeat bittikten sonra DataTables'i başlatmak için
-            app.directive('onFinishRender', function ($timeout) {
-                return {
-                    restrict: 'A',
-                    link: function (scope) {
-                        if (scope.$last === true) {
-                            $timeout(function () { scope.$emit('ngRepeatFinished'); }, 0);
-                        }
-                    }
-                };
+        $(function () {
+            var $tbl = $('#grid_OzelMatrah');
+            if ($.fn.DataTable.isDataTable($tbl)) {
+                $tbl.DataTable().destroy();
+            }
+            $tbl.DataTable({
+                pageLength: 25,
+                lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "Tümü"]],
+                order: [[0, 'asc']],
+                columnDefs: [{ targets: 0, type: 'num' }],
+                deferRender: true,
+                stateSave: true,
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
             });
-
-            app.controller('ozelMatrahController', ['$scope', '$http', function ($scope, $http) {
-                $scope.rows = [];
-                var dtInitialized = false;
-
-                // (İsteğe bağlı) API: /api/ozel-matrah-kodlari -> [{code, name}]
-                $http.get('/api/ozel-matrah-kodlari').then(function (res) {
-                    if (Array.isArray(res.data) && res.data.length > 0) {
-                        $scope.rows = res.data;
-                    } else {
-                        $scope.rows = fallbackOzelMatrah;
-                    }
-                }).catch(function () {
-                    $scope.rows = fallbackOzelMatrah;
-                });
-
-                function initDataTable() {
-                    var $tbl = $('#grid_OzelMatrah');
-                    if ($.fn.DataTable.isDataTable($tbl)) {
-                        $tbl.DataTable().destroy();
-                    }
-                    $tbl.DataTable({
-                        pageLength: 25,
-                        order: [[0, 'asc']],
-                        columnDefs: [{ targets: 0, type: 'num' }],
-                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
-                    });
-                    dtInitialized = true;
-                }
-
-                $scope.$on('ngRepeatFinished', function () {
-                    initDataTable();
-                });
-            }]);
-
-            // Verdiğin 12 maddelik liste (fallback)
-            var fallbackOzelMatrah = [
-                { code: 805, name: "Altından mamül veya altın ihtiva eden ziynet eşyaları ile sikke altınların teslim ve ithali" },
-                { code: 802, name: "At yarışları ve diğer müşterek bahis ve talih oyunları" },
-                { code: 809, name: "Belediyeler tarafından yapılan şehiriçi yolcu taşımacılığında kullanılan biletlerin ve kartların bayiler tarafından satışı" },
-                { code: 807, name: "Gazete, dergi ve benzeri periyodik yayınlar" },
-                { code: 804, name: "Gümrük depolarında ve müzayede salonlarında yapılan satışlar" },
-                { code: 812, name: "İkinci el motorlu kara taşıtı veya taşınmaz ticaretiyle iştigal eden mükelleflerce, KDV mükellefi olmayanlardan (mükellef olanlardan istisna kapsamında yapılan alımlar dâhil) alınarak vasfında esaslı değişiklik yapılmaksızın ikinci el motorlu kara taşıtı veya taşınmaz teslimi" },
-                { code: 808, name: "Külçe gümüş ve gümüşten mamül eşya teslimleri" },
-                { code: 801, name: "Milli piyango, spor-toto ve benzeri Devletçe organize edilen organizasyonlar" },
-                { code: 803, name: "Profesyonel sanatçıların yer aldığı gösteriler ve konserler ile profesyonel sporcuların katıldığı sportif faaliyetler, maçlar ve yarışlar ve yarışmalar" },
-                { code: 810, name: "Telefon kartı ve jeton satışları" },
-                { code: 811, name: "Türkiye Şoförler ve Otomobilciler Federasyonu tarafından araç plakaları ile sürücü kurslarında kullanılan bir kısım evrakın basımı" },
-                { code: 806, name: "Tütün mamülleri ve bazı alkollü içkiler" }
-            ];
-        })();
+        });
     </script>
 }

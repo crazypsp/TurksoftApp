@@ -26,4 +26,6 @@ export * as ParameterSettingApi from './ParameterSetting.js';
 export * as UserInvoiceInboxSettingApi from './UserInvoiceInboxSetting.js';
 export * as UserVerificationDeviceApi from './UserVerificationDevice.js';
 export * as SettingApi from './Setting.js';
+export * as BrandApi from './Brand.js';
+export * as UnitApi from './Unit.js';
 

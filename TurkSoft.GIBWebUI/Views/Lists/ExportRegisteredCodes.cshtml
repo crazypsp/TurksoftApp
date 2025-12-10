@@ -29,7 +29,7 @@
 <section class="content">
     <h2>İhraç Kayıtlı Kod Listesi</h2>
 
-    <div class="box box-primary" ng-app="myApp" ng-controller="ihracKayitliController">
+    <div class="box box-primary">
         <div class="box-body">
             <table id="grid_Export" class="table table-bordered table-hover dataTable dt-head-center" width="100%">
                 <thead>
@@ -39,12 +39,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr ng-repeat="r in rows" on-finish-render>
-                        <td><pre>{{r.code}}</pre></td>
-                        <td><pre>{{r.name}}</pre></td>
+                    <tr>
+                        <td>701</td>
+                        <td>3065 s. KDV Kanununun 11/1-c md. Kapsamındaki İhraç Kayıtlı Satış</td>
                     </tr>
-                    <tr ng-if="!rows || rows.length===0">
-                        <td colspan="2" class="text-center">Kayıt bulunamadı.</td>
+                    <tr>
+                        <td>704</td>
+                        <td>3065 sayılı KDV Kanununun (11/1-c) maddesi ve 4760 s. ÖTV Kanununun 8/2. Md. Kapsamındaki İhraç Kayıtlı Satış</td>
+                    </tr>
+                    <tr>
+                        <td>703</td>
+                        <td>4760 s. ÖTV Kanununun 8/2 Md. Kapsamındaki İhraç Kayıtlı Satış</td>
+                    </tr>
+                    <tr>
+                        <td>702</td>
+                        <td>DİİB ve Geçici Kabul Rejimi Kapsamındaki Satışlar</td>
                     </tr>
                 </tbody>
             </table>
@@ -54,62 +63,16 @@
 
 @section Scripts {
     <script>
-        (function () {
-            var app;
-            try { app = angular.module('myApp'); }
-            catch (e) { app = angular.module('myApp', []); }
-
-            // ng-repeat tamamlandıktan sonra DataTables'i başlatmak için
-            app.directive('onFinishRender', function ($timeout) {
-                return {
-                    restrict: 'A',
-                    link: function (scope) {
-                        if (scope.$last === true) {
-                            $timeout(function () { scope.$emit('ngRepeatFinished'); }, 0);
-                        }
-                    }
-                };
+        $(function () {
+            $('#grid_Export').DataTable({
+                pageLength: 25,
+                lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "Tümü"]],
+                order: [[0, 'asc']],
+                columnDefs: [{ targets: 0, type: 'num' }],
+                deferRender: true,
+                stateSave: true,
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
             });
-
-            app.controller('ihracKayitliController', ['$scope', '$http', function ($scope, $http) {
-                $scope.rows = [];
-
-                // (Opsiyonel) API uç noktası: /api/ihrac-kayitli-kodlari -> [{code, name}]
-                $http.get('/api/ihrac-kayitli-kodlari').then(function (res) {
-                    if (Array.isArray(res.data) && res.data.length > 0) {
-                        $scope.rows = res.data;
-                    } else {
-                        $scope.rows = fallbackExportCodes;
-                    }
-                }).catch(function () {
-                    $scope.rows = fallbackExportCodes;
-                });
-
-                function initDataTable() {
-                    var $tbl = $('#grid_Export');
-                    if ($.fn.DataTable.isDataTable($tbl)) {
-                        $tbl.DataTable().destroy();
-                    }
-                    $tbl.DataTable({
-                        pageLength: 25,
-                        order: [[0, 'asc']],
-                        columnDefs: [{ targets: 0, type: 'num' }],
-                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' }
-                    });
-                }
-
-                $scope.$on('ngRepeatFinished', function () {
-                    initDataTable();
-                });
-            }]);
-
-            // Verdiğiniz 4 satırlık liste (fallback)
-            var fallbackExportCodes = [
-                { code: 701, name: "3065 s. KDV Kanununun 11/1-c md. Kapsamındaki İhraç Kayıtlı Satış" },
-                { code: 704, name: "3065 sayılı KDV Kanununun (11/1-c) maddesi ve 4760 s. ÖTV Kanununun 8/2. md. kapsamındaki İhraç Kayıtlı Satış" },
-                { code: 703, name: "4760 s. ÖTV Kanununun 8/2 md. kapsamındaki İhraç Kayıtlı Satış" },
-                { code: 702, name: "DİİB ve Geçici Kabul Rejimi kapsamındaki satışlar" }
-            ];
-        })();
+        });
     </script>
 }
