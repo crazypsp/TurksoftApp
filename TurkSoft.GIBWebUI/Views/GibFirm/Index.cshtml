@@ -90,7 +90,6 @@
             color: #9ea3b0;
         }
 
-        /* Bölüm başlıkları */
         .modal-corporate .section-title {
             font-size: 12px;
             text-transform: uppercase;
@@ -111,11 +110,24 @@
             margin-top: 20px;
         }
 
-        /* Büyük ekranlarda modal genişliği (biraz daha ferah) */
         @@media (min-width: 992px) {
             .modal-dialog.modal-lg {
                 width: 1024px;
             }
+        }
+
+        /* İç gridler */
+        .panel-sky {
+            background: transparent;
+            border: none;
+        }
+
+            .panel-sky .panel-body {
+                padding: 0;
+            }
+
+        .dt-head-center thead th {
+            text-align: center;
         }
     </style>
 }
@@ -143,12 +155,15 @@
     </div>
 </div>
 
-<!-- Modal -->
+<!-- =========================
+     GİB FİRMA MODAL
+     ========================= -->
 <div id="gibFirmModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gibFirmModalLabel">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content modal-corporate">
             <form id="gibFirmForm" method="post" novalidate>
                 @Html.AntiForgeryToken()
+
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
                         <span aria-hidden="true">&times;</span>
@@ -161,55 +176,194 @@
                 <div class="modal-body">
                     <input type="hidden" id="FirmId" name="Id" />
                     <input type="hidden" id="RowVersionBase64" name="RowVersionBase64" />
-                    <div class="row">
-                        <!-- SOL SÜTUN -->
-                        <div class="col-md-6">
+
+                    <!-- Üst Tablar -->
+                    <ul class="nav nav-tabs" id="gibFirmTabs">
+                        <li class="active">
+                            <a href="#tabFirmMain" data-toggle="tab">
+                                <i class="fa fa-info-circle"></i> Firma Bilgileri
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#tabFirmServices" data-toggle="tab">
+                                <i class="fa fa-exchange"></i> Hizmet &amp; Alias
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" style="margin-top:15px;">
+
+                        <!-- TAB 1: Firma Bilgileri -->
+                        <div class="tab-pane fade in active" id="tabFirmMain">
+
                             <div class="section-title">
                                 <i class="fa fa-id-card-o"></i> Firma Bilgileri
                             </div>
 
-                            <div class="form-group">
-                                <label for="Title">Ünvan</label>
-                                <input class="form-control" id="Title" name="Title" required maxlength="200" />
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="TaxNo">VKN / TCKN *</label>
+                                        <input class="form-control" id="TaxNo" name="TaxNo" maxlength="20" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="CustomerName">Müşteri Adı *</label>
+                                        <input class="form-control" id="CustomerName" name="CustomerName" maxlength="200" />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="TaxNo">VKN / TCKN</label>
-                                <input class="form-control" id="TaxNo" name="TaxNo" maxlength="20" />
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="Title">Unvan *</label>
+                                        <input class="form-control" id="Title" name="Title" maxlength="200" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="KepAddress">Kep Adresi</label>
+                                        <input type="email" class="form-control" id="KepAddress" name="KepAddress" placeholder="x@hs0.kep.tr" maxlength="200" />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="TaxOffice">Vergi Dairesi</label>
-                                <input class="form-control" id="TaxOffice" name="TaxOffice" maxlength="100" />
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="PersonalFirstName">Adı (*Tckn)</label>
+                                        <input class="form-control" id="PersonalFirstName" name="PersonalFirstName" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="InstitutionType">Kurum Türü *</label>
+                                        <select class="form-control" id="InstitutionType" name="InstitutionType">
+                                            <option value="1">ÖZEL</option>
+                                            <option value="0">KAMU</option>
+                                            <option value="3">VUK 507 ÖZEL</option>
+                                            <option value="2">VUK 507 KAMU</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="CommercialRegistrationNo">Ticaret Sicil No</label>
-                                <input class="form-control" id="CommercialRegistrationNo" name="CommercialRegistrationNo" maxlength="100" />
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="PersonalLastName">Soyadı (*Tckn)</label>
+                                        <input class="form-control" id="PersonalLastName" name="PersonalLastName" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="CorporateEmail">Kurumsal e-Posta *</label>
+                                        <input type="email" class="form-control" id="CorporateEmail" name="CorporateEmail" maxlength="200" />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="MersisNo">Mersis No</label>
-                                <input class="form-control" id="MersisNo" name="MersisNo" maxlength="100" />
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="TaxOfficeProvince">Vergi Dairesi İl *</label>
+                                        <input class="form-control" id="TaxOfficeProvince" name="TaxOfficeProvince" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="TaxOffice">Vergi Dairesi *</label>
+                                        <input class="form-control" id="TaxOffice" name="TaxOffice" maxlength="100" />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="section-title m-t-20">
-                                <i class="fa fa-envelope-o"></i> GİB Bilgileri
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="CustomerRepresentative">Müşteri Temsilcisi *</label>
+                                        <input class="form-control" id="CustomerRepresentative" name="CustomerRepresentative" maxlength="200" />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="GibAlias">GİB Alias</label>
-                                <input class="form-control" id="GibAlias" name="GibAlias" maxlength="200" />
+                            <hr />
+
+                            <!-- Sorumlu Kişi -->
+                            <div class="section-title">
+                                <i class="fa fa-user"></i> Sorumlu Kişi
                             </div>
 
-                            <div class="form-group">
-                                <label for="ApiKey">API Key</label>
-                                <input class="form-control" id="ApiKey" name="ApiKey" maxlength="200" />
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="ResponsibleTckn">Sorumlu Tckn *</label>
+                                        <input class="form-control" id="ResponsibleTckn" name="ResponsibleTckn" maxlength="11" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6"></div>
                             </div>
-                        </div>
 
-                        <!-- SAĞ SÜTUN -->
-                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="ResponsibleFirstName">Sorumlu Adı *</label>
+                                        <input class="form-control" id="ResponsibleFirstName" name="ResponsibleFirstName" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="ResponsibleLastName">Sorumlu Soyadı *</label>
+                                        <input class="form-control" id="ResponsibleLastName" name="ResponsibleLastName" maxlength="100" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="ResponsibleMobilePhone">Sorumlu Cep Tel. *</label>
+                                        <input class="form-control" id="ResponsibleMobilePhone" name="ResponsibleMobilePhone" maxlength="30" placeholder="___ ___-__-__" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="ResponsibleEmail">Sorumlu e-Posta *</label>
+                                        <input type="email" class="form-control" id="ResponsibleEmail" name="ResponsibleEmail" maxlength="200" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <!-- Müşteri kaydını alan kişi -->
+                            <label>Müşteri Kaydını Alan Kişinin:</label>
+                            <div class="row">
+                                <div class="col-sm-4">
+                                    <div class="form-group">
+                                        <label for="CreatedByPersonFirstName">Adı *</label>
+                                        <input class="form-control" id="CreatedByPersonFirstName" name="CreatedByPersonFirstName" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="form-group">
+                                        <label for="CreatedByPersonLastName">Soyadı *</label>
+                                        <input class="form-control" id="CreatedByPersonLastName" name="CreatedByPersonLastName" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="form-group">
+                                        <label for="CreatedByPersonMobilePhone">Cep No *</label>
+                                        <input class="form-control" id="CreatedByPersonMobilePhone" name="CreatedByPersonMobilePhone" maxlength="30" placeholder="___ ___-__-__" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <!-- Adres & İletişim -->
                             <div class="section-title">
                                 <i class="fa fa-map-marker"></i> Adres &amp; İletişim
                             </div>
@@ -258,7 +412,7 @@
                                 </div>
                                 <div class="col-sm-6">
                                     <div class="form-group">
-                                        <label for="FirmEmail">E-Posta</label>
+                                        <label for="FirmEmail">Genel E-Posta</label>
                                         <input type="email" class="form-control" id="FirmEmail" name="Email" maxlength="200" />
                                     </div>
                                 </div>
@@ -282,7 +436,17 @@
                             </div>
 
                             <div class="section-title m-t-20">
-                                <i class="fa fa-battery-full"></i> Kontör Ayarları
+                                <i class="fa fa-key"></i> GİB ve Kontör
+                            </div>
+
+                            <div class="form-group">
+                                <label for="GibAlias">Genel GİB Alias</label>
+                                <input class="form-control" id="GibAlias" name="GibAlias" maxlength="200" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ApiKey">API Key</label>
+                                <input class="form-control" id="ApiKey" name="ApiKey" maxlength="200" />
                             </div>
 
                             <div class="form-group">
@@ -296,8 +460,72 @@
                                 </p>
                             </div>
                         </div>
-                    </div>
-                </div>
+
+                        <!-- TAB 2: Hizmet & Alias -->
+                        <div class="tab-pane fade" id="tabFirmServices">
+                            <div class="section-title">
+                                <i class="fa fa-file-text-o"></i> Hizmet Bilgileri
+                            </div>
+
+                            <div class="form-group-12">
+                                <div class="panel panel-sky">
+                                    <div class="panel-body">
+                                        <div class="modal-header" style="padding:8px 0 10px;border-bottom:none;">
+                                            <button type="button" id="btnNewFirmService" class="btn btn-success">
+                                                Hizmet Ekle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-plus"></i></span>
+                                            </button>
+                                        </div>
+                                        <table id="FirmServiceGrid" class="table table-bordered table-hover dataTable dt-head-center" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th style="min-width:140px;max-width:180px;text-align:center;">Hizmet Türü</th>
+                                                    <th style="min-width:140px;max-width:140px;text-align:center;">Başlangıç Tarihi</th>
+                                                    <th style="min-width:140px;max-width:140px;text-align:center;">Bitiş Tarihi</th>
+                                                    <th style="min-width:120px;max-width:140px;text-align:center;">Tarife Türü</th>
+                                                    <th style="min-width:100px;max-width:120px;text-align:center;">Durum</th>
+                                                    <th style="min-width:150px;max-width:180px;text-align:center;">İşlemler</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-title m-t-20">
+                                <i class="fa fa-at"></i> Alias Bilgileri
+                            </div>
+
+                            <div class="form-group-12">
+                                <div class="panel panel-sky">
+                                    <div class="panel-body">
+                                        <div class="modal-header" style="padding:8px 0 10px;border-bottom:none;">
+                                            <button type="button" id="btnNewFirmServiceAlias" class="btn btn-success">
+                                                Alias Ekle &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-plus"></i></span>
+                                            </button>
+                                            <span class="help-block small" style="margin-left:10px;">
+                                                Aliaslar, yukarıdaki listeden seçili hizmet için geçerlidir.
+                                            </span>
+                                        </div>
+                                        <table id="FirmServiceAliasGrid" class="table table-bordered table-hover dataTable dt-head-center" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th style="min-width:140px;max-width:180px;text-align:center;">Hizmet Türü</th>
+                                                    <th style="min-width:120px;max-width:120px;text-align:center;">Yön</th>
+                                                    <th style="min-width:220px;max-width:260px;text-align:center;">Alias</th>
+                                                    <th style="min-width:150px;max-width:180px;text-align:center;">İşlemler</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div> <!-- /tabFirmServices -->
+
+                    </div> <!-- /tab-content -->
+                </div> <!-- /modal-body -->
 
                 <div class="modal-footer">
                     <button id="btnSaveFirm" type="submit" class="btn btn-success">

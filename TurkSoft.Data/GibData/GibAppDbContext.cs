@@ -98,6 +98,11 @@ namespace TurkSoft.Data.GibData
         public DbSet<UserInvoiceInboxSetting> UserInvoiceInboxSetting { get; set; } = default!;
         public DbSet<ParameterSetting> ParameterSetting { get; set; } = default!;
         public DbSet<UserVerificationDevice> UserVerificationDevice { get; set; } = default!;
+
+        // 🔹 Firma Tanımlamada Kullanılacak Ek Tablolar
+        public DbSet<GibFirmService> GibFirmServices { get; set; }
+        public DbSet<GibFirmServiceAlias> GibFirmServiceAliases { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

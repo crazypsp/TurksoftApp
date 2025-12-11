@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,10 +70,14 @@ namespace TurkSoft.Service.Manager
         // Public API
         // ======================================================
 
+
         public async Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default)
         {
             var query = _set.AsNoTracking().AsQueryable();
             query = ApplyIsActiveFilterIfExists(query);
+
+            // 🔹 TEntity için navigation’ları dahil et
+            query = ApplyIncludesForEntity(query);
 
             var predicate = BuildIdEqualsExpression(id);
             return await query.FirstOrDefaultAsync(predicate, ct);
@@ -83,8 +88,14 @@ namespace TurkSoft.Service.Manager
             var query = _set.AsNoTracking().AsQueryable();
             query = ApplyIsActiveFilterIfExists(query);
 
+            // 🔹 TEntity için navigation’ları dahil et
+            query = ApplyIncludesForEntity(query);
+
             return await query.ToListAsync(ct);
         }
+
+
+
 
         /// <summary>
         /// Generic Add.
@@ -1651,5 +1662,90 @@ namespace TurkSoft.Service.Manager
                 }
             }
         }
+
+        /// <summary>
+        /// TEntity için EF model metadata'sını kullanarak navigation’ları Include eder.
+        /// - Tüm normal navigation’lar (reference & collection) için Include ekler.
+        /// - maxDepth kadar alt seviye navigation'ları da (Parent.Child.GrandChild) dahil eder.
+        /// Böylece Item, Invoice, Customer, Category vb. tüm entity’ler için otomatik çalışır.
+        /// </summary>
+        private IQueryable<TEntity> ApplyIncludesForEntity(IQueryable<TEntity> query)
+        {
+            var entityType = _db.Model.FindEntityType(typeof(TEntity));
+            if (entityType == null)
+                return query;
+
+            const int maxDepth = 2; // İstersen 1/3 yaparak derinliği değiştirebilirsin.
+
+            var visited = new HashSet<IEntityType>();
+            return IncludeNavigationsRecursive(
+                query,
+                entityType,
+                prefix: null,
+                depth: maxDepth,
+                visited: visited,
+                rootEntityType: entityType);
+        }
+
+        /// <summary>
+        /// Navigation ağacını derinlik kontrollü olarak dolaşıp Include path’leri ekler.
+        /// Örn: Item -> ItemsCategories -> Category için
+        /// - "ItemsCategories"
+        /// - "ItemsCategories.Category"
+        /// path’lerini üretir.
+        /// </summary>
+        private IQueryable<TEntity> IncludeNavigationsRecursive(
+    IQueryable<TEntity> query,
+    IEntityType entityType,
+    string? prefix,
+    int depth,
+    HashSet<IEntityType> visited,
+    IEntityType rootEntityType)
+        {
+            if (depth <= 0)
+                return query;
+
+            // Aynı entity tipini aynı include ağacında ikinci kez işlemeye çalışıyorsak
+            // (B -> C -> B gibi) sonsuz döngüye girmemek için burada kesiyoruz.
+            if (!visited.Add(entityType))
+                return query;
+
+            foreach (var navigation in entityType.GetNavigations())
+            {
+                var targetEntityType = navigation.TargetEntityType;
+
+                // 🔴 ÖNEMLİ:
+                // Root tipe (TEntity) geri dönen navigation'ları alt seviyede atla.
+                // Örnekler:
+                //  - Item (root) -> Brand -> Items   ❌  (Brand.Items atlanacak)
+                //  - Invoice (root) -> Customer -> Invoices  ❌
+                //
+                // prefix == null => root seviyesindeyiz (Item.Brand, Invoice.Customer gibi).
+                // prefix != null => alt seviye (Brand.Items, Customer.Invoices gibi).
+                if (targetEntityType == rootEntityType && prefix != null)
+                    continue;
+
+                // Bu navigation için Include path'i oluştur:
+                //  - root seviye: "Brand", "Unit", "ItemsCategories"
+                //  - alt seviye:  "ItemsCategories.Category" vb.
+                var path = string.IsNullOrEmpty(prefix)
+                    ? navigation.Name
+                    : $"{prefix}.{navigation.Name}";
+
+                query = query.Include(path);
+
+                // Alt navigation'ları da (max depth kadar) işlemeye devam et
+                query = IncludeNavigationsRecursive(
+                    query,
+                    targetEntityType,
+                    path,
+                    depth - 1,
+                    visited,
+                    rootEntityType);
+            }
+
+            return query;
+        }
+
     }
 }
