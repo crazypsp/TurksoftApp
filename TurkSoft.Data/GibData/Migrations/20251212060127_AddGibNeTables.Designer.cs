@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TurkSoft.Data.GibData;
 
@@ -11,9 +12,11 @@ using TurkSoft.Data.GibData;
 namespace TurkSoft.Data.GibData.Migrations
 {
     [DbContext(typeof(GibAppDbContext))]
-    partial class GibAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251212060127_AddGibNeTables")]
+    partial class AddGibNeTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

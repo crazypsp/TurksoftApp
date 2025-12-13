@@ -21,4 +21,10 @@
     <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Interop.UnityObjects">
+      <HintPath>..\..\Interop.UnityObjects.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

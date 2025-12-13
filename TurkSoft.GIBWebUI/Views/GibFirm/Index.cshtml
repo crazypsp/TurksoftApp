@@ -155,9 +155,6 @@
     </div>
 </div>
 
-<!-- =========================
-     GİB FİRMA MODAL
-     ========================= -->
 <div id="gibFirmModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gibFirmModalLabel">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content modal-corporate">
@@ -177,7 +174,6 @@
                     <input type="hidden" id="FirmId" name="Id" />
                     <input type="hidden" id="RowVersionBase64" name="RowVersionBase64" />
 
-                    <!-- Üst Tablar -->
                     <ul class="nav nav-tabs" id="gibFirmTabs">
                         <li class="active">
                             <a href="#tabFirmMain" data-toggle="tab">
@@ -193,7 +189,6 @@
 
                     <div class="tab-content" style="margin-top:15px;">
 
-                        <!-- TAB 1: Firma Bilgileri -->
                         <div class="tab-pane fade in active" id="tabFirmMain">
 
                             <div class="section-title">
@@ -280,6 +275,22 @@
                                 </div>
                             </div>
 
+                            <!-- ✅ EKLENDİ: REQUIRED alanlar -->
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="CommercialRegistrationNo">Ticaret Sicil No *</label>
+                                        <input class="form-control" id="CommercialRegistrationNo" name="CommercialRegistrationNo" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label for="MersisNo">Mersis No *</label>
+                                        <input class="form-control" id="MersisNo" name="MersisNo" maxlength="100" />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="row">
                                 <div class="col-sm-6">
                                     <div class="form-group">
@@ -291,7 +302,6 @@
 
                             <hr />
 
-                            <!-- Sorumlu Kişi -->
                             <div class="section-title">
                                 <i class="fa fa-user"></i> Sorumlu Kişi
                             </div>
@@ -338,7 +348,6 @@
 
                             <hr />
 
-                            <!-- Müşteri kaydını alan kişi -->
                             <label>Müşteri Kaydını Alan Kişinin:</label>
                             <div class="row">
                                 <div class="col-sm-4">
@@ -363,7 +372,6 @@
 
                             <hr />
 
-                            <!-- Adres & İletişim -->
                             <div class="section-title">
                                 <i class="fa fa-map-marker"></i> Adres &amp; İletişim
                             </div>
@@ -461,7 +469,6 @@
                             </div>
                         </div>
 
-                        <!-- TAB 2: Hizmet & Alias -->
                         <div class="tab-pane fade" id="tabFirmServices">
                             <div class="section-title">
                                 <i class="fa fa-file-text-o"></i> Hizmet Bilgileri
@@ -522,10 +529,10 @@
                                 </div>
                             </div>
 
-                        </div> <!-- /tabFirmServices -->
+                        </div>
 
-                    </div> <!-- /tab-content -->
-                </div> <!-- /modal-body -->
+                    </div>
+                </div>
 
                 <div class="modal-footer">
                     <button id="btnSaveFirm" type="submit" class="btn btn-success">
@@ -539,5 +546,5 @@
 </div>
 
 @section Scripts {
-    <script type="module" src="~/apps/gibFirm.js"></script>
+    <script type="module" src="~/apps/gibFirm.js?v=20251212_3"></script>
 }

@@ -1,30 +1,34 @@
 ﻿import { FirmaApi, GibUserCreditAccountApi } from '../Entites/index.js';
 
 /* ===========================================
+   INIT GUARD (dosya 2 kere yüklenirse)
+   =========================================== */
+if (window.__gibFirmInitialized) {
+    console.warn('[GibFirm] already initialized');
+} else {
+    window.__gibFirmInitialized = true;
+}
+
+/* ===========================================
    RowVersion yardımcıları
    =========================================== */
-
 function rowVersionHexToBase64(hex) {
     if (!hex) return "";
     let h = String(hex).trim();
-    if (h.startsWith("0x") || h.startsWith("0X")) {
-        h = h.substring(2);
-    }
-    if (h.length % 2 === 1) {
-        h = "0" + h;
-    }
+    if (h.startsWith("0x") || h.startsWith("0X")) h = h.substring(2);
+    if (h.length % 2 === 1) h = "0" + h;
+
     const bytes = [];
     for (let i = 0; i < h.length; i += 2) {
         const b = parseInt(h.substr(i, 2), 16);
         if (!isNaN(b)) bytes.push(b);
     }
+
     let bin = "";
-    for (let i = 0; i < bytes.length; i++) {
-        bin += String.fromCharCode(bytes[i]);
-    }
-    try {
-        return btoa(bin);
-    } catch (e) {
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+
+    try { return btoa(bin); }
+    catch (e) {
         console.error("RowVersion base64 dönüşümünde hata:", e);
         return "";
     }
@@ -41,36 +45,33 @@ function getRowVersionFromEntityOrDefault(entity) {
         entity.rowVersion || entity.RowVersion ||
         entity.rowVersionHex || entity.RowVersionHex;
 
-    if (rv && /^0x/i.test(rv)) {
-        rv = rowVersionHexToBase64(rv);
-    }
-
+    if (rv && /^0x/i.test(rv)) rv = rowVersionHexToBase64(rv);
     return rv || DEFAULT_ROWVERSION_BASE64;
 }
 
 /* ===========================================
-   BaseEntity builder
+   BaseEntity builder (Firm + Child)
    =========================================== */
+const BASE_USER_ID = 1;
 
-function buildBaseEntityForFirm(isNew, nowIso, existing, overrideRowVersion) {
+function buildBaseEntityNew(nowIso) {
+    return {
+        UserId: BASE_USER_ID,
+        IsActive: true,
+        DeleteDate: null,
+        DeletedByUserId: null,
+        CreatedAt: nowIso,
+        UpdatedAt: null,
+        CreatedByUserId: BASE_USER_ID,
+        UpdatedByUserId: BASE_USER_ID,
+        RowVersion: DEFAULT_ROWVERSION_BASE64
+    };
+}
+
+function buildBaseEntityUpdate(nowIso, existing, overrideRowVersion) {
     const ex = existing || {};
-    const BASE_USER_ID = 1;
-
-    if (isNew) {
-        return {
-            UserId: BASE_USER_ID,
-            IsActive: true,
-            DeleteDate: null,
-            DeletedByUserId: null,
-            CreatedAt: nowIso,
-            UpdatedAt: null,
-            CreatedByUserId: BASE_USER_ID,
-            UpdatedByUserId: BASE_USER_ID,
-            RowVersion: overrideRowVersion || DEFAULT_ROWVERSION_BASE64
-        };
-    }
-
     const createdAt = ex.createdAt || ex.CreatedAt || nowIso;
+
     const isActive =
         (ex.isActive !== undefined ? ex.isActive :
             (ex.IsActive !== undefined ? ex.IsActive : true));
@@ -78,19 +79,13 @@ function buildBaseEntityForFirm(isNew, nowIso, existing, overrideRowVersion) {
     const deleteDate = ex.deleteDate || ex.DeleteDate || null;
     const deletedByUserId = ex.deletedByUserId || ex.DeletedByUserId || null;
 
-    const createdByUserId =
-        ex.createdByUserId || ex.CreatedByUserId || BASE_USER_ID;
+    const createdByUserId = ex.createdByUserId || ex.CreatedByUserId || BASE_USER_ID;
+    const updatedByUserId = ex.updatedByUserId || ex.UpdatedByUserId || BASE_USER_ID;
+    const userId = ex.userId || ex.UserId || BASE_USER_ID;
 
-    const updatedByUserId =
-        ex.updatedByUserId || ex.UpdatedByUserId || BASE_USER_ID;
-
-    const userId =
-        ex.userId || ex.UserId || BASE_USER_ID;
-
-    let rowVersionBase64 = overrideRowVersion;
-    if (!rowVersionBase64) {
-        rowVersionBase64 = getRowVersionFromEntityOrDefault(ex);
-    }
+    const rowVersionBase64 = (overrideRowVersion && String(overrideRowVersion).trim())
+        ? String(overrideRowVersion).trim()
+        : getRowVersionFromEntityOrDefault(ex);
 
     return {
         UserId: userId,
@@ -106,46 +101,65 @@ function buildBaseEntityForFirm(isNew, nowIso, existing, overrideRowVersion) {
 }
 
 /* ===========================================
-   Hizmet / Alias yardımcıları
+   Hizmet / Alias sabitleri (STRING)
    =========================================== */
-
-function serviceTypeLabel(val) {
-    const v = String(val || '1');
-    switch (v) {
-        case '1': return 'E-Fatura / E-Arşiv';
-        case '2': return 'E-İrsaliye';
-        case '3': return 'E-Defter';
-        case '4': return 'E-MM';
-        case '5': return 'E-Bilet';
-        default: return 'Bilinmiyor';
-    }
-}
+const SERVICE_TYPES = [
+    { value: 'EFATURA_EARSIV', text: 'E-Fatura / E-Arşiv' },
+    { value: 'EIRSALIYE', text: 'E-İrsaliye' },
+    { value: 'EDEFTER', text: 'E-Defter' },
+    { value: 'EMM', text: 'E-MM' },
+    { value: 'EBILET', text: 'E-Bilet' }
+];
 
 function buildServiceTypeSelect(selectedVal) {
-    const v = String(selectedVal || '1');
-    return `
-        <select class="form-control svc-serviceType">
-            <option value="1" ${v === '1' ? 'selected' : ''}>E-Fatura / E-Arşiv</option>
-            <option value="2" ${v === '2' ? 'selected' : ''}>E-İrsaliye</option>
-            <option value="3" ${v === '3' ? 'selected' : ''}>E-Defter</option>
-            <option value="4" ${v === '4' ? 'selected' : ''}>E-MM</option>
-            <option value="5" ${v === '5' ? 'selected' : ''}>E-Bilet</option>
-        </select>`;
+    const v = String(selectedVal || 'EFATURA_EARSIV').trim();
+    const opts = SERVICE_TYPES.map(x =>
+        `<option value="${x.value}" ${x.value === v ? 'selected' : ''}>${x.text}</option>`
+    ).join('');
+    return `<select class="form-control svc-serviceType">${opts}</select>`;
+}
+
+function buildAliasServiceTypeSelect(selectedVal) {
+    const v = String(selectedVal || 'EFATURA_EARSIV').trim();
+    const opts = SERVICE_TYPES.map(x =>
+        `<option value="${x.value}" ${x.value === v ? 'selected' : ''}>${x.text}</option>`
+    ).join('');
+    return `<select class="form-control alias-serviceType">${opts}</select>`;
+}
+
+/* ===========================================
+   Tarih normalize (dd.MM.yyyy -> yyyy-MM-dd)
+   =========================================== */
+function normalizeDateToIso(value) {
+    const s = String(value || '').trim();
+    if (!s) return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    const m = s.match(/^(\d{2})[./-](\d{2})[./-](\d{4})$/);
+    if (m) {
+        const dd = m[1], mm = m[2], yyyy = m[3];
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    return s;
 }
 
 /* ===========================================
    MAIN INIT
    =========================================== */
-
 function initGibFirm() {
-    console.log('[GibFirm] init çalıştı');
+    console.log('[GibFirm] init');
 
     const gridBody = document.querySelector('#tblGibFirms tbody');
     const form = document.getElementById('gibFirmForm');
-    const $modal = window.$ ? window.$('#gibFirmModal') : null;
+    const btnSave = document.getElementById('btnSaveFirm');
+
+    const $modal = (window.$ && window.$.fn && window.$.fn.modal)
+        ? window.$('#gibFirmModal')
+        : null;
 
     // ------- Firma form elemanları -------
-
     const fmId = document.getElementById('FirmId');
     const fmRowVersion = document.getElementById('RowVersionBase64') || document.getElementById('RowVersion');
 
@@ -160,6 +174,10 @@ function initGibFirm() {
     const fmTaxOfficeProvince = document.getElementById('TaxOfficeProvince');
     const fmTaxOffice = document.getElementById('TaxOffice');
     const fmCustomerRepresentative = document.getElementById('CustomerRepresentative');
+
+    // ✅ CSHTML’de eklenmeli (yoksa required hatası bitmez)
+    const fmCommercialRegistrationNo = document.getElementById('CommercialRegistrationNo');
+    const fmMersisNo = document.getElementById('MersisNo');
 
     const fmResponsibleTckn = document.getElementById('ResponsibleTckn');
     const fmResponsibleFirstName = document.getElementById('ResponsibleFirstName');
@@ -185,23 +203,16 @@ function initGibFirm() {
     const fmIsEArch = document.getElementById('IsEArchiveRegistered');
     const fmInitialCredits = document.getElementById('InitialCredits');
 
-    // ------- Hizmet / Alias tablo erişimleri dinamik olsun -------
-    function getSvcBody() {
-        return document.querySelector('#FirmServiceGrid tbody');
-    }
-
-    function getAliasBody() {
-        return document.querySelector('#FirmServiceAliasGrid tbody');
-    }
-
-    // ------- State -------
+    function getSvcBody() { return document.querySelector('#FirmServiceGrid tbody'); }
+    function getAliasBody() { return document.querySelector('#FirmServiceAliasGrid tbody'); }
 
     let currentFirmEntity = null;
 
     let serviceRowSeq = 0;
     let aliasRowSeq = 0;
     let selectedServiceRowIndex = null;
-    const serviceRowIndexByServiceId = {};
+
+    const serviceRowIndexByServiceId = {}; // edit modunda: serviceId -> rowIndex
 
     function nextServiceRowIndex() { serviceRowSeq += 1; return serviceRowSeq; }
     function nextAliasRowIndex() { aliasRowSeq += 1; return aliasRowSeq; }
@@ -210,11 +221,8 @@ function initGibFirm() {
         serviceRowSeq = 0;
         aliasRowSeq = 0;
         selectedServiceRowIndex = null;
-        for (const k in serviceRowIndexByServiceId) {
-            if (Object.prototype.hasOwnProperty.call(serviceRowIndexByServiceId, k)) {
-                delete serviceRowIndexByServiceId[k];
-            }
-        }
+        Object.keys(serviceRowIndexByServiceId).forEach(k => delete serviceRowIndexByServiceId[k]);
+
         const svcBody = getSvcBody();
         const aliasBody = getAliasBody();
         if (svcBody) svcBody.innerHTML = '';
@@ -227,41 +235,51 @@ function initGibFirm() {
         return svcBody.querySelector('tr.active');
     }
 
+    // ✅ Alias satırları ASLA kaybolmaz: sadece seçili satır dışı olanlar soluklaşır
     function refreshAliasVisibility() {
         const aliasBody = getAliasBody();
-        const svcBody = getSvcBody();
-        if (!aliasBody || !svcBody) return;
+        if (!aliasBody) return;
 
         const selected = getSelectedServiceRow();
-        if (!selected) {
-            aliasBody.querySelectorAll('tr').forEach(tr => tr.style.display = 'none');
-            return;
-        }
-        const idx = selected.dataset.serviceRowIndex;
+        const idx = selected ? String(selected.dataset.serviceRowIndex) : null;
+
         aliasBody.querySelectorAll('tr').forEach(tr => {
-            tr.style.display = (String(tr.dataset.serviceRowIndex) === String(idx)) ? '' : 'none';
+            tr.style.display = '';
+            if (!idx) tr.style.opacity = '1';
+            else tr.style.opacity = (String(tr.dataset.serviceRowIndex) === idx) ? '1' : '0.35';
         });
     }
 
-    function addServiceRow(service) {
-        console.log('[GibFirm] addServiceRow', service);
+    function findFirstServiceRowIndexByType(serviceType) {
         const svcBody = getSvcBody();
-        if (!svcBody) {
-            console.warn('[GibFirm] FirmServiceGrid tbody bulunamadı');
-            return;
-        }
+        if (!svcBody) return null;
+
+        const rows = Array.from(svcBody.querySelectorAll('tr'));
+        const found = rows.find(r => String(r.querySelector('.svc-serviceType')?.value || '') === String(serviceType));
+        return found ? String(found.dataset.serviceRowIndex) : null;
+    }
+
+    function addServiceRow(service, options) {
+        const opts = options || {};
+        const makeActive = (opts.makeActive !== false);
+
+        const svcBody = getSvcBody();
+        if (!svcBody) return;
 
         const rowIndex = nextServiceRowIndex();
+
         const idVal = service ? (service.id || service.Id || 0) : 0;
-        const serviceTypeVal = service ? (service.serviceType || service.ServiceType || 1) : 1;
+        const serviceTypeVal = service
+            ? String(service.serviceType || service.ServiceType || 'EFATURA_EARSIV')
+            : 'EFATURA_EARSIV';
 
         let startDate = service ? (service.startDate || service.StartDate || '') : '';
         let endDate = service ? (service.endDate || service.EndDate || '') : '';
-        const tariffType = service ? (service.tariffType || service.TariffType || '') : '';
+        let tariffType = service ? (service.tariffType || service.TariffType || '') : '';
         let status = service ? (service.status || service.Status || '') : '';
 
-        if (startDate && typeof startDate === 'string' && startDate.length >= 10) startDate = startDate.substring(0, 10);
-        if (endDate && typeof endDate === 'string' && endDate.length >= 10) endDate = endDate.substring(0, 10);
+        // Server tarafında string required çıkarsa boş kalmasın:
+        if (!tariffType) tariffType = 'Kontör';
         if (!status) status = 'Aktif';
 
         if (idVal) serviceRowIndexByServiceId[idVal] = rowIndex;
@@ -290,57 +308,45 @@ function initGibFirm() {
 
         svcBody.appendChild(tr);
 
-        svcBody.querySelectorAll('tr').forEach(r => r.classList.remove('active'));
-        tr.classList.add('active');
-        selectedServiceRowIndex = rowIndex;
+        if (makeActive) {
+            svcBody.querySelectorAll('tr').forEach(r => r.classList.remove('active'));
+            tr.classList.add('active');
+            selectedServiceRowIndex = rowIndex;
+        }
+
         refreshAliasVisibility();
     }
 
-    function getServiceTypeValueByRowIndex(idx) {
-        const svcBody = getSvcBody();
-        if (!svcBody) return '1';
-        const tr = Array.from(svcBody.querySelectorAll('tr'))
-            .find(r => String(r.dataset.serviceRowIndex) === String(idx));
-        if (!tr) return '1';
-        const sel = tr.querySelector('.svc-serviceType');
-        return sel ? (sel.value || '1') : '1';
-    }
-
     function addAliasRow(alias, serviceRowIndex, serviceTypeVal) {
-        console.log('[GibFirm] addAliasRow', alias, serviceRowIndex);
         const aliasBody = getAliasBody();
-        if (!aliasBody) {
-            console.warn('[GibFirm] FirmServiceAliasGrid tbody bulunamadı');
-            return;
-        }
+        if (!aliasBody) return;
 
+        // Eğer serviceRowIndex gelmediyse seçili service row’u baz al
         if (!serviceRowIndex) {
-            const sel = getSelectedServiceRow();
-            if (!sel) return;
-            serviceRowIndex = sel.dataset.serviceRowIndex;
+            const selRow = getSelectedServiceRow();
+            if (!selRow) { alert('Önce yukarıdaki listeden bir hizmet satırı seçin.'); return; }
+            serviceRowIndex = selRow.dataset.serviceRowIndex;
         }
 
         const rowIndex = nextAliasRowIndex();
         const idVal = alias ? (alias.id || alias.Id || 0) : 0;
 
-        const directionVal = alias ? (alias.direction || alias.Direction || 1) : 1;
+        const directionVal = alias ? (alias.direction || alias.Direction || 'SENDER') : 'SENDER';
         const aliasText = alias ? (alias.alias || alias.Alias || '') : '';
 
-        const svcType = serviceTypeVal ||
-            (alias ? (alias.serviceType || alias.ServiceType || 1) :
-                getServiceTypeValueByRowIndex(serviceRowIndex));
-        const svcLabel = serviceTypeLabel(svcType);
+        const svcType = String(serviceTypeVal || (alias ? (alias.serviceType || alias.ServiceType || 'EFATURA_EARSIV') : 'EFATURA_EARSIV'));
 
         const tr = document.createElement('tr');
         tr.dataset.aliasRowIndex = String(rowIndex);
         tr.dataset.serviceRowIndex = String(serviceRowIndex);
+
         tr.innerHTML = `
-            <td class="alias-serviceType-text">${svcLabel}</td>
+            <td>${buildAliasServiceTypeSelect(svcType)}</td>
             <td>
                 <input type="hidden" class="alias-id" value="${idVal}" />
                 <select class="form-control alias-direction">
-                    <option value="1" ${String(directionVal) === '1' ? 'selected' : ''}>Gönderici</option>
-                    <option value="2" ${String(directionVal) === '2' ? 'selected' : ''}>Alıcı</option>
+                    <option value="SENDER" ${String(directionVal) === 'SENDER' ? 'selected' : ''}>Gönderici</option>
+                    <option value="RECEIVER" ${String(directionVal) === 'RECEIVER' ? 'selected' : ''}>Alıcı</option>
                 </select>
             </td>
             <td><input type="text" class="form-control alias-value" value="${aliasText || ''}" /></td>
@@ -355,28 +361,49 @@ function initGibFirm() {
     }
 
     function loadServicesAndAliasesFromFirm(firm) {
+        clearServiceAliasTables();
+
         const svcBody = getSvcBody();
         const aliasBody = getAliasBody();
         if (!svcBody || !aliasBody) return;
 
-        clearServiceAliasTables();
-
+        // 1) Services
         const services = (firm && (firm.services || firm.Services)) || [];
-        if (Array.isArray(services)) services.forEach(s => addServiceRow(s));
+        if (Array.isArray(services)) {
+            services.forEach(s => addServiceRow(s, { makeActive: false }));
+        }
 
-        const aliases = (firm && (firm.aliases || firm.Aliases)) || [];
-        if (Array.isArray(aliases)) {
-            aliases.forEach(a => {
+        // 2) Aliases (öncelik: Services içinden)
+        if (Array.isArray(services)) {
+            services.forEach(s => {
+                const sid = s.id || s.Id || 0;
+                const rowIdx = sid ? serviceRowIndexByServiceId[sid] : null;
+                const svcType = s.serviceType || s.ServiceType || 'EFATURA_EARSIV';
+                const aliases = (s.aliases || s.Aliases) || [];
+                if (!rowIdx) return;
+
+                if (Array.isArray(aliases)) {
+                    aliases.forEach(a => addAliasRow(a, rowIdx, svcType));
+                }
+            });
+        }
+
+        // 3) Eğer API root seviyede Aliases döndürüyorsa (geri uyum)
+        const rootAliases = (firm && (firm.aliases || firm.Aliases)) || [];
+        if (Array.isArray(rootAliases) && rootAliases.length) {
+            rootAliases.forEach(a => {
                 const sid =
                     a.gibFirmServiceId || a.GibFirmServiceId ||
                     a.serviceId || a.ServiceId || 0;
+
                 const rowIdx = sid ? serviceRowIndexByServiceId[sid] : null;
-                const svcType = a.serviceType || a.ServiceType || 1;
+                const svcType = a.serviceType || a.ServiceType || 'EFATURA_EARSIV';
                 if (!rowIdx) return;
                 addAliasRow(a, rowIdx, svcType);
             });
         }
 
+        // ilk service satırını seç
         const firstRow = svcBody.querySelector('tr');
         svcBody.querySelectorAll('tr').forEach(r => r.classList.remove('active'));
         if (firstRow) {
@@ -385,33 +412,29 @@ function initGibFirm() {
         } else {
             selectedServiceRowIndex = null;
         }
+
         refreshAliasVisibility();
     }
 
     /* ========= Ana grid ========= */
-
     async function loadTable() {
         if (!gridBody) return;
+
         try {
             const data = await FirmaApi.list();
             gridBody.innerHTML = (data || []).map(f => `
-                <tr data-id="${f.id}">
+                <tr data-id="${f.id || f.Id}">
                     <td>${f.title || f.Title || ''}</td>
                     <td>${f.taxNo || f.TaxNo || ''}</td>
                     <td>${f.gibAlias || f.GibAlias || ''}</td>
                     <td>${(f.isEInvoiceRegistered || f.IsEInvoiceRegistered) ? 'Evet' : 'Hayır'}</td>
                     <td>${(f.isEArchiveRegistered || f.IsEArchiveRegistered) ? 'Evet' : 'Hayır'}</td>
                     <td class="text-center">
-                        <button class="btn btn-warning btn-sm act-edit-firm" type="button">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button class="btn btn-danger btn-sm act-del-firm" type="button">
-                            <i class="fa fa-trash"></i>
-                        </button>
+                        <button class="btn btn-warning btn-sm act-edit-firm" type="button"><i class="fa fa-edit"></i></button>
+                        <button class="btn btn-danger btn-sm act-del-firm" type="button"><i class="fa fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
-            bindGridRowEvents();
         } catch (err) {
             console.error('Firma listesi yüklenemedi:', err);
             alert(err.message || 'Firma listesi yüklenemedi.');
@@ -424,40 +447,47 @@ function initGibFirm() {
         if (fmId) fmId.value = '';
         if (fmRowVersion) fmRowVersion.value = DEFAULT_ROWVERSION_BASE64;
 
-        if (fmTaxNo) fmTaxNo.value = '';
-        if (fmCustomerName) fmCustomerName.value = '';
-        if (fmTitle) fmTitle.value = '';
-        if (fmKepAddress) fmKepAddress.value = '';
-        if (fmPersonalFirstName) fmPersonalFirstName.value = '';
+        const clear = (el, val = '') => { if (el) el.value = val; };
+
+        clear(fmTaxNo);
+        clear(fmCustomerName);
+        clear(fmTitle);
+        clear(fmKepAddress);
+        clear(fmPersonalFirstName);
         if (fmInstitutionType) fmInstitutionType.value = '1';
-        if (fmPersonalLastName) fmPersonalLastName.value = '';
-        if (fmCorporateEmail) fmCorporateEmail.value = '';
-        if (fmTaxOfficeProvince) fmTaxOfficeProvince.value = '';
-        if (fmTaxOffice) fmTaxOffice.value = '';
-        if (fmCustomerRepresentative) fmCustomerRepresentative.value = '';
+        clear(fmPersonalLastName);
+        clear(fmCorporateEmail);
+        clear(fmTaxOfficeProvince);
+        clear(fmTaxOffice);
+        clear(fmCustomerRepresentative);
 
-        if (fmResponsibleTckn) fmResponsibleTckn.value = '';
-        if (fmResponsibleFirstName) fmResponsibleFirstName.value = '';
-        if (fmResponsibleLastName) fmResponsibleLastName.value = '';
-        if (fmResponsibleMobilePhone) fmResponsibleMobilePhone.value = '';
-        if (fmResponsibleEmail) fmResponsibleEmail.value = '';
+        clear(fmCommercialRegistrationNo);
+        clear(fmMersisNo);
 
-        if (fmCreatedByPersonFirstName) fmCreatedByPersonFirstName.value = '';
-        if (fmCreatedByPersonLastName) fmCreatedByPersonLastName.value = '';
-        if (fmCreatedByPersonMobilePhone) fmCreatedByPersonMobilePhone.value = '';
+        clear(fmResponsibleTckn);
+        clear(fmResponsibleFirstName);
+        clear(fmResponsibleLastName);
+        clear(fmResponsibleMobilePhone);
+        clear(fmResponsibleEmail);
+
+        clear(fmCreatedByPersonFirstName);
+        clear(fmCreatedByPersonLastName);
+        clear(fmCreatedByPersonMobilePhone);
 
         if (fmAddress) fmAddress.value = '';
-        if (fmCity) fmCity.value = '';
-        if (fmDistrict) fmDistrict.value = '';
-        if (fmCountry) fmCountry.value = '';
-        if (fmPostalCode) fmPostalCode.value = '';
-        if (fmPhone) fmPhone.value = '';
-        if (fmEmail) fmEmail.value = '';
+        clear(fmCity);
+        clear(fmDistrict);
+        clear(fmCountry);
+        clear(fmPostalCode);
+        clear(fmPhone);
+        clear(fmEmail);
 
-        if (fmGibAlias) fmGibAlias.value = '';
-        if (fmApiKey) fmApiKey.value = '';
+        clear(fmGibAlias);
+        clear(fmApiKey);
+
         if (fmIsEInv) fmIsEInv.checked = false;
         if (fmIsEArch) fmIsEArch.checked = false;
+
         if (fmInitialCredits) fmInitialCredits.value = '';
 
         clearServiceAliasTables();
@@ -468,9 +498,9 @@ function initGibFirm() {
 
         gridBody.querySelectorAll('.act-edit-firm').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const tr = btn.closest('tr');
-                const id = tr ? Number(tr.dataset.id) : 0;
+                const id = Number(btn.closest('tr')?.dataset.id || 0);
                 if (!id) return;
+
                 try {
                     const f = await FirmaApi.get(id);
                     currentFirmEntity = f;
@@ -491,6 +521,9 @@ function initGibFirm() {
                     if (fmTaxOfficeProvince) fmTaxOfficeProvince.value = f.taxOfficeProvince || f.TaxOfficeProvince || '';
                     if (fmTaxOffice) fmTaxOffice.value = f.taxOffice || f.TaxOffice || '';
                     if (fmCustomerRepresentative) fmCustomerRepresentative.value = f.customerRepresentative || f.CustomerRepresentative || '';
+
+                    if (fmCommercialRegistrationNo) fmCommercialRegistrationNo.value = f.commercialRegistrationNo || f.CommercialRegistrationNo || '';
+                    if (fmMersisNo) fmMersisNo.value = f.mersisNo || f.MersisNo || '';
 
                     if (fmResponsibleTckn) fmResponsibleTckn.value = f.responsibleTckn || f.ResponsibleTckn || '';
                     if (fmResponsibleFirstName) fmResponsibleFirstName.value = f.responsibleFirstName || f.ResponsibleFirstName || '';
@@ -515,12 +548,11 @@ function initGibFirm() {
                     if (fmIsEInv) fmIsEInv.checked = !!(f.isEInvoiceRegistered || f.IsEInvoiceRegistered);
                     if (fmIsEArch) fmIsEArch.checked = !!(f.isEArchiveRegistered || f.IsEArchiveRegistered);
 
-                    if (fmInitialCredits) fmInitialCredits.value = '';
-
                     loadServicesAndAliasesFromFirm(f);
 
                     const titleEl = document.getElementById('gibFirmModalLabel');
                     if (titleEl) titleEl.textContent = 'Firma Güncelle';
+
                     if ($modal) $modal.modal('show');
                 } catch (err) {
                     console.error('Firma getirilemedi:', err);
@@ -531,13 +563,14 @@ function initGibFirm() {
 
         gridBody.querySelectorAll('.act-del-firm').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const tr = btn.closest('tr');
-                const id = tr ? Number(tr.dataset.id) : 0;
+                const id = Number(btn.closest('tr')?.dataset.id || 0);
                 if (!id) return;
                 if (!confirm('Bu firma silinsin mi?')) return;
+
                 try {
                     await FirmaApi.remove(id);
                     await loadTable();
+                    bindGridRowEvents();
                 } catch (err) {
                     console.error('Firma silinemedi:', err);
                     alert(err.message || 'Firma silinemedi.');
@@ -546,36 +579,22 @@ function initGibFirm() {
         });
     }
 
-    // ----- Hizmet / Alias buton click handler'ları -----
+    /* ========= Delegated Events ========= */
 
-    function onAddServiceClick(ev) {
-        if (ev && ev.preventDefault) ev.preventDefault();
-        addServiceRow(null);
-    }
-
-    function onAddAliasClick(ev) {
-        if (ev && ev.preventDefault) ev.preventDefault();
+    // Inline onclick kalmışsa hata vermesin:
+    window.__gib_addServiceRow = (e) => { if (e?.preventDefault) e.preventDefault(); addServiceRow(null, { makeActive: true }); };
+    window.__gib_addServiceAlias = (e) => {
+        if (e?.preventDefault) e.preventDefault();
         const selected = getSelectedServiceRow();
-        if (!selected) {
-            alert('Önce yukarıdaki listeden bir hizmet satırı seçin.');
-            return;
-        }
+        if (!selected) { alert('Önce yukarıdaki listeden bir hizmet satırı seçin.'); return; }
         const idx = selected.dataset.serviceRowIndex;
-        const sel = selected.querySelector('.svc-serviceType');
-        const svcTypeVal = sel ? (sel.value || '1') : '1';
+        const svcTypeVal = selected.querySelector('.svc-serviceType')?.value || 'EFATURA_EARSIV';
         addAliasRow(null, idx, svcTypeVal);
-    }
+    };
 
-    // Eski inline onclick'ler varsa hata vermesin diye:
-    window.__gib_addServiceRow = onAddServiceClick;
-    window.__gib_addServiceAlias = onAddAliasClick;
-
-    // ----- Document seviyesinde delegasyon (buton + satırlar) -----
-
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', async (e) => {
         // Yeni Firma
-        const btnNewFirm = e.target.closest('#btnNewFirm');
-        if (btnNewFirm) {
+        if (e.target.closest('#btnNewFirm')) {
             clearForm();
             const titleEl = document.getElementById('gibFirmModalLabel');
             if (titleEl) titleEl.textContent = 'Yeni Firma';
@@ -583,39 +602,40 @@ function initGibFirm() {
             return;
         }
 
-        // Hizmet ekle
-        const btnSvc = e.target.closest('#btnNewFirmService');
-        if (btnSvc) {
-            onAddServiceClick(e);
+        // Hizmet Ekle
+        if (e.target.closest('#btnNewFirmService')) {
+            window.__gib_addServiceRow(e);
             return;
         }
 
-        // Alias ekle
-        const btnAlias = e.target.closest('#btnNewFirmServiceAlias');
-        if (btnAlias) {
-            onAddAliasClick(e);
+        // Alias Ekle
+        if (e.target.closest('#btnNewFirmServiceAlias')) {
+            window.__gib_addServiceAlias(e);
             return;
         }
 
-        // --------- Hizmet satırları ---------
+        // Hizmet grid içi
         const svcBody = getSvcBody();
         if (svcBody && svcBody.contains(e.target)) {
             const tr = e.target.closest('tr');
             if (!tr) return;
 
+            // sil
             const delBtn = e.target.closest('.act-del-service');
             if (delBtn) {
                 const idx = tr.dataset.serviceRowIndex;
                 tr.remove();
 
+                // bağlı aliasları SİLMEK İSTEMİYORSAN burayı yorum satırı yapabilirsin.
+                // Şimdilik mantıklı ilişki için: service silinince bağlı aliaslar da silinir.
                 const aliasBody = getAliasBody();
                 if (aliasBody) {
                     Array.from(aliasBody.querySelectorAll('tr')).forEach(r => {
-                        if (String(r.dataset.serviceRowIndex) === String(idx)) {
-                            r.remove();
-                        }
+                        if (String(r.dataset.serviceRowIndex) === String(idx)) r.remove();
                     });
                 }
+
+                // yeni aktif satır
                 const firstRow = svcBody.querySelector('tr');
                 svcBody.querySelectorAll('tr').forEach(r => r.classList.remove('active'));
                 if (firstRow) {
@@ -624,208 +644,336 @@ function initGibFirm() {
                 } else {
                     selectedServiceRowIndex = null;
                 }
+
                 refreshAliasVisibility();
-            } else {
-                svcBody.querySelectorAll('tr').forEach(r => r.classList.remove('active'));
-                tr.classList.add('active');
-                selectedServiceRowIndex = tr.dataset.serviceRowIndex;
-                refreshAliasVisibility();
+                return;
             }
+
+            // satır seç
+            svcBody.querySelectorAll('tr').forEach(r => r.classList.remove('active'));
+            tr.classList.add('active');
+            selectedServiceRowIndex = tr.dataset.serviceRowIndex;
+            refreshAliasVisibility();
+            return;
         }
 
-        // --------- Alias satırları (silme) ---------
+        // Alias grid içi (sil)
         const aliasBody = getAliasBody();
         if (aliasBody && aliasBody.contains(e.target)) {
             const delAliasBtn = e.target.closest('.act-del-alias');
             if (delAliasBtn) {
-                const tr = delAliasBtn.closest('tr');
-                if (tr) tr.remove();
+                delAliasBtn.closest('tr')?.remove();
                 refreshAliasVisibility();
             }
         }
     });
 
-    /* ========= Form submit ========= */
+    document.addEventListener('change', (e) => {
+        // ServiceType değiştiyse: bu service satırına bağlı alias satırlarının serviceType’ını güncelle
+        const svcSel = e.target.closest('.svc-serviceType');
+        if (svcSel) {
+            const svcRow = svcSel.closest('tr');
+            if (!svcRow) return;
+
+            const rowIndex = String(svcRow.dataset.serviceRowIndex);
+            const newType = String(svcSel.value);
+
+            const aliasBody = getAliasBody();
+            if (aliasBody) {
+                aliasBody.querySelectorAll(`tr[data-service-row-index="${rowIndex}"]`).forEach(aRow => {
+                    const aSel = aRow.querySelector('.alias-serviceType');
+                    if (aSel) aSel.value = newType;
+                });
+            }
+
+            refreshAliasVisibility();
+            return;
+        }
+
+        // Alias serviceType değiştiyse: alias satırını o tipe sahip bir service satırına bağla (yoksa yeni service aç)
+        const aliasSel = e.target.closest('.alias-serviceType');
+        if (aliasSel) {
+            const aRow = aliasSel.closest('tr');
+            if (!aRow) return;
+
+            const newType = String(aliasSel.value);
+            let targetRowIndex = findFirstServiceRowIndexByType(newType);
+
+            if (!targetRowIndex) {
+                // yoksa yeni service satırı aç ama diğerlerini bozma
+                addServiceRow({ ServiceType: newType, TariffType: 'Kontör', Status: 'Aktif' }, { makeActive: false });
+                targetRowIndex = findFirstServiceRowIndexByType(newType);
+            }
+
+            if (targetRowIndex) {
+                aRow.dataset.serviceRowIndex = String(targetRowIndex);
+            }
+
+            refreshAliasVisibility();
+        }
+    });
+
+    /* ========= Submit ========= */
+    let isSaving = false;
+
+    function val(el) { return String(el?.value || '').trim(); }
+
+    function requireFields(list) {
+        const missing = [];
+        for (const item of list) {
+            const v = val(item.el);
+            if (!v) missing.push(item.name);
+        }
+        return missing;
+    }
 
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (isSaving) return;
+
+            // CSHTML’de yoksa zaten dolduramaz
+            if (!fmCommercialRegistrationNo || !fmMersisNo) {
+                alert('CSHTML’de CommercialRegistrationNo ve MersisNo inputları yok. Ekleyip tekrar dene.');
+                return;
+            }
+
+            // ✅ required kontroller (API’nin şikayet ettiği alanlar)
+            const missing = requireFields([
+                { name: 'Title', el: fmTitle },
+                { name: 'TaxNo', el: fmTaxNo },
+                { name: 'CustomerName', el: fmCustomerName },
+                { name: 'CorporateEmail', el: fmCorporateEmail },
+                { name: 'TaxOfficeProvince', el: fmTaxOfficeProvince },
+                { name: 'TaxOffice', el: fmTaxOffice },
+                { name: 'CustomerRepresentative', el: fmCustomerRepresentative },
+
+                { name: 'CommercialRegistrationNo', el: fmCommercialRegistrationNo },
+                { name: 'MersisNo', el: fmMersisNo },
+
+                { name: 'ResponsibleTckn', el: fmResponsibleTckn },
+                { name: 'ResponsibleFirstName', el: fmResponsibleFirstName },
+                { name: 'ResponsibleLastName', el: fmResponsibleLastName },
+                { name: 'ResponsibleMobilePhone', el: fmResponsibleMobilePhone },
+                { name: 'ResponsibleEmail', el: fmResponsibleEmail },
+
+                { name: 'CreatedByPersonFirstName', el: fmCreatedByPersonFirstName },
+                { name: 'CreatedByPersonLastName', el: fmCreatedByPersonLastName },
+                { name: 'CreatedByPersonMobilePhone', el: fmCreatedByPersonMobilePhone },
+            ]);
+
+            if (missing.length) {
+                alert('Zorunlu alanlar boş: ' + missing.join(', '));
+                return;
+            }
+
+            isSaving = true;
+            if (btnSave) btnSave.disabled = true;
 
             const isNew = !fmId || !fmId.value;
             const nowIso = new Date().toISOString();
 
-            if (fmTitle && !fmTitle.value) {
-                alert('Ünvan zorunludur.');
-                return;
-            }
-
-            const creditsRaw = fmInitialCredits ? (fmInitialCredits.value || '').trim() : '';
+            const creditsRaw = val(fmInitialCredits);
             const credits = creditsRaw ? parseInt(creditsRaw, 10) : 0;
-            if (creditsRaw && (isNaN(credits) || credits < 0)) {
-                alert('Başlangıç kontör değeri geçersiz.');
-                return;
-            }
 
-            const overrideRv = fmRowVersion && fmRowVersion.value
-                ? fmRowVersion.value.trim()
-                : null;
+            const overrideRv = val(fmRowVersion) || null;
 
-            const baseEntity = buildBaseEntityForFirm(
-                isNew,
-                nowIso,
-                isNew ? null : currentFirmEntity,
-                overrideRv
-            );
+            const baseEntity = isNew
+                ? buildBaseEntityNew(nowIso)
+                : buildBaseEntityUpdate(nowIso, currentFirmEntity, overrideRv);
 
             const dto = {
                 ...baseEntity,
                 Id: isNew ? 0 : Number(fmId.value),
 
-                TaxNo: fmTaxNo ? fmTaxNo.value : '',
-                CustomerName: fmCustomerName ? fmCustomerName.value : '',
-                Title: fmTitle ? fmTitle.value : '',
-                KepAddress: fmKepAddress ? fmKepAddress.value : '',
-                PersonalFirstName: fmPersonalFirstName ? fmPersonalFirstName.value : '',
+                Title: val(fmTitle),
+                TaxNo: val(fmTaxNo),
+                CustomerName: val(fmCustomerName),
+
+                TaxOffice: val(fmTaxOffice),
+                TaxOfficeProvince: val(fmTaxOfficeProvince),
+                CommercialRegistrationNo: val(fmCommercialRegistrationNo),
+                MersisNo: val(fmMersisNo),
+
+                KepAddress: val(fmKepAddress),
+                PersonalFirstName: val(fmPersonalFirstName),
+                PersonalLastName: val(fmPersonalLastName),
                 InstitutionType: fmInstitutionType ? parseInt(fmInstitutionType.value || '0', 10) : 0,
-                PersonalLastName: fmPersonalLastName ? fmPersonalLastName.value : '',
-                CorporateEmail: fmCorporateEmail ? fmCorporateEmail.value : '',
-                TaxOfficeProvince: fmTaxOfficeProvince ? fmTaxOfficeProvince.value : '',
-                TaxOffice: fmTaxOffice ? fmTaxOffice.value : '',
-                CustomerRepresentative: fmCustomerRepresentative ? fmCustomerRepresentative.value : '',
+                CustomerRepresentative: val(fmCustomerRepresentative),
 
-                ResponsibleTckn: fmResponsibleTckn ? fmResponsibleTckn.value : '',
-                ResponsibleFirstName: fmResponsibleFirstName ? fmResponsibleFirstName.value : '',
-                ResponsibleLastName: fmResponsibleLastName ? fmResponsibleLastName.value : '',
-                ResponsibleMobilePhone: fmResponsibleMobilePhone ? fmResponsibleMobilePhone.value : '',
-                ResponsibleEmail: fmResponsibleEmail ? fmResponsibleEmail.value : '',
+                CorporateEmail: val(fmCorporateEmail),
 
-                CreatedByPersonFirstName: fmCreatedByPersonFirstName ? fmCreatedByPersonFirstName.value : '',
-                CreatedByPersonLastName: fmCreatedByPersonLastName ? fmCreatedByPersonLastName.value : '',
-                CreatedByPersonMobilePhone: fmCreatedByPersonMobilePhone ? fmCreatedByPersonMobilePhone.value : '',
+                ResponsibleTckn: val(fmResponsibleTckn),
+                ResponsibleFirstName: val(fmResponsibleFirstName),
+                ResponsibleLastName: val(fmResponsibleLastName),
+                ResponsibleMobilePhone: val(fmResponsibleMobilePhone),
+                ResponsibleEmail: val(fmResponsibleEmail),
 
-                AddressLine: fmAddress ? fmAddress.value : '',
-                City: fmCity ? fmCity.value : '',
-                District: fmDistrict ? fmDistrict.value : '',
-                Country: fmCountry ? fmCountry.value : '',
-                PostalCode: fmPostalCode ? fmPostalCode.value : '',
-                Phone: fmPhone ? fmPhone.value : '',
-                Email: fmEmail ? fmEmail.value : '',
+                CreatedByPersonFirstName: val(fmCreatedByPersonFirstName),
+                CreatedByPersonLastName: val(fmCreatedByPersonLastName),
+                CreatedByPersonMobilePhone: val(fmCreatedByPersonMobilePhone),
 
-                GibAlias: fmGibAlias ? fmGibAlias.value : '',
-                ApiKey: fmApiKey ? fmApiKey.value : '',
-                IsEInvoiceRegistered: fmIsEInv ? fmIsEInv.checked : false,
-                IsEArchiveRegistered: fmIsEArch ? fmIsEArch.checked : false
+                AddressLine: val(fmAddress),
+                City: val(fmCity),
+                District: val(fmDistrict),
+                Country: val(fmCountry),
+                PostalCode: val(fmPostalCode),
+                Phone: val(fmPhone),
+                Email: val(fmEmail),
+
+                GibAlias: val(fmGibAlias),
+                ApiKey: val(fmApiKey),
+                IsEInvoiceRegistered: !!fmIsEInv?.checked,
+                IsEArchiveRegistered: !!fmIsEArch?.checked
             };
 
-            // ----- Hizmetler -----
+            // Services + Aliases (NESTED)
             const servicesDto = [];
             const svcBody = getSvcBody();
-            if (svcBody) {
-                Array.from(svcBody.querySelectorAll('tr')).forEach(tr => {
-                    const idInput = tr.querySelector('.svc-id');
-                    const idVal = parseInt(idInput ? idInput.value || '0' : '0', 10) || 0;
-                    const selType = tr.querySelector('.svc-serviceType');
-                    const serviceTypeVal = selType ? selType.value : '';
-                    const startDate = (tr.querySelector('.svc-startDate')?.value || '').trim();
-                    const endDate = (tr.querySelector('.svc-endDate')?.value || '').trim();
-                    const tariffType = (tr.querySelector('.svc-tariffType')?.value || '').trim();
-                    const statusSel = tr.querySelector('.svc-status');
-                    const status = statusSel ? statusSel.value : '';
+            const aliasBody = getAliasBody();
 
-                    if (!serviceTypeVal && !startDate && !endDate && !tariffType && !status) return;
+            // Önce Service satırlarını al
+            const serviceRows = svcBody ? Array.from(svcBody.querySelectorAll('tr')) : [];
+            for (const tr of serviceRows) {
+                const idVal = parseInt((tr.querySelector('.svc-id')?.value || '0'), 10) || 0;
 
-                    servicesDto.push({
-                        Id: idVal,
-                        GibFirmId: dto.Id || 0,
-                        ServiceType: serviceTypeVal ? parseInt(serviceTypeVal, 10) : 0,
-                        StartDate: startDate || null,
-                        EndDate: endDate || null,
-                        TariffType: tariffType || null,
-                        Status: status || null
-                    });
+                const serviceTypeVal = String(tr.querySelector('.svc-serviceType')?.value || '').trim();
+                const startDate = normalizeDateToIso(val(tr.querySelector('.svc-startDate')));
+                const endDate = normalizeDateToIso(val(tr.querySelector('.svc-endDate')));
+                let tariffType = val(tr.querySelector('.svc-tariffType'));
+                let status = String(tr.querySelector('.svc-status')?.value || '').trim();
+
+                if (!tariffType) tariffType = 'Kontör';
+                if (!status) status = 'Aktif';
+
+                if (!serviceTypeVal) continue;
+
+                const childBase = buildBaseEntityNew(nowIso);
+
+                servicesDto.push({
+                    ...childBase,
+                    Id: idVal,
+                    GibFirmId: dto.Id || 0,
+                    ServiceType: serviceTypeVal,
+                    StartDate: startDate || null,
+                    EndDate: endDate || null,
+                    TariffType: tariffType,
+                    Status: status,
+                    Aliases: [] // buraya aliasları bağlayacağız
                 });
             }
 
-            // ----- Aliaslar -----
-            const aliasesDto = [];
-            const aliasBody = getAliasBody();
-            if (aliasBody && svcBody) {
-                Array.from(aliasBody.querySelectorAll('tr')).forEach(tr => {
-                    const idInput = tr.querySelector('.alias-id');
-                    const idVal = parseInt(idInput ? idInput.value || '0' : '0', 10) || 0;
-                    const aliasValueInput = tr.querySelector('.alias-value');
-                    const aliasText = aliasValueInput ? (aliasValueInput.value || '').trim() : '';
-                    if (!aliasText) return;
+            // Aliasları ilgili serviceRowIndex’e göre service’a bağla
+            const aliasRows = aliasBody ? Array.from(aliasBody.querySelectorAll('tr')) : [];
+            for (const tr of aliasRows) {
+                const aliasText = val(tr.querySelector('.alias-value'));
+                if (!aliasText) continue;
 
-                    const dirSelect = tr.querySelector('.alias-direction');
-                    const directionVal = dirSelect ? dirSelect.value || '1' : '1';
+                const idVal = parseInt((tr.querySelector('.alias-id')?.value || '0'), 10) || 0;
 
-                    const svcRowIndex = tr.dataset.serviceRowIndex;
-                    const svcRow = Array.from(svcBody.querySelectorAll('tr'))
-                        .find(r => String(r.dataset.serviceRowIndex) === String(svcRowIndex));
+                const directionVal = String(tr.querySelector('.alias-direction')?.value || 'SENDER');
+                const aliasServiceTypeVal = String(tr.querySelector('.alias-serviceType')?.value || 'EFATURA_EARSIV').trim();
 
-                    let serviceTypeVal = '1';
-                    let svcIdVal = 0;
+                const svcRowIndex = String(tr.dataset.serviceRowIndex || '');
+
+                // service satırını bul: önce rowIndex’ten, yoksa serviceType’tan
+                let service = null;
+
+                if (svcRowIndex) {
+                    const svcRow = serviceRows.find(r => String(r.dataset.serviceRowIndex) === svcRowIndex);
                     if (svcRow) {
-                        const stSel = svcRow.querySelector('.svc-serviceType');
-                        serviceTypeVal = stSel ? stSel.value || '1' : '1';
-                        const idInp = svcRow.querySelector('.svc-id');
-                        svcIdVal = parseInt(idInp ? idInp.value || '0' : '0', 10) || 0;
+                        const st = String(svcRow.querySelector('.svc-serviceType')?.value || '').trim();
+                        service = servicesDto.find(x => x.ServiceType === st) || null;
                     }
+                }
 
-                    aliasesDto.push({
-                        Id: idVal,
-                        GibFirmServiceId: svcIdVal || 0,
-                        ServiceType: serviceTypeVal ? parseInt(serviceTypeVal, 10) : 0,
-                        Direction: directionVal ? parseInt(directionVal, 10) : 0,
-                        Alias: aliasText
-                    });
+                if (!service) {
+                    service = servicesDto.find(x => x.ServiceType === aliasServiceTypeVal) || null;
+                }
+
+                // hâlâ yoksa otomatik service objesi ekle (UI’da service satırı yoksa bile kayıtta ilişki kopsun istemiyoruz)
+                if (!service) {
+                    const childBase = buildBaseEntityNew(nowIso);
+                    service = {
+                        ...childBase,
+                        Id: 0,
+                        GibFirmId: dto.Id || 0,
+                        ServiceType: aliasServiceTypeVal,
+                        StartDate: null,
+                        EndDate: null,
+                        TariffType: 'Kontör',
+                        Status: 'Aktif',
+                        Aliases: []
+                    };
+                    servicesDto.push(service);
+                }
+
+                const aliasBase = buildBaseEntityNew(nowIso);
+
+                service.Aliases.push({
+                    ...aliasBase,
+                    Id: idVal,
+                    Direction: directionVal,
+                    Alias: aliasText
                 });
             }
 
             dto.Services = servicesDto;
-            dto.Aliases = aliasesDto;
 
             console.log('[GibFirm] Gönderilen DTO:', dto);
 
             try {
+                // 1) Önce firma kaydı
                 let savedFirm;
-                if (isNew) {
-                    savedFirm = await FirmaApi.create(dto);
-                } else {
-                    savedFirm = await FirmaApi.update(dto.Id, dto);
-                }
+                if (isNew) savedFirm = await FirmaApi.create(dto);
+                else savedFirm = await FirmaApi.update(dto.Id, dto);
 
-                const firmId =
-                    (savedFirm && (savedFirm.id || savedFirm.Id)) ||
-                    dto.Id;
+                const firmId = (savedFirm && (savedFirm.id || savedFirm.Id)) || dto.Id;
 
-                if (isNew && firmId && credits > 0) {
-                    const creditBase = buildBaseEntityForFirm(true, nowIso, null, null);
-                    await GibUserCreditAccountApi.create({
-                        ...creditBase,
-                        Id: 0,
-                        GibFirmId: firmId,
-                        TotalCredits: credits,
-                        UsedCredits: 0
-                    });
-                }
-
+                // 2) Listeyi yenile (firma kaydı başarılıysa)
                 if ($modal) $modal.modal('hide');
                 await loadTable();
+                bindGridRowEvents();
+
+                // 3) Kontör hesabı (opsiyonel) - hata verirse firm kaydını BOZMASIN
+                if (isNew && firmId && credits > 0) {
+                    try {
+                        const creditBase = buildBaseEntityNew(nowIso);
+                        await GibUserCreditAccountApi.create({
+                            ...creditBase,
+                            Id: 0,
+                            GibFirmId: firmId,
+                            TotalCredits: credits,
+                            UsedCredits: 0
+                        });
+                    } catch (creditErr) {
+                        console.error('Kontör hesabı oluşturulamadı:', creditErr);
+                        alert('Firma kaydedildi; ancak kontör hesabı oluşturulamadı: ' + (creditErr?.message || 'Bilinmeyen hata'));
+                    }
+                }
             } catch (err) {
                 console.error('Firma kaydedilemedi:', err);
-                alert(err.message || 'Firma kaydedilemedi (API Error 500).');
+                alert(err.message || 'Firma kaydedilemedi (API Error).');
+            } finally {
+                isSaving = false;
+                if (btnSave) btnSave.disabled = false;
             }
         });
     }
 
-    loadTable();
+    // ilk yükleme
+    (async () => {
+        await loadTable();
+        bindGridRowEvents();
+    })();
 }
 
 /* DOM ready */
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGibFirm);
-} else {
-    initGibFirm();
+if (!window.__gibFirmInitializedRun) {
+    window.__gibFirmInitializedRun = true;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGibFirm);
+    } else {
+        initGibFirm();
+    }
 }
