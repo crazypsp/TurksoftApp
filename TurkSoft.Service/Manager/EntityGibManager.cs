@@ -53,6 +53,7 @@ namespace TurkSoft.Service.Manager
                 { "PaymentType",        new[] { "Name" } },
                 { "PaymentAccount",     new[] { "Name" } },
                 { "Customer",           new[] { "TaxNo", "Name" } },
+                { "GibFirm",            new[] { "TaxNo" } },
                 // İstersen buraya "Identifiers" -> "Uuid" da ekleyebilirsin;
                 // şu an için Identifiers'ı yeni kayıt olarak ele alıyoruz.
             };
@@ -111,101 +112,102 @@ namespace TurkSoft.Service.Manager
 
             var utcNow = DateTimeOffset.UtcNow;
 
+            // ✅ retry varsa bile güvenli çalıştır
+            var strategy = _db.Database.CreateExecutionStrategy();
+
             try
             {
-                // 0) Eğer Id > 0 geldiyse: önce DB’de böyle bir kayıt var mı bak
-                if (IdProp != null)
+                return await strategy.ExecuteAsync(async () =>
                 {
-                    var idValue = IdProp.GetValue(entity);
-                    if (idValue != null)
+                    await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+                    try
                     {
-                        var idType = Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType;
-                        if (idType == typeof(long) || idType == typeof(int) || idType == typeof(short))
+                        // 0) Eğer Id > 0 geldiyse: önce DB’de böyle bir kayıt var mı bak
+                        if (IdProp != null)
                         {
-                            var numeric = Convert.ToInt64(idValue);
-                            if (numeric > 0)
+                            var idValue = IdProp.GetValue(entity);
+                            if (idValue != null)
                             {
-                                var existingById = await _set.FindAsync(new object[] { idValue }, ct);
-                                if (existingById != null)
+                                var idType = Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType;
+                                if (idType == typeof(long) || idType == typeof(int) || idType == typeof(short))
                                 {
-                                    // Zaten var, insert etme
-                                    return existingById;
-                                }
-                                else
-                                {
-                                    // Bu Id ile kayıt yok, identity insert hatası yaşamamak için Id'yi sıfırla
-                                    ResetIdentityId(entity);
+                                    var numeric = Convert.ToInt64(idValue);
+                                    if (numeric > 0)
+                                    {
+                                        var existingById = await _set.FindAsync(new object[] { idValue }, ct);
+                                        if (existingById != null)
+                                        {
+                                            await tx.RollbackAsync(ct);
+                                            return existingById;
+                                        }
+                                        ResetIdentityId(entity);
+                                    }
                                 }
                             }
                         }
+
+                        // 1) Audit
+                        TouchAudit(entity, utcNow);
+
+                        // ✅ 2) GibFirm graph fix (Invoice'a dokunma, rowversion insert etme)
+                        if (entity is GibFirm firm)
+                        {
+                            FixGibFirmGraphForAdd(firm, utcNow);
+                        }
+
+                        // 2-a) Item / 2-b) Customer / 2-c) Invoice aynı kalsın
+                        if (entity is Item itemEntity)
+                            await FixItemGraphAsync(itemEntity, utcNow, ct);
+
+                        if (entity is Customer custEntity)
+                            await FixCustomerGraphAsync(custEntity, utcNow, ct);
+
+                        if (entity is Invoice inv)
+                        {
+                            await FixInvoiceGraphAsync(inv, utcNow, ct);
+                            ValidateInvoiceDecimalRanges(inv);
+                        }
+
+                        // 3) Duplicate kontrol
+                        var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, entity, ct);
+                        if (existingByKey != null)
+                        {
+                            await tx.RollbackAsync(ct);
+                            return existingByKey;
+                        }
+
+                        // 4) Insert
+                        await _set.AddAsync(entity, ct);
+                        await _db.SaveChangesAsync(ct);
+
+                        await tx.CommitAsync(ct);
+                        return entity;
                     }
-                }
-
-                // 1) Audit alanları (BaseEntity ise)
-                TouchAudit(entity, utcNow);
-
-                // 2-a) Item grafı ise (Brand/Unit/Category/Identifiers normalize & dedupe)
-                if (entity is Item itemEntity)
-                {
-                    await FixItemGraphAsync(itemEntity, utcNow, ct);
-                }
-
-                // 2-b) Customer grafı ise (CustomersGroups / Addresses normalize & dedupe)
-                if (entity is Customer custEntity)
-                {
-                    await FixCustomerGraphAsync(custEntity, utcNow, ct);
-                }
-
-                // 2-c) Invoice grafı ise ilişkileri düzelt / normalize et
-                if (entity is Invoice inv)
-                {
-                    await FixInvoiceGraphAsync(inv, utcNow, ct);
-
-                    // Invoice grafındaki tüm decimal alanları SQL decimal aralığına göre doğrula
-                    ValidateInvoiceDecimalRanges(inv);
-                }
-
-                // 3) UserId + iş anahtarı bazlı duplicate kontrolü
-                var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, entity, ct);
-                if (existingByKey != null)
-                {
-                    // Aynı anahtarla aktif kayıt var, onu kullan
-                    return existingByKey;
-                }
-
-                // 4) Gerçek insert
-                await _set.AddAsync(entity, ct);
-                await _db.SaveChangesAsync(ct);
-
-                return entity;
+                    catch
+                    {
+                        await tx.RollbackAsync(ct);
+                        _db.ChangeTracker.Clear(); // ✅ retry-safe + state temizliği
+                        throw;
+                    }
+                });
             }
             catch (DbUpdateException due) when (IsUniqueViolation(due))
             {
-                // DB unique constraint patladıysa, son bir kez daha aynı anahtarla kayıt var mı bak
                 var existing = await TryGetExistingByUniqueKeyAsync(_db, entity, ct);
                 if (existing != null)
                 {
-                    // Yeni entity'yi context'ten çıkar, var olanı dön
-                    var entry = _db.Entry(entity);
-                    if (entry != null)
-                        entry.State = EntityState.Detached;
-
+                    _db.ChangeTracker.Clear();
                     return existing;
                 }
-
                 throw new Exception(BuildUniqueViolationMessage<TEntity>(due), due);
-            }
-            catch (OperationCanceledException oce)
-            {
-                throw new Exception(
-                    "Veri kaydı iptal edildi (OperationCanceled). Genellikle istek iptali veya SQL zaman aşımı/kilit kaynaklıdır.",
-                    oce);
             }
             finally
             {
                 _db.Database.SetCommandTimeout(prevTimeout);
             }
         }
+
 
         public async Task<TEntity> UpdateAsync(TEntity entity, CancellationToken ct = default)
         {
@@ -1745,6 +1747,263 @@ namespace TurkSoft.Service.Manager
             }
 
             return query;
+        }
+
+
+        private static void FixGibFirmGraphForAdd(GibFirm firm, DateTimeOffset utcNow)
+        {
+            // ✅ Invoice kesinlikle insert edilmesin
+            firm.Invoices = null;
+
+            // RowVersion: CREATE’te kesinlikle null
+            firm.RowVersion = null;
+
+            // services init
+            firm.Services ??= new List<GibFirmService>();
+
+            foreach (var svc in firm.Services)
+            {
+                // Id>0 gelirse create’de sorun çıkarabilir
+                if (svc.Id <= 0) svc.RowVersion = null;
+
+                PropagateUserId(firm, svc);
+                TouchAudit(svc, utcNow);
+
+                svc.GibFirm = null;
+
+                svc.Aliases ??= new List<GibFirmServiceAlias>();
+                foreach (var al in svc.Aliases)
+                {
+                    if (al.Id <= 0) al.RowVersion = null;
+
+                    PropagateUserId(firm, al);
+                    TouchAudit(al, utcNow);
+
+                    al.Service = null;
+
+                    if (string.IsNullOrWhiteSpace(al.Direction))
+                        al.Direction = "SENDER";
+                }
+            }
+
+            // CreditAccounts init (JS create’de gönderebilir)
+            if (firm.CreditAccounts != null)
+            {
+                foreach (var acc in firm.CreditAccounts)
+                {
+                    if (acc.Id <= 0) acc.RowVersion = null;
+
+                    PropagateUserId(firm, acc);
+                    TouchAudit(acc, utcNow);
+
+                    acc.GibFirm = null;
+
+                    // Transactions
+                    if (acc.Transactions != null)
+                    {
+                        foreach (var tr in acc.Transactions)
+                        {
+                            if (tr.Id <= 0) tr.RowVersion = null;
+
+                            PropagateUserId(firm, tr);
+                            TouchAudit(tr, utcNow);
+
+                            // ✅ Invoice insert edilmesin
+                            tr.Invoice = null;
+                            tr.InvoiceId = null;
+
+                            tr.GibUserCreditAccount = null;
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task<GibFirm> UpdateGibFirmGraphAsync(GibFirm incoming, DateTimeOffset utcNow, CancellationToken ct)
+        {
+            var strategy = _db.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+                try
+                {
+                    // tracked existing graph
+                    var existing = await _db.Set<GibFirm>()
+                        .Include(x => x.Services)
+                            .ThenInclude(s => s.Aliases)
+                        .Include(x => x.CreditAccounts)
+                            .ThenInclude(a => a.Transactions)
+                        .FirstOrDefaultAsync(x => x.Id == incoming.Id, ct);
+
+                    if (existing == null)
+                        throw new Exception("GibFirm bulunamadı.");
+
+                    // ✅ Concurrency: sadece firm rowversion’ı client’tan
+                    if (incoming.RowVersion != null && incoming.RowVersion.Length > 0)
+                    {
+                        _db.Entry(existing).Property("RowVersion").OriginalValue = incoming.RowVersion;
+                    }
+
+                    // ✅ Invoice update/insert yok
+                    existing.Invoices = null;
+
+                    // scalar map
+                    existing.Title = incoming.Title;
+                    existing.TaxNo = incoming.TaxNo;
+                    existing.TaxOffice = incoming.TaxOffice;
+                    existing.TaxOfficeProvince = incoming.TaxOfficeProvince;
+                    existing.CommercialRegistrationNo = incoming.CommercialRegistrationNo;
+                    existing.MersisNo = incoming.MersisNo;
+                    existing.CustomerName = incoming.CustomerName;
+                    existing.PersonalFirstName = incoming.PersonalFirstName;
+                    existing.PersonalLastName = incoming.PersonalLastName;
+                    existing.InstitutionType = incoming.InstitutionType;
+                    existing.CustomerRepresentative = incoming.CustomerRepresentative;
+
+                    existing.AddressLine = incoming.AddressLine;
+                    existing.City = incoming.City;
+                    existing.District = incoming.District;
+                    existing.Country = incoming.Country;
+                    existing.PostalCode = incoming.PostalCode;
+                    existing.Phone = incoming.Phone;
+                    existing.Email = incoming.Email;
+
+                    existing.CorporateEmail = incoming.CorporateEmail;
+                    existing.KepAddress = incoming.KepAddress;
+
+                    existing.ResponsibleTckn = incoming.ResponsibleTckn;
+                    existing.ResponsibleFirstName = incoming.ResponsibleFirstName;
+                    existing.ResponsibleLastName = incoming.ResponsibleLastName;
+                    existing.ResponsibleMobilePhone = incoming.ResponsibleMobilePhone;
+                    existing.ResponsibleEmail = incoming.ResponsibleEmail;
+
+                    existing.CreatedByPersonFirstName = incoming.CreatedByPersonFirstName;
+                    existing.CreatedByPersonLastName = incoming.CreatedByPersonLastName;
+                    existing.CreatedByPersonMobilePhone = incoming.CreatedByPersonMobilePhone;
+
+                    existing.GibAlias = incoming.GibAlias;
+                    existing.ApiKey = incoming.ApiKey;
+                    existing.IsEInvoiceRegistered = incoming.IsEInvoiceRegistered;
+                    existing.IsEArchiveRegistered = incoming.IsEArchiveRegistered;
+
+                    TouchAudit(existing, utcNow);
+
+                    // ===== Services merge =====
+                    incoming.Services ??= new List<GibFirmService>();
+                    existing.Services ??= new List<GibFirmService>();
+
+                    // remove missing services
+                    var incomingServiceIds = incoming.Services.Where(s => s.Id > 0).Select(s => s.Id).ToHashSet();
+                    var removeServices = existing.Services.Where(s => s.Id > 0 && !incomingServiceIds.Contains(s.Id)).ToList();
+                    foreach (var rs in removeServices)
+                    {
+                        if (rs.Aliases != null && rs.Aliases.Count > 0)
+                            _db.RemoveRange(rs.Aliases);
+
+                        _db.Remove(rs);
+                    }
+
+                    // upsert services
+                    foreach (var incSvc in incoming.Services)
+                    {
+                        if (incSvc.Id > 0)
+                        {
+                            var exSvc = existing.Services.FirstOrDefault(s => s.Id == incSvc.Id);
+                            if (exSvc == null) continue;
+
+                            exSvc.ServiceType = incSvc.ServiceType;
+                            exSvc.StartDate = incSvc.StartDate;
+                            exSvc.EndDate = incSvc.EndDate;
+                            exSvc.TariffType = incSvc.TariffType;
+                            exSvc.Status = incSvc.Status;
+
+                            PropagateUserId(existing, exSvc);
+                            TouchAudit(exSvc, utcNow);
+
+                            // aliases merge
+                            incSvc.Aliases ??= new List<GibFirmServiceAlias>();
+                            exSvc.Aliases ??= new List<GibFirmServiceAlias>();
+
+                            var incomingAliasIds = incSvc.Aliases.Where(a => a.Id > 0).Select(a => a.Id).ToHashSet();
+                            var removeAliases = exSvc.Aliases.Where(a => a.Id > 0 && !incomingAliasIds.Contains(a.Id)).ToList();
+                            foreach (var ra in removeAliases) _db.Remove(ra);
+
+                            foreach (var incAl in incSvc.Aliases)
+                            {
+                                if (incAl.Id > 0)
+                                {
+                                    var exAl = exSvc.Aliases.FirstOrDefault(a => a.Id == incAl.Id);
+                                    if (exAl == null) continue;
+
+                                    exAl.Direction = string.IsNullOrWhiteSpace(incAl.Direction) ? "SENDER" : incAl.Direction;
+                                    exAl.Alias = incAl.Alias;
+
+                                    PropagateUserId(existing, exAl);
+                                    TouchAudit(exAl, utcNow);
+                                }
+                                else
+                                {
+                                    var newAl = new GibFirmServiceAlias
+                                    {
+                                        Direction = string.IsNullOrWhiteSpace(incAl.Direction) ? "SENDER" : incAl.Direction,
+                                        Alias = incAl.Alias
+                                    };
+                                    PropagateUserId(existing, newAl);
+                                    TouchAudit(newAl, utcNow);
+                                    exSvc.Aliases.Add(newAl);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var newSvc = new GibFirmService
+                            {
+                                ServiceType = incSvc.ServiceType,
+                                StartDate = incSvc.StartDate,
+                                EndDate = incSvc.EndDate,
+                                TariffType = incSvc.TariffType,
+                                Status = incSvc.Status,
+                                Aliases = new List<GibFirmServiceAlias>()
+                            };
+
+                            PropagateUserId(existing, newSvc);
+                            TouchAudit(newSvc, utcNow);
+
+                            incSvc.Aliases ??= new List<GibFirmServiceAlias>();
+                            foreach (var incAl in incSvc.Aliases)
+                            {
+                                var newAl = new GibFirmServiceAlias
+                                {
+                                    Direction = string.IsNullOrWhiteSpace(incAl.Direction) ? "SENDER" : incAl.Direction,
+                                    Alias = incAl.Alias
+                                };
+                                PropagateUserId(existing, newAl);
+                                TouchAudit(newAl, utcNow);
+                                newSvc.Aliases.Add(newAl);
+                            }
+
+                            existing.Services.Add(newSvc);
+                        }
+                    }
+
+                    // ===== CreditAccounts: update’te dokunma (UI sadece create’de gönderiyor) =====
+                    // incoming.CreditAccounts gönderilse bile burada karıştırmıyoruz.
+                    // (istersen ayrıca ayrı endpoint ile yönet.)
+
+                    await _db.SaveChangesAsync(ct);
+                    await tx.CommitAsync(ct);
+
+                    return existing;
+                }
+                catch
+                {
+                    await tx.RollbackAsync(ct);
+                    _db.ChangeTracker.Clear();
+                    throw;
+                }
+            });
         }
 
     }
