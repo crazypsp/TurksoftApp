@@ -12,6 +12,7 @@ namespace TurkSoft.Entities.GIBEntityDB
         public DateTime InvoiceDate { get; set; }
         public decimal Total { get; set; }
         public string Currency { get; set; }
+        public int Type { get; set; }
 
         // Navigation
         [ValidateNever] public Customer Customer { get; set; }
