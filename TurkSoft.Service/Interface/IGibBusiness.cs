@@ -66,6 +66,15 @@ namespace TurkSoft.Service.Interface
         Task<(int remaining, int used)> ConsumeBalanceAsync(string companyVkn, int amount, string reason, CancellationToken ct = default);
         #endregion
 
+        #region Zarf Sorgulama (Ortak)
+        /// <summary>
+        /// Zarf/Status sorgulama için ortak giriş.
+        /// hizmetTuru: 1=e-Fatura, 2=e-İrsaliye
+        /// id: ilgili kayıt Id/ETTN (Guid)
+        /// </summary>
+        Task<HttpResult<object>> GetEnvelopeStatusAsync(int hizmetTuru, Guid id, CancellationToken ct = default);
+        #endregion
+
         #region StaticList
         Task<HttpResult<object>> GetStaticListUnitAsync(CancellationToken ct = default);
         Task<HttpResult<object>> GetStaticListTaxExemptionReasonsAsync(CancellationToken ct = default);
@@ -76,19 +85,54 @@ namespace TurkSoft.Service.Interface
         #endregion
 
         #region e-Fatura Outbox
-        Task<HttpResult<object>> SendEInvoiceJsonAsync(Invoice inv, bool isExport = false, bool consumeKontor = true, string? kontorVkn = null, string? targetAlias = null, CancellationToken ct = default);
+        Task<HttpResult<object>> SendEInvoiceJsonAsync(
+            Invoice inv,
+            bool isExport = false,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            string? targetAlias = null,
+            CancellationToken ct = default);
 
-        Task<HttpResult<object>> SendEInvoiceUblAsync(Stream fileStream, string fileName,
-            int appType, int status, bool useManualInvoiceId,
-            string? targetAlias, bool? useFirstAlias, string? prefix,
-            string? localReferenceId, bool? checkLocalReferenceId, string? xsltCode,
-            bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
+        /// <summary>
+        /// Test/Debug: Postman payload'ını birebir göndermek için (JSON Raw).
+        /// </summary>
+        Task<HttpResult<object>> SendEInvoiceJsonRawAsync(
+            object body,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            CancellationToken ct = default);
 
-        Task<HttpResult<object>> UpdateEInvoiceUblAsync(Guid ettn, Stream fileStream, string fileName,
-            int appType, int status, bool useManualInvoiceId,
-            string? targetAlias, bool? useFirstAlias,
-            string? localReferenceId, bool? checkLocalReferenceId, string? xsltCode,
-            bool consumeKontor = false, string? kontorVkn = null, CancellationToken ct = default);
+        Task<HttpResult<object>> SendEInvoiceUblAsync(
+            Stream fileStream,
+            string fileName,
+            int appType,
+            int status,
+            bool useManualInvoiceId,
+            string? targetAlias,
+            bool? useFirstAlias,
+            string? prefix,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            CancellationToken ct = default);
+
+        Task<HttpResult<object>> UpdateEInvoiceUblAsync(
+            Guid ettn,
+            Stream fileStream,
+            string fileName,
+            int appType,
+            int status,
+            bool useManualInvoiceId,
+            string? targetAlias,
+            bool? useFirstAlias,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool consumeKontor = false,
+            string? kontorVkn = null,
+            CancellationToken ct = default);
 
         Task<HttpResult<object>> UpdateEInvoiceJsonAsync(Guid ettn, object body, CancellationToken ct = default);
         Task<HttpResult<object>> UpdateEInvoiceStatusAsync(IEnumerable<Guid> ids, int status, CancellationToken ct = default);
@@ -98,14 +142,49 @@ namespace TurkSoft.Service.Interface
         Task<HttpResult<byte[]>> GetEInvoiceOutboxUblAsync(Guid ettn, CancellationToken ct = default);
         Task<HttpResult<object>> GetOutboxInvoicesWithNullLocalReferencesAsync(DateTime start, DateTime end, CancellationToken ct = default);
         Task<HttpResult<object>> GetOutboxInvoiceReasonAsync(Guid ettn, CancellationToken ct = default);
+        Task<HttpResult<object>> GetEInvoiceOutboxAsync(DateTime start, DateTime end, int pageIndex, int pageSize, bool isDesc, CancellationToken ct = default);
+
+        /// <summary>
+        /// Dokümandaki doğru path ile invoice reason (opsiyonel/fix amaçlı).
+        /// </summary>
+        Task<HttpResult<object>> GetOutboxInvoiceReasonFixedAsync(Guid id, CancellationToken ct = default);
         #endregion
 
         #region e-Fatura Inbox
-        Task<HttpResult<object>> GetEInvoiceInboxAsync(DateTime start, DateTime end,
-            int pageIndex, int pageSize, bool isNew, CancellationToken ct = default);
+        Task<HttpResult<object>> GetEInvoiceInboxAsync(
+            DateTime start,
+            DateTime end,
+            int pageIndex,
+            int pageSize,
+            bool isNew,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// Dokümandaki tüm filtre parametreleriyle inbox list.
+        /// </summary>
+        Task<HttpResult<object>> GetEInvoiceInboxListFullAsync(
+            DateTime start,
+            DateTime end,
+            int pageIndex,
+            int pageSize,
+            bool isDesc,
+            bool isNew,
+            string? invoiceNumber = null,
+            string? sourceVkn = null,
+            string? targetVknTckn = null,
+            int? status = null,
+            int? envelopeType = null,
+            CancellationToken ct = default);
+
         Task<HttpResult<byte[]>> GetEInvoiceInboxHtmlAsync(Guid ettn, bool standardXslt, CancellationToken ct = default);
         Task<HttpResult<byte[]>> GetEInvoiceInboxPdfAsync(Guid ettn, bool standardXslt, CancellationToken ct = default);
         Task<HttpResult<byte[]>> GetEInvoiceInboxUblAsync(Guid ettn, CancellationToken ct = default);
+
+        /// <summary>
+        /// Inbox ZIP indirme.
+        /// </summary>
+        Task<HttpResult<byte[]>> GetEInvoiceInboxZipAsync(Guid id, bool isStandartXslt, CancellationToken ct = default);
+
         Task<HttpResult<object>> GetEInvoiceInboxStatusAsync(Guid ettn, CancellationToken ct = default);
         Task<HttpResult<object>> SendInvoiceResponseAsync(InvoiceResponseRequest request, CancellationToken ct = default);
         Task<HttpResult<object>> RetryInvoiceResponseListAsync(IEnumerable<Guid> invoiceIds, CancellationToken ct = default);
@@ -115,16 +194,45 @@ namespace TurkSoft.Service.Interface
         #region e-Arşiv
         Task<HttpResult<object>> SendEArchiveJsonAsync(Invoice inv, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
         Task<HttpResult<object>> SendEArchiveJsonRawAsync(object body, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
-        Task<HttpResult<object>> SendEArchiveUblAsync(Stream fileStream, string fileName,
-            int status, bool useManualInvoiceId, bool sendEmail,
-            string? emailAddress, string? prefix, string? localReferenceId,
-            bool? checkLocalReferenceId, string? xsltCode, bool? allowOldEArsivCustomer,
-            bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
 
-        Task<HttpResult<object>> UpdateEArchiveUblAsync(Guid id, Stream fileStream, string fileName,
-            int status, bool sendEmail, string emailAddress,
-            string? localReferenceId, bool? checkLocalReferenceId, string? xsltCode, bool? allowOldEArsivCustomer,
+        Task<HttpResult<object>> SendEArchiveUblAsync(
+            Stream fileStream,
+            string fileName,
+            int status,
+            bool useManualInvoiceId,
+            bool sendEmail,
+            string? emailAddress,
+            string? prefix,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool? allowOldEArsivCustomer,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
             CancellationToken ct = default);
+
+        Task<HttpResult<object>> UpdateEArchiveUblAsync(
+            Guid id,
+            Stream fileStream,
+            string fileName,
+            int status,
+            bool sendEmail,
+            string emailAddress,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool? allowOldEArsivCustomer,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// e-Arşiv JSON update (PUT /v2/earchive/update/{id})
+        /// </summary>
+        Task<HttpResult<object>> UpdateEArchiveJsonAsync(Guid id, object body, CancellationToken ct = default);
+
+        /// <summary>
+        /// e-Arşiv mail detail (GET /v1/earchive/getmaildetail?id=...)
+        /// </summary>
+        Task<HttpResult<object>> GetEArchiveMailDetailAsync(Guid id, CancellationToken ct = default);
 
         Task<HttpResult<object>> GetEArchiveStatusAsync(Guid ettn, CancellationToken ct = default);
         Task<HttpResult<byte[]>> GetEArchivePdfAsync(Guid ettn, bool standardXslt, CancellationToken ct = default);
@@ -140,6 +248,11 @@ namespace TurkSoft.Service.Interface
         Task<HttpResult<object>> SendDespatchUblAsync(Invoice inv, string? targetAlias = null, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
         Task<HttpResult<object>> UpdateDespatchStatusListAsync(IEnumerable<Guid> ids, int status, CancellationToken ct = default);
         Task<HttpResult<object>> GetDespatchInboxAsync(DateTime start, DateTime end, int pageIndex, int pageSize, bool isDesc, CancellationToken ct = default);
+
+        /// <summary>
+        /// Zarf sorgulamada da kullanılan: outbox despatch status
+        /// </summary>
+        Task<HttpResult<object>> GetDespatchOutboxStatusAsync(Guid id, CancellationToken ct = default);
         #endregion
 
         #region e-Defter
@@ -151,6 +264,31 @@ namespace TurkSoft.Service.Interface
 
         #region GIB User
         Task<HttpResult<byte[]>> GetGibUserRecipientZipAsync(CancellationToken ct = default);
+        #endregion
+
+        #region e-MM (ProducerReceipt)
+        Task<HttpResult<object>> PostProducerReceiptUblRawAsync(object body, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
+        Task<HttpResult<object>> PutProducerReceiptUblRawAsync(Guid id, object body, CancellationToken ct = default);
+        Task<HttpResult<object>> UpdateProducerReceiptStatusListAsync(IEnumerable<Guid> ids, int status, CancellationToken ct = default);
+        Task<HttpResult<object>> CancelProducerReceiptAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetProducerReceiptHtmlAsync(Guid id, bool isStandartXslt, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetProducerReceiptPdfAsync(Guid id, bool isStandartXslt, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetProducerReceiptZipAsync(Guid id, bool isStandartXslt, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetProducerReceiptUblAsync(Guid id, CancellationToken ct = default);
+        Task<HttpResult<object>> GetProducerReceiptStatusAsync(Guid id, CancellationToken ct = default);
+        #endregion
+
+        #region e-SMM (Voucher)
+        Task<HttpResult<object>> PostVoucherCreateAsync(object body, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
+        Task<HttpResult<object>> PostVoucherUblRawAsync(object body, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default);
+        Task<HttpResult<object>> PutVoucherUblRawAsync(Guid id, object body, CancellationToken ct = default);
+        Task<HttpResult<object>> UpdateVoucherStatusListAsync(IEnumerable<Guid> ids, int status, CancellationToken ct = default);
+        Task<HttpResult<object>> CancelVoucherAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetVoucherHtmlAsync(Guid id, bool isStandartXslt, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetVoucherPdfAsync(Guid id, bool isStandartXslt, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetVoucherZipAsync(Guid id, bool isStandartXslt, CancellationToken ct = default);
+        Task<HttpResult<byte[]>> GetVoucherUblAsync(Guid id, CancellationToken ct = default);
+        Task<HttpResult<object>> GetVoucherStatusAsync(Guid id, CancellationToken ct = default);
         #endregion
     }
 }

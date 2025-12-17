@@ -21,13 +21,11 @@ namespace TurkSoft.Service.Manager
         // ---- Ayarlar ----
         public sealed class Options
         {
-            
             public string EFaturaBaseUrl { get; init; } = "https://efaturaservice.turkcellesirket.com";
             public string EIrsaliyeBaseUrl { get; init; } = "https://eirsaliyeservicetest.isim360.com";
             public string EDefterBaseUrl { get; init; } = "https://edefterservicetest.isim360.com";
 
             // 🔴 BURAYA test portalinden oluşturduğun API KEY'i yazacaksın
-            // Örnek: "abc123xyz..."
             public string ApiKey { get; set; } = "EcwbRm3WbGk2tRpNGwlu4j7UbuPiVZwWCBdhLIx3Bbo=";
 
             public string TestSenderVkn { get; set; } = "1234567803";
@@ -40,7 +38,7 @@ namespace TurkSoft.Service.Manager
         private sealed class OutboxInvoiceCreateRequest
         {
             [JsonPropertyName("recordType")] public int RecordType { get; set; } = 1; // 1: e-Fatura
-            [JsonPropertyName("status")] public int Status { get; set; } = 20;
+            [JsonPropertyName("status")] public int Status { get; set; } = 0;//20 Gönder, 0 Taslak
             [JsonPropertyName("xsltCode")] public string? XsltCode { get; set; }
             [JsonPropertyName("localReferenceId")] public string? LocalReferenceId { get; set; }
             [JsonPropertyName("useManualInvoiceId")] public bool UseManualInvoiceId { get; set; }
@@ -120,7 +118,6 @@ namespace TurkSoft.Service.Manager
             [JsonPropertyName("taxAmount")] public decimal TaxAmount { get; set; }
         }
 
-
         private sealed class InvoiceHeader
         {
             public DateTime IssueDate { get; set; } = DateTime.UtcNow;
@@ -144,7 +141,7 @@ namespace TurkSoft.Service.Manager
             public string? TargetAlias { get; set; }
             public bool? UseManualDespatchAdviceId { get; set; }
             public bool? CheckLocalReferenceId { get; set; }
-            public int Status { get; set; } = 20;
+            public int Status { get; set; } = 0;
         }
 
         // ---- E-Arşiv JSON DTO'ları (Post_Earchive_Invoice_Json'a birebir uyumlu) ----
@@ -152,7 +149,7 @@ namespace TurkSoft.Service.Manager
         private sealed class EArchiveInvoiceCreateRequest
         {
             [JsonPropertyName("recordType")] public int RecordType { get; set; } = 0;  // 0: e-Arşiv
-            [JsonPropertyName("status")] public int Status { get; set; } = 20;
+            [JsonPropertyName("status")] public int Status { get; set; } = 0;
             [JsonPropertyName("isNew")] public bool IsNew { get; set; } = true;
             [JsonPropertyName("localReferenceId")] public string? LocalReferenceId { get; set; }
             [JsonPropertyName("useManualInvoiceId")] public bool UseManualInvoiceId { get; set; } = false;
@@ -249,7 +246,11 @@ namespace TurkSoft.Service.Manager
             [JsonPropertyName("sendEMail")] public bool SendEmail { get; set; }
             [JsonPropertyName("eMailAddress")] public string? EmailAddress { get; set; }
         }
-
+        private sealed class OutboxUiInvoiceItem
+        {
+            [JsonPropertyName("id")] public string? Id { get; set; }      // ETTN (Guid string gelir)
+            [JsonPropertyName("status")] public string? Status { get; set; }
+        }
         // ---- Alanlar ----
         private readonly Options _opt;
         private readonly HttpClient _http;
@@ -297,7 +298,6 @@ namespace TurkSoft.Service.Manager
                 throw new InvalidOperationException("GibBusiness.Options.ApiKey boş. portaltest.isim360.com üzerinden oluşturduğunuz API key'i Options.ApiKey içine yazın.");
 
             var req = new HttpRequestMessage(method, new Uri(new Uri(baseUrl), path));
-            // Turkcell / ePlatform servisleri APIKEY'i buradan bekliyor
             req.Headers.Add("x-api-key", _opt.ApiKey);
             return Task.FromResult(req);
         }
@@ -306,6 +306,7 @@ namespace TurkSoft.Service.Manager
         {
             using var resp = await http.SendAsync(req, ct);
             var code = (int)resp.StatusCode;
+
             if (!resp.IsSuccessStatusCode)
                 return HttpResult<T>.Fail(await resp.Content.ReadAsStringAsync(ct), code);
 
@@ -317,6 +318,21 @@ namespace TurkSoft.Service.Manager
 
             var data = await resp.Content.ReadFromJsonAsync<T>(cancellationToken: ct);
             return HttpResult<T>.Success(data!, code);
+        }
+
+        // ---------- Küçük yardımcılar (interface'e dokunmadan ek) ----------
+        private static string ToApiDateTime(DateTime dt)
+            => dt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+
+        private static string AddQuery(string path, IEnumerable<(string key, string? value)> query)
+        {
+            var list = new List<string>();
+            foreach (var (key, value) in query)
+            {
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                list.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value)}");
+            }
+            return list.Count == 0 ? path : $"{path}?{string.Join("&", list)}";
         }
 
         // ---------- Kontör ----------
@@ -336,8 +352,19 @@ namespace TurkSoft.Service.Manager
             return Task.FromResult((bal.Remaining, bal.Used));
         }
 
+        // ---------- Zarf Sorgulama (Ortak) ----------
+        // hizmetTuru: 1=e-Fatura, 2=e-İrsaliye
+        public async Task<HttpResult<object>> GetEnvelopeStatusAsync(int hizmetTuru, Guid id, CancellationToken ct = default)
+        {
+            return hizmetTuru switch
+            {
+                1 => await GetEInvoiceOutboxStatusAsync(id, ct),
+                2 => await GetDespatchOutboxStatusAsync(id, ct),
+                _ => HttpResult<object>.Fail("Geçersiz hizmet türü. 1=e-Fatura, 2=e-İrsaliye", 400)
+            };
+        }
+
         // ---------- Mapping (Invoice -> JSON) ----------
-        // ---------- Mapping (Invoice -> e-Fatura JSON) ----------
         private OutboxInvoiceCreateRequest MapToEInvoiceRequest(Invoice inv, bool isExport, string? targetAlias = null)
         {
             if (inv == null)
@@ -345,21 +372,16 @@ namespace TurkSoft.Service.Manager
 
             var customer = inv.Customer;
 
-            // VKN/TCKN zorunlu
             var vkn = (customer?.TaxNo ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(vkn))
                 throw new InvalidOperationException("Invoice.Customer.TaxNo (VKN/TCKN) boş. e-Fatura gönderimi için zorunlu alandır.");
 
-            // Alias – şimdilik Options üzerinden (UpdateUserOptions ile güncelliyorsun)
-            // Eğer sonradan Customer veya Invoice içine Alias alanı eklenirse buraya map edebilirsin.
             var alias = targetAlias;
-
-            // Adres bilgisi – customer.Addresses içinden ilk kayıt
             var addr = customer?.Addresses?.FirstOrDefault();
 
             var fullName = $"{(customer?.Name ?? "").Trim()} {(customer?.Surname ?? "").Trim()}".Trim();
             if (string.IsNullOrWhiteSpace(fullName))
-                fullName = customer?.Name?.Trim() ?? string.Empty; // En azından Name dolu kalır
+                fullName = customer?.Name?.Trim() ?? string.Empty;
 
             var receiverStreet = addr?.Street;
             var receiverDistrict = addr?.District;
@@ -367,12 +389,10 @@ namespace TurkSoft.Service.Manager
             var receiverCountry = addr?.Country;
             var receiverZip = addr?.PostCode;
 
-            // Satırları hesapla
             var lines = new List<InvoiceLine>();
             decimal lineExtTotal = 0m;
             decimal vatTotal = 0m;
 
-            // Eğer invoice üzerinde vergi satırı yoksa:
             var defaultVatRate = (inv.InvoicesTaxes != null && inv.InvoicesTaxes.Any())
                 ? inv.InvoicesTaxes.First().Rate
                 : (isExport ? 0m : 18m);
@@ -391,19 +411,14 @@ namespace TurkSoft.Service.Manager
                     lineExtTotal += lineAmount;
                     vatTotal += vatAmount;
 
-                    // Birim kodu – Unit.ShortName varsa onu, yoksa Name, o da yoksa C62
                     var unitCode =
                         it.Item?.Unit?.ShortName ??
                         it.Item?.Unit?.Name ??
                         "C62";
 
-                    // İhracat için KDV 0 ise istisna kodu zorunlu
                     string? vatExemptionReasonCode = null;
                     if (isExport && vatRate == 0m)
-                    {
-                        // Örnek: 301 – İhracat KDV istisnası
                         vatExemptionReasonCode = "301";
-                    }
 
                     lines.Add(new InvoiceLine
                     {
@@ -424,7 +439,7 @@ namespace TurkSoft.Service.Manager
                         BuyersItemIdentification = null,
                         ManufacturersItemIdentification = null,
 
-                        Taxes = null // İstersen InvoicesTaxes’e göre detay doldurabilirsin
+                        Taxes = null
                     });
                 }
             }
@@ -435,44 +450,30 @@ namespace TurkSoft.Service.Manager
             if (vatTotal == 0m && inv.InvoicesTaxes != null && inv.InvoicesTaxes.Any())
                 vatTotal = inv.InvoicesTaxes.Sum(t => t.Amount);
 
-            var taxExclusive = lineExtTotal;
-            var taxInclusive = taxExclusive + vatTotal;
-            var payable = inv.Total != 0 ? inv.Total : taxInclusive;
-
-            var issueDate = inv.InvoiceDate == default
-                ? DateTime.Now
-                : inv.InvoiceDate;
-
-            // Fatura tipi – SATIŞ / İHRACAT vs.
-            // 1: SATIS, 2: IADE, 7: IHRACKAYITLI vb. – dokümana göre daha detaylı ayarlayabilirsin
+            var issueDate = inv.InvoiceDate == default ? DateTime.Now : inv.InvoiceDate;
             var type = isExport ? 7 : 1;
 
             var currency = string.IsNullOrWhiteSpace(inv.Currency) ? "TRY" : inv.Currency.Trim();
-            // TRY harici durumlarda gerçek kur bilgini Invoice içine eklediysen burayı ona göre güncelle
             var exchangeRate = currency == "TRY" ? 0m : 1m;
 
             return new OutboxInvoiceCreateRequest
             {
-                // Üst alanlar
-                RecordType = 1, // e-Fatura
-                Status = 20,
+                RecordType = 1,
+                Status = 0,
                 XsltCode = null,
                 LocalReferenceId = !string.IsNullOrWhiteSpace(inv.InvoiceNo)
                                     ? inv.InvoiceNo
                                     : inv.Id.ToString(CultureInfo.InvariantCulture),
-                UseManualInvoiceId = false,      // İstersen InvoiceNo’yu manuel kullanmak için true + InvoiceNumber doldur
-                Note = null,        // Invoice üzerinde Note alanı tanımlarsan buraya map edebilirsin
+                UseManualInvoiceId = false,
+                Note = null,
                 Notes = new List<string>(),
 
-                // Alıcı adres bilgileri – Tamamı Invoice.Customer + Customer.Addresses’den
                 AddressBook = new AddressBook
                 {
                     Name = fullName,
                     ReceiverPersonSurName = customer?.Surname,
                     IdentificationNumber = vkn,
                     Alias = alias,
-
-                    // Ticaret sicil / mersis vb. için ileride Customer/Address’e alan eklersen buraya map edebilirsin
                     RegisterNumber = null,
 
                     ReceiverStreet = receiverStreet,
@@ -491,13 +492,12 @@ namespace TurkSoft.Service.Manager
                     ReceiverTaxOffice = customer?.TaxOffice
                 },
 
-                // Genel bilgiler
                 GeneralInfoModel = new GeneralInfoModel
                 {
-                    Ettn = null,    // Eğer Invoice içine Ettn (Guid/string) alanı eklediysen burada parse edebilirsin
-                    Prefix = null,    // UI’daki Fatura Ön Eki’ni Invoice’a ekleyip buraya map edebilirsin
-                    InvoiceNumber = null,    // UseManualInvoiceId = true yaparsan buraya inv.InvoiceNo vermelisin
-                    InvoiceProfileType = 1,      // 1: Ticari – böylece /einvoice/response ile yanıt verebilirsin
+                    Ettn = null,
+                    Prefix = null,
+                    InvoiceNumber = null,
+                    InvoiceProfileType = 1,
                     IssueDate = issueDate,
                     Type = type,
                     ReturnInvoiceNumber = null,
@@ -506,25 +506,21 @@ namespace TurkSoft.Service.Manager
                     ExchangeRate = exchangeRate
                 },
 
-                // Satır listesi
                 InvoiceLines = lines
             };
         }
-
 
         private EArchiveInvoiceCreateRequest MapToEArchiveRequest(Invoice inv)
         {
             var customer = inv.Customer;
 
-            // 🔴 E-Arşiv için: e-fatura kullanıcısı VKN'sine (1234567803) e-arşiv kesilmez.
-            // Test senaryosu için: bu durumda "nihai tüketici" örneği olan 1123581321'e çeviriyoruz.
             var receiverId = customer?.TaxNo;
 
             if (string.IsNullOrWhiteSpace(receiverId) ||
-                receiverId == "1234567803" ||      // mailde/testte verilen e-fatura VKN
-                receiverId == _opt.TestSenderVkn)  // Options içindeki test VKN'i de büyük ihtimalle bu
+                receiverId == "1234567803" ||
+                receiverId == _opt.TestSenderVkn)
             {
-                receiverId = "1123581321";         // Turkcell dokümanındaki e-Arşiv nihai tüketici örneği
+                receiverId = "1123581321";
             }
 
             var lines = new List<EArchiveInvoiceLine>();
@@ -554,12 +550,9 @@ namespace TurkSoft.Service.Manager
                         it.Item?.Unit?.Name ??
                         "C62";
 
-                    // 🔴 KDV 0 ise istisna kodu zorunlu – burada 301 kullanıyoruz (ihracat/istisna örneği)
                     string vatExemptionReasonCode = "";
                     if (vatRate == 0m)
-                    {
                         vatExemptionReasonCode = "301";
-                    }
 
                     lines.Add(new EArchiveInvoiceLine
                     {
@@ -587,12 +580,12 @@ namespace TurkSoft.Service.Manager
 
             var issueDate = inv.InvoiceDate == default ? DateTime.Now : inv.InvoiceDate;
             var currency = string.IsNullOrWhiteSpace(inv.Currency) ? "TRY" : inv.Currency!;
-            var exchangeRate = currency == "TRY" ? 0m : 1m; // TRY harici için gerçek kur koyabilirsin
+            var exchangeRate = currency == "TRY" ? 0m : 1m;
 
             return new EArchiveInvoiceCreateRequest
             {
-                RecordType = 0,  // e-Arşiv
-                Status = 20,     // Postman örneği
+                RecordType = 0,
+                Status = 0,
                 IsNew = true,
                 LocalReferenceId = !string.IsNullOrWhiteSpace(inv.InvoiceNo)
                     ? inv.InvoiceNo
@@ -603,9 +596,9 @@ namespace TurkSoft.Service.Manager
                 GeneralInfoModel = new EArchiveGeneralInfoModel
                 {
                     Ettn = null,
-                    InvoiceProfileType = 4,          // Postman'de e-Arşiv için 4
+                    InvoiceProfileType = 4,
                     IssueDate = issueDate,
-                    Type = 1,                        // 1: SATIS
+                    Type = 1,
                     CurrencyCode = currency,
                     ExchangeRate = exchangeRate,
                     TotalAmount = payable,
@@ -619,16 +612,16 @@ namespace TurkSoft.Service.Manager
 
                 AddressBook = new EArchiveAddressBook
                 {
-                    IdentificationNumber = receiverId,  // 🔴 burada vkn yerine düzeltilmiş receiverId'yi kullanıyoruz
+                    IdentificationNumber = receiverId,
                     Name = $"{customer?.Name} {customer?.Surname}".Trim(),
                     ReceiverBuildingName = null,
                     ReceiverPersonSurName = customer?.Surname,
                     ReceiverNumber = customer?.Phone,
                     ReceiverStreet = "",
                     ReceiverEmail = customer?.Email ?? "abb@gmail.com",
-                    ReceiverDistrict = "PENDİK",        // 🔴 Boş değil
-                    ReceiverCity = "İSTANBUL",          // 🔴 Boş değil
-                    ReceiverCountry = "Türkiye",        // 🔴 Boş değil
+                    ReceiverDistrict = "PENDİK",
+                    ReceiverCity = "İSTANBUL",
+                    ReceiverCountry = "Türkiye",
                     RegisterNumber = null,
                     ReceiverTaxOffice = customer?.TaxOffice ?? "",
                     ReceiverPhoneNumber = customer?.Phone ?? ""
@@ -720,7 +713,7 @@ namespace TurkSoft.Service.Manager
                 DespatchAdviceZip = Convert.ToBase64String(zipBytes),
                 LocalReferenceId = inv.InvoiceNo ?? inv.Id.ToString(),
                 TargetAlias = string.IsNullOrWhiteSpace(targetAlias) ? null : targetAlias,
-                Status = 20
+                Status = 0
             };
         }
 
@@ -762,29 +755,63 @@ namespace TurkSoft.Service.Manager
         }
 
         // ---------- e-Fatura Outbox ----------
-        public async Task<HttpResult<object>> SendEInvoiceJsonAsync(Invoice inv, bool isExport = false, bool consumeKontor = true, string? kontorVkn = null, string? targetAlias = null, CancellationToken ct = default)
+        public async Task<HttpResult<object>> SendEInvoiceJsonAsync(
+            Invoice inv,
+            bool isExport = false,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            string? targetAlias = null,
+            CancellationToken ct = default)
         {
             var payload = MapToEInvoiceRequest(inv, isExport, targetAlias);
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/outboxinvoice/create", ct);
             req.Content = JsonContent.Create(payload);
+
             var res = await SendAsync<object>(_http, req, ct);
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Fatura Gönderim (JSON)", ct);
+
             return res;
         }
 
-        public async Task<HttpResult<object>> SendEInvoiceUblAsync(Stream fileStream, string fileName,
-            int appType, int status, bool useManualInvoiceId,
-            string? targetAlias, bool? useFirstAlias, string? prefix,
-            string? localReferenceId, bool? checkLocalReferenceId, string? xsltCode,
-            bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
+        public async Task<HttpResult<object>> SendEInvoiceJsonRawAsync(
+            object body,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/outboxinvoice/create", ct);
+            req.Content = JsonContent.Create(body);
+
+            var res = await SendAsync<object>(_http, req, ct);
+            if (consumeKontor && res.Ok)
+                await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Fatura Gönderim (JSON Raw)", ct);
+
+            return res;
+        }
+
+        public async Task<HttpResult<object>> SendEInvoiceUblAsync(
+            Stream fileStream,
+            string fileName,
+            int appType,
+            int status,
+            bool useManualInvoiceId,
+            string? targetAlias,
+            bool? useFirstAlias,
+            string? prefix,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            CancellationToken ct = default)
         {
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v2/outboxinvoice", ct);
             var mp = new MultipartFormDataContent
             {
                 { new StreamContent(fileStream), "invoiceFile", fileName },
-                { new StringContent(appType.ToString()), "appType" },
-                { new StringContent(status.ToString()), "status" },
+                { new StringContent(appType.ToString(CultureInfo.InvariantCulture)), "appType" },
+                { new StringContent(status.ToString(CultureInfo.InvariantCulture)), "status" },
                 { new StringContent(useManualInvoiceId.ToString()), "useManualInvoiceId" }
             };
 
@@ -796,24 +823,36 @@ namespace TurkSoft.Service.Manager
             if (!string.IsNullOrWhiteSpace(xsltCode)) mp.Add(new StringContent(xsltCode), "xsltCode");
 
             req.Content = mp;
+
             var res = await SendAsync<object>(_http, req, ct);
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Fatura Gönderim (UBL)", ct);
+
             return res;
         }
 
-        public async Task<HttpResult<object>> UpdateEInvoiceUblAsync(Guid ettn, Stream fileStream, string fileName,
-            int appType, int status, bool useManualInvoiceId,
-            string? targetAlias, bool? useFirstAlias,
-            string? localReferenceId, bool? checkLocalReferenceId, string? xsltCode,
-            bool consumeKontor = false, string? kontorVkn = null, CancellationToken ct = default)
+        public async Task<HttpResult<object>> UpdateEInvoiceUblAsync(
+            Guid ettn,
+            Stream fileStream,
+            string fileName,
+            int appType,
+            int status,
+            bool useManualInvoiceId,
+            string? targetAlias,
+            bool? useFirstAlias,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool consumeKontor = false,
+            string? kontorVkn = null,
+            CancellationToken ct = default)
         {
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Put, $"/v2/outboxinvoice/{ettn}", ct);
             var mp = new MultipartFormDataContent
             {
                 { new StreamContent(fileStream), "invoiceFile", fileName },
-                { new StringContent(appType.ToString()), "appType" },
-                { new StringContent(status.ToString()), "status" },
+                { new StringContent(appType.ToString(CultureInfo.InvariantCulture)), "appType" },
+                { new StringContent(status.ToString(CultureInfo.InvariantCulture)), "status" },
                 { new StringContent(useManualInvoiceId.ToString()), "useManualInvoiceId" }
             };
 
@@ -824,9 +863,11 @@ namespace TurkSoft.Service.Manager
             if (!string.IsNullOrWhiteSpace(xsltCode)) mp.Add(new StringContent(xsltCode), "xsltCode");
 
             req.Content = mp;
+
             var res = await SendAsync<object>(_http, req, ct);
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Fatura Güncelleme (UBL)", ct);
+
             return res;
         }
 
@@ -877,14 +918,21 @@ namespace TurkSoft.Service.Manager
 
         public async Task<HttpResult<object>> GetOutboxInvoiceReasonAsync(Guid ettn, CancellationToken ct = default)
         {
+            // Mevcut halin bozulmasın diye aynen bıraktım.
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/outboxInvoice/invoicereason/{ettn}", ct);
             return await SendAsync<object>(_http, req, ct);
         }
 
-        // ---------- e-Fatura Inbox ----------
-        public async Task<HttpResult<object>> GetEInvoiceInboxAsync(DateTime start, DateTime end,
-            int pageIndex, int pageSize, bool isNew, CancellationToken ct = default)
+        public async Task<HttpResult<object>> GetOutboxInvoiceReasonFixedAsync(Guid id, CancellationToken ct = default)
         {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/outboxinvoice/invoicereason/{id}", ct);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        // ---------- e-Fatura Inbox ----------
+        public async Task<HttpResult<object>> GetEInvoiceInboxAsync(DateTime start, DateTime end, int pageIndex, int pageSize, bool isNew, CancellationToken ct = default)
+        {
+            // Mevcut halin bozulmasın diye aynen bıraktım.
             var url =
                 $"/v1/inboxInvoice/list?pageIndex={pageIndex}&pageSize={pageSize}&isNew={isNew}" +
                 $"&startDate={start:yyyy-MM-dd HH:mm:ss}&endDate={end:yyyy-MM-dd HH:mm:ss}";
@@ -892,31 +940,66 @@ namespace TurkSoft.Service.Manager
             return await SendAsync<object>(_http, req, ct);
         }
 
+        public async Task<HttpResult<object>> GetEInvoiceInboxListFullAsync(
+            DateTime start,
+            DateTime end,
+            int pageIndex,
+            int pageSize,
+            bool isDesc,
+            bool isNew,
+            string? invoiceNumber = null,
+            string? sourceVkn = null,
+            string? targetVknTckn = null,
+            int? status = null,
+            int? envelopeType = null,
+            CancellationToken ct = default)
+        {
+            var url = AddQuery("/v1/inboxinvoice/list", new (string, string?)[]
+            {
+                ("startDate", ToApiDateTime(start)),
+                ("endDate", ToApiDateTime(end)),
+                ("pageIndex", pageIndex.ToString(CultureInfo.InvariantCulture)),
+                ("pageSize", pageSize.ToString(CultureInfo.InvariantCulture)),
+                ("isDesc", isDesc.ToString()),
+                ("isNew", isNew.ToString()),
+                ("invoiceNumber", invoiceNumber),
+                ("sourceVkn", sourceVkn),
+                ("targetVknTckn", targetVknTckn),
+                ("status", status?.ToString(CultureInfo.InvariantCulture)),
+                ("envelopeType", envelopeType?.ToString(CultureInfo.InvariantCulture)),
+            });
+
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, url, ct);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
         public async Task<HttpResult<byte[]>> GetEInvoiceInboxHtmlAsync(Guid ettn, bool standardXslt, CancellationToken ct = default)
         {
-            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get,
-                $"/v2/inboxinvoice/{ettn}/html/{standardXslt}", ct);
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v2/inboxinvoice/{ettn}/html/{standardXslt}", ct);
             return await SendAsync<byte[]>(_http, req, ct);
         }
 
         public async Task<HttpResult<byte[]>> GetEInvoiceInboxPdfAsync(Guid ettn, bool standardXslt, CancellationToken ct = default)
         {
-            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get,
-                $"/v2/inboxinvoice/{ettn}/pdf/{standardXslt}", ct);
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v2/inboxinvoice/{ettn}/pdf/{standardXslt}", ct);
             return await SendAsync<byte[]>(_http, req, ct);
         }
 
         public async Task<HttpResult<byte[]>> GetEInvoiceInboxUblAsync(Guid ettn, CancellationToken ct = default)
         {
-            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get,
-                $"/v2/inboxinvoice/{ettn}/ubl", ct);
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v2/inboxinvoice/{ettn}/ubl", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetEInvoiceInboxZipAsync(Guid id, bool isStandartXslt, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v2/inboxinvoice/{id}/zip/{isStandartXslt}", ct);
             return await SendAsync<byte[]>(_http, req, ct);
         }
 
         public async Task<HttpResult<object>> GetEInvoiceInboxStatusAsync(Guid ettn, CancellationToken ct = default)
         {
-            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get,
-                $"/v2/inboxinvoice/{ettn}/status", ct);
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v2/inboxinvoice/{ettn}/status", ct);
             return await SendAsync<object>(_http, req, ct);
         }
 
@@ -942,11 +1025,7 @@ namespace TurkSoft.Service.Manager
         }
 
         // ---------- e-Arşiv ----------
-        public async Task<HttpResult<object>> SendEArchiveJsonAsync(
-            Invoice inv,
-            bool consumeKontor = true,
-            string? kontorVkn = null,
-            CancellationToken ct = default)
+        public async Task<HttpResult<object>> SendEArchiveJsonAsync(Invoice inv, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
         {
             var payload = MapToEArchiveRequest(inv);
 
@@ -954,7 +1033,6 @@ namespace TurkSoft.Service.Manager
             req.Content = JsonContent.Create(payload);
 
             var res = await SendAsync<object>(_http, req, ct);
-
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Arşiv Gönderim (JSON)", ct);
 
@@ -965,23 +1043,35 @@ namespace TurkSoft.Service.Manager
         {
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v2/earchive/create", ct);
             req.Content = JsonContent.Create(body);
+
             var res = await SendAsync<object>(_http, req, ct);
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Arşiv Gönderim (JSON Raw)", ct);
+
             return res;
         }
 
-        public async Task<HttpResult<object>> SendEArchiveUblAsync(Stream fileStream, string fileName,
-            int status, bool useManualInvoiceId, bool sendEmail,
-            string? emailAddress, string? prefix, string? localReferenceId,
-            bool? checkLocalReferenceId, string? xsltCode, bool? allowOldEArsivCustomer,
-            bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
+        public async Task<HttpResult<object>> SendEArchiveUblAsync(
+            Stream fileStream,
+            string fileName,
+            int status,
+            bool useManualInvoiceId,
+            bool sendEmail,
+            string? emailAddress,
+            string? prefix,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool? allowOldEArsivCustomer,
+            bool consumeKontor = true,
+            string? kontorVkn = null,
+            CancellationToken ct = default)
         {
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v2/earchive", ct);
             var mp = new MultipartFormDataContent
             {
                 { new StreamContent(fileStream), "invoiceFile", fileName },
-                { new StringContent(status.ToString()), "status" },
+                { new StringContent(status.ToString(CultureInfo.InvariantCulture)), "status" },
                 { new StringContent(useManualInvoiceId.ToString()), "useManualInvoiceId" },
                 { new StringContent(sendEmail.ToString()), "sendEMail" }
             };
@@ -994,22 +1084,32 @@ namespace TurkSoft.Service.Manager
             if (allowOldEArsivCustomer.HasValue) mp.Add(new StringContent(allowOldEArsivCustomer.Value.ToString()), "allowOldEArsivCustomer");
 
             req.Content = mp;
+
             var res = await SendAsync<object>(_http, req, ct);
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Arşiv Gönderim (UBL)", ct);
+
             return res;
         }
 
-        public async Task<HttpResult<object>> UpdateEArchiveUblAsync(Guid id, Stream fileStream, string fileName,
-            int status, bool sendEmail, string emailAddress,
-            string? localReferenceId, bool? checkLocalReferenceId, string? xsltCode, bool? allowOldEArsivCustomer,
+        public async Task<HttpResult<object>> UpdateEArchiveUblAsync(
+            Guid id,
+            Stream fileStream,
+            string fileName,
+            int status,
+            bool sendEmail,
+            string emailAddress,
+            string? localReferenceId,
+            bool? checkLocalReferenceId,
+            string? xsltCode,
+            bool? allowOldEArsivCustomer,
             CancellationToken ct = default)
         {
             using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Put, $"/v2/earchive/{id}", ct);
             var mp = new MultipartFormDataContent
             {
                 { new StreamContent(fileStream), "invoiceFile", fileName },
-                { new StringContent(status.ToString()), "status" },
+                { new StringContent(status.ToString(CultureInfo.InvariantCulture)), "status" },
                 { new StringContent(sendEmail.ToString()), "sendEMail" },
                 { new StringContent(emailAddress), "eMailAddress" }
             };
@@ -1020,6 +1120,19 @@ namespace TurkSoft.Service.Manager
             if (allowOldEArsivCustomer.HasValue) mp.Add(new StringContent(allowOldEArsivCustomer.Value.ToString()), "allowOldEArsivCustomer");
 
             req.Content = mp;
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> UpdateEArchiveJsonAsync(Guid id, object body, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Put, $"/v2/earchive/update/{id}", ct);
+            req.Content = JsonContent.Create(body);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> GetEArchiveMailDetailAsync(Guid id, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/earchive/getmaildetail?id={id}", ct);
             return await SendAsync<object>(_http, req, ct);
         }
 
@@ -1078,11 +1191,14 @@ namespace TurkSoft.Service.Manager
         public async Task<HttpResult<object>> SendDespatchUblAsync(Invoice inv, string? targetAlias = null, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
         {
             var body = MapToDespatchUbl(inv, targetAlias);
+
             using var req = await CreateReqAsync(_opt.EIrsaliyeBaseUrl, HttpMethod.Post, "/v1/outboxdespatch", ct);
             req.Content = JsonContent.Create(body);
+
             var res = await SendAsync<object>(_http, req, ct);
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-İrsaliye Gönderim (UBL)", ct);
+
             return res;
         }
 
@@ -1095,9 +1211,14 @@ namespace TurkSoft.Service.Manager
 
         public async Task<HttpResult<object>> GetDespatchInboxAsync(DateTime start, DateTime end, int pageIndex, int pageSize, bool isDesc, CancellationToken ct = default)
         {
-            var url =
-                $"/v1/inboxdespatch/list?startDate={start:yyyy-MM-dd HH:mm:ss}&endDate={end:yyyy-MM-dd HH:mm:ss}&pageIndex={pageIndex}&pageSize={pageSize}&isDesc={isDesc}";
+            var url = $"/v1/inboxdespatch/list?startDate={start:yyyy-MM-dd HH:mm:ss}&endDate={end:yyyy-MM-dd HH:mm:ss}&pageIndex={pageIndex}&pageSize={pageSize}&isDesc={isDesc}";
             using var req = await CreateReqAsync(_opt.EIrsaliyeBaseUrl, HttpMethod.Get, url, ct);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> GetDespatchOutboxStatusAsync(Guid id, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EIrsaliyeBaseUrl, HttpMethod.Get, $"/v2/outboxdespatch/{id}/status", ct);
             return await SendAsync<object>(_http, req, ct);
         }
 
@@ -1108,24 +1229,25 @@ namespace TurkSoft.Service.Manager
             return await SendAsync<object>(_http, req, ct);
         }
 
-        public async Task<HttpResult<object>> PostEDefterAsync(PostEDefterRequest model, Stream zipStream, string fileName,
-            bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
+        public async Task<HttpResult<object>> PostEDefterAsync(PostEDefterRequest model, Stream zipStream, string fileName, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
         {
             using var req = await CreateReqAsync(_opt.EDefterBaseUrl, HttpMethod.Post, "/v1/period", ct);
             var mp = new MultipartFormDataContent
             {
                 { new StringContent(model.StartDate), "StartDate" },
                 { new StringContent(model.EndDate), "EndDate" },
-                { new StringContent(model.SplitSize.ToString()), "SplitSize" },
+                { new StringContent(model.SplitSize.ToString(CultureInfo.InvariantCulture)), "SplitSize" },
                 { new StringContent(model.TimeStamp.ToString()), "TimeStamp" },
                 { new StringContent(model.WithoutTaxDetail.ToString()), "WithoutTaxDetail" }
             };
+
             mp.Add(new StreamContent(zipStream), "ZipFile", fileName);
             req.Content = mp;
 
             var res = await SendAsync<object>(_http, req, ct);
             if (consumeKontor && res.Ok)
                 await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-Defter Yükleme", ct);
+
             return res;
         }
 
@@ -1142,6 +1264,146 @@ namespace TurkSoft.Service.Manager
             return await SendAsync<byte[]>(_http, req, ct);
         }
 
+        // ---------- e-MM (ProducerReceipt) ----------
+        public async Task<HttpResult<object>> PostProducerReceiptUblRawAsync(object body, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/producerreceipt", ct);
+            req.Content = JsonContent.Create(body);
+
+            var res = await SendAsync<object>(_http, req, ct);
+            if (consumeKontor && res.Ok)
+                await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-MM Gönderim", ct);
+
+            return res;
+        }
+
+        public async Task<HttpResult<object>> PutProducerReceiptUblRawAsync(Guid id, object body, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Put, $"/v1/producerreceipt/{id}", ct);
+            req.Content = JsonContent.Create(body);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> UpdateProducerReceiptStatusListAsync(IEnumerable<Guid> ids, int status, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Put, "/v1/producerreceipt/updatestatuslist", ct);
+            req.Content = JsonContent.Create(new { ids, status });
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> CancelProducerReceiptAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/producerreceipt/cancel", ct);
+            req.Content = JsonContent.Create(ids);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetProducerReceiptHtmlAsync(Guid id, bool isStandartXslt, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/producerreceipt/{id}/html/{isStandartXslt}", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetProducerReceiptPdfAsync(Guid id, bool isStandartXslt, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/producerreceipt/{id}/pdf/{isStandartXslt}", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetProducerReceiptZipAsync(Guid id, bool isStandartXslt, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/producerreceipt/{id}/zip/{isStandartXslt}", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetProducerReceiptUblAsync(Guid id, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/producerreceipt/{id}/ubl", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> GetProducerReceiptStatusAsync(Guid id, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/producerreceipt/{id}/status", ct);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        // ---------- e-SMM (Voucher) ----------
+        public async Task<HttpResult<object>> PostVoucherCreateAsync(object body, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/voucher/create", ct);
+            req.Content = JsonContent.Create(body);
+
+            var res = await SendAsync<object>(_http, req, ct);
+            if (consumeKontor && res.Ok)
+                await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-SMM Create", ct);
+
+            return res;
+        }
+
+        public async Task<HttpResult<object>> PostVoucherUblRawAsync(object body, bool consumeKontor = true, string? kontorVkn = null, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/voucher", ct);
+            req.Content = JsonContent.Create(body);
+
+            var res = await SendAsync<object>(_http, req, ct);
+            if (consumeKontor && res.Ok)
+                await ConsumeBalanceAsync(kontorVkn ?? _opt.TestSenderVkn, 1, "e-SMM Gönderim", ct);
+
+            return res;
+        }
+
+        public async Task<HttpResult<object>> PutVoucherUblRawAsync(Guid id, object body, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Put, $"/v1/voucher/{id}", ct);
+            req.Content = JsonContent.Create(body);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> UpdateVoucherStatusListAsync(IEnumerable<Guid> ids, int status, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Put, "/v1/voucher/updatestatuslist", ct);
+            req.Content = JsonContent.Create(new { ids, status });
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> CancelVoucherAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Post, "/v1/voucher/cancel", ct);
+            req.Content = JsonContent.Create(ids);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetVoucherHtmlAsync(Guid id, bool isStandartXslt, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/voucher/{id}/html/{isStandartXslt}", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetVoucherPdfAsync(Guid id, bool isStandartXslt, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/voucher/{id}/pdf/{isStandartXslt}", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetVoucherZipAsync(Guid id, bool isStandartXslt, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/voucher/{id}/zip/{isStandartXslt}", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<byte[]>> GetVoucherUblAsync(Guid id, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/voucher/{id}/ubl", ct);
+            return await SendAsync<byte[]>(_http, req, ct);
+        }
+
+        public async Task<HttpResult<object>> GetVoucherStatusAsync(Guid id, CancellationToken ct = default)
+        {
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, $"/v1/voucher/{id}/status", ct);
+            return await SendAsync<object>(_http, req, ct);
+        }
+
         // -------- Yardımcı: faturanın ayına göre e-Defter request --------
         public static PostEDefterRequest MakeEDefterRequestByInvoiceMonth(Invoice inv, bool timeStamp = true, bool withoutTaxDetail = false)
         {
@@ -1149,12 +1411,75 @@ namespace TurkSoft.Service.Manager
             var end = start.AddMonths(1).AddDays(-1);
             return new PostEDefterRequest
             {
-                StartDate = start.ToString("yyyy-MM-dd"),
-                EndDate = end.ToString("yyyy-MM-dd"),
+                StartDate = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                EndDate = end.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 SplitSize = 50,
                 TimeStamp = timeStamp,
                 WithoutTaxDetail = withoutTaxDetail
             };
         }
+        public async Task<HttpResult<object>> GetEInvoiceOutboxAsync(
+    DateTime start,
+    DateTime end,
+    int pageIndex,
+    int pageSize,
+    bool isDesc,
+    CancellationToken ct = default)
+        {
+            // Dokümandaki doğru endpoint:
+            // GET /v2/outboxinvoice/withnulllocalreferences?startDate=...&endDate=...
+            // (Arayüzden kesilen e-Faturaların ETTN listesini verir)
+            // :contentReference[oaicite:2]{index=2}
+
+            var url = AddQuery("/v2/outboxinvoice/withnulllocalreferences", new (string, string?)[]
+            {
+        ("startDate", ToApiDateTime(start)),
+        ("endDate",   ToApiDateTime(end)),
+            });
+
+            using var req = await CreateReqAsync(_opt.EFaturaBaseUrl, HttpMethod.Get, url, ct);
+
+            // Array döndüğü için object yerine typed okuyup sonra istersen paginate edelim
+            try
+            {
+                var res = await SendAsync<List<OutboxUiInvoiceItem>>(_http, req, ct);
+                if (!res.Ok)
+                    return HttpResult<object>.Fail(res.Error ?? "Request failed", res.StatusCode);
+
+                var list = res.Data ?? new List<OutboxUiInvoiceItem>();
+
+                // İsteğe bağlı sıralama + sayfalama (remote endpoint'te pageIndex/pageSize yok)
+                if (isDesc) list = list.OrderByDescending(x => x.Id).ToList();
+                else list = list.OrderBy(x => x.Id).ToList();
+
+                var safePageIndex = pageIndex < 1 ? 1 : pageIndex;
+                var safePageSize = pageSize < 1 ? 50 : pageSize;
+
+                var totalCount = list.Count;
+                var items = list
+                    .Skip((safePageIndex - 1) * safePageSize)
+                    .Take(safePageSize)
+                    .ToList();
+
+                // JS tarafında grid vs. rahat kullansın diye paketliyoruz
+                var payload = new
+                {
+                    totalCount,
+                    pageIndex = safePageIndex,
+                    pageSize = safePageSize,
+                    items
+                };
+
+                return HttpResult<object>.Success(payload, res.StatusCode);
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            
+        }
+
+
     }
 }

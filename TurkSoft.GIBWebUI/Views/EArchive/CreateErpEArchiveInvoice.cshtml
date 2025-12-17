@@ -207,28 +207,5 @@
 </section>
 
 @section Scripts {
-    <script>
-        $(function () {
-            $('#grid_erpdenolustur').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Turkish.json" }
-            });
-        });
-
-        function birimEslemeKayit() {
-            alert('Birim eşleme kaydedildi.');
-        }
-
-        function myFaturaList() {
-            alert('ERP den e-Arşiv listesi getirilecek.');
-        }
-
-        function clearSearchInputs() {
-            $('input').val('');
-            $('select').val('0');
-        }
-
-        function sendAll() {
-            alert('Seçilen faturalar gönderilecek.');
-        }
-    </script>
+    <script type="module" src="~/apps/CreateErpEArchiveInvoice.js"></script>
 }

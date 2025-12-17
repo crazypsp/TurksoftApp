@@ -474,448 +474,59 @@
 
         </div>
     </div>
-
-    <script>
-        // Önce gridSearch / clearSearch stub olsun ki onclick çağrıları patlamasın
-        window.gridSearch = window.gridSearch || function () {
-            console.warn("gridSearch henüz hazır değil.");
-        };
-        window.clearSearchInputs = window.clearSearchInputs || function () {
-            console.warn("clearSearchInputs henüz hazır değil.");
-        };
-
-        (function () {
-            "use strict";
-
-            // ---------- Genel küçük helper'lar ----------
-            function num(v) {
-                v = (v == null ? 0 : v);
-                var n = +v;
-                return isNaN(n) ? 0 : n;
-            }
-
-            function fmtMoney(n, c, d, t) {
-                c = isNaN(c = Math.abs(c)) ? 2 : c;
-                d = (d === undefined) ? "," : d;
-                t = (t === undefined) ? "." : t;
-                var s = n < 0 ? "-" : "",
-                    i = String(parseInt(Math.abs(Number(n) || 0).toFixed(c))),
-                    j = (j = i.length) > 3 ? j % 3 : 0;
-                return s +
-                    (j ? i.substr(0, j) + t : "") +
-                    i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) +
-                    (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
-            }
-
-            function notifyOk(m) {
-                if (window.toastr && toastr.success) toastr.success(m);
-                else alert(m);
-            }
-
-            function notifyErr(m) {
-                if (window.toastr && toastr.error) toastr.error(m);
-                else alert(m);
-            }
-
-            // datetime-local => "yyyy-MM-dd HH:mm:ss"
-            function normalizeHtmlDateTime(v, isEnd) {
-                if (!v) return "";
-                if (v.indexOf("T") >= 0) {
-                    var parts = v.split("T");
-                    var date = parts[0];
-                    var time = parts[1] || "";
-                    if (time.length === 5) { // HH:mm
-                        time += ":00";
-                    }
-                    return date + " " + time;
-                }
-                return v + (isEnd ? " 23:59:59" : " 00:00:00");
-            }
-
-            function getCurrentUserIdForGib($) {
-                var userId = 0;
-
-                var $userHidden = $("#hdnUserId");
-                if ($userHidden.length) {
-                    var parsed = parseInt($userHidden.val(), 10);
-                    if (!isNaN(parsed) && parsed > 0) {
-                        userId = parsed;
-                    }
-                }
-
-                if (!userId && typeof window.currentUserId === "number" && window.currentUserId > 0) {
-                    userId = window.currentUserId;
-                }
-
-                if (!userId && typeof sessionStorage !== "undefined") {
-                    try {
-                        var stored =
-                            sessionStorage.getItem("CurrentUserId") ||
-                            sessionStorage.getItem("currentUserId") ||
-                            sessionStorage.getItem("UserId");
-
-                        if (stored) {
-                            var parsed2 = parseInt(stored, 10);
-                            if (!isNaN(parsed2) && parsed2 > 0) {
-                                userId = parsed2;
-                                console.log("[InboxInvoice] userId sessionStorage'dan okundu:", userId);
-                            }
-                        }
-                    } catch (e) {
-                        console.warn("[InboxInvoice] CurrentUserId sessionStorage'dan okunamadı:", e);
-                    }
-                }
-
-                if (!userId) {
-                    throw new Error("Kullanıcı Id (userId) bulunamadı. Lütfen oturumu kontrol edin.");
-                }
-
-                return userId;
-            }
-
-            // ---------- ASIL INIT FONKSİYONU ----------
-            function initInboxInvoice() {
-                // jQuery yüklü mü kontrol et
-                if (!window.jQuery) {
-                    console.error("[InboxInvoice] jQuery (window.jQuery) bulunamadı. Script çalışmayacak.");
-                    return;
-                }
-
-                var $ = window.jQuery;
-
-                // Yıl/Ay ilk ayar
-                function yearChange() {
-                    var now = new Date(),
-                        selY = +$("#IntegrationYear").val();
-                    if (selY === now.getFullYear()) {
-                        $("#IntegrationMonth").val(String(now.getMonth() + 1));
-                    } else {
-                        $("#IntegrationMonth").val("-1");
-                    }
-                }
-                $("#IntegrationYear").on("change", yearChange);
-                yearChange();
-
-                // Fatura tarihlerini varsayılan doldur (ayın 1'i - bugün)
-                (function initDefaultIssueDates() {
-                    var now = new Date();
-                    var y = now.getFullYear();
-                    var m = ("0" + (now.getMonth() + 1)).slice(-2);
-                    var dNow = ("0" + now.getDate()).slice(-2);
-                    $("#IssueDateStart").val(y + "-" + m + "-01T00:00");
-                    $("#IssueDateStartEnd").val(y + "-" + m + "-" + dNow + "T23:59");
-                })();
-
-                // Çoklu VKN/TCKN kutucuğu
-                window.vknAyracChk = function () {
-                    var multi = $("#TargetIdentifierChk").is(":checked");
-                    var $inp = $("#TargetIdentifier");
-                    $inp.val("");
-                    if (multi) {
-                        $inp.attr("maxlength", "400").attr("placeholder", "111...,222...,333...");
-                    } else {
-                        $inp.attr("maxlength", "11").attr("placeholder", "11 hane");
-                    }
-                };
-
-                // Detaylı arama ikon toggle
-                $("#btnDetayliArama").on("click", function () {
-                    var $i = $(this).find(".myCollapseIcon");
-                    setTimeout(function () { $i.toggleClass("fa-plus fa-minus"); }, 150);
-                });
-
-                // GİB userId
-                var gibUserId = 0;
-                try {
-                    gibUserId = getCurrentUserIdForGib($);
-                } catch (e) {
-                    console.error(e);
-                    gibUserId = 0;
-                }
-
-                // Base URL
-                var baseUrl = window.gibPortalApiBaseUrl || "/api/";
-                if (!baseUrl.endsWith("/")) baseUrl += "/";
-                var normBase = baseUrl; // örn: https://localhost:7151/api/
-
-                // API endpoint URL builder
-                // GET /api/TurkcellEFatura/einvoice/inbox/list?start=...&end=...&userId=...&pageIndex=1&pageSize=100&isNew=true
-                function buildInboxListUrl() {
-                    var params = {
-                        pageIndex: 1,
-                        pageSize: 100,
-                        isNew: true
-                    };
-
-                    if (gibUserId) {
-                        params.userId = gibUserId;
-                    }
-
-                    var issueStartRaw = $("#IssueDateStart").val();
-                    var issueEndRaw = $("#IssueDateStartEnd").val();
-                    var startStr = normalizeHtmlDateTime(issueStartRaw, false);
-                    var endStr = normalizeHtmlDateTime(issueEndRaw, true);
-
-                    if (startStr) params.start = startStr;
-                    if (endStr) params.end = endStr;
-
-                    var qsParts = [];
-                    for (var k in params) {
-                        if (!params.hasOwnProperty(k)) continue;
-                        var val = params[k];
-                        if (val === undefined || val === null || val === "") continue;
-                        qsParts.push(encodeURIComponent(k) + "=" + encodeURIComponent(String(val)));
-                    }
-
-                    var url = normBase + "TurkcellEFatura/einvoice/inbox/list";
-                    if (qsParts.length) {
-                        url += "?" + qsParts.join("&");
-                    }
-                    return url;
-                }
-
-                // Gelen items listesini tabloya bas
-                function renderTableRows(items) {
-                    var $tbody = $("#myDataTable tbody");
-                    $tbody.empty();
-
-                    var kdvToplam = 0;
-                    var odemeToplam = 0;
-                    var matrahToplam = 0; // matrah bilgisi yok
-
-                    (items || []).forEach(function (row) {
-                        row = row || {};
-                        var key = row.id || row.envelopeId || row.invoiceNumber || "";
-
-                        var no = row.invoiceNumber || "";
-                        var ettn = row.envelopeId || row.id || "";
-                        var firma = row.targetTitle || "";
-                        var vkn = row.targetVknTckn || "";
-                        var tip = row.tipType || "";
-                        var type = row.type || "";
-                        var faturaTip = tip + (type ? " / " + type : "");
-
-                        var faturaTarihi = row.executionDate ? String(row.executionDate).substring(0, 10) : "";
-                        var islemTarihi = row.createdDate
-                            ? String(row.createdDate).replace("T", " ").substring(0, 16)
-                            : "";
-
-                        var total = num(row.totalAmount);
-                        var payable = num(row.payableAmount);
-                        var kdv = total - payable;
-                        if (kdv < 0) kdv = 0;
-
-                        kdvToplam += kdv;
-                        odemeToplam += payable;
-
-                        var muhasebe;
-                        if (row.isAccount === true || row.isAccount === "YES") muhasebe = "Evet";
-                        else if (row.isAccount === false || row.isAccount === "NO") muhasebe = "Hayır";
-                        else muhasebe = "-";
-
-                        var durum = (row.status || "");
-                        if (row.envelope && row.envelope.status) {
-                            durum += (durum ? " / " : "") + row.envelope.status;
-                        }
-
-                        var trHtml =
-                            "<tr>" +
-                            '<td><input type="checkbox" class="rowchk" data-id="' + key + '"></td>' +
-                            "<td>" + no + (ettn ? "<br><small>" + ettn + "</small>" : "") + "</td>" +
-                            "<td>" + (firma || "") + "</td>" +
-                            "<td>" + (vkn || "") + "</td>" +
-                            "<td>" + (faturaTip || "") + "</td>" +
-                            "<td>" + (faturaTarihi || "") + "</td>" +
-                            "<td>" + (islemTarihi || "") + "</td>" +
-                            '<td class="text-right">' + fmtMoney(kdv, 2, ",", ".") + "</td>" +
-                            '<td class="text-right">' + fmtMoney(payable, 2, ",", ".") + "</td>" +
-                            '<td class="text-center">' + muhasebe + "</td>" +
-                            '<td class="text-center">' + (durum || "") + "</td>" +
-                            '<td class="text-center">' +
-                            '<div class="btn-group btn-group-xs">' +
-                            '<button type="button" class="btn btn-info" title="Detay" onclick="console.log(\'Detay\', \'' + key + '\')">' +
-                            '<i class="fa fa-eye"></i>' +
-                            "</button>" +
-                            "</div>" +
-                            "</td>" +
-                            "</tr>";
-
-                        $tbody.append(trHtml);
-                    });
-
-                    $("#totalKDVTaxableAmount").text(fmtMoney(matrahToplam, 2, ",", ".") + " TL");
-                    $("#totalKDVAmount").text(fmtMoney(kdvToplam, 2, ",", ".") + " TL");
-                    $("#totalPayableAmount").text(fmtMoney(odemeToplam, 2, ",", ".") + " TL");
-
-                    $("#chkAll").prop("checked", false);
-                }
-
-                // Tümünü seç checkbox
-                $("#chkAll").on("change", function () {
-                    var c = $(this).is(":checked");
-                    $("#myDataTable .rowchk").prop("checked", c);
-                });
-
-                // ---- ASIL: Arama Yap butonunun çağırdığı fonksiyon ----
-                window.gridSearch = function () {
-                    var url = buildInboxListUrl();
-                    console.log("[InboxInvoice] İstek:", url);
-
-                    $.ajax({
-                        url: url,
-                        method: "GET",
-                        dataType: "json"
-                    })
-                        .done(function (json) {
-                            var items = (json && json.items) ? json.items : [];
-                            if (items && !Array.isArray(items)) {
-                                items = [items];
-                            }
-                            items = items || [];
-                            renderTableRows(items);
-                        })
-                        .fail(function (xhr, status, err) {
-                            console.error("Inbox list hatası:", status, err, xhr);
-                            notifyErr("Gelen faturalar alınamadı.");
-                            renderTableRows([]);
-                        });
-                };
-
-                window.clearSearchInputs = function () {
-                    $("#IsArchive,#ApplicationResponseCode,#ProfileId,#InvoiceTypeCode,#CurrencyCode,#IsCancelled,#IsPrinted,#Status,#IsAccount,#IsPaid,#PostaKutusuEtiketi").val("");
-                    $("#DocumentId,#UUID,#TargetIdentifier,#TargetTitle").val("");
-                    $("#TargetIdentifierChk").prop("checked", false);
-                    window.vknAyracChk();
-
-                    // Fatura tarihlerini reset
-                    var now = new Date();
-                    var y = now.getFullYear();
-                    var m = ("0" + (now.getMonth() + 1)).slice(-2);
-                    var dNow = ("0" + now.getDate()).slice(-2);
-                    $("#IssueDateStart").val(y + "-" + m + "-01T00:00");
-                    $("#IssueDateStartEnd").val(y + "-" + m + "-" + dNow + "T23:59");
-
-                    $("#CreatedDateStart,#CreatedDateEnd").val("");
-                    $("#IntegrationMonth").val("-1");
-                    yearChange();
-
-                    gridSearch();
-                };
-
-                // Enter ile arama
-                $("#btnAramaYapEnter").on("keypress", "input", function (e) {
-                    if (e.which === 13) {
-                        e.preventDefault();
-                        gridSearch();
-                    }
-                });
-
-                // Seçilen satır anahtarları
-                function getSelectedUUIDs() {
-                    var ids = [];
-                    $("#myDataTable .rowchk:checked").each(function () {
-                        ids.push($(this).data("id"));
-                    });
-                    return ids;
-                }
-
-                // Toplu işlem stub'ları (onclick'ler boşa düşmesin diye)
-                window.invoiceTopluArsivIslem = function (val) {
-                    var uuids = getSelectedUUIDs();
-                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
-                    console.log("Toplu Arşiv (stub):", val, uuids);
-                };
-
-                window.invoiceTopluOkunduIslem = function (val) {
-                    var uuids = getSelectedUUIDs();
-                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
-                    console.log("Toplu Okundu (stub):", val, uuids);
-                };
-
-                window.invoiceTopluOdendiIslem = function (val) {
-                    var uuids = getSelectedUUIDs();
-                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
-                    console.log("Toplu Ödendi (stub):", val, uuids);
-                };
-
-                window.invoicePreview = function (uuid) {
-                    console.log("Önizleme (stub):", uuid);
-                };
-
-                window.getInvoiceTopluPrint = function () {
-                    var uuids = getSelectedUUIDs();
-                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
-                    console.log("Toplu Yazdır (stub):", uuids);
-                };
-
-                window.getDownloadFileAll = function (type) {
-                    var uuids = getSelectedUUIDs();
-                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
-                    console.log("Toplu Download (stub):", type, uuids);
-                };
-
-                window.invoiceSendMailModalCol = function (uuids, fromBulk) {
-                    if (fromBulk) {
-                        uuids = getSelectedUUIDs();
-                        if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
-                    }
-                    console.log("Mail Modal (stub):", uuids);
-                };
-
-                window.invoiceExcelAktarModal = function (all) {
-                    console.log("Excel Aktar (stub):", all);
-                };
-
-                window.sendLucaToplu = function () {
-                    var uuids = getSelectedUUIDs();
-                    if (!uuids.length) return notifyErr("Lütfen en az bir kayıt seçin.");
-                    console.log("Luca Toplu (stub):", uuids);
-                };
-
-                window.muhasebeyeTopluAktar = function () {
-                    console.log("Muhasebeye Toplu Aktar (stub)");
-                };
-
-                window.openGibCancel = function (docNo, uuid) {
-                    console.log("GİB Cancel (stub):", docNo, uuid);
-                };
-
-                window.invoiceCancelGibSend = function (val, uuid) {
-                    console.log("GİB Cancel Gönder (stub):", val, uuid);
-                };
-
-                window.openCevaplaModal = function (uuid) {
-                    console.log("Cevapla Modal (stub):", uuid);
-                };
-
-                window.sendApplicationResponse = function () {
-                    console.log("Uygulama Yanıtı Gönder (stub)");
-                };
-
-                window.sendInvoiceDogrudanIade = function () {
-                    console.log("Doğrudan İade (stub)");
-                };
-
-                // Sayfa açılınca ilk liste
-                window.gridSearch();
-            }
-
-            // ---------- jQuery + DOM hazır olunca initInboxInvoice çağır ----------
-            function onReady() {
-                try {
-                    initInboxInvoice();
-                } catch (e) {
-                    console.error("[InboxInvoice] initInboxInvoice hata:", e);
-                }
-            }
-
-            if (document.readyState === "loading") {
-                document.addEventListener("DOMContentLoaded", onReady);
-            } else {
-                onReady();
-            }
-        })();
-    </script>
-
-
+    <!-- ====== Önizleme (PDF) Modal ====== -->
+    <div class="modal fade" id="invoicePreviewModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl" role="document" style="max-width:95%">
+            <div class="modal-content">
+                <div class="modal-header bg-info">
+                    <h4 class="modal-title">Fatura Önizleme</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body" style="height:80vh;">
+                    <iframe id="invoicePreviewFrame" style="width:100%;height:100%;border:0;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== Kabul / Red Modal ====== -->
+    <div class="modal fade" id="responseModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document" style="max-width:720px;">
+            <div class="modal-content">
+                <div class="modal-header bg-success">
+                    <h4 class="modal-title">Uygulama Yanıtı (Kabul / Red)</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="respUuid" />
+                    <div class="form-group">
+                        <label>Fatura No</label>
+                        <div><b id="respInvoiceNo"></b></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Yanıt</label>
+                        <select id="ddlResponseCode" class="form-control">
+                            <option value="KABUL">KABUL</option>
+                            <option value="RED">RED</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Not (opsiyonel)</label>
+                        <textarea id="txtResponseNote" class="form-control" rows="4" placeholder="Açıklama / Red gerekçesi..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="btnSendResponse" class="btn btn-success">Gönder</button>
+                    <button class="btn btn-default" data-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
+@section Scripts {
+    <script type="module" src="~/apps/InboxInvoice.js"></script>
+}

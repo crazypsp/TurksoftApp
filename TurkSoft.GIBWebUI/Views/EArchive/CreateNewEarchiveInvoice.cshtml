@@ -5,6 +5,18 @@
 }
 
 <form id="faturaformu">
+
+    <!-- 🔽 GEREKLİ HIDDEN ALANLAR (JS bunları kullanıyor) -->
+    <input type="hidden" id="hdnUserId" />
+    <input type="hidden" id="hdnUserName" />
+    <input type="hidden" id="hdnRowVersion" />
+
+    <input type="hidden" id="hfInvoiceId" />
+    <input type="hidden" id="hfGibStatusCode" />
+    <input type="hidden" id="hfGibInvoiceUuid" />
+    <input type="hidden" id="hfGibInvoiceNumber" />
+    <input type="hidden" id="hfGibDocumentId" />
+    <!-- 🔼 -->
     <!-- ÜST BİLGİLER -->
     <div class="box box-default">
         <div class="box-header with-border">
@@ -194,21 +206,7 @@
             <div class="tab-pane active" id="alicibilgileri">
                 <div class="box-body">
                     <div class="row">
-                        <!-- SOL SÜTUN -->
                         <div class="col-md-4">
-                            <!-- Ara / Müşteri Seç -->
-                            <div class="form-horizontal row" id="araDiv">
-                                <label class="control-label col-sm-3">Ara</label>
-                                <div class="col-sm-9 inputPadding">
-                                    <select id="ddlMusteriAra" class="form-control select2" style="width:100%">
-                                        <option value="">Seçiniz</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <br />
-
-                            <!-- VKN/TCKN -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">VKN/TCKN *</label>
                                 <div class="col-sm-9 inputPadding">
@@ -216,7 +214,6 @@
                                 </div>
                             </div>
 
-                            <!-- Firma Adı -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Firma Adı *</label>
                                 <div class="col-sm-9 inputPadding">
@@ -224,7 +221,6 @@
                                 </div>
                             </div>
 
-                            <!-- Adı -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Adı *</label>
                                 <div class="col-sm-9 inputPadding">
@@ -232,7 +228,6 @@
                                 </div>
                             </div>
 
-                            <!-- Soyadı -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Soyadı *</label>
                                 <div class="col-sm-9 inputPadding">
@@ -241,9 +236,7 @@
                             </div>
                         </div>
 
-                        <!-- ORTA SÜTUN -->
                         <div class="col-md-4">
-                            <!-- Vergi Dairesi -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Vergi Dairesi</label>
                                 <div class="col-sm-9 inputPadding">
@@ -251,7 +244,6 @@
                                 </div>
                             </div>
 
-                            <!-- Ülke -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Ülke *</label>
                                 <div class="col-sm-9 inputPadding">
@@ -266,7 +258,6 @@
                                 </div>
                             </div>
 
-                            <!-- İl -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">
                                     İl *
@@ -284,7 +275,6 @@
                                 </div>
                             </div>
 
-                            <!-- İlçe -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">İlçe *</label>
                                 <div class="col-sm-9 inputPadding">
@@ -299,7 +289,6 @@
                                 </div>
                             </div>
 
-                            <!-- Adres -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Adres</label>
                                 <div class="col-sm-9 inputPadding">
@@ -307,7 +296,6 @@
                                 </div>
                             </div>
 
-                            <!-- E-Mail -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">E-Mail</label>
                                 <div class="col-sm-9 inputPadding">
@@ -316,9 +304,7 @@
                             </div>
                         </div>
 
-                        <!-- SAĞ SÜTUN -->
                         <div class="col-md-4">
-                            <!-- Posta Kodu -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Posta Kodu</label>
                                 <div class="col-sm-9 inputPadding">
@@ -326,7 +312,6 @@
                                 </div>
                             </div>
 
-                            <!-- Web Sitesi -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Web Sitesi</label>
                                 <div class="col-sm-9 inputPadding">
@@ -334,7 +319,6 @@
                                 </div>
                             </div>
 
-                            <!-- Telefon -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Telefon</label>
                                 <div class="col-sm-9 inputPadding">
@@ -342,7 +326,6 @@
                                 </div>
                             </div>
 
-                            <!-- Fax -->
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Fax</label>
                                 <div class="col-sm-9 inputPadding">
@@ -350,7 +333,6 @@
                                 </div>
                             </div>
 
-                            <!-- Türmob -->
                             <div class="form-horizontal row" style="margin:15px 10px">
                                 <button id="btnTurmobSorgula" type="button" class="btn btn-primary btn-md btn-labeled" style="float:right">
                                     Türmob Müşteri Sorgula
@@ -398,7 +380,6 @@
             <div class="tab-pane" id="earsivek">
                 <div class="box-body">
                     <div class="row">
-                        <!-- SOL -->
                         <div class="col-md-6">
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Gönderi Tipi</label>
@@ -438,7 +419,6 @@
                             </div>
                         </div>
 
-                        <!-- SAĞ -->
                         <div class="col-md-6">
                             <div class="form-horizontal row">
                                 <label class="control-label col-sm-3">Taşıyıcı VKN/TCKN</label>
@@ -525,7 +505,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- e-Arşiv için sağ tarafta kamu alanını boş bırakıyorum -->
                     </div>
                 </div>
             </div>
@@ -533,7 +512,6 @@
             <!-- Alıcı - Satıcı Ek Alanlar -->
             <div class="tab-pane" id="ekdosyasube">
                 <div class="box-body row">
-                    <!-- Satıcı Ek Alanlar -->
                     <div class="col-6 col-md-4">
                         <div class="box box-default">
                             <div class="box-header with-border">
@@ -559,7 +537,6 @@
                         </div>
                     </div>
 
-                    <!-- Satıcı Şube Ek Alanlar -->
                     <div class="col-6 col-md-4">
                         <div class="box box-default">
                             <div class="box-header with-border">
@@ -585,7 +562,6 @@
                         </div>
                     </div>
 
-                    <!-- Alıcı Ek Alanlar -->
                     <div class="col-6 col-md-4">
                         <div class="box box-default">
                             <div class="box-header with-border">
@@ -653,8 +629,8 @@
 
                 </div>
             </div>
-        </div> <!-- /tab-content -->
-    </div> <!-- /box (tabs) -->
+        </div>
+    </div>
 </form>
 
 <!-- ===================== F A T U R A  K A L E M L E R İ ===================== -->
@@ -663,7 +639,6 @@
         <h3 class="box-title">Fatura Kalemleri</h3>
 
         <div class="box-tools pull-right">
-            <!-- KDV Hariç/Dahil -->
             <div class="input-group input-group-md pull-left" style="margin-right:8px">
                 <select class="form-control" id="kdvStatu" name="kdvstatu">
                     <option value="false">KDV Hariç</option>
@@ -671,7 +646,6 @@
                 </select>
             </div>
 
-            <!-- Medula / Cezaevi -->
             <button class="btn btn-default btn-md" id="btnMedulaAktar" style="margin-right:8px" type="button">
                 <i class="fa fa-inbox"></i> Medula'dan Aktar
             </button>
@@ -679,7 +653,6 @@
                 <i class="fa fa-inbox"></i> Cezaevi Aktar
             </button>
 
-            <!-- Excel -->
             <div class="btn-group" style="margin-right:8px">
                 <button aria-expanded="false" class="btn btn-default btn-md dropdown-toggle" data-toggle="dropdown" type="button">
                     Excel <span class="caret"></span>
@@ -690,7 +663,6 @@
                 </ul>
             </div>
 
-            <!-- Toplu işlemler -->
             <button class="btn btn-default btn-md" id="btnTopluIndirim" style="margin-right:8px" type="button">
                 <i class="fa fa-plus"></i> Toplu İndirim/Artırım Ekle
             </button>
@@ -698,7 +670,6 @@
                 <i class="fa fa-plus"></i> Toplu Vergi Ekle
             </button>
 
-            <!-- Yeni satır -->
             <button class="btn btn-primary btn-md" id="btnLineAdd" type="button">
                 <i class="fa fa-plus"></i> Yeni Satır Ekle
             </button>
@@ -727,14 +698,12 @@
                 <tbody id="invoiceBody"></tbody>
             </table>
         </div>
-        <!-- Ürün arama listesi -->
         <datalist id="stoks"></datalist>
     </div>
 </div>
 
 <!-- ======================== A Ç I K L A M A  /  T O P L A M ======================== -->
 <div class="row">
-    <!-- AÇIKLAMA -->
     <div class="col-md-6">
         <div class="box box-default">
             <div class="box-header with-border">
@@ -748,7 +717,6 @@
         </div>
     </div>
 
-    <!-- TOPLAM BİLGİLERİ -->
     <div class="col-md-6">
         <div class="box box-default">
             <div class="box-header with-border">
@@ -764,7 +732,6 @@
             </div>
 
             <div class="box-body">
-                <!-- Mal/Hizmet Toplam Tutarı -->
                 <div class="form-horizontal row">
                     <label class="control-label col-sm-6">Mal/Hizmet Toplam Tutarı</label>
                     <div class="col-sm-5 inputPadding">
@@ -772,7 +739,6 @@
                     </div>
                 </div>
 
-                <!-- Toplam İskonto Tutarı -->
                 <div class="form-horizontal row">
                     <label class="control-label col-sm-6">Toplam İskonto Tutarı</label>
                     <div class="col-sm-5 inputPadding">
@@ -780,7 +746,6 @@
                     </div>
                 </div>
 
-                <!-- Hesaplanan KDV -->
                 <div class="form-horizontal row">
                     <label class="control-label col-sm-6">Hesaplanan KDV Matrah (20)</label>
                     <div class="col-sm-5 inputPadding">
@@ -793,7 +758,6 @@
                     </div>
                 </div>
 
-                <!-- Vergiler Dahil Toplam -->
                 <div class="form-horizontal row">
                     <label class="control-label col-sm-6">Vergiler Dahil Toplam Tutar</label>
                     <div class="col-sm-5 inputPadding">
@@ -801,7 +765,6 @@
                     </div>
                 </div>
 
-                <!-- Ödenecek Toplam -->
                 <div class="form-horizontal row">
                     <label class="control-label col-sm-6">Ödenecek Toplam Tutar</label>
                     <div class="col-sm-5 inputPadding">
@@ -824,9 +787,7 @@
                 </button>
             </div>
 
-            <div class="modal-body" id="invoicePreviewContent">
-                <!-- Dynamic HTML buraya gelecek -->
-            </div>
+            <div class="modal-body" id="invoicePreviewContent"></div>
         </div>
     </div>
 </div>
@@ -840,24 +801,4 @@
 @section Scripts {
     <script src="~/apps/listdata.js"></script>
     <script type="module" src="~/apps/earchiveinvoice.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            try {
-                var raw = sessionStorage.getItem('SelectedMukellefForEArchive');
-                if (!raw) return;
-
-                var data = JSON.parse(raw) || {};
-                var identifier = data.Identifier || '';
-
-                var idEl = document.getElementById('txtIdentificationID');
-                if (idEl && identifier) {
-                    idEl.value = identifier;
-                }
-
-                sessionStorage.removeItem('SelectedMukellefForEArchive');
-            } catch (e) {
-                console.error('SelectedMukellefForEArchive okunamadı:', e);
-            }
-        });
-    </script>
 }

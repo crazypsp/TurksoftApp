@@ -117,80 +117,89 @@ namespace TurkSoft.Service.Manager
 
             try
             {
-                return await strategy.ExecuteAsync(async () =>
+                try
                 {
-                    await using var tx = await _db.Database.BeginTransactionAsync(ct);
-
-                    try
+                    return await strategy.ExecuteAsync(async () =>
                     {
-                        // 0) Eğer Id > 0 geldiyse: önce DB’de böyle bir kayıt var mı bak
-                        if (IdProp != null)
+                        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+                        try
                         {
-                            var idValue = IdProp.GetValue(entity);
-                            if (idValue != null)
+                            // 0) Eğer Id > 0 geldiyse: önce DB’de böyle bir kayıt var mı bak
+                            if (IdProp != null)
                             {
-                                var idType = Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType;
-                                if (idType == typeof(long) || idType == typeof(int) || idType == typeof(short))
+                                var idValue = IdProp.GetValue(entity);
+                                if (idValue != null)
                                 {
-                                    var numeric = Convert.ToInt64(idValue);
-                                    if (numeric > 0)
+                                    var idType = Nullable.GetUnderlyingType(IdProp.PropertyType) ?? IdProp.PropertyType;
+                                    if (idType == typeof(long) || idType == typeof(int) || idType == typeof(short))
                                     {
-                                        var existingById = await _set.FindAsync(new object[] { idValue }, ct);
-                                        if (existingById != null)
+                                        var numeric = Convert.ToInt64(idValue);
+                                        if (numeric > 0)
                                         {
-                                            await tx.RollbackAsync(ct);
-                                            return existingById;
+                                            var existingById = await _set.FindAsync(new object[] { idValue }, ct);
+                                            if (existingById != null)
+                                            {
+                                                await tx.RollbackAsync(ct);
+                                                return existingById;
+                                            }
+                                            ResetIdentityId(entity);
                                         }
-                                        ResetIdentityId(entity);
                                     }
                                 }
                             }
+
+                            // 1) Audit
+                            TouchAudit(entity, utcNow);
+
+                            // ✅ 2) GibFirm graph fix (Invoice'a dokunma, rowversion insert etme)
+                            if (entity is GibFirm firm)
+                            {
+                                FixGibFirmGraphForAdd(firm, utcNow);
+                            }
+
+                            // 2-a) Item / 2-b) Customer / 2-c) Invoice aynı kalsın
+                            if (entity is Item itemEntity)
+                                await FixItemGraphAsync(itemEntity, utcNow, ct);
+
+                            if (entity is Customer custEntity)
+                                await FixCustomerGraphAsync(custEntity, utcNow, ct);
+
+                            if (entity is Invoice inv)
+                            {
+                                await FixInvoiceGraphAsync(inv, utcNow, ct);
+                                ValidateInvoiceDecimalRanges(inv);
+                            }
+
+                            // 3) Duplicate kontrol
+                            var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, entity, ct);
+                            if (existingByKey != null)
+                            {
+                                await tx.RollbackAsync(ct);
+                                return existingByKey;
+                            }
+
+                            // 4) Insert
+                            await _set.AddAsync(entity, ct);
+                            await _db.SaveChangesAsync(ct);
+
+                            await tx.CommitAsync(ct);
+                            return entity;
                         }
-
-                        // 1) Audit
-                        TouchAudit(entity, utcNow);
-
-                        // ✅ 2) GibFirm graph fix (Invoice'a dokunma, rowversion insert etme)
-                        if (entity is GibFirm firm)
-                        {
-                            FixGibFirmGraphForAdd(firm, utcNow);
-                        }
-
-                        // 2-a) Item / 2-b) Customer / 2-c) Invoice aynı kalsın
-                        if (entity is Item itemEntity)
-                            await FixItemGraphAsync(itemEntity, utcNow, ct);
-
-                        if (entity is Customer custEntity)
-                            await FixCustomerGraphAsync(custEntity, utcNow, ct);
-
-                        if (entity is Invoice inv)
-                        {
-                            await FixInvoiceGraphAsync(inv, utcNow, ct);
-                            ValidateInvoiceDecimalRanges(inv);
-                        }
-
-                        // 3) Duplicate kontrol
-                        var existingByKey = await TryGetExistingByUniqueKeyAsync(_db, entity, ct);
-                        if (existingByKey != null)
+                        catch
                         {
                             await tx.RollbackAsync(ct);
-                            return existingByKey;
+                            _db.ChangeTracker.Clear(); // ✅ retry-safe + state temizliği
+                            throw;
                         }
+                    });
+                }
+                catch (Exception ex)
+                {
 
-                        // 4) Insert
-                        await _set.AddAsync(entity, ct);
-                        await _db.SaveChangesAsync(ct);
-
-                        await tx.CommitAsync(ct);
-                        return entity;
-                    }
-                    catch
-                    {
-                        await tx.RollbackAsync(ct);
-                        _db.ChangeTracker.Clear(); // ✅ retry-safe + state temizliği
-                        throw;
-                    }
-                });
+                    throw;
+                }
+               
             }
             catch (DbUpdateException due) when (IsUniqueViolation(due))
             {

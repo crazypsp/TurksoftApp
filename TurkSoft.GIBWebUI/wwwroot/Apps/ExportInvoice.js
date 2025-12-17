@@ -20,7 +20,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             return isNaN(n) ? 0 : n;
         },
         formatNumber: function (value, decimals) {
-            decimals = (decimals == null) ? 2 : decimals;
+            decimals = decimals == null ? 2 : decimals;
             const n = Number(value) || 0;
             return n.toLocaleString("tr-TR", {
                 minimumFractionDigits: decimals,
@@ -29,6 +29,13 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         }
     };
 
+    function normalizeText(s) {
+        return (s || "").toString().trim().toLowerCase();
+    }
+
+    /***********************************************************
+     *  RowVersion yardımcıları
+     ***********************************************************/
     // RowVersion hex → base64 (SQL rowversion -> JSON string)
     function rowVersionHexToBase64(hex) {
         if (!hex) return "";
@@ -73,16 +80,164 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
     // Global ListData objesini garanti altına al
     global.ListData = global.ListData || {};
-
     function getListData() {
         return global.ListData || {};
+    }
+
+    function syncUserIdHiddenFromSession() {
+        const $hdn = $("#hdnUserId");
+        if (!$hdn.length) return;
+
+        if (!$hdn.val()) {
+            try {
+                const stored =
+                    sessionStorage.getItem("CurrentUserId") ||
+                    sessionStorage.getItem("currentUserId") ||
+                    sessionStorage.getItem("UserId");
+
+                if (stored) {
+                    $hdn.val(stored);
+                    console.log("[ExportInvoice] hdnUserId sessionStorage ile dolduruldu:", stored);
+                }
+            } catch (e) {
+                console.warn("[ExportInvoice] CurrentUserId sessionStorage'dan okunamadı:", e);
+            }
+        }
+    }
+
+    // Export ekranında CustomerId çoğu zaman 0 kalıyor → mümkün olan her yerden yakala
+    function resolveCustomerIdFromUIAndCache(flatCustomer) {
+        let id = 0;
+
+        // 1) Hidden inputlar
+        const hiddenSelectors = ["#hfCustomerId", "#hdnCustomerId", "#CustomerId", "input[name='CustomerId']"];
+        for (const sel of hiddenSelectors) {
+            const $el = $(sel);
+            if ($el.length) {
+                const parsed = parseInt($el.val(), 10);
+                if (!isNaN(parsed) && parsed > 0) return parsed;
+            }
+        }
+
+        // 2) Export demo dropdown (varsa)
+        const $ddl = $("#ddlMusteriAra");
+        if ($ddl.length) {
+            const parsed = parseInt($ddl.val(), 10);
+            if (!isNaN(parsed) && parsed > 0) return parsed;
+        }
+
+        // 3) Session SelectedMukellefForInvoice
+        try {
+            const raw = sessionStorage.getItem("SelectedMukellefForInvoice");
+            if (raw) {
+                const m = JSON.parse(raw) || {};
+                const parsed = parseInt(m.CustomerId || m.customerId || m.Id || m.id, 10);
+                if (!isNaN(parsed) && parsed > 0) return parsed;
+            }
+        } catch {
+            /* noop */
+        }
+
+        // 4) ListData müşteri listesi: TaxNo/Title/fullname eşle
+        const listData = getListData();
+        const customers =
+            listData.CustomerList ||
+            listData.customerList ||
+            listData.Customers ||
+            listData.customers ||
+            [];
+
+        if (Array.isArray(customers) && customers.length) {
+            const taxNo = normalizeText(flatCustomer.IdentificationID);
+            const partyName = normalizeText(flatCustomer.PartyName);
+            const fullName = normalizeText([flatCustomer.FirstName, flatCustomer.LastName].filter(Boolean).join(" "));
+
+            const byTax = taxNo
+                ? customers.find(c => normalizeText(c.TaxNo || c.taxNo || c.Vkn || c.vkn) === taxNo)
+                : null;
+
+            const byParty = partyName
+                ? customers.find(c => normalizeText(c.Name || c.name || c.Title || c.title) === partyName)
+                : null;
+
+            const byFullName = fullName
+                ? customers.find(c => {
+                    const n = normalizeText(c.Name || c.name);
+                    const s = normalizeText(c.Surname || c.surname);
+                    return normalizeText([n, s].filter(Boolean).join(" ")) === fullName || n === fullName;
+                })
+                : null;
+
+            const found = byTax || byParty || byFullName;
+            const foundId = parseInt(found?.Id ?? found?.id, 10);
+            if (!isNaN(foundId) && foundId > 0) return foundId;
+        }
+
+        return id;
+    }
+    // GİB için kullanılacak userId'yi UI'dan / global'den okur
+    function getCurrentUserIdForGib() {
+        let userId = 0;
+
+        // 1) Hidden input
+        const $userHidden = $("#hdnUserId");
+        if ($userHidden.length) {
+            const parsed = parseInt($userHidden.val(), 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                userId = parsed;
+            }
+        }
+
+        // 2) window.currentUserId
+        if (!userId && typeof window.currentUserId === "number" && window.currentUserId > 0) {
+            userId = window.currentUserId;
+        }
+
+        // 3) sessionStorage
+        if (!userId && typeof sessionStorage !== "undefined") {
+            try {
+                const stored =
+                    sessionStorage.getItem("CurrentUserId") ||
+                    sessionStorage.getItem("currentUserId") ||
+                    sessionStorage.getItem("UserId");
+
+                if (stored) {
+                    const parsed = parseInt(stored, 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        userId = parsed;
+                        console.log("[Invoice] userId sessionStorage'dan okundu:", userId);
+                    }
+                }
+            } catch (e) {
+                console.warn("[Invoice] CurrentUserId sessionStorage'dan okunamadı:", e);
+            }
+        }
+
+        if (!userId) {
+            throw new Error("Kullanıcı Id (userId) bulunamadı. Lütfen oturumu kontrol edin.");
+        }
+
+        return userId;
+    }
+    function resolveBrandFromListData() {
+        const listData = getListData();
+        const brands = listData.BrandList || listData.brandList || listData.Brands || listData.brands || [];
+        if (!Array.isArray(brands) || !brands.length) return null;
+
+        const exact = brands.find(b => normalizeText(b.Name || b.name) === normalizeText("GENEL MARKA"));
+        const picked = exact || brands[0];
+        const id = parseInt(picked?.Id ?? picked?.id, 10);
+        if (!isNaN(id) && id > 0) {
+            return { id, name: picked.Name || picked.name || "GENEL MARKA", country: picked.Country || picked.country || "TR" };
+        }
+        return null;
     }
 
     function generateUUIDv4() {
         // GİB'in ETTN formatına uygun UUID v4
         return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === "x" ? r : (r & 0x3 | 0x8);
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
             return v.toString(16);
         }).toUpperCase();
     }
@@ -103,7 +258,9 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         $form.prepend($alert);
 
         setTimeout(function () {
-            $alert.fadeOut(400, function () { $(this).remove(); });
+            $alert.fadeOut(400, function () {
+                $(this).remove();
+            });
         }, 5000);
     }
 
@@ -116,7 +273,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
     const invoiceModel = {
         invoiceheader: {
-            Invoice_ID: null,        // ETTN
+            Invoice_ID: null, // ETTN
             IssueDate: null,
             IssueTime: null,
             SourceUrn: null,
@@ -133,7 +290,16 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             BranchCode: null,
             TemplateName: null
         },
-        customer: null,
+        customer: null, // nested customerParty (preview/xml)
+        Customer: null, // flat
+        payment: null,
+        kamuAlicisi: null,
+        sgk: null,
+        irsaliyeler: [],
+        sellerAdditional: [],
+        sellerAgentAdditional: [],
+        buyerAdditional: [],
+        ekAlan: [],
         invoiceLines: []
     };
 
@@ -268,134 +434,148 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         });
     }
 
-    function fillAliciEtiketiDropdown() {
-        function fillAliciEtiketiDropdown() {
-            const $ddl = $("#ddlAliciEtiketi");
-            if (!$ddl.length) return;
+    // Export ekranında da Invoice.js mantığı: Session'dan seçilen mükellefi uygula
+    function applySelectedMukellefFromSession() {
+        try {
+            const raw = sessionStorage.getItem("SelectedMukellefForInvoice");
+            if (!raw) return;
 
-            // -------------------------------------------------
-            // 1) HomeController'dan gelen mükellef var mı?
-            // -------------------------------------------------
-            let identifier = "";
-            let alias = "";
-            let title = "";
-            let hasSessionMukellef = false;
+            const m = JSON.parse(raw) || {};
+            const identifier = (m.Identifier || m.identifier || "").toString().trim();
+            const title = (m.Title || m.title || "").toString().trim();
+            const alias = (m.Alias || m.alias || "").toString().trim();
 
-            try {
-                const raw = sessionStorage.getItem("SelectedMukellefForInvoice");
-                if (raw) {
-                    const data = JSON.parse(raw) || {};
-                    console.log("[Invoice] SelectedMukellefForInvoice:", data);
-
-                    identifier = (data.Identifier || data.identifier || "").toString().trim();
-                    alias = (data.Alias || data.alias || "").toString().trim();
-                    title = (data.Title || data.title || "").toString().trim();
-
-                    hasSessionMukellef = !!(identifier || alias || title);
-                }
-            } catch (e) {
-                console.warn("[Invoice] SelectedMukellefForInvoice okunamadı:", e);
-            }
-
-            // -------------------------------------------------
-            // 2) VKN/TCKN ve Firma Adı alanlarını doldur
-            // -------------------------------------------------
-            if (identifier) {
-                $("#txtIdentificationID").val(identifier);
-            }
-
-            if (title) {
-                $("#txtPartyName").val(title);
-            }
-
-            // Ad / Soyad boşsa Ünvan'dan türet
-            const $firstName = $("#txtPersonFirstName");
-            const $lastName = $("#txtPersonLastName");
-
-            if (title && !$firstName.val() && !$lastName.val()) {
-                const parts = title.trim().split(/\s+/);
-                let first = "";
-                let last = "";
-
-                if (parts.length === 1) {
-                    first = parts[0];
-                    last = ".";
-                } else {
-                    last = parts.pop();
-                    first = parts.join(" ");
-                }
-
-                $firstName.val(first);
-                $lastName.val(last);
-            }
-
-            // -------------------------------------------------
-            // 3) Alıcı Etiketi dropdown'ını doldur
-            // -------------------------------------------------
-            $ddl.empty();
+            if (identifier) $("#txtIdentificationID").val(identifier);
+            if (title) $("#txtPartyName").val(title);
 
             if (alias) {
-                // Eski tüm option'lar silindi, sadece gelen alias eklenecek
-                const opt = new Option(alias, alias);
-                $ddl.append(opt);
-                $ddl.val(alias).trigger("change");
-            } else {
-                // Home'dan alias gelmediyse: eski davranış (ListData.KurumEtiketList)
-                const listData = getListData();
-                const arr = listData.KurumEtiketList || [];
-
-                $ddl.append(new Option("Seçiniz", ""));
-
-                arr.forEach(urn => {
-                    if (!urn) return;
-                    $ddl.append(new Option(urn, urn));
-                });
-
-                if (arr.length > 0) {
-                    $ddl.val(arr[0]).trigger("change");
-                }
-            }
-
-            // -------------------------------------------------
-            // 4) invoiceModel içindeki Customer bilgisini güncelle
-            // -------------------------------------------------
-            try {
-                const flatCustomer = readCustomerFromUI();
-                invoiceModel.Customer = flatCustomer;
-                invoiceModel.customer = {
-                    customerParty: {
-                        IdentificationID: flatCustomer.IdentificationID,
-                        PartyName: flatCustomer.PartyName,
-                        TaxSchemeName: flatCustomer.TaxOffice,
-                        CountryName: flatCustomer.CountryName,
-                        CityName: flatCustomer.CityName,
-                        CitySubdivisionName: flatCustomer.CitySubdivisionName,
-                        StreetName: flatCustomer.StreetName,
-                        PostalZone: flatCustomer.PostalZone,
-                        ElectronicMail: flatCustomer.Email,
-                        Telephone: flatCustomer.Telephone,
-                        WebsiteURI: flatCustomer.WebsiteURI,
-                        Person_FirstName: flatCustomer.FirstName,
-                        Person_FamilyName: flatCustomer.LastName,
-                        ManuelCityAndSubdivision: flatCustomer.ManuelCityEntry
+                const $ddl = $("#ddlAliciEtiketi");
+                if ($ddl.length) {
+                    if (!$ddl.find(`option[value="${alias}"]`).length) {
+                        $ddl.append(new Option(alias, alias));
                     }
-                };
-            } catch (e) {
-                console.warn("[Invoice] invoiceModel.Customer güncellenirken hata:", e);
-            }
-
-            // -------------------------------------------------
-            // 5) Tek seferlik kullanım için session key'i sil
-            // -------------------------------------------------
-            if (hasSessionMukellef) {
-                try {
-                    sessionStorage.removeItem("SelectedMukellefForInvoice");
-                } catch (e) {
-                    console.warn("[Invoice] SelectedMukellefForInvoice kaldırılamadı:", e);
+                    $ddl.val(alias).trigger("change");
                 }
             }
+
+            // model güncelle
+            const flat = readCustomerFromUI();
+            invoiceModel.Customer = flat;
+            invoiceModel.customer = {
+                customerParty: {
+                    IdentificationID: flat.IdentificationID,
+                    PartyName: flat.PartyName,
+                    TaxSchemeName: flat.TaxOffice,
+                    CountryName: flat.CountryName,
+                    CityName: flat.CityName,
+                    CitySubdivisionName: flat.CitySubdivisionName,
+                    StreetName: flat.StreetName,
+                    PostalZone: flat.PostalZone,
+                    ElectronicMail: flat.Email,
+                    Telephone: flat.Telephone,
+                    WebsiteURI: flat.WebsiteURI,
+                    Person_FirstName: flat.FirstName,
+                    Person_FamilyName: flat.LastName,
+                    ManuelCityAndSubdivision: flat.ManuelCityEntry
+                }
+            };
+        } catch (e) {
+            console.warn("[ExportInvoice] SelectedMukellefForInvoice uygulanamadı:", e);
+        }
+    }
+
+    function fillAliciEtiketiDropdown() {
+        const $ddl = $("#ddlAliciEtiketi");
+        if (!$ddl.length) return;
+
+        let identifier = "";
+        let alias = "";
+        let title = "";
+        let hasSessionMukellef = false;
+
+        try {
+            const raw = sessionStorage.getItem("SelectedMukellefForInvoice");
+            if (raw) {
+                const data = JSON.parse(raw) || {};
+                identifier = (data.Identifier || data.identifier || "").toString().trim();
+                alias = (data.Alias || data.alias || "").toString().trim();
+                title = (data.Title || data.title || "").toString().trim();
+                hasSessionMukellef = !!(identifier || alias || title);
+            }
+        } catch (e) {
+            console.warn("[ExportInvoice] SelectedMukellefForInvoice okunamadı:", e);
         }
 
+        if (identifier) $("#txtIdentificationID").val(identifier);
+        if (title) $("#txtPartyName").val(title);
+
+        const $firstName = $("#txtPersonFirstName");
+        const $lastName = $("#txtPersonLastName");
+        if (title && !$firstName.val() && !$lastName.val()) {
+            const parts = title.trim().split(/\s+/);
+            let first = "";
+            let last = "";
+            if (parts.length === 1) {
+                first = parts[0];
+                last = ".";
+            } else {
+                last = parts.pop();
+                first = parts.join(" ");
+            }
+            $firstName.val(first);
+            $lastName.val(last);
+        }
+
+        $ddl.empty();
+
+        if (alias) {
+            $ddl.append(new Option(alias, alias));
+            $ddl.val(alias).trigger("change");
+        } else {
+            const listData = getListData();
+            const arr = listData.KurumEtiketList || [];
+            $ddl.append(new Option("Seçiniz", ""));
+            arr.forEach(urn => {
+                if (!urn) return;
+                $ddl.append(new Option(urn, urn));
+            });
+            if (arr.length > 0) $ddl.val(arr[0]).trigger("change");
+        }
+
+        // model güncelle
+        try {
+            const flatCustomer = readCustomerFromUI();
+            invoiceModel.Customer = flatCustomer;
+            invoiceModel.customer = {
+                customerParty: {
+                    IdentificationID: flatCustomer.IdentificationID,
+                    PartyName: flatCustomer.PartyName,
+                    TaxSchemeName: flatCustomer.TaxOffice,
+                    CountryName: flatCustomer.CountryName,
+                    CityName: flatCustomer.CityName,
+                    CitySubdivisionName: flatCustomer.CitySubdivisionName,
+                    StreetName: flatCustomer.StreetName,
+                    PostalZone: flatCustomer.PostalZone,
+                    ElectronicMail: flatCustomer.Email,
+                    Telephone: flatCustomer.Telephone,
+                    WebsiteURI: flatCustomer.WebsiteURI,
+                    Person_FirstName: flatCustomer.FirstName,
+                    Person_FamilyName: flatCustomer.LastName,
+                    ManuelCityAndSubdivision: flatCustomer.ManuelCityEntry
+                }
+            };
+        } catch (e) {
+            console.warn("[ExportInvoice] invoiceModel.Customer güncellenirken hata:", e);
+        }
+
+        // tek seferlik kullanım ise temizle
+        if (hasSessionMukellef) {
+            try {
+                sessionStorage.removeItem("SelectedMukellefForInvoice");
+            } catch {
+                /* noop */
+            }
+        }
     }
 
     function fillParaBirimiDropdown() {
@@ -419,7 +599,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     function fillPaymentDropdowns() {
         const listData = getListData();
 
-        // Ödeme Şekli
         const $means = $("#PaymentMeansCode");
         if ($means.length) {
             $means.empty();
@@ -429,7 +608,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             });
         }
 
-        // Ödeme Kanalı
         const $channel = $("#PaymentChannelCode");
         if ($channel.length) {
             $channel.empty();
@@ -439,7 +617,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             });
         }
 
-        // Hesap Para Birimi
         const $payeeCur = $("#PayeeFinancialCurrencyCode");
         if ($payeeCur.length) {
             $payeeCur.empty();
@@ -553,6 +730,65 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         });
     }
 
+    // Alıcıyı formdan okuyan ortak helper (flat Customer)
+    function readCustomerFromUI() {
+        const isManual = $("#chkManuelSehir").is(":checked");
+
+        const IdentificationID = $("#txtIdentificationID").val() || "";
+        const PartyName = $("#txtPartyName").val() || "";
+        const FirstName = $("#txtPersonFirstName").val() || "";
+        const LastName = $("#txtPersonLastName").val() || "";
+        const TaxOffice = $("#txtTaxSchemeName").val() || "";
+
+        const CountryName = isManual ? $("#txtUlke").val() || "" : $("#ddlUlke option:selected").text() || "";
+        const CityName = isManual ? $("#txtIl").val() || "" : $("#ddlIl option:selected").text() || "";
+        const CitySubdivisionName = isManual ? $("#txtIlce").val() || "" : $("#ddlIlce option:selected").text() || "";
+
+        const StreetName = $("#txtStreetName").val() || "";
+        const Email = $("#txtEmail").val() || "";
+        const WebsiteURI = $("#txtWebsite").val() || "";
+        const Telephone = $("#txtTelephone").val() || "";
+        const Fax = $("#txtFax").val() || "";
+        const PostalZone = $("#txtPostalCode").val() || "";
+        const AliciEtiketi = $("#ddlAliciEtiketi").val() || "";
+
+        return {
+            IdentificationID,
+            PartyName,
+            FirstName,
+            LastName,
+            TaxOffice,
+            CountryName,
+            CityName,
+            CitySubdivisionName,
+            StreetName,
+            Email,
+            WebsiteURI,
+            Telephone,
+            Fax,
+            PostalZone,
+            AliciEtiketi,
+            ManuelCityEntry: isManual
+        };
+    }
+
+    function splitNameSurname(flatCustomer) {
+        let name = flatCustomer.FirstName || "";
+        let surname = flatCustomer.LastName || "";
+
+        if (!name && !surname && flatCustomer.PartyName) {
+            const parts = flatCustomer.PartyName.trim().split(/\s+/);
+            if (parts.length === 1) {
+                name = parts[0];
+                surname = ".";
+            } else {
+                surname = parts.pop();
+                name = parts.join(" ");
+            }
+        }
+        return { name, surname };
+    }
+
     function fillCustomerFieldsFromTest(cust) {
         if (!cust) return;
 
@@ -588,8 +824,12 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         $("#txtTelephone").val(cust.telephone);
         $("#txtFax").val(cust.fax);
 
-        setTimeout(() => { $("#ddlIl").val(cust.ilCode).trigger("change"); }, 50);
-        setTimeout(() => { $("#ddlIlce").val(cust.ilceCode).trigger("change"); }, 100);
+        setTimeout(() => {
+            $("#ddlIl").val(cust.ilCode).trigger("change");
+        }, 50);
+        setTimeout(() => {
+            $("#ddlIlce").val(cust.ilceCode).trigger("change");
+        }, 100);
 
         invoiceModel.customer = {
             customerParty: {
@@ -609,6 +849,8 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 ManuelCityAndSubdivision: $("#chkManuelSehir").is(":checked")
             }
         };
+
+        invoiceModel.Customer = readCustomerFromUI();
     }
 
     /***********************************************************
@@ -686,8 +928,10 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
     function toggleIstisnaOnLines() {
         const isIstisna = $("#ddlFaturaTipi").val() === "ISTISNA";
-        $("#manuel_grid tbody tr").each(function () {
+        $("#invoiceBody tbody tr, #invoiceBody tr").each(function () {
             const $istisna = $(this).find(".js-line-istisna");
+            if (!$istisna.length) return;
+
             if (isIstisna) {
                 $istisna.prop("disabled", false);
                 if ($istisna.children().length <= 1) {
@@ -786,7 +1030,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             kdv = matrah * (kdvRate / 100);
             toplam = matrah + kdv;
         } else {
-            const factor = 1 + (kdvRate / 100);
+            const factor = 1 + kdvRate / 100;
             const netUnit = factor > 0 ? unitPrice / factor : unitPrice;
             const brutNet = qty * netUnit;
             indirim = brutNet * (discRate / 100);
@@ -876,6 +1120,120 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         model.invoiceheader.Prefix = $("#ddlInvoicePrefix").val() || null;
         model.invoiceheader.TemplateName = $("#ddlGoruntuDosyasi").val() || null;
 
+        // -------- ALICI ----------
+        const flatCustomer = readCustomerFromUI();
+        model.Customer = flatCustomer;
+        model.customer = {
+            customerParty: {
+                IdentificationID: flatCustomer.IdentificationID,
+                PartyName: flatCustomer.PartyName,
+                TaxSchemeName: flatCustomer.TaxOffice,
+                CountryName: flatCustomer.CountryName,
+                CityName: flatCustomer.CityName,
+                CitySubdivisionName: flatCustomer.CitySubdivisionName,
+                StreetName: flatCustomer.StreetName,
+                PostalZone: flatCustomer.PostalZone,
+                ElectronicMail: flatCustomer.Email,
+                Telephone: flatCustomer.Telephone,
+                WebsiteURI: flatCustomer.WebsiteURI,
+                Person_FirstName: flatCustomer.FirstName,
+                Person_FamilyName: flatCustomer.LastName,
+                ManuelCityAndSubdivision: flatCustomer.ManuelCityEntry
+            }
+        };
+
+        // -------- İRSALİYE ----------
+        model.irsaliyeler = [];
+        $("#tblIrsaliyeBody tr").each(function () {
+            const no = ($(this).find(".irs-no").val() || "").trim();
+            const date = ($(this).find(".irs-date").val() || "").trim();
+            if (no || date) {
+                model.irsaliyeler.push({
+                    IrsaliyeNo: no,
+                    IrsaliyeTarihi: date
+                });
+            }
+        });
+
+        // -------- ÖDEME ----------
+        const payment = {
+            PaymentMeansCode: $("#PaymentMeansCode").val() || "",
+            PaymentDueDate: $("#PaymentDueDate").val() || "",
+            InstructionNote: $("#InstructionNote").val() || "",
+            PaymentChannelCode: $("#PaymentChannelCode").val() || "",
+            PayeeFinancialAccount: $("#PayeeFinancialAccount").val() || "",
+            PayeeFinancialCurrencyCode: $("#PayeeFinancialCurrencyCode").val() || ""
+        };
+        const paymentHasData = Object.values(payment).some(v => (v || "").toString().trim() !== "");
+        model.payment = paymentHasData ? payment : null;
+
+        // -------- KAMU ALICISI ----------
+        const kamu = {
+            Vkn: $("#txtKamuVkn").val() || "",
+            Unvan: $("#txtKamuUnvan").val() || "",
+            Ulke: $("#txtKamuUlke").val() || "",
+            Il: $("#txtKamuIl").val() || ""
+        };
+        const kamuHasData = Object.values(kamu).some(v => (v || "").toString().trim() !== "");
+        model.kamuAlicisi = kamuHasData ? kamu : null;
+
+        // -------- SGK ----------
+        const ilaveFaturaTipi = $("#ddlilaveFaturaTipi").val() || "";
+        if (ilaveFaturaTipi) {
+            model.sgk = {
+                IlaveFaturaTipi: ilaveFaturaTipi,
+                MukellefKodu: $("#mukellefkodu").val() || "",
+                MukellefAdi: $("#mukellefadi").val() || "",
+                DosyaNo: $("#dosyano").val() || "",
+                GonderimTarihiBaslangic: $("#txtSendingDateBaslangic").val() || "",
+                GonderimTarihiBitis: $("#txtSendingDateBitis").val() || ""
+            };
+        } else {
+            model.sgk = null;
+        }
+
+        // -------- EK ALANLAR (class yok → index bazlı oku) ----------
+        model.sellerAdditional = [];
+        $("#tbodySaticiEk tr").each(function () {
+            const $inputs = $(this).find("input");
+            const key = ($inputs.eq(0).val() || "").trim();
+            const val = ($inputs.eq(1).val() || "").trim();
+            if (key || val) model.sellerAdditional.push({ Key: key, Value: val });
+        });
+
+        model.sellerAgentAdditional = [];
+        $("#tbodySaticiSubeEk tr").each(function () {
+            const $inputs = $(this).find("input");
+            const key = ($inputs.eq(0).val() || "").trim();
+            const val = ($inputs.eq(1).val() || "").trim();
+            if (key || val) model.sellerAgentAdditional.push({ Key: key, Value: val });
+        });
+
+        model.buyerAdditional = [];
+        $("#tbodyAliciEk tr").each(function () {
+            const $inputs = $(this).find("input");
+            const key = ($inputs.eq(0).val() || "").trim();
+            const val = ($inputs.eq(1).val() || "").trim();
+            if (key || val) model.buyerAdditional.push({ Key: key, Value: val });
+        });
+
+        model.ekAlan = [];
+        $("#tbodyEkalani tr").each(function () {
+            const type = ($(this).find("select").eq(0).val() || "").trim();
+            const answer = ($(this).find("select").eq(1).val() || "").trim();
+            const info = ($(this).find("input").eq(0).val() || "").trim();
+            const date = ($(this).find("input").eq(1).val() || "").trim();
+            if (type || answer || info || date) {
+                model.ekAlan.push({
+                    Type: type,
+                    Answer: answer,
+                    Info: info,
+                    Date: date
+                });
+            }
+        });
+
+        // -------- SATIRLAR ----------
         model.invoiceLines = [];
         $("#invoiceBody tr").each(function (idx) {
             const $row = $(this);
@@ -893,102 +1251,38 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 KdvTutar: Utils.parseNumber($row.find(".js-line-kdv-amount").val()),
                 LineTotal: Utils.parseNumber($row.find(".js-line-total").val()),
                 IstisnaKodu: $row.find(".js-line-istisna").val() || "",
-                SellerItemCode: "" // şu anlık boş
+                SellerItemCode: ""
             });
         });
 
         return model;
     }
 
+    /***********************************************************
+     *  Fatura önizleme (orijinal yapı korunuyor)
+     ***********************************************************/
     let previewStylesInjected = false;
     function ensurePreviewStyles() {
         if (previewStylesInjected) return;
 
         const css = `
-#invoicePreviewModal .modal-dialog {
-    max-width: 900px;
-    width: 95%;
-}
-
-#invoicePreviewContent {
-    background: #f5f5f5;
-    padding: 10px;
-}
-
-#invoicePreviewContent .invoice-pdf {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11px;
-    color: #000;
-}
-
-#invoicePreviewContent .invoice-pdf-page {
-    background: #ffffff;
-    margin: 0 auto;
-    border: 1px solid #000;
-    padding: 8px 12px 12px 12px;
-    position: relative;
-    max-width: 900px;
-    min-height: 600px;
-}
-
-#invoicePreviewContent .invoice-watermark {
-    position: absolute;
-    top: 45%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    font-size: 80px;
-    font-weight: 700;
-    color: rgba(255,0,0,0.18);
-    z-index: 0;
-    pointer-events: none;
-}
-
-#invoicePreviewContent .invoice-qr {
-    width: 95px;
-    height: 95px;
-    border: 1px solid #000;
-    display: inline-block;
-    background: #fff;
-    font-size: 10px;
-    text-align: center;
-    line-height: 95px;
-}
-
-#invoicePreviewContent .invoice-logo-text {
-    font-size: 22px;
-    font-weight: bold;
-    margin-top: 15px;
-}
-
+#invoicePreviewModal .modal-dialog { max-width: 900px; width: 95%; }
+#invoicePreviewContent { background: #f5f5f5; padding: 10px; }
+#invoicePreviewContent .invoice-pdf { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #000; }
+#invoicePreviewContent .invoice-pdf-page { background: #ffffff; margin: 0 auto; border: 1px solid #000; padding: 8px 12px 12px 12px; position: relative; max-width: 900px; min-height: 600px; }
+#invoicePreviewContent .invoice-watermark { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 80px; font-weight: 700; color: rgba(255,0,0,0.18); z-index: 0; pointer-events: none; }
+#invoicePreviewContent .invoice-qr { width: 95px; height: 95px; border: 1px solid #000; display: inline-block; background: #fff; font-size: 10px; text-align: center; line-height: 95px; }
+#invoicePreviewContent .invoice-logo-text { font-size: 22px; font-weight: bold; margin-top: 15px; }
 #invoicePreviewContent .invoice-table-tight th,
-#invoicePreviewContent .invoice-table-tight td {
-    padding: 3px 4px !important;
-    border: 1px solid #000 !important;
-}
-
+#invoicePreviewContent .invoice-table-tight td { padding: 3px 4px !important; border: 1px solid #000 !important; }
 #invoicePreviewContent .invoice-table-no-border th,
-#invoicePreviewContent .invoice-table-no-border td {
-    padding: 2px 4px !important;
-    border: none !important;
-}
+#invoicePreviewContent .invoice-table-no-border td { padding: 2px 4px !important; border: none !important; }
+#invoicePreviewContent .invoice-separator { border-top: 1px solid #000; margin: 6px 0 8px 0; }
+#invoicePreviewContent .text-xs { font-size: 10px; }
+#invoicePreviewContent .invoice-footer-page { text-align: center; margin-top: 8px; font-size: 10px; }
+        `;
 
-#invoicePreviewContent .invoice-separator {
-    border-top: 1px solid #000;
-    margin: 6px 0 8px 0;
-}
-
-#invoicePreviewContent .text-xs {
-    font-size: 10px;
-}
-
-#invoicePreviewContent .invoice-footer-page {
-    text-align: center;
-    margin-top: 8px;
-    font-size: 10px;
-}
-    `;
-
-        $("head").append('<style id="invoicePdfPreviewStyles">' + css + '</style>');
+        $("head").append('<style id="invoicePdfPreviewStyles">' + css + "</style>");
         previewStylesInjected = true;
     }
 
@@ -997,20 +1291,15 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         const h = model.invoiceheader || {};
         const c = model.customer && model.customer.customerParty ? model.customer.customerParty : {};
-
         const lines = model.invoiceLines || [];
 
         const currencyCode = h.DocumentCurrencyCode || "TRY";
         const currencySuffix = currencyCode === "TRY" ? "TL" : currencyCode;
 
-        let invoiceNo =
-            $("#txtInvoiceNumber").val() ||
-            $("#txtFaturaNo").val() ||
-            "";
-
+        let invoiceNo = $("#txtInvoiceNumber").val() || $("#txtFaturaNo").val() || "";
         if (!invoiceNo) {
             if (h.Prefix && h.Invoice_ID) {
-                invoiceNo = h.Prefix + (h.Invoice_ID.replace(/-/g, "").substring(0, 13));
+                invoiceNo = h.Prefix + h.Invoice_ID.replace(/-/g, "").substring(0, 13);
             } else {
                 invoiceNo = h.Invoice_ID || "";
             }
@@ -1019,9 +1308,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         function formatIssueDate(dateStr) {
             if (!dateStr) return "";
             const parts = dateStr.split("-");
-            if (parts.length === 3) {
-                return parts[2] + " - " + parts[1] + " - " + parts[0];
-            }
+            if (parts.length === 3) return parts[2] + " - " + parts[1] + " - " + parts[0];
             return dateStr;
         }
 
@@ -1035,34 +1322,28 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         }
 
         let toplamIskonto = 0;
-        lines.forEach(l => {
-            toplamIskonto += Number(l.DiscountAmount || 0);
-        });
+        lines.forEach(l => (toplamIskonto += Number(l.DiscountAmount || 0)));
 
         const malHizmetToplam = Number(h.LineExtensionAmount || 0);
         const kdvToplam = Number(h.Taxes || 0);
-        const vergilerDahil = Number(h.TaxInclusiveAmount || h.PayableAmount || (malHizmetToplam + kdvToplam));
+        const vergilerDahil = Number(h.TaxInclusiveAmount || h.PayableAmount || malHizmetToplam + kdvToplam);
         const odenecek = Number(h.PayableAmount || vergilerDahil);
 
-        const kdvRates = Array.from(new Set(
-            lines
-                .map(l => Number(l.KdvOran))
-                .filter(v => !isNaN(v))
-        ));
+        const kdvRates = Array.from(
+            new Set(
+                lines
+                    .map(l => Number(l.KdvOran))
+                    .filter(v => !isNaN(v))
+            )
+        );
         let kdvLabelSuffix = "";
-        if (kdvRates.length === 1) {
-            kdvLabelSuffix = " (%" + Utils.formatNumber(kdvRates[0], 0) + ")";
-        }
+        if (kdvRates.length === 1) kdvLabelSuffix = " (%" + Utils.formatNumber(kdvRates[0], 0) + ")";
 
-        const aliciAdSoyad = ((c.Person_FirstName || "") + " " + (c.Person_FamilyName || "")).trim() ||
-            (c.PartyName || "");
+        const aliciAdSoyad =
+            ((c.Person_FirstName || "") + " " + (c.Person_FamilyName || "")).trim() || c.PartyName || "";
 
         const aliciAdresSatir1 = c.StreetName || "";
-        const aliciAdresSatir2 = [
-            c.PostalZone || "",
-            c.CitySubdivisionName || "",
-            c.CityName || ""
-        ].filter(Boolean).join(" ");
+        const aliciAdresSatir2 = [c.PostalZone || "", c.CitySubdivisionName || "", c.CityName || ""].filter(Boolean).join(" ");
 
         function fmt(n, dec) {
             return Utils.formatNumber(n || 0, dec == null ? 2 : dec);
@@ -1070,30 +1351,46 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         const issueDateText = formatIssueDate(h.IssueDate);
         const issueTimeText = formatIssueTime(h.IssueTime);
-
         const ozellestirmeNo = $("#txtOzelNitelikNo").val() || "TR1.2";
 
         let html = "";
         html += "<div class='invoice-pdf'>";
         html += "  <div class='invoice-pdf-page'>";
-
         html += "    <div class='invoice-watermark'>TASLAK</div>";
 
         html += "    <div class='row' style='position:relative; z-index:1;'>";
         html += "      <div class='col-xs-6'>";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
-        html += "          <tr><td><strong>" + ($("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan").first().text().trim() ||
-            $("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan").first().val() || "Satıcı Ünvanı") + "</strong></td></tr>";
+        html +=
+            "          <tr><td><strong>" +
+            ($("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan")
+                .first()
+                .text()
+                .trim() ||
+                $("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan").first().val() ||
+                "Satıcı Ünvanı") +
+            "</strong></td></tr>";
         html += "          <tr><td>" + ($("#sellerAddress").text().trim() || $("#sellerAddress").val() || "") + "</td></tr>";
         html += "          <tr><td>" + ($("#sellerDistrictCity").text().trim() || "") + "</td></tr>";
-        html += "          <tr><td>Tel:" + ($("#sellerPhone").val() || $("#sellerPhone").text() || "") +
-            "  Fax:" + ($("#sellerFax").val() || $("#sellerFax").text() || "") + "</td></tr>";
+        html +=
+            "          <tr><td>Tel:" +
+            ($("#sellerPhone").val() || $("#sellerPhone").text() || "") +
+            "  Fax:" +
+            ($("#sellerFax").val() || $("#sellerFax").text() || "") +
+            "</td></tr>";
         html += "          <tr><td>Web Sitesi:" + ($("#sellerWeb").val() || $("#sellerWeb").text() || "") + "</td></tr>";
         html += "          <tr><td>E-Posta:" + ($("#sellerEmail").val() || $("#sellerEmail").text() || "") + "</td></tr>";
-        html += "          <tr><td>Vergi Dairesi:" + ($("#sellerVergiDairesi").val() || $("#sellerVergiDairesi").text() || "") + "</td></tr>";
+        html +=
+            "          <tr><td>Vergi Dairesi:" +
+            ($("#sellerVergiDairesi").val() || $("#sellerVergiDairesi").text() || "") +
+            "</td></tr>";
         html += "          <tr><td>VKN:" + ($("#sellerVkn").val() || $("#sellerVkn").text() || "") + "</td></tr>";
-        html += "          <tr><td>TICARETSICILNO:" + ($("#sellerTicaretSicilNo").val() || $("#sellerTicaretSicilNo").text() || "") + "</td></tr>";
-        html += "          <tr><td>MERSISNO:" + ($("#sellerMersisNo").val() || $("#sellerMersisNo").text() || "") + "</td></tr>";
+        html +=
+            "          <tr><td>TICARETSICILNO:" +
+            ($("#sellerTicaretSicilNo").val() || $("#sellerTicaretSicilNo").text() || "") +
+            "</td></tr>";
+        html +=
+            "          <tr><td>MERSISNO:" + ($("#sellerMersisNo").val() || $("#sellerMersisNo").text() || "") + "</td></tr>";
         html += "        </table>";
         html += "      </div>";
 
@@ -1117,27 +1414,13 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
         html += "          <tr><td><strong>SAYIN</strong></td></tr>";
         html += "          <tr><td><strong>" + (aliciAdSoyad || "") + "</strong></td></tr>";
-        if (aliciAdresSatir1) {
-            html += "      <tr><td>" + aliciAdresSatir1 + "</td></tr>";
-        }
-        if (aliciAdresSatir2) {
-            html += "      <tr><td>" + aliciAdresSatir2 + "</td></tr>";
-        }
-        if (c.WebsiteURI) {
-            html += "      <tr><td>Web Sitesi:" + c.WebsiteURI + "</td></tr>";
-        }
-        if (c.ElectronicMail) {
-            html += "      <tr><td>E-Posta:" + c.ElectronicMail + "</td></tr>";
-        }
-        if (c.Telephone) {
-            html += "      <tr><td>Tel:" + c.Telephone + "</td></tr>";
-        }
-        if (c.TaxSchemeName) {
-            html += "      <tr><td>Vergi Dairesi:" + c.TaxSchemeName + "</td></tr>";
-        }
-        if (c.IdentificationID) {
-            html += "      <tr><td>VKN/TCKN:" + c.IdentificationID + "</td></tr>";
-        }
+        if (aliciAdresSatir1) html += "      <tr><td>" + aliciAdresSatir1 + "</td></tr>";
+        if (aliciAdresSatir2) html += "      <tr><td>" + aliciAdresSatir2 + "</td></tr>";
+        if (c.WebsiteURI) html += "      <tr><td>Web Sitesi:" + c.WebsiteURI + "</td></tr>";
+        if (c.ElectronicMail) html += "      <tr><td>E-Posta:" + c.ElectronicMail + "</td></tr>";
+        if (c.Telephone) html += "      <tr><td>Tel:" + c.Telephone + "</td></tr>";
+        if (c.TaxSchemeName) html += "      <tr><td>Vergi Dairesi:" + c.TaxSchemeName + "</td></tr>";
+        if (c.IdentificationID) html += "      <tr><td>VKN/TCKN:" + c.IdentificationID + "</td></tr>";
         html += "        </table>";
         html += "      </div>";
 
@@ -1201,25 +1484,50 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         html += "    <div class='row' style='position:relative; z-index:1; margin-top:4px;'>";
         html += "      <div class='col-xs-6'>";
-        if (h.Note) {
-            html += "      <p class='text-xs'><strong>Not:</strong> " + (h.Note || "") + "</p>";
-        }
+        if (h.Note) html += "      <p class='text-xs'><strong>Not:</strong> " + (h.Note || "") + "</p>";
         html += "      </div>";
 
         html += "      <div class='col-xs-6'>";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
-        html += "          <tr><th>Mal Hizmet Toplam Tutarı</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Toplam İskonto</th><td class='text-right'>" + fmt(toplamIskonto, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>KDV Matrahı" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Hesaplanan KDV" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(kdvToplam, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Vergiler Dahil Toplam Tutar</th><td class='text-right'>" + fmt(vergilerDahil, 2) + currencySuffix + "</td></tr>";
-        html += "          <tr><th>Ödenecek Tutar</th><td class='text-right'><strong>" + fmt(odenecek, 2) + currencySuffix + "</strong></td></tr>";
+        html +=
+            "          <tr><th>Mal Hizmet Toplam Tutarı</th><td class='text-right'>" +
+            fmt(malHizmetToplam, 2) +
+            currencySuffix +
+            "</td></tr>";
+        html +=
+            "          <tr><th>Toplam İskonto</th><td class='text-right'>" +
+            fmt(toplamIskonto, 2) +
+            currencySuffix +
+            "</td></tr>";
+        html +=
+            "          <tr><th>KDV Matrahı" +
+            kdvLabelSuffix +
+            "</th><td class='text-right'>" +
+            fmt(malHizmetToplam, 2) +
+            currencySuffix +
+            "</td></tr>";
+        html +=
+            "          <tr><th>Hesaplanan KDV" +
+            kdvLabelSuffix +
+            "</th><td class='text-right'>" +
+            fmt(kdvToplam, 2) +
+            currencySuffix +
+            "</td></tr>";
+        html +=
+            "          <tr><th>Vergiler Dahil Toplam Tutar</th><td class='text-right'>" +
+            fmt(vergilerDahil, 2) +
+            currencySuffix +
+            "</td></tr>";
+        html +=
+            "          <tr><th>Ödenecek Tutar</th><td class='text-right'><strong>" +
+            fmt(odenecek, 2) +
+            currencySuffix +
+            "</strong></td></tr>";
         html += "        </table>";
         html += "      </div>";
         html += "    </div>";
 
         html += "    <div class='invoice-footer-page'>1/1</div>";
-
         html += "  </div>";
         html += "</div>";
 
@@ -1227,54 +1535,62 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     }
 
     /***********************************************************
-     *  Invoice Entity (DTO) – ERP API için (RowVersion’lı)
+     *  Invoice Entity (DTO) – Invoice.js gibi FULL GRAPH
      ***********************************************************/
     function buildInvoiceEntityFromUI() {
-        // Toplamları bir daha güncelle
         recalcTotals();
         const model = buildInvoiceModelFromUI();
         const h = model.invoiceheader || {};
 
-        // Seçili müşteri Id (varsa)
-        const customerId = parseInt($("#ddlMusteriAra").val(), 10) || 0;
-
-        // Kullanıcı Id'si – varsa gizli inputtan al
+        // ============================
+        // UserId (Invoice.js ile aynı)
+        // ============================
         let currentUserId = 0;
-        const $userHidden = $("#hdnUserId");
-        if ($userHidden && $userHidden.length) {
-            const parsed = parseInt($userHidden.val(), 10);
-            if (!isNaN(parsed)) currentUserId = parsed;
+        try {
+            const stored =
+                sessionStorage.getItem("CurrentUserId") ||
+                sessionStorage.getItem("currentUserId") ||
+                sessionStorage.getItem("UserId");
+            if (stored) {
+                const parsed = parseInt(stored, 10);
+                if (!isNaN(parsed) && parsed > 0) currentUserId = parsed;
+            }
+        } catch (e) {
+            console.warn("[ExportInvoice] sessionStorage userId okunamadı:", e);
+        }
+
+        if (!currentUserId) {
+            const $userHidden = $("#hdnUserId");
+            if ($userHidden.length) {
+                const parsed = parseInt($userHidden.val(), 10);
+                if (!isNaN(parsed) && parsed > 0) currentUserId = parsed;
+            }
         }
 
         const nowIso = new Date().toISOString();
 
-        // Sabit RowVersion hex (yeni kayıtlar için)
+        // RowVersion
         const DEFAULT_ROWVERSION_HEX = "0x00000000000007E1";
         const defaultRowVersionBase64 = rowVersionHexToBase64(DEFAULT_ROWVERSION_HEX);
 
-        // RowVersion – 0x. hex → base64 (mevcut kayıt düzenleniyorsa, yoksa sabit)
         let rowVersionBase64 = defaultRowVersionBase64;
         const $rowVerHidden = $("#hdnRowVersion");
-        if ($rowVerHidden && $rowVerHidden.length) {
+        if ($rowVerHidden.length) {
             const hexVal = ($rowVerHidden.val() || "").trim();
             if (hexVal) {
-                rowVersionBase64 = rowVersionHexToBase64(hexVal);
+                const converted = rowVersionHexToBase64(hexVal);
+                if (converted) rowVersionBase64 = converted;
             }
         }
 
-        // Tüm BaseEntity türevleri için ortak doldurucu
-        const baseFor = (rvBase64) => buildBaseEntity(
-            currentUserId,
-            nowIso,
-            rvBase64 || defaultRowVersionBase64
-        );
+        const baseFor = rvBase64 => buildBaseEntity(currentUserId, nowIso, rvBase64 || defaultRowVersionBase64);
 
-        // Fatura no ve tarih
+        // InvoiceNo & InvoiceDate
         let invoiceNo =
             $("#txtInvoiceNumber").val() ||
             $("#txtFaturaNo").val() ||
-            (h.Prefix && h.Invoice_ID ? (h.Prefix + "-" + h.Invoice_ID) : (h.Invoice_ID || null)) ||
-            ("INV-" + Date.now());
+            (h.Prefix && h.Invoice_ID ? h.Prefix + "-" + h.Invoice_ID : h.Invoice_ID || null) ||
+            "INV-" + Date.now();
 
         let invoiceDateIso = nowIso;
         if (h.IssueDate) {
@@ -1287,34 +1603,29 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         let total = h.PayableAmount || 0;
         if (!total) {
-            const txtTotal =
-                $("#odenecekToplam").val() ||
-                $("#odenecekToplam").text() ||
-                "0";
+            const txtTotal = $("#odenecekToplam").val() || $("#odenecekToplam").text() || "0";
             total = Utils.parseNumber(txtTotal);
         }
 
-        const entity = {
-            // BaseEntity (RowVersion kesin dolu)
+        // -------- ROOT INVOICE --------
+        const invoice = {
             ...baseFor(rowVersionBase64),
-
             Id: 0,
-            CustomerId: customerId,
-            Ettn: h.Invoice_ID || null,
+            CustomerId: 0,
             InvoiceNo: invoiceNo,
             InvoiceDate: invoiceDateIso,
             Total: total,
             Currency: currency,
 
+            Ettn: h.Invoice_ID || null,
             BranchCode: $("#ddlSubeKodu").val() || null,
             SourceUrn: $("#ddlSourceUrn").val() || null,
             InvoicePrefix: $("#ddlInvoicePrefix").val() || null,
             TemplateName: $("#ddlGoruntuDosyasi").val() || null,
-
             InvoiceTypeCode: h.InvoiceTypeCode || null,
             Scenario: h.Scenario || null,
 
-            Customer: model.customer || null,
+            Customer: null,
             InvoicesItems: [],
             InvoicesTaxes: [],
             InvoicesDiscounts: [],
@@ -1322,86 +1633,196 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             SgkRecords: [],
             ServicesProviders: [],
             Returns: [],
-            InvoicesPayments: []
+            InvoicesPayments: [],
+
+            GibInvoiceOperationLogs: [],
+            GibUserCreditTransactions: [],
+
+            Despatchs: [],
+            AdditionalFields: null,
+            KamuAlicisi: model.kamuAlicisi || null
         };
 
-        // -------- KALEMLER (InvoicesItems) --------
-        (model.invoiceLines || []).forEach(l => {
-            entity.InvoicesItems.push({
+        // -------- CUSTOMER (duplicate engelleme + id çözümleme) --------
+        const flatCustomer = model.Customer || readCustomerFromUI();
+        const resolvedCustomerId = resolveCustomerIdFromUIAndCache(flatCustomer);
+
+        invoice.CustomerId = resolvedCustomerId || 0;
+
+        const partyName = (flatCustomer.PartyName || "").trim();
+        const fullName = [flatCustomer.FirstName, flatCustomer.LastName].filter(Boolean).join(" ").trim();
+        const nameParts = splitNameSurname(flatCustomer);
+
+        const customerNameForDb = partyName || fullName || nameParts.name || "Müşteri";
+        const customerSurnameForDb = partyName ? "." : flatCustomer.LastName || nameParts.surname || ".";
+
+        const customerEntity = {
+            ...baseFor(),
+            Id: resolvedCustomerId || 0,
+            Name: customerNameForDb,
+            Surname: customerSurnameForDb,
+            Phone: flatCustomer.Telephone || "",
+            Email: flatCustomer.Email || "",
+            TaxNo: flatCustomer.IdentificationID || "",
+            TaxOffice: flatCustomer.TaxOffice || "",
+            CustomersGroups: [],
+            Addresses: [],
+            Invoices: []
+        };
+
+        customerEntity.Addresses.push({
+            ...baseFor(),
+            Id: 0,
+            CustomerId: resolvedCustomerId || 0,
+            Country: flatCustomer.CountryName || "",
+            City: flatCustomer.CityName || "",
+            District: flatCustomer.CitySubdivisionName || "",
+            Street: flatCustomer.StreetName || "",
+            PostCode: flatCustomer.PostalZone || "",
+            Customer: null
+        });
+
+        invoice.Customer = customerEntity;
+
+        // -------- ITEMS / INVOICESITEMS (Brand + Unit full) --------
+        const resolvedBrand = resolveBrandFromListData(); // varsa mevcut brand id kullan
+
+        (model.invoiceLines || []).forEach((l, idx) => {
+            const lineDiscountRate = Number(l.DiscountRate || 0);
+            const lineDiscountAmount = Number(l.DiscountAmount || 0);
+
+            const brandObj = resolvedBrand
+                ? {
+                    ...baseFor(),
+                    Id: resolvedBrand.id,
+                    Name: resolvedBrand.name,
+                    Country: resolvedBrand.country || flatCustomer.CountryName || "TR",
+                    Items: []
+                }
+                : {
+                    ...baseFor(),
+                    Id: 0,
+                    Name: "GENEL MARKA",
+                    Country: flatCustomer.CountryName || "TR",
+                    Items: []
+                };
+
+            const itemEntity = {
+                ...baseFor(),
+                Id: 0,
+                Name: l.ItemName || "Satır " + (idx + 1),
+                Code: l.SellerItemCode || "ITEM-" + (idx + 1),
+
+                // Brand FK sorunu çözümü:
+                BrandId: resolvedBrand ? resolvedBrand.id : 0,
+                UnitId: 0,
+
+                Price: Number(l.Price || 0),
+                Currency: currency,
+
+                Brand: brandObj,
+                Unit: {
+                    ...baseFor(),
+                    Id: 0,
+                    Name: l.UnitText || l.UnitCode || "ADET",
+                    ShortName: l.UnitCode || "C62",
+                    Items: []
+                },
+
+                ItemsCategories: [],
+                ItemsDiscounts: [],
+                Identifiers: []
+            };
+
+            if (lineDiscountRate > 0 || lineDiscountAmount > 0) {
+                itemEntity.ItemsDiscounts.push({
+                    ...baseFor(),
+                    Id: 0,
+                    InvoiceId: 0,
+                    Name: "Satır İskonto",
+                    Rate: lineDiscountRate,
+                    Amount: lineDiscountAmount,
+                    Invoice: null
+                });
+            }
+
+            const lineTotal = Number(l.LineTotal || (l.Amount || 0) + (l.KdvTutar || 0));
+
+            invoice.InvoicesItems.push({
                 ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
-                Name: l.ItemName,
-                Quantity: l.Quantity,
-                UnitCode: l.UnitCode,
-                UnitPrice: l.Price,
-                DiscountRate: l.DiscountRate,
-                DiscountAmount: l.DiscountAmount,
-                LineAmount: l.Amount,
-                TaxRate: l.KdvOran,
-                TaxAmount: l.KdvTutar,
-                LineTotal: l.LineTotal,
-                IstisnaKodu: l.IstisnaKodu
+                ItemId: 0,
+                Quantity: Number(l.Quantity || 0),
+                Price: Number(l.Price || 0),
+                Total: lineTotal,
+                Invoice: null,
+                Item: itemEntity
             });
         });
 
-        // -------- VERGİLER (InvoicesTaxes) --------
-        if ((h.Taxes || 0) > 0) {
-            entity.InvoicesTaxes.push({
+        // -------- TAXES --------
+        const taxMap = {};
+        (model.invoiceLines || []).forEach(l => {
+            const rate = Number(l.KdvOran || 0);
+            const amount = Number(l.KdvTutar || 0);
+            if (!taxMap[rate]) taxMap[rate] = 0;
+            taxMap[rate] += amount;
+        });
+
+        Object.keys(taxMap).forEach(rateStr => {
+            const rate = Number(rateStr);
+            const amount = taxMap[rateStr] || 0;
+            invoice.InvoicesTaxes.push({
                 ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
-                TaxTypeCode: "KDV",
-                TaxPercent: null,
-                TaxAmount: h.Taxes
+                Name: "KDV",
+                Rate: rate,
+                Amount: amount,
+                Invoice: null
+            });
+        });
+
+        // -------- TOTAL DISCOUNT --------
+        let totalDiscount = 0;
+        (model.invoiceLines || []).forEach(l => (totalDiscount += Number(l.DiscountAmount || 0)));
+        if (totalDiscount > 0) {
+            invoice.InvoicesDiscounts.push({
+                ...baseFor(),
+                Id: 0,
+                ItemId: 0,
+                Name: "Genel İskonto",
+                Desc: "Satır iskonto toplamı",
+                Base: "GENEL",
+                Rate: 0,
+                Amount: totalDiscount,
+                Item: null
             });
         }
 
-        // -------- ÖDEME (InvoicesPayments) --------
-        const payment = {
-            ...baseFor(),
-            Id: 0,
-            InvoiceId: 0,
-            PaymentMeansCode: $("#PaymentMeansCode").val() || "",
-            PaymentDueDate: $("#PaymentDueDate").val() || null,
-            InstructionNote: $("#InstructionNote").val() || "",
-            PaymentChannelCode: $("#PaymentChannelCode").val() || "",
-            PayeeFinancialAccount: $("#PayeeFinancialAccount").val() || "",
-            PayeeFinancialCurrencyCode: $("#PayeeFinancialCurrencyCode").val() || ""
-        };
+        // -------- SGK --------
+        if (model.sgk) {
+            const startDateIso = model.sgk.GonderimTarihiBaslangic ? new Date(model.sgk.GonderimTarihiBaslangic).toISOString() : nowIso;
+            const endDateIso = model.sgk.GonderimTarihiBitis ? new Date(model.sgk.GonderimTarihiBitis).toISOString() : nowIso;
 
-        if (
-            payment.PaymentMeansCode ||
-            payment.PaymentDueDate ||
-            payment.InstructionNote ||
-            payment.PaymentChannelCode ||
-            payment.PayeeFinancialAccount ||
-            payment.PayeeFinancialCurrencyCode
-        ) {
-            entity.InvoicesPayments.push(payment);
-        }
-
-        // -------- SGK / İlave Fatura Tipi (varsa) --------
-        const ilaveFaturaTipi = $("#ddlilaveFaturaTipi").val();
-        if (ilaveFaturaTipi) {
-            entity.SgkRecords.push({
+            invoice.SgkRecords.push({
                 ...baseFor(),
                 Id: 0,
                 InvoiceId: 0,
-                IlaveFaturaTipi: ilaveFaturaTipi,
-                MukellefKodu: $("#mukellefkodu").val() || "",
-                MukellefAdi: $("#mukellefadi").val() || "",
-                DosyaNo: $("#dosyano").val() || "",
-                SendingDateStart: $("#txtSendingDateBaslangic").val() || null,
-                SendingDateEnd: $("#txtSendingDateBitis").val() || null
+                Type: model.sgk.IlaveFaturaTipi || "",
+                Code: model.sgk.MukellefKodu || "",
+                Name: model.sgk.MukellefAdi || "",
+                No: model.sgk.DosyaNo || "",
+                StartDate: startDateIso,
+                EndDate: endDateIso,
+                Invoice: null
             });
         }
 
-        // -------- HİZMET SAĞLAYICI (ServicesProvider) – opsiyonel ama RowVersion'lı tek kayıt --------
-        const systemUser =
-            ($("#hdnUserName").val() || $("#lblUserName").text() || "").trim() || "WEBUI";
-
-        entity.ServicesProviders.push({
+        // -------- SERVICE PROVIDER --------
+        const systemUser = ($("#hdnUserName").val() || $("#lblUserName").text() || "").trim() || "WEBUI";
+        invoice.ServicesProviders.push({
             ...baseFor(),
             Id: 0,
             No: "SRV-" + Date.now(),
@@ -1410,55 +1831,123 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             Invoice: null
         });
 
-        return entity;
+        // -------- PAYMENT (Invoice.js gibi) --------
+        if (model.payment) {
+            const p = model.payment;
+
+            const paymentTypeName = $("#PaymentMeansCode option:selected").text() || p.PaymentMeansCode || "Ödeme";
+            const paymentChannelText = $("#PaymentChannelCode option:selected").text() || p.PaymentChannelCode || "";
+            const paymentCurrency = (p.PayeeFinancialCurrencyCode || currency || "TRY").toString().toUpperCase();
+
+            const paymentDateIso = p.PaymentDueDate ? p.PaymentDueDate + "T00:00:00" : invoice.InvoiceDate || nowIso;
+
+            const paymentType = {
+                ...baseFor(),
+                Id: 0,
+                Name: paymentTypeName,
+                Desc: paymentChannelText || "Ödeme Şekli",
+                Payments: []
+            };
+
+            const bankName = $("#txtBankName").val() || $("#txtBankName").text() || "";
+            const bankCountry = $("#txtBankCountry").val() || flatCustomer.CountryName || "TR";
+            const bankCity = $("#txtBankCity").val() || flatCustomer.CityName || "";
+            const bankSwift = $("#txtSwiftCode").val() || "";
+
+            const bank = {
+                ...baseFor(),
+                Id: 0,
+                Name: bankName || "Banka",
+                SwiftCode: bankSwift,
+                Country: bankCountry,
+                City: bankCity,
+                PaymentAccounts: []
+            };
+
+            const accountName = p.PayeeFinancialAccount || "Hesap";
+            const accountNo = $("#txtAccountNo").val() || p.PayeeFinancialAccount || "";
+            const iban = $("#txtIban").val() || "";
+
+            const paymentAccount = {
+                ...baseFor(),
+                Id: 0,
+                Name: accountName,
+                Desc: paymentChannelText || "",
+                BankId: 0,
+                AccountNo: accountNo,
+                Iban: iban,
+                Currency: paymentCurrency,
+                Bank: bank,
+                Payments: []
+            };
+
+            const paymentEntity = {
+                ...baseFor(),
+                Id: 0,
+                PaymentTypeId: 0,
+                PaymentAccountId: 0,
+                Amount: invoice.Total || 0,
+                Currency: paymentCurrency,
+                Date: paymentDateIso,
+                Note: p.InstructionNote || "",
+                PaymentType: paymentType,
+                PaymentAccount: paymentAccount,
+                InvoicesPayments: []
+            };
+
+            const invoicePayment = {
+                ...baseFor(),
+                Id: 0,
+                InvoiceId: 0,
+                PaymentId: 0,
+                Invoice: null,
+                Payment: paymentEntity
+            };
+
+            invoice.InvoicesPayments.push(invoicePayment);
+        }
+
+        // -------- DESPATCH --------
+        if ((model.irsaliyeler || []).length) {
+            invoice.Despatchs = model.irsaliyeler.map(d => ({
+                ...baseFor(),
+                Id: 0,
+                InvoiceId: 0,
+                DespatchNo: d.IrsaliyeNo,
+                DespatchDate: d.IrsaliyeTarihi || null
+            }));
+        }
+
+        // -------- AdditionalFields --------
+        const additional = {
+            Seller: model.sellerAdditional || [],
+            SellerAgent: model.sellerAgentAdditional || [],
+            BuyerAdditional: model.buyerAdditional || [],
+            EkAlan: model.ekAlan || []
+        };
+
+        const hasAdditional =
+            (additional.Seller && additional.Seller.length) ||
+            (additional.SellerAgent && additional.SellerAgent.length) ||
+            (additional.BuyerAdditional && additional.BuyerAdditional.length) ||
+            (additional.EkAlan && additional.EkAlan.length);
+
+        if (hasAdditional) invoice.AdditionalFields = additional;
+
+        return invoice;
     }
 
     /***********************************************************
      *  SGK EK ALANLAR
      ***********************************************************/
     const sgkConfig = {
-        "SAGLIK_ECZ": {
-            mukellefKodu: "SGK Kurum Kodu",
-            mukellefAdi: "SGK Kurum Adı",
-            dosyaNo: "Reçete / Takip No",
-            showSendingDate: true
-        },
-        "SAGLIK_HAS": {
-            mukellefKodu: "SGK Kurum Kodu",
-            mukellefAdi: "SGK Kurum Adı",
-            dosyaNo: "Takip No",
-            showSendingDate: true
-        },
-        "SAGLIK_OPT": {
-            mukellefKodu: "SGK Kurum Kodu",
-            mukellefAdi: "SGK Kurum Adı",
-            dosyaNo: "Reçete No",
-            showSendingDate: true
-        },
-        "SAGLIK_MED": {
-            mukellefKodu: "SGK Kurum Kodu",
-            mukellefAdi: "SGK Kurum Adı",
-            dosyaNo: "Evrak No",
-            showSendingDate: true
-        },
-        "ABONELIK": {
-            mukellefKodu: "Abone No",
-            mukellefAdi: "Abone Adı",
-            dosyaNo: "Sözleşme / Müşteri No",
-            showSendingDate: true
-        },
-        "MAL_HIZMET": {
-            mukellefKodu: "Müşteri / Kurum Kodu",
-            mukellefAdi: "Müşteri / Kurum Adı",
-            dosyaNo: "Evrak / Dosya No",
-            showSendingDate: true
-        },
-        "DIGER": {
-            mukellefKodu: "Referans Kodu",
-            mukellefAdi: "Referans Adı",
-            dosyaNo: "Referans No",
-            showSendingDate: false
-        }
+        SAGLIK_ECZ: { mukellefKodu: "SGK Kurum Kodu", mukellefAdi: "SGK Kurum Adı", dosyaNo: "Reçete / Takip No", showSendingDate: true },
+        SAGLIK_HAS: { mukellefKodu: "SGK Kurum Kodu", mukellefAdi: "SGK Kurum Adı", dosyaNo: "Takip No", showSendingDate: true },
+        SAGLIK_OPT: { mukellefKodu: "SGK Kurum Kodu", mukellefAdi: "SGK Kurum Adı", dosyaNo: "Reçete No", showSendingDate: true },
+        SAGLIK_MED: { mukellefKodu: "SGK Kurum Kodu", mukellefAdi: "SGK Kurum Adı", dosyaNo: "Evrak No", showSendingDate: true },
+        ABONELIK: { mukellefKodu: "Abone No", mukellefAdi: "Abone Adı", dosyaNo: "Sözleşme / Müşteri No", showSendingDate: true },
+        MAL_HIZMET: { mukellefKodu: "Müşteri / Kurum Kodu", mukellefAdi: "Müşteri / Kurum Adı", dosyaNo: "Evrak / Dosya No", showSendingDate: true },
+        DIGER: { mukellefKodu: "Referans Kodu", mukellefAdi: "Referans Adı", dosyaNo: "Referans No", showSendingDate: false }
     };
 
     function updateSgkFields() {
@@ -1477,11 +1966,8 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             $("#lblMukellefKodu").text(cfg.mukellefKodu);
             $("#lblMukellefAdi").text(cfg.mukellefAdi);
             $("#lblDosyaNo").text(cfg.dosyaNo);
-            if (cfg.showSendingDate) {
-                $("#fieldGonderimTarihi").removeClass("d-none");
-            } else {
-                $("#fieldGonderimTarihi").addClass("d-none");
-            }
+            if (cfg.showSendingDate) $("#fieldGonderimTarihi").removeClass("d-none");
+            else $("#fieldGonderimTarihi").addClass("d-none");
         } else {
             $("#lblMukellefKodu").text("Mükellef Kodu");
             $("#lblMukellefAdi").text("Mükellef Adı");
@@ -1491,7 +1977,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     }
 
     /***********************************************************
-     *  DİĞER TABLOLAR - Yeni Satır Ekle / Sil
+     *  DİĞER TABLOLAR - Yeni Satır Ekle / Sil (orijinal yapı)
      ***********************************************************/
     function addNewIrsaliyeRow() {
         const row = `
@@ -1578,7 +2064,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     }
 
     /***********************************************************
-     *  ZORUNLU ALAN KONTROLÜ
+     *  ZORUNLU ALAN KONTROLÜ (orijinal)
      ***********************************************************/
     function validateForm() {
         const errors = [];
@@ -1611,7 +2097,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             }
         }
 
-        // HEADER / ŞUBE vs
         requireSelect("#ddlSubeKodu", "Şube seçiniz.");
         requireSelect("#ddlSourceUrn", "Gönderici etiketini seçiniz.", [""]);
         requireSelect("#ddlInvoicePrefix", "Fatura ön ekini seçiniz.", [""]);
@@ -1621,7 +2106,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         requireInput("#txtIssueTime", "Fatura saatini giriniz.");
         requireSelect("#ddlParaBirimi", "Para birimini seçiniz.", [""]);
 
-        // ALICI BİLGİLERİ
         requireInput("#txtIdentificationID", "VKN/TCKN giriniz.");
         requireInput("#txtPartyName", "Firma adını giriniz.");
         requireInput("#txtPersonFirstName", "Adı alanını doldurunuz.");
@@ -1637,12 +2121,10 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             requireSelect("#ddlIlce", "İlçe seçiniz.", [""]);
         }
 
-        // ÖDEME
         requireSelect("#PaymentMeansCode", "Ödeme şeklini seçiniz.", [""]);
         requireInput("#PaymentDueDate", "Ödeme tarihini giriniz.");
         requireSelect("#PayeeFinancialCurrencyCode", "Hesap para birimini seçiniz.", [""]);
 
-        // FATURA KALEMLERİ
         if ($("#invoiceBody tr").length === 0) {
             errors.push("En az bir fatura kalemi ekleyiniz.");
         } else {
@@ -1650,16 +2132,11 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             $("#invoiceBody tr").each(function () {
                 const name = ($(this).find(".js-line-name").val() || "").trim();
                 const qty = Utils.parseNumber($(this).find(".js-line-qty").val());
-                if (name && qty > 0) {
-                    hasNamedLine = true;
-                }
+                if (name && qty > 0) hasNamedLine = true;
             });
-            if (!hasNamedLine) {
-                errors.push("En az bir satırda mal/hizmet adı ve miktar giriniz.");
-            }
+            if (!hasNamedLine) errors.push("En az bir satırda mal/hizmet adı ve miktar giriniz.");
         }
 
-        // KAMU SENARYOSU İSE
         const isKamuSenaryo = $("#ddlSenaryo").val() === "KAMU";
         if (isKamuSenaryo) {
             requireInput("#txtKamuVkn", "Kamu alıcı VKN giriniz.");
@@ -1668,14 +2145,9 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             requireInput("#txtKamuIl", "Kamu alıcı il bilgisini giriniz.");
         }
 
-        if (errors.length && invalidElements.length) {
-            invalidElements[0].focus();
-        }
+        if (errors.length && invalidElements.length) invalidElements[0].focus();
 
-        return {
-            isValid: errors.length === 0,
-            errors: errors
-        };
+        return { isValid: errors.length === 0, errors };
     }
 
     /***********************************************************
@@ -1726,20 +2198,44 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             throw new Error("GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).");
         }
 
-        if (!baseUrl.endsWith("/")) {
-            baseUrl += "/";
-        }
+        if (!baseUrl.endsWith("/")) baseUrl += "/";
         return baseUrl;
     }
-
-    // İhracat faturası için GİB'e gönderim (isExport = true)
     async function sendInvoiceToGibById(invoiceId) {
-        const baseUrl = getGibPortalBaseUrl();
+        // Id'yi garanti sayıya çevir
+        const numericId = Number(invoiceId);
+        if (!Number.isFinite(numericId) || numericId <= 0) {
+            throw new Error("Geçersiz invoiceId: " + invoiceId);
+        }
+
+        const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+        if (!baseUrl) {
+            throw new Error("GİB Portal API Base URL (gibPortalApiBaseUrl) tanımlı değil.");
+        }
+
+        // 🔹 BURADA oturumdaki kullanıcı Id'sini alıyoruz
+        const userId = getCurrentUserIdForGib();
+
+        // BaseUrl sonu / ile bitmiyorsa ekle
+        const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+        const AliciEtiketi = $("#ddlAliciEtiketi").val() || "";
+        // Query string'i güvenli şekilde üret
+        const qs = new URLSearchParams({
+            userId: String(userId),
+            isExport: "true"
+        });
+        // 🔹 Alias doluysa query string'e ekle
+        if (AliciEtiketi) {
+            qs.append("alias", AliciEtiketi);
+        }
+        // /api/TurkcellEFatura/einvoice/send-json/{id}?userId=...&isExport=false
         const url =
-            baseUrl +
+            normBase +
             "TurkcellEFatura/einvoice/send-json/" +
-            encodeURIComponent(invoiceId) +
-            "?isExport=true";
+            encodeURIComponent(numericId) +
+            "?" + qs.toString();
+
+        console.log("[GIB] Gönderim URL:", url);
 
         const response = await fetch(url, {
             method: "POST",
@@ -1748,26 +2244,69 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             }
         });
 
+        // Hem hata hem başarı için text al
+        const contentType = (response.headers.get("content-type") || "").toLowerCase();
+        const isJson = contentType.includes("application/json");
+        const rawText = await response.text();
+        let data = null;
+
+        if (isJson && rawText) {
+            try {
+                data = JSON.parse(rawText);
+            } catch (e) {
+                console.warn("[GIB] JSON parse hatası:", e, rawText);
+            }
+        }
+
+        // HTTP 200–299 dışı ise hata
         if (!response.ok) {
-            const text = await response.text().catch(() => "");
-            throw new Error("GİB API isteği başarısız. Status: " + response.status + " " + text);
+            let warningMessages = [];
+
+            if (data && typeof data === "object") {
+                // Örnek: {"uyarı":["e-Fatura göndermiş olduğunuz firmanın VKN/TCKN ile etiketi(alias) uyuşmuyor."]}
+                const uyarilarRaw =
+                    data["uyarı"] ||
+                    data["uyari"] ||
+                    data["Uyarı"] ||
+                    data["Uyari"] ||
+                    data["warnings"] ||
+                    data["warning"];
+
+                if (Array.isArray(uyarilarRaw)) {
+                    warningMessages = uyarilarRaw;
+                } else if (typeof uyarilarRaw === "string" && uyarilarRaw.trim()) {
+                    warningMessages = [uyarilarRaw.trim()];
+                }
+            }
+
+            let msg =
+                (warningMessages.length
+                    ? warningMessages.join("\n")
+                    : (data && (data.message || data.Message)) ||
+                    `GİB API isteği başarısız. Status: ${response.status} ${response.statusText}`); // eslint-disable-line max-len
+
+            const err = new Error(msg);
+            err.status = response.status;
+            err.payload = data;
+            throw err;
         }
 
-        let json = null;
-        try {
-            json = await response.json();
-        } catch {
-            json = null;
+        // Başarılı durum: JSON yoksa, text'ten parse etmeyi dene
+        if (!data && rawText) {
+            try {
+                data = JSON.parse(rawText);
+            } catch {
+                data = {};
+            }
         }
 
-        return json;
+        return data || {};
     }
+   
 
     function handleGibSendResponse(gibRes) {
-        const uuid =
-            (gibRes && (gibRes.id || gibRes.uuid || gibRes.ettn)) || "";
-        const invoiceNumber =
-            (gibRes && (gibRes.invoiceNumber || gibRes.invoiceNo || gibRes.number)) || "";
+        const uuid = (gibRes && (gibRes.id || gibRes.uuid || gibRes.ettn)) || "";
+        const invoiceNumber = (gibRes && (gibRes.invoiceNumber || gibRes.invoiceNo || gibRes.number)) || "";
 
         $("#hfGibInvoiceUuid").val(uuid || "");
         $("#hfGibInvoiceNumber").val(invoiceNumber || "");
@@ -1775,14 +2314,9 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         if (uuid && invoiceNumber) {
             $("#btnDownloadPDF").prop("disabled", false);
             $("#btnDownloadXML").prop("disabled", false);
-
             showAlert("success", "Fatura başarıyla GİB'e gönderildi.");
         } else {
-            showAlert(
-                "danger",
-                (gibRes && (gibRes.message || gibRes.Message)) ||
-                "Fatura GİB'e gönderilirken bir hata oluştu."
-            );
+            showAlert("danger", (gibRes && (gibRes.message || gibRes.Message)) || "Fatura GİB'e gönderilirken bir hata oluştu.");
         }
     }
 
@@ -1819,56 +2353,46 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
      *  EVENT BINDINGS
      ***********************************************************/
     function bindEvents() {
-        // Manuel şehir
         $(document).on("change", "#chkManuelSehir", toggleManuelSehir);
 
-        // Alıcıdan kamuya kopyala
         $(document).on("click", "#btnAliciBilgilerindenKopyala", function (e) {
             e.preventDefault();
             copyAliciToKamu();
         });
 
-        // Müşteri seçimi
         $(document).on("change", "#ddlMusteriAra", function () {
             const id = parseInt($(this).val(), 10);
             const cust = TestCustomers.find(x => x.id === id);
             fillCustomerFieldsFromTest(cust);
         });
 
-        // Header değişiklikleri
         bindHeaderInputs();
 
-        // Fatura kalemleri – yeni satır
         $(document).on("click", "#btnLineAdd", function () {
             addNewLineRow();
         });
 
-        // Fatura kalemleri – satır sil
         $(document).on("click", ".js-line-remove", function () {
             $(this).closest("tr").remove();
             renumberLines();
             recalcTotals();
         });
 
-        // Fatura kalemleri – hesaplama
-        $(document).on("keyup change",
-            "#invoiceBody .js-line-qty, " +
-            "#invoiceBody .js-line-price, " +
-            "#invoiceBody .js-line-disc-rate, " +
-            "#invoiceBody .js-line-kdv",
+        $(document).on(
+            "keyup change",
+            "#invoiceBody .js-line-qty, #invoiceBody .js-line-price, #invoiceBody .js-line-disc-rate, #invoiceBody .js-line-kdv",
             function () {
                 const $row = $(this).closest("tr");
                 calcLine($row);
-            });
+            }
+        );
 
-        // KDV hariç/dahil
         $(document).on("change", "#kdvStatu", function () {
             $("#invoiceBody tr").each(function () {
                 calcLine($(this));
             });
         });
 
-        // Önizleme
         $(document).on("click", "#btnPreviewInvoice", function (e) {
             e.preventDefault();
             recalcTotals();
@@ -1877,7 +2401,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             $("#invoicePreviewModal").modal("show");
         });
 
-        // TASLAK / GİB GÖNDER BUTONLARI
+        // TASLAK / GİB
         $(document).on("click", "#btnDraftSave, #btnSendToGib", async function (e) {
             e.preventDefault();
 
@@ -1899,9 +2423,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                     const draftRes = await saveInvoiceDraft(entity);
                     currentInvoiceId = extractInvoiceIdFromResponse(draftRes) || currentInvoiceId;
                 } else {
-                    // GİB'e gönder
                     if (!currentInvoiceId || $("#btnDraftSave").prop("disabled") === false) {
-                        // Henüz taslak yok ya da buton hâlâ aktif → önce taslak kaydet
                         const draftRes = await saveInvoiceDraft(entity);
                         currentInvoiceId = extractInvoiceIdFromResponse(draftRes) || currentInvoiceId;
                     }
@@ -1917,68 +2439,106 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 }
             } catch (err) {
                 console.error("[ExportInvoice] Taslak/GİB gönderim hatası:", err);
-                showAlert(
-                    "danger",
-                    isDraftButton
-                        ? "Taslak ihracat fatura kaydedilirken bir hata oluştu."
-                        : "İhracat faturası GİB'e gönderilirken bir hata oluştu."
-                );
+                showAlert("danger", isDraftButton ? "Taslak ihracat fatura kaydedilirken bir hata oluştu." : "İhracat faturası GİB'e gönderilirken bir hata oluştu.");
             }
         });
-
-        // PDF İndir
-        $(document).on("click", "#btnDownloadPDF", async function (e) {
+        $(document).on("click", "#btnDownloadPDF", function (e) {
             e.preventDefault();
 
             const uuid = $("#hfGibInvoiceUuid").val();
 
             if (!uuid) {
                 showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                alert("Önce faturayı GİB'e başarıyla göndermelisiniz.");
                 return;
             }
 
-            try {
-                const baseUrl = getGibPortalBaseUrl();
-                const url =
-                    baseUrl +
-                    "TurkcellEFatura/einvoice/outbox/pdf/" +
-                    encodeURIComponent(uuid) +
-                    "?standardXslt=true";
-
-                await downloadBinaryFromGib(url, uuid + ".pdf");
-            } catch (err) {
-                console.error("[ExportInvoice] PDF indirilirken hata:", err);
-                showAlert("danger", "PDF indirilirken bir hata oluştu.");
+            const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+            if (!baseUrl) {
+                const msg = "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).";
+                showAlert("danger", msg);
+                alert(msg);
+                return;
             }
-        });
 
+            const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+
+            // 🔹 userId'yi oku
+            let userId;
+            try {
+                userId = getCurrentUserIdForGib();
+            } catch (err) {
+                const msg = err.message || "Kullanıcı Id okunamadı.";
+                showAlert("danger", msg);
+                alert(msg);
+                return;
+            }
+
+            const qs = new URLSearchParams({
+                userId: String(userId),
+                standardXslt: "true"
+            });
+
+            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/pdf/{uuid}?userId=...&standardXslt=true
+            const url =
+                normBase +
+                "TurkcellEFatura/einvoice/outbox/pdf/" +
+                encodeURIComponent(uuid) +
+                "?" + qs.toString();
+
+            console.log("[GIB] PDF download URL:", url);
+
+            window.open(url, "_blank");
+        });
         // XML (UBL) İndir
-        $(document).on("click", "#btnDownloadXML", async function (e) {
+        $(document).on("click", "#btnDownloadXML", function (e) {
             e.preventDefault();
 
             const uuid = $("#hfGibInvoiceUuid").val();
 
             if (!uuid) {
                 showAlert("danger", "Önce faturayı GİB'e başarıyla göndermelisiniz.");
+                alert("Önce faturayı GİB'e başarıyla göndermelisiniz.");
                 return;
             }
 
-            try {
-                const baseUrl = getGibPortalBaseUrl();
-                const url =
-                    baseUrl +
-                    "TurkcellEFatura/einvoice/outbox/ubl/" +
-                    encodeURIComponent(uuid) +
-                    "?standardXslt=true";
-
-                await downloadBinaryFromGib(url, uuid + ".xml");
-            } catch (err) {
-                console.error("[ExportInvoice] XML (UBL) indirilirken hata:", err);
-                showAlert("danger", "XML (UBL) indirilirken bir hata oluştu.");
+            const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+            if (!baseUrl) {
+                const msg = "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).";
+                showAlert("danger", msg);
+                alert(msg);
+                return;
             }
+
+            const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+
+            // 🔹 userId'yi oku
+            let userId;
+            try {
+                userId = getCurrentUserIdForGib();
+            } catch (err) {
+                const msg = err.message || "Kullanıcı Id okunamadı.";
+                showAlert("danger", msg);
+                alert(msg);
+                return;
+            }
+
+            const qs = new URLSearchParams({
+                userId: String(userId),
+            });
+
+            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/ubl/{uuid}?userId=...
+            const url =
+                normBase +
+                "TurkcellEFatura/einvoice/outbox/ubl/" +
+                encodeURIComponent(uuid) +
+                "?" + qs.toString();
+
+            console.log("[GIB] UBL download URL:", url);
+
+            window.open(url, "_blank");
         });
 
-        // SGK ilave fatura tipi
         $(document).on("change", "#ddlilaveFaturaTipi", updateSgkFields);
 
         // İrsaliye
@@ -2021,7 +2581,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             $(this).closest("tr").remove();
         });
 
-        // Excel / Medula / Cezaevi / Toplu işlemler - placeholder
+        // placeholder
         $(document).on("click", "#excelLineModalOpen", function (e) {
             e.preventDefault();
             console.log("Excel'den yükleme burada implemente edilecek.");
@@ -2048,55 +2608,44 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
      *  INIT
      ***********************************************************/
     function initDefaults() {
-        // ETTN üret
         if ($("#txtUUID").length) {
             const ettn = generateUUIDv4();
             $("#txtUUID").val(ettn);
             invoiceModel.invoiceheader.Invoice_ID = ettn;
         }
 
-        // Manuel şehir default: seçili
         if ($("#chkManuelSehir").length) {
             $("#chkManuelSehir").prop("checked", true);
             toggleManuelSehir();
         }
 
-        // Müşteri dropdown (demo)
         fillMusteriAraDropdown();
 
-        // ListData'dan dropdownlar
         fillSubeDropdown();
         fillSourceUrnDropdown();
         fillInvoicePrefixDropdown();
         fillGoruntuDosyasiDropdown();
         fillAliciEtiketiDropdown();
+
+        // Export ekranında da session seçimini uygula
+        applySelectedMukellefFromSession();
+
         fillParaBirimiDropdown();
         fillPaymentDropdowns();
 
-        // txtKurBilgisi varsayılan 1
         if ($("#txtKurBilgisi").length && !$("#txtKurBilgisi").val()) {
             $("#txtKurBilgisi").val("1");
         }
 
-        // Fatura Ön İzleme modalini genişlet
         if ($("#invoicePreviewModal .modal-dialog").length) {
-            $("#invoicePreviewModal .modal-dialog").css({
-                "max-width": "95%",
-                "width": "95%"
-            });
+            $("#invoicePreviewModal .modal-dialog").css({ "max-width": "95%", width: "95%" });
         }
         if ($("#invoicePreviewContent").length) {
-            $("#invoicePreviewContent").css({
-                "max-height": "80vh",
-                "overflow-x": "auto",
-                "overflow-y": "auto"
-            });
+            $("#invoicePreviewContent").css({ "max-height": "80vh", "overflow-x": "auto", "overflow-y": "auto" });
         }
 
-        // SGK alanları
         updateSgkFields();
 
-        // Tarih & saat default
         const now = new Date();
         if ($("#txtIssueDate").length && !$("#txtIssueDate").val()) {
             const y = now.getFullYear();
@@ -2138,6 +2687,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     function init() {
         bindEvents();
         initDefaults();
+        syncUserIdHiddenFromSession();
     }
 
     const ExportInvoiceApp = {
@@ -2148,7 +2698,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     };
 
     global.ExportInvoiceApp = ExportInvoiceApp;
-
 })(window, jQuery);
 
 // Sayfa yüklenince başlat
