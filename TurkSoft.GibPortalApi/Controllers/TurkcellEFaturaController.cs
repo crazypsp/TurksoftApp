@@ -1445,7 +1445,7 @@ namespace TurkSoft.GibPortalApi.Controllers
         }
 
 
-        // -------- e-Arşiv --------
+        
         // -------- e-Arşiv --------
         [HttpPost("earchive/send-json/{id:long}")]
         public async Task<IActionResult> SendEArchiveJson(
