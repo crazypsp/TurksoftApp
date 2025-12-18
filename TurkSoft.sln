@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.GIBWebUI", "TurkSo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurkSoft.GIBErpApi", "TurkSoft.GIBErpApi\TurkSoft.GIBErpApi.csproj", "{5E4F87A9-4CBF-43BE-8EE3-15E9CE6CFC3A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turksoft.BankServiceAPI", "Turksoft.BankServiceAPI\Turksoft.BankServiceAPI.csproj", "{E74A6AB4-2670-475A-87A9-0A633E4BB45C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -99,6 +101,10 @@ Global
 		{5E4F87A9-4CBF-43BE-8EE3-15E9CE6CFC3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5E4F87A9-4CBF-43BE-8EE3-15E9CE6CFC3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5E4F87A9-4CBF-43BE-8EE3-15E9CE6CFC3A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E74A6AB4-2670-475A-87A9-0A633E4BB45C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E74A6AB4-2670-475A-87A9-0A633E4BB45C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E74A6AB4-2670-475A-87A9-0A633E4BB45C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E74A6AB4-2670-475A-87A9-0A633E4BB45C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
