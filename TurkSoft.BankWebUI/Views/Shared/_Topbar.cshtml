@@ -1,0 +1,37 @@
+﻿@{
+    var userName = User?.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Misafir";
+    var role = User?.Claims?.FirstOrDefault(c => c.Type.EndsWith("/role"))?.Value ?? "—";
+}
+<div class="topbar-inner">
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-light d-lg-none" type="button" id="btnSidebarToggle">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input class="form-control form-control-sm" placeholder="Banka, hesap, fiş no, açıklama..." />
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <div class="dropdown">
+            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fa-regular fa-circle-user me-1"></i> @userName
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li class="px-3 py-2 small text-muted">
+                    Rol: <span class="badge text-bg-secondary">@role</span>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="px-2">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm btn-outline-danger w-100" type="submit">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i>Çıkış
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

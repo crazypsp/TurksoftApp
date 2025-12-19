@@ -1,0 +1,47 @@
+﻿@{
+    string c = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");
+    string a = (ViewContext.RouteData.Values["action"]?.ToString() ?? "");
+    string IsActive(string controller, string action = "Index")
+        => (string.Equals(c, controller, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(a, action, StringComparison.OrdinalIgnoreCase)) ? "active" : "";
+}
+
+<div class="sidebar-brand">
+    <div class="brand-badge">
+        <i class="fa-solid fa-chart-line"></i>
+    </div>
+    <div class="brand-text">
+        <div class="fw-bold">Finans</div>
+        <div class="text-muted small">Banka & Raporlama</div>
+    </div>
+</div>
+
+<nav class="sidebar-nav">
+    <a class="nav-item @IsActive("Dashboard")" asp-controller="Dashboard" asp-action="Index">
+        <i class="fa-solid fa-gauge-high"></i><span>Dashboard</span>
+    </a>
+
+    <div class="nav-section">Operasyon</div>
+
+    <a class="nav-item @IsActive("Reports")" asp-controller="Reports" asp-action="Index">
+        <i class="fa-solid fa-file-invoice-dollar"></i><span>Raporlar</span>
+    </a>
+
+    <a class="nav-item @IsActive("Accounting")" asp-controller="Accounting" asp-action="Index">
+        <i class="fa-solid fa-right-left"></i><span>Aktarım / Muhasebe</span>
+    </a>
+
+    <a class="nav-item @IsActive("BankIntegrations")" asp-controller="BankIntegrations" asp-action="Index">
+        <i class="fa-solid fa-building-columns"></i><span>Banka Entegrasyonları</span>
+    </a>
+
+    <div class="nav-section">Yönetim</div>
+
+    <a class="nav-item @IsActive("Users")" asp-controller="Users" asp-action="Index">
+        <i class="fa-solid fa-users-gear"></i><span>Kullanıcılar</span>
+    </a>
+</nav>
+
+<div class="sidebar-footer">
+    <div class="small text-muted">© @DateTime.Now.Year YourCompany</div>
+</div>
