@@ -36,7 +36,7 @@ namespace TurkSoft.Business.Managers.BankProviders
                     ExtUName = request.Username,
                     ExtUPassword = request.Password ?? "",
                     AccountNumber = accountNumber,
-                    AccountSuffix = accountSuffix.ToString(), // Reference: AccountSuffix string
+                    //AccountSuffix = accountSuffix.ToString(), // Reference: AccountSuffix string
                     BeginDate = request.BeginDate,
                     EndDate = request.EndDate,
                 };

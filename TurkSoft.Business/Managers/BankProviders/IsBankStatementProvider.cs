@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using TurkSoft.Business.Base;
 using TurkSoft.Business.Interface;
@@ -14,6 +10,12 @@ namespace TurkSoft.Business.Managers.BankProviders
 {
     public sealed class IsBankStatementProvider : IBankStatementProvider
     {
+        static IsBankStatementProvider()
+        {
+            // Host tarafı unutsa bile burada garanti
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        }
+
         public int BankId => BankIds.IsBankasi;
         public string BankCode => "ISB";
 
@@ -23,21 +25,49 @@ namespace TurkSoft.Business.Managers.BankProviders
                 throw new ArgumentException("İşBank için Link ve TLink zorunlu.");
 
             var cookies = new CookieContainer();
-            var handler = new HttpClientHandler { CookieContainer = cookies, AllowAutoRedirect = true, UseCookies = true };
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = cookies,
+                AllowAutoRedirect = true,
+                UseCookies = true,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            };
 
             using var http = new HttpClient(handler);
+            http.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+            );
 
-            _ = await http.GetAsync(request.Link, ct);
+            // 1) cookie al
+            _ = await http.GetAsync(request.Link, ct).ConfigureAwait(false);
 
+            // 2) login
             var post = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["uid"] = request.Username,
                 ["pwd"] = request.Password
             });
 
-            var resp = await http.PostAsync(request.TLink, post, ct);
-            var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
-            var content = Encoding.GetEncoding("iso-8859-9").GetString(bytes);
+            var resp = await http.PostAsync(request.TLink, post, ct).ConfigureAwait(false);
+            var bytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+
+            // 3) KESİN decoding: ISO-8859-9 (28599) -> fallback 1254
+            string content;
+            try
+            {
+                content = Encoding.GetEncoding(28599).GetString(bytes); // ISO-8859-9
+            }
+            catch
+            {
+                content = Encoding.GetEncoding(1254).GetString(bytes);  // Windows-1254
+            }
+
+            content = (content ?? "").Trim();
+            if (!content.Contains("<Hesap", StringComparison.OrdinalIgnoreCase))
+            {
+                var preview = content.Length > 500 ? content[..500] : content;
+                throw new Exception($"İşBank XML yerine beklenmeyen içerik döndü (ilk 500): {preview}");
+            }
 
             var xml = new XmlDocument();
             xml.LoadXml(content);
