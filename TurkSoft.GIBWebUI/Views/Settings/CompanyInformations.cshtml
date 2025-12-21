@@ -198,9 +198,9 @@
                     <hr style="margin:10px 0 20px">
 
                     <div class="panel-body">
-                        <button type="submit" class="btn btn-success pull-right" style="margin:0 10px 10px 0">
+                      @*   <button type="submit" class="btn btn-success pull-right" style="margin:0 10px 10px 0">
                             Değişiklikleri Kaydet &nbsp;<span class="btn-label"><i class="glyphicon glyphicon-saved"></i></span>
-                        </button>
+                        </button> *@
                     </div>
 
                 </div>
@@ -384,7 +384,9 @@
 </div>
 
 @section Scripts {
-    <!-- Bu listeleri ister burada tut, ister ortak bir JS'e taşı -->
+    <script src="~/apps/listdata.js"></script>
+    <script type="module" src="~/Apps/CompanyInformations.js"></script>
+    @* <!-- Bu listeleri ister burada tut, ister ortak bir JS'e taşı -->
     <script>
         // Vergi Dairesi İl listesi
         window.vergiDaireIlList = [
@@ -448,8 +450,6 @@
             {"IlId":77,"IlAdi":"YALOVA"},{"IlId":78,"IlAdi":"KARABÜK"},{"IlId":79,"IlAdi":"KİLİS"},{"IlId":80,"IlAdi":"OSMANİYE"},
             {"IlId":81,"IlAdi":"DÜZCE"}
         ];
-    </script>
+    </script> *@
 
-    <!-- moment.js gerekiyorsa layout'ta ekli olduğundan emin ol -->
-    <script type="module" src="~/js/pages/Settings/CompanyInformations.js"></script>
 }

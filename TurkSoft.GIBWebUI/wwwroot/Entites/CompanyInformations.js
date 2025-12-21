@@ -2,7 +2,7 @@
 import BaseApiService from '../Base/BaseAPIService.js';
 
 // Controller ismiyle birebir olmalı
-const svc = new BaseApiService('GibCompanyInformations');
+const svc = new BaseApiService('GibGibFirm');
 
 export const list = (p = null) => svc.list(p);
 export const get = (id) => svc.get(id);

@@ -26,6 +26,14 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals
             });
+        },
+        // yyyy-MM-dd
+        toYmd: function (dateObj) {
+            const d = dateObj || new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
         }
     };
 
@@ -175,6 +183,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         return id;
     }
+
     // GİB için kullanılacak userId'yi UI'dan / global'den okur
     function getCurrentUserIdForGib() {
         let userId = 0;
@@ -219,6 +228,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         return userId;
     }
+
     function resolveBrandFromListData() {
         const listData = getListData();
         const brands = listData.BrandList || listData.brandList || listData.Brands || listData.brands || [];
@@ -235,11 +245,13 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
     function generateUUIDv4() {
         // GİB'in ETTN formatına uygun UUID v4
-        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-            const r = (Math.random() * 16) | 0;
-            const v = c === "x" ? r : (r & 0x3) | 0x8;
-            return v.toString(16);
-        }).toUpperCase();
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+            .replace(/[xy]/g, function (c) {
+                const r = (Math.random() * 16) | 0;
+                const v = c === "x" ? r : (r & 0x3) | 0x8;
+                return v.toString(16);
+            })
+            .toUpperCase();
     }
 
     function showAlert(type, message) {
@@ -420,11 +432,14 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         }
     }
 
+    // ✅ (2) ddlGoruntuDosyasi ilk veri seçili olsun
     function fillGoruntuDosyasiDropdown() {
         const listData = getListData();
         const arr = listData.GetXsltList || [];
         const $ddl = $("#ddlGoruntuDosyasi");
         if (!$ddl.length) return;
+
+        const currentVal = ($ddl.val() || "").toString();
 
         $ddl.empty();
         $ddl.append(new Option("Seçiniz", ""));
@@ -432,6 +447,13 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         arr.forEach(x => {
             $ddl.append(new Option(x, x));
         });
+
+        // Eğer değer yoksa ve liste doluysa ilk veriyi seç
+        if (!currentVal && arr.length > 0) {
+            $ddl.val(arr[0]).trigger("change");
+        } else if (currentVal) {
+            $ddl.val(currentVal).trigger("change");
+        }
     }
 
     // Export ekranında da Invoice.js mantığı: Session'dan seçilen mükellefi uygula
@@ -885,12 +907,12 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         $(document).on("change", "#ddlFaturaTipi", function () {
             invoiceModel.invoiceheader.InvoiceTypeCode = $(this).val();
-            toggleIstisnaOnLines();
+            toggleIstisnaOnLines(); // ISTISNA → KDV 0&disabled + istisna enabled
         });
     }
 
     /***********************************************************
-     *  BİRİM / İSTİSNA SELECTLERİ
+     *  BİRİM / İSTİSNA / KDV SELECTLERİ
      ***********************************************************/
     function fillBirimSelect($select) {
         const listData = getListData();
@@ -926,20 +948,68 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         });
     }
 
+    // ✅ (6) KDV oranları select list: 0-1-8-10-12-18-20, default 18 (ISTISNA değilse)
+    const KDV_RATE_OPTIONS = [0, 1, 8, 10, 12, 18, 20];
+    const DEFAULT_KDV_RATE = 18;
+
+    function fillKdvSelect($select, selectedVal) {
+        if (!$select || !$select.length) return;
+
+        // seçenekler zaten varsa tekrar basma
+        if ($select.children().length) {
+            if (selectedVal !== undefined && selectedVal !== null && selectedVal !== "") {
+                $select.val(String(selectedVal));
+            }
+            return;
+        }
+
+        $select.empty();
+        KDV_RATE_OPTIONS.forEach(r => {
+            $select.append(new Option(String(r), String(r)));
+        });
+
+        const v = selectedVal == null || selectedVal === "" ? DEFAULT_KDV_RATE : selectedVal;
+        $select.val(String(v));
+    }
+
+    // ✅ (5) ddlFaturaTipi ISTISNA ise KDV 0 ve disabled; değilse enabled + default 18
     function toggleIstisnaOnLines() {
         const isIstisna = $("#ddlFaturaTipi").val() === "ISTISNA";
-        $("#invoiceBody tbody tr, #invoiceBody tr").each(function () {
-            const $istisna = $(this).find(".js-line-istisna");
-            if (!$istisna.length) return;
 
-            if (isIstisna) {
-                $istisna.prop("disabled", false);
-                if ($istisna.children().length <= 1) {
-                    fillIstisnaSelect($istisna);
+        $("#invoiceBody tr").each(function () {
+            const $tr = $(this);
+
+            const $istisna = $tr.find(".js-line-istisna");
+            if ($istisna.length) {
+                if (isIstisna) {
+                    $istisna.prop("disabled", false);
+                    if ($istisna.children().length <= 1) {
+                        fillIstisnaSelect($istisna);
+                    }
+                } else {
+                    $istisna.prop("disabled", true).val("");
                 }
-            } else {
-                $istisna.prop("disabled", true).val("");
             }
+
+            const $kdv = $tr.find(".js-line-kdv");
+            if ($kdv.length) {
+                // kdv select'i garanti doldur
+                fillKdvSelect($kdv);
+
+                if (isIstisna) {
+                    $kdv.val("0").prop("disabled", true);
+                } else {
+                    $kdv.prop("disabled", false);
+                    // ISTISNA'dan dönüldüyse 0 kalmasın → 18'e çek
+                    const cur = ($kdv.val() || "").toString();
+                    if (!cur || cur === "0") {
+                        $kdv.val(String(DEFAULT_KDV_RATE));
+                    }
+                }
+            }
+
+            // Değişiklikler toplamları etkiler
+            calcLine($tr);
         });
     }
 
@@ -972,7 +1042,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 <input type="text" class="form-control input-sm js-line-amount" value="0,00" disabled>
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control input-sm js-line-kdv" value="20">
+                <select class="form-control input-sm js-line-kdv"></select>
             </td>
             <td>
                 <input type="text" class="form-control input-sm js-line-kdv-amount" value="0,00" disabled>
@@ -997,6 +1067,11 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         $tbody.append($row);
 
         fillBirimSelect($row.find(".js-line-unit"));
+
+        // KDV select + default 18 (ISTISNA ise toggle fonksiyonu 0'a çeker)
+        fillKdvSelect($row.find(".js-line-kdv"), DEFAULT_KDV_RATE);
+
+        // ISTISNA/KDV davranışı
         toggleIstisnaOnLines();
 
         renumberLines();
@@ -1339,8 +1414,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         let kdvLabelSuffix = "";
         if (kdvRates.length === 1) kdvLabelSuffix = " (%" + Utils.formatNumber(kdvRates[0], 0) + ")";
 
-        const aliciAdSoyad =
-            ((c.Person_FirstName || "") + " " + (c.Person_FamilyName || "")).trim() || c.PartyName || "";
+        const aliciAdSoyad = ((c.Person_FirstName || "") + " " + (c.Person_FamilyName || "")).trim() || c.PartyName || "";
 
         const aliciAdresSatir1 = c.StreetName || "";
         const aliciAdresSatir2 = [c.PostalZone || "", c.CitySubdivisionName || "", c.CityName || ""].filter(Boolean).join(" ");
@@ -1363,10 +1437,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
         html +=
             "          <tr><td><strong>" +
-            ($("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan")
-                .first()
-                .text()
-                .trim() ||
+            ($("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan").first().text().trim() ||
                 $("#sellerName, #lblSellerName, #txtSellerName, #txtUnvan").first().val() ||
                 "Satıcı Ünvanı") +
             "</strong></td></tr>";
@@ -1380,17 +1451,13 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             "</td></tr>";
         html += "          <tr><td>Web Sitesi:" + ($("#sellerWeb").val() || $("#sellerWeb").text() || "") + "</td></tr>";
         html += "          <tr><td>E-Posta:" + ($("#sellerEmail").val() || $("#sellerEmail").text() || "") + "</td></tr>";
-        html +=
-            "          <tr><td>Vergi Dairesi:" +
-            ($("#sellerVergiDairesi").val() || $("#sellerVergiDairesi").text() || "") +
-            "</td></tr>";
+        html += "          <tr><td>Vergi Dairesi:" + ($("#sellerVergiDairesi").val() || $("#sellerVergiDairesi").text() || "") + "</td></tr>";
         html += "          <tr><td>VKN:" + ($("#sellerVkn").val() || $("#sellerVkn").text() || "") + "</td></tr>";
         html +=
             "          <tr><td>TICARETSICILNO:" +
             ($("#sellerTicaretSicilNo").val() || $("#sellerTicaretSicilNo").text() || "") +
             "</td></tr>";
-        html +=
-            "          <tr><td>MERSISNO:" + ($("#sellerMersisNo").val() || $("#sellerMersisNo").text() || "") + "</td></tr>";
+        html += "          <tr><td>MERSISNO:" + ($("#sellerMersisNo").val() || $("#sellerMersisNo").text() || "") + "</td></tr>";
         html += "        </table>";
         html += "      </div>";
 
@@ -1490,39 +1557,16 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         html += "      <div class='col-xs-6'>";
         html += "        <table class='table table-condensed invoice-table-no-border text-xs'>";
         html +=
-            "          <tr><th>Mal Hizmet Toplam Tutarı</th><td class='text-right'>" +
-            fmt(malHizmetToplam, 2) +
-            currencySuffix +
-            "</td></tr>";
+            "          <tr><th>Mal Hizmet Toplam Tutarı</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
+        html += "          <tr><th>Toplam İskonto</th><td class='text-right'>" + fmt(toplamIskonto, 2) + currencySuffix + "</td></tr>";
         html +=
-            "          <tr><th>Toplam İskonto</th><td class='text-right'>" +
-            fmt(toplamIskonto, 2) +
-            currencySuffix +
-            "</td></tr>";
+            "          <tr><th>KDV Matrahı" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(malHizmetToplam, 2) + currencySuffix + "</td></tr>";
         html +=
-            "          <tr><th>KDV Matrahı" +
-            kdvLabelSuffix +
-            "</th><td class='text-right'>" +
-            fmt(malHizmetToplam, 2) +
-            currencySuffix +
-            "</td></tr>";
+            "          <tr><th>Hesaplanan KDV" + kdvLabelSuffix + "</th><td class='text-right'>" + fmt(kdvToplam, 2) + currencySuffix + "</td></tr>";
         html +=
-            "          <tr><th>Hesaplanan KDV" +
-            kdvLabelSuffix +
-            "</th><td class='text-right'>" +
-            fmt(kdvToplam, 2) +
-            currencySuffix +
-            "</td></tr>";
+            "          <tr><th>Vergiler Dahil Toplam Tutar</th><td class='text-right'>" + fmt(vergilerDahil, 2) + currencySuffix + "</td></tr>";
         html +=
-            "          <tr><th>Vergiler Dahil Toplam Tutar</th><td class='text-right'>" +
-            fmt(vergilerDahil, 2) +
-            currencySuffix +
-            "</td></tr>";
-        html +=
-            "          <tr><th>Ödenecek Tutar</th><td class='text-right'><strong>" +
-            fmt(odenecek, 2) +
-            currencySuffix +
-            "</strong></td></tr>";
+            "          <tr><th>Ödenecek Tutar</th><td class='text-right'><strong>" + fmt(odenecek, 2) + currencySuffix + "</strong></td></tr>";
         html += "        </table>";
         html += "      </div>";
         html += "    </div>";
@@ -1537,6 +1581,54 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     /***********************************************************
      *  Invoice Entity (DTO) – Invoice.js gibi FULL GRAPH
      ***********************************************************/
+
+    // (DB zorunlulukları için) select'ten ilk dolu değeri bul
+    function getFirstNonEmptySelectValue($select) {
+        if (!$select || !$select.length) return "";
+        const opts = $select.find("option").toArray();
+        for (const o of opts) {
+            const v = (o.value || "").toString();
+            if (v && v !== "0") return v;
+        }
+        return "";
+    }
+
+    // ✅ (1) Ödeme tabı alanları UI'da zorunlu değil; DB zorunluysa payload'a default hazırla
+    function buildPaymentModelForEntity(invoiceCurrency) {
+        const currency = (invoiceCurrency || $("#ddlParaBirimi").val() || "TRY").toString().toUpperCase();
+
+        const $means = $("#PaymentMeansCode");
+        const $due = $("#PaymentDueDate");
+        const $note = $("#InstructionNote");
+        const $channel = $("#PaymentChannelCode");
+        const $acc = $("#PayeeFinancialAccount");
+        const $payeeCur = $("#PayeeFinancialCurrencyCode");
+
+        let means = ($means.val() || "").toString().trim();
+        let due = ($due.val() || "").toString().trim();
+        let note = ($note.val() || "").toString().trim();
+        let channel = ($channel.val() || "").toString().trim();
+        let account = ($acc.val() || "").toString().trim();
+        let payeeCur = ($payeeCur.val() || "").toString().trim();
+
+        // Eğer hiç girilmediyse default hazırla (null göndermemek için)
+        if (!means) means = getFirstNonEmptySelectValue($means) || "OTHER";
+        if (!channel) channel = getFirstNonEmptySelectValue($channel) || "";
+        if (!due) due = Utils.toYmd(new Date());
+        if (!payeeCur) payeeCur = getFirstNonEmptySelectValue($payeeCur) || currency;
+        if (!account) account = "N/A";
+        if (!note) note = "";
+
+        return {
+            PaymentMeansCode: means,
+            PaymentDueDate: due,
+            InstructionNote: note,
+            PaymentChannelCode: channel,
+            PayeeFinancialAccount: account,
+            PayeeFinancialCurrencyCode: payeeCur
+        };
+    }
+
     function buildInvoiceEntityFromUI() {
         recalcTotals();
         const model = buildInvoiceModelFromUI();
@@ -1607,6 +1699,13 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             total = Utils.parseNumber(txtTotal);
         }
 
+        // ✅ (3) txtSiparisTarih aktif gün (UI'da set ediliyor) + ✅ (4) sipariş no boşsa DB için default gönder
+        const siparisNoUi = ($("#txtSiparisNo").val() || "").toString().trim();
+        const siparisTarihUi = ($("#txtSiparisTarih").val() || "").toString().trim();
+
+        const siparisNoForDb = siparisNoUi || ("SIP-" + Date.now());
+        const siparisTarihForDb = siparisTarihUi || $("#txtIssueDate").val() || Utils.toYmd(new Date());
+
         // -------- ROOT INVOICE --------
         const invoice = {
             ...baseFor(rowVersionBase64),
@@ -1624,6 +1723,12 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             TemplateName: $("#ddlGoruntuDosyasi").val() || null,
             InvoiceTypeCode: h.InvoiceTypeCode || null,
             Scenario: h.Scenario || null,
+
+            // (DB zorunlu olabilir diye hem TR isimle hem EN isimle ekliyoruz; backend ignore ediyorsa sorun olmaz)
+            SiparisNo: siparisNoForDb,
+            SiparisTarih: siparisTarihForDb,
+            OrderNo: siparisNoForDb,
+            OrderDate: siparisTarihForDb,
 
             Customer: null,
             InvoicesItems: [],
@@ -1773,6 +1878,10 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         Object.keys(taxMap).forEach(rateStr => {
             const rate = Number(rateStr);
             const amount = taxMap[rateStr] || 0;
+
+            // 0 KDV / 0 tutar satırlarını DB'ye boş yere göndermeyelim
+            if (amount <= 0) return;
+
             invoice.InvoicesTaxes.push({
                 ...baseFor(),
                 Id: 0,
@@ -1832,8 +1941,10 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         });
 
         // -------- PAYMENT (Invoice.js gibi) --------
-        if (model.payment) {
-            const p = model.payment;
+        // ✅ (1) UI zorunlu değil; model.payment null olsa bile DB için default üretip gönderiyoruz
+        const paymentModel = model.payment || buildPaymentModelForEntity(currency);
+        if (paymentModel) {
+            const p = paymentModel;
 
             const paymentTypeName = $("#PaymentMeansCode option:selected").text() || p.PaymentMeansCode || "Ödeme";
             const paymentChannelText = $("#PaymentChannelCode option:selected").text() || p.PaymentChannelCode || "";
@@ -2064,9 +2175,12 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
     }
 
     /***********************************************************
-     *  ZORUNLU ALAN KONTROLÜ (orijinal)
+     *  ZORUNLU ALAN KONTROLÜ (güncellendi)
      ***********************************************************/
-    function validateForm() {
+    // ✅ (1) Ödeme tabı zorunluluğu, Taslak/GİB gönder butonunda kaldırıldı
+    // ✅ (4) txtSiparisNo zorunluluğu (DB tarafı için default gönderiliyor; UI validation yok)
+    function validateForm(options) {
+        const opts = options || {};
         const errors = [];
         const invalidElements = [];
 
@@ -2121,9 +2235,16 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             requireSelect("#ddlIlce", "İlçe seçiniz.", [""]);
         }
 
-        requireSelect("#PaymentMeansCode", "Ödeme şeklini seçiniz.", [""]);
-        requireInput("#PaymentDueDate", "Ödeme tarihini giriniz.");
-        requireSelect("#PayeeFinancialCurrencyCode", "Hesap para birimini seçiniz.", [""]);
+        // ❌ ÖDEME alanları artık Taslak/GİB gönderimde zorunlu değil
+        // (İsterseniz ileride farklı bir modda zorunlu yapmak için opts.requirePayment kullanılabilir)
+        if (opts.requirePayment === true) {
+            requireSelect("#PaymentMeansCode", "Ödeme şeklini seçiniz.", [""]);
+            requireInput("#PaymentDueDate", "Ödeme tarihini giriniz.");
+            requireSelect("#PayeeFinancialCurrencyCode", "Hesap para birimini seçiniz.", [""]);
+        } else {
+            // varsa eski invalid işaretlerini temizle
+            $("#PaymentMeansCode,#PaymentDueDate,#PayeeFinancialCurrencyCode").removeClass("is-invalid");
+        }
 
         if ($("#invoiceBody tr").length === 0) {
             errors.push("En az bir fatura kalemi ekleyiniz.");
@@ -2188,19 +2309,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         }
     }
 
-    function getGibPortalBaseUrl() {
-        let baseUrl = window.gibPortalApiBaseUrl;
-        if (!baseUrl && typeof gibPortalApiBaseUrl !== "undefined") {
-            baseUrl = gibPortalApiBaseUrl;
-        }
-
-        if (!baseUrl) {
-            throw new Error("GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).");
-        }
-
-        if (!baseUrl.endsWith("/")) baseUrl += "/";
-        return baseUrl;
-    }
     async function sendInvoiceToGibById(invoiceId) {
         // Id'yi garanti sayıya çevir
         const numericId = Number(invoiceId);
@@ -2219,6 +2327,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         // BaseUrl sonu / ile bitmiyorsa ekle
         const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         const AliciEtiketi = $("#ddlAliciEtiketi").val() || "";
+
         // Query string'i güvenli şekilde üret
         const qs = new URLSearchParams({
             userId: String(userId),
@@ -2228,7 +2337,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         if (AliciEtiketi) {
             qs.append("alias", AliciEtiketi);
         }
-        // /api/TurkcellEFatura/einvoice/send-json/{id}?userId=...&isExport=false
+
         const url =
             normBase +
             "TurkcellEFatura/einvoice/send-json/" +
@@ -2239,12 +2348,9 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         const response = await fetch(url, {
             method: "POST",
-            headers: {
-                "Accept": "application/json"
-            }
+            headers: { Accept: "application/json" }
         });
 
-        // Hem hata hem başarı için text al
         const contentType = (response.headers.get("content-type") || "").toLowerCase();
         const isJson = contentType.includes("application/json");
         const rawText = await response.text();
@@ -2258,12 +2364,10 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             }
         }
 
-        // HTTP 200–299 dışı ise hata
         if (!response.ok) {
             let warningMessages = [];
 
             if (data && typeof data === "object") {
-                // Örnek: {"uyarı":["e-Fatura göndermiş olduğunuz firmanın VKN/TCKN ile etiketi(alias) uyuşmuyor."]}
                 const uyarilarRaw =
                     data["uyarı"] ||
                     data["uyari"] ||
@@ -2283,7 +2387,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 (warningMessages.length
                     ? warningMessages.join("\n")
                     : (data && (data.message || data.Message)) ||
-                    `GİB API isteği başarısız. Status: ${response.status} ${response.statusText}`); // eslint-disable-line max-len
+                    `GİB API isteği başarısız. Status: ${response.status} ${response.statusText}`);
 
             const err = new Error(msg);
             err.status = response.status;
@@ -2291,7 +2395,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             throw err;
         }
 
-        // Başarılı durum: JSON yoksa, text'ten parse etmeyi dene
         if (!data && rawText) {
             try {
                 data = JSON.parse(rawText);
@@ -2302,7 +2405,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         return data || {};
     }
-   
 
     function handleGibSendResponse(gibRes) {
         const uuid = (gibRes && (gibRes.id || gibRes.uuid || gibRes.ettn)) || "";
@@ -2318,35 +2420,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         } else {
             showAlert("danger", (gibRes && (gibRes.message || gibRes.Message)) || "Fatura GİB'e gönderilirken bir hata oluştu.");
         }
-    }
-
-    async function downloadBinaryFromGib(url, defaultFileName) {
-        const response = await fetch(url, { method: "GET" });
-
-        if (!response.ok) {
-            const text = await response.text().catch(() => "");
-            throw new Error("Dosya indirme isteği başarısız. Status: " + response.status + " " + text);
-        }
-
-        const blob = await response.blob();
-        let fileName = defaultFileName || "file";
-
-        const contentDisposition = response.headers.get("content-disposition");
-        if (contentDisposition) {
-            const match = contentDisposition.match(/filename\*?=(?:UTF-8''|)([^;]+)/i);
-            if (match && match[1]) {
-                fileName = decodeURIComponent(match[1].replace(/["']/g, "").trim());
-            }
-        }
-
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(blobUrl);
     }
 
     /***********************************************************
@@ -2407,7 +2480,8 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
             const isDraftButton = this.id === "btnDraftSave";
 
-            const validation = validateForm();
+            // ✅ (1) Ödeme zorunluluğu kaldırıldı → requirePayment:false
+            const validation = validateForm({ requirePayment: false });
             if (!validation.isValid) {
                 const htmlErrors = validation.errors.map(m => "• " + m).join("<br>");
                 showAlert("danger", "Lütfen zorunlu alanları doldurunuz:<br>" + htmlErrors);
@@ -2442,6 +2516,8 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 showAlert("danger", isDraftButton ? "Taslak ihracat fatura kaydedilirken bir hata oluştu." : "İhracat faturası GİB'e gönderilirken bir hata oluştu.");
             }
         });
+
+        // PDF İndir
         $(document).on("click", "#btnDownloadPDF", function (e) {
             e.preventDefault();
 
@@ -2463,7 +2539,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
             const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
-            // 🔹 userId'yi oku
             let userId;
             try {
                 userId = getCurrentUserIdForGib();
@@ -2479,7 +2554,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
                 standardXslt: "true"
             });
 
-            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/pdf/{uuid}?userId=...&standardXslt=true
             const url =
                 normBase +
                 "TurkcellEFatura/einvoice/outbox/pdf/" +
@@ -2490,6 +2564,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
             window.open(url, "_blank");
         });
+
         // XML (UBL) İndir
         $(document).on("click", "#btnDownloadXML", function (e) {
             e.preventDefault();
@@ -2512,7 +2587,6 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
             const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
-            // 🔹 userId'yi oku
             let userId;
             try {
                 userId = getCurrentUserIdForGib();
@@ -2524,10 +2598,9 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
             }
 
             const qs = new URLSearchParams({
-                userId: String(userId),
+                userId: String(userId)
             });
 
-            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/ubl/{uuid}?userId=...
             const url =
                 normBase +
                 "TurkcellEFatura/einvoice/outbox/ubl/" +
@@ -2624,7 +2697,7 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         fillSubeDropdown();
         fillSourceUrnDropdown();
         fillInvoicePrefixDropdown();
-        fillGoruntuDosyasiDropdown();
+        fillGoruntuDosyasiDropdown(); // ✅ (2) ilk veri seçimi burada
         fillAliciEtiketiDropdown();
 
         // Export ekranında da session seçimini uygula
@@ -2648,15 +2721,17 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
 
         const now = new Date();
         if ($("#txtIssueDate").length && !$("#txtIssueDate").val()) {
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, "0");
-            const d = String(now.getDate()).padStart(2, "0");
-            $("#txtIssueDate").val(`${y}-${m}-${d}`);
+            $("#txtIssueDate").val(Utils.toYmd(now));
         }
         if ($("#txtIssueTime").length && !$("#txtIssueTime").val()) {
             const hh = String(now.getHours()).padStart(2, "0");
             const mm = String(now.getMinutes()).padStart(2, "0");
             $("#txtIssueTime").val(`${hh}:${mm}`);
+        }
+
+        // ✅ (3) txtSiparisTarih tarihi aktif gün seçili olsun
+        if ($("#txtSiparisTarih").length && !$("#txtSiparisTarih").val()) {
+            $("#txtSiparisTarih").val(Utils.toYmd(now));
         }
 
         if ($("#ddlSenaryo").length) {
@@ -2682,6 +2757,9 @@ import { create as createInvoice } from "../entites/ExportInvoice.js";
         if ($("#btnLineAdd").length) {
             $("#btnLineAdd").trigger("click");
         }
+
+        // İlk açılışta KDV/İstisna kuralını uygula (özellikle ISTISNA için KDV=0 disabled)
+        toggleIstisnaOnLines();
     }
 
     function init() {

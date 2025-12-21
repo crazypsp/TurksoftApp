@@ -151,13 +151,9 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             let b = (baseUrl || "").toString().trim();
             if (!b) return "";
 
-            // slash garanti
             if (!b.endsWith("/")) b += "/";
 
-            // baseUrl zaten /api/ içeriyor mu?
             const hasApiSegment = /\/api\/($|.*)/i.test(b);
-
-            // yoksa /api/ ekle
             if (!hasApiSegment) b += "api/";
 
             return b;
@@ -174,7 +170,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             userId: String(userId)
         });
 
-        // ✅ Controller: TurkcellEFaturaController  => /api/TurkcellEFatura/...
         const url =
             normBase +
             "TurkcellEFatura/earchive/send-json/" +
@@ -230,7 +225,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         return data || {};
     }
 
-
     /***********************************************************
      *  ListData
      ***********************************************************/
@@ -261,6 +255,31 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
 
         $form.prepend($alert);
         setTimeout(function () { $alert.fadeOut(400, function () { $(this).remove(); }); }, 5000);
+    }
+
+    function pad2(n) { return String(n).padStart(2, "0"); }
+    function todayYmd() {
+        const now = new Date();
+        return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    }
+    function nowTimeHm() {
+        const now = new Date();
+        return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+    }
+    function safeFirstNonEmptyOptionValue($select, invalids) {
+        if (!$select || !$select.length) return "";
+        const bad = invalids || ["", "0"];
+        const opts = $select.find("option");
+        for (let i = 0; i < opts.length; i++) {
+            const v = ($(opts[i]).attr("value") ?? "").toString();
+            if (bad.indexOf(v) === -1) return v;
+        }
+        return "";
+    }
+    function buildSiparisNoDefault() {
+        const d = new Date();
+        const stamp = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+        return `SIP-${stamp}`;
     }
 
     /***********************************************************
@@ -380,6 +399,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         }
     }
 
+    // ✅ (2) ddlGoruntuDosyasi ilk veri seçili
     function fillGoruntuDosyasiDropdown() {
         const listData = getListData();
         const arr = listData.GetXsltList || [];
@@ -387,8 +407,17 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         if (!$ddl.length) return;
 
         $ddl.empty();
+
+        // placeholder kalsın ama ilk gerçek veri seçili olsun
         $ddl.append(new Option("Seçiniz", ""));
+
         arr.forEach(x => $ddl.append(new Option(x, x)));
+
+        if (arr.length > 0) {
+            $ddl.val(arr[0]).trigger("change");
+        } else {
+            $ddl.val("").trigger("change");
+        }
     }
 
     function fillParaBirimiDropdown() {
@@ -561,7 +590,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             if (identifier) $("#txtIdentificationID").val(identifier);
             if (title) $("#txtPartyName").val(title);
 
-            // ad/soyad boşsa ünvan’dan türet
             const $fn = $("#txtPersonFirstName");
             const $ln = $("#txtPersonLastName");
             if (title && !$fn.val() && !$ln.val()) {
@@ -576,7 +604,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
                 }
             }
 
-            // model’i güncelle
             const flat = readCustomerFromUI();
             invoiceModel.Customer = flat;
             invoiceModel.customer = {
@@ -619,7 +646,12 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         });
 
         $(document).on("change", "#ddlSenaryo", function () { invoiceModel.invoiceheader.Scenario = $(this).val(); });
-        $(document).on("change", "#ddlFaturaTipi", function () { invoiceModel.invoiceheader.InvoiceTypeCode = $(this).val(); toggleIstisnaOnLines(); });
+
+        // ✅ (5)(6) fatura tipi değişince satırlarda KDV/İstisna kuralları
+        $(document).on("change", "#ddlFaturaTipi", function () {
+            invoiceModel.invoiceheader.InvoiceTypeCode = $(this).val();
+            applyInvoiceTypeRulesOnLines();
+        });
 
         $(document).on("change", "#EArchiveSendType", function () { invoiceModel.invoiceheader.EArchiveSendType = $(this).val() || "KAGIT"; });
         $(document).on("change", "#IsInternetSale", function () { invoiceModel.invoiceheader.IsInternetSale = $(this).is(":checked"); });
@@ -652,19 +684,60 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         });
     }
 
-    function toggleIstisnaOnLines() {
-        const isIstisna = $("#ddlFaturaTipi").val() === "ISTISNA";
-        $("#invoiceBody tr").each(function () {
-            const $istisna = $(this).find(".js-line-istisna");
-            if (!$istisna.length) return;
+    /***********************************************************
+     *  ✅ (5)(6) KDV select + ISTISNA kuralı
+     ***********************************************************/
+    const KDV_OPTIONS = [0, 1, 8, 10, 12, 18, 20];
 
-            if (isIstisna) {
-                $istisna.prop("disabled", false);
-                if ($istisna.children().length <= 1) fillIstisnaSelect($istisna);
-            } else {
-                $istisna.prop("disabled", true).val("");
-            }
+    function fillKdvSelect($select, selectedValue) {
+        if (!$select || !$select.length) return;
+        const sel = (selectedValue == null || selectedValue === "") ? "18" : String(selectedValue);
+
+        $select.empty();
+        KDV_OPTIONS.forEach(v => {
+            $select.append(new Option(String(v), String(v)));
         });
+
+        // default 18
+        $select.val(KDV_OPTIONS.includes(Number(sel)) ? sel : "18");
+    }
+
+    function applyInvoiceTypeRulesOnLines() {
+        const isIstisna = $("#ddlFaturaTipi").val() === "ISTISNA";
+
+        $("#invoiceBody tr").each(function () {
+            const $row = $(this);
+
+            // İstisna dropdown
+            const $istisna = $row.find(".js-line-istisna");
+            if ($istisna.length) {
+                if (isIstisna) {
+                    $istisna.prop("disabled", false);
+                    if ($istisna.children().length <= 1) fillIstisnaSelect($istisna);
+                } else {
+                    $istisna.prop("disabled", true).val("");
+                }
+            }
+
+            // KDV dropdown
+            const $kdv = $row.find(".js-line-kdv");
+            if ($kdv.length) {
+                if (isIstisna) {
+                    $kdv.empty().append(new Option("0", "0"));
+                    $kdv.val("0").prop("disabled", true);
+                } else {
+                    const currentVal = ($kdv.val() || "").toString();
+                    fillKdvSelect($kdv, (currentVal && currentVal !== "0") ? currentVal : "18");
+                    $kdv.prop("disabled", false);
+                    if (!currentVal || currentVal === "0") $kdv.val("18");
+                }
+            }
+
+            // satır yeniden hesapla (tek sefer totals sonra)
+            calcLine($row, true);
+        });
+
+        recalcTotals();
     }
 
     /***********************************************************
@@ -681,7 +754,10 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             <td><input type="number" step="0.01" class="form-control input-sm js-line-disc-rate" value="0"></td>
             <td><input type="text" class="form-control input-sm js-line-disc-amount" value="0,00" disabled></td>
             <td><input type="text" class="form-control input-sm js-line-amount" value="0,00" disabled></td>
-            <td><input type="number" step="0.01" class="form-control input-sm js-line-kdv" value="20"></td>
+
+            <!-- ✅ (6) KDV Oranı select -->
+            <td><select class="form-control input-sm js-line-kdv"></select></td>
+
             <td><input type="text" class="form-control input-sm js-line-kdv-amount" value="0,00" disabled></td>
             <td><select class="form-control input-sm js-line-istisna" disabled></select></td>
             <td class="text-center">
@@ -699,7 +775,10 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         $tbody.append($row);
 
         fillBirimSelect($row.find(".js-line-unit"));
-        toggleIstisnaOnLines();
+
+        // KDV select doldur + ISTISNA kurallarını uygula
+        fillKdvSelect($row.find(".js-line-kdv"), "18");
+        applyInvoiceTypeRulesOnLines(); // satırları da günceller
 
         renumberLines();
         calcLine($row);
@@ -738,7 +817,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         return { indirim, matrah, kdv, toplam };
     }
 
-    function calcLine($row) {
+    function calcLine($row, skipTotals) {
         const qty = Utils.parseNumber($row.find(".js-line-qty").val());
         const unitPrice = Utils.parseNumber($row.find(".js-line-price").val());
         const discRate = Utils.parseNumber($row.find(".js-line-disc-rate").val());
@@ -752,7 +831,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         $row.find(".js-line-kdv-amount").val(Utils.formatNumber(vals.kdv));
         $row.find(".js-line-total").val(vals.toplam);
 
-        recalcTotals();
+        if (!skipTotals) recalcTotals();
     }
 
     function recalcTotals() {
@@ -790,7 +869,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
 
     /***********************************************************
      *  Preview (mevcut render fonksiyonun aynen korunuyor)
-     *  buildInvoiceModelFromUI içinde customer + ek tablolar eklendi
      ***********************************************************/
     function buildInvoiceModelFromUI() {
         const model = JSON.parse(JSON.stringify(invoiceModel));
@@ -820,7 +898,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         h.IsInternet_Delivery_FirstName = $("#IsInternet_Delivery_FirstName").val() || null;
         h.IsInternet_Delivery_FamilyName = $("#IsInternet_Delivery_FamilyName").val() || null;
 
-        // Customer (preview için)
         const flatCustomer = readCustomerFromUI();
         model.Customer = flatCustomer;
         model.customer = {
@@ -906,7 +983,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         return model;
     }
 
-    // ==== Preview CSS + renderInvoicePreview ==== (senin gönderdiğin hali korudum)
+    // ==== Preview CSS + renderInvoicePreview ==== (senin gönderdiğin hali korunuyor)
     let previewStylesInjected = false;
     function ensurePreviewStyles() {
         if (previewStylesInjected) return;
@@ -931,15 +1008,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
     }
 
     function renderInvoicePreview(model) {
-        // Senin gönderdiğin uzun render fonksiyonunu değiştirmedim:
-        // (Buraya aynen yapıştırılmış hali var – kısaltmıyorum diye aynı bıraktım.)
-        // -----
-        // NOT: Bu cevapta yer kısıtı için renderInvoicePreview gövdesini
-        // önceki mesajındakiyle birebir aynı tuttuğumu varsayıyorum.
-        // İstersen birebir tekrar da basarım.
-        // -----
-        // Pratikte: senden gelen renderInvoicePreview fonksiyonunu buraya aynen koy.
-        // -----
         ensurePreviewStyles();
 
         const h = model.invoiceheader || {};
@@ -1134,6 +1202,18 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             total = Utils.parseNumber(txtTotal);
         }
 
+        // ✅ TemplateName DB null olmasın
+        const templateNameUi = ($("#ddlGoruntuDosyasi").val() || "").toString();
+        const templateNameDefault = templateNameUi || safeFirstNonEmptyOptionValue($("#ddlGoruntuDosyasi"), [""]) || "DEFAULT";
+
+        // ✅ (4) Sipariş No DB null olmasın
+        const orderNoUi = ($("#txtSiparisNo").val() || "").toString().trim();
+        const orderNoDefault = orderNoUi || buildSiparisNoDefault();
+
+        // ✅ (3) Sipariş Tarihi DB null olmasın
+        const orderDateUi = ($("#txtSiparisTarih").val() || "").toString().trim();
+        const orderDateDefault = orderDateUi || todayYmd();
+
         // ROOT INVOICE graph
         const invoice = {
             ...baseFor(rowVersionBase64),
@@ -1149,7 +1229,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             BranchCode: $("#ddlSubeKodu").val() || null,
             SourceUrn: null,
             InvoicePrefix: $("#ddlInvoicePrefix").val() || null,
-            TemplateName: $("#ddlGoruntuDosyasi").val() || null,
+            TemplateName: templateNameDefault,
             InvoiceTypeCode: h.InvoiceTypeCode || null,
             Scenario: h.Scenario || null,
 
@@ -1181,12 +1261,12 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
                 DeliveryPartyName: h.IsInternet_Delivery_PartyName || "",
                 DeliveryFirstName: h.IsInternet_Delivery_FirstName || "",
                 DeliveryFamilyName: h.IsInternet_Delivery_FamilyName || "",
-                OrderNo: $("#txtSiparisNo").val() || "",
-                OrderDate: $("#txtSiparisTarih").val() || null
+                OrderNo: orderNoDefault,
+                OrderDate: orderDateDefault
             }
         };
 
-        // CUSTOMER + ADDRESS (invoice.js ile aynı)
+        // CUSTOMER + ADDRESS
         const flatCustomer = model.Customer || readCustomerFromUI();
         const nameParts = splitNameSurname(flatCustomer);
 
@@ -1219,7 +1299,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         customerEntity.Addresses.push(addressEntity);
         invoice.Customer = customerEntity;
 
-        // ITEMS (FK sorununu çözen kritik kısım: Item graph dolu)
+        // ITEMS
         (model.invoiceLines || []).forEach((l, idx) => {
             const lineDiscountRate = Number(l.DiscountRate || 0);
             const lineDiscountAmount = Number(l.DiscountAmount || 0);
@@ -1228,7 +1308,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
                 ...baseFor(),
                 Id: 0,
                 Name: l.ItemName || ("Satır " + (idx + 1)),
-                Code: l.SellerItemCode || ("ITEM-" + (idx + 1)), // istersen burada daha stabil kod üret
+                Code: l.SellerItemCode || ("ITEM-" + (idx + 1)),
                 BrandId: 0,
                 UnitId: 0,
                 Price: Number(l.Price || 0),
@@ -1321,62 +1401,77 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             });
         }
 
-        // PAYMENT (invoice.js yaklaşımı)
+        /***********************************************************
+         *  ✅ (1) Ödeme zorunluluğu kalktı ama DB null olmasın diye
+         *  default payment hazırlayıp HER ZAMAN gönderiyoruz.
+         ***********************************************************/
+        const $meansSel = $("#PaymentMeansCode");
+        const $channelSel = $("#PaymentChannelCode");
+        const $payeeCurSel = $("#PayeeFinancialCurrencyCode");
+
         const p = {
-            PaymentMeansCode: $("#PaymentMeansCode").val() || "",
-            PaymentDueDate: $("#PaymentDueDate").val() || "",
-            InstructionNote: $("#InstructionNote").val() || "",
-            PaymentChannelCode: $("#PaymentChannelCode").val() || "",
-            PayeeFinancialAccount: $("#PayeeFinancialAccount").val() || "",
-            PayeeFinancialCurrencyCode: $("#PayeeFinancialCurrencyCode").val() || ""
+            PaymentMeansCode: ($meansSel.val() || "").toString().trim(),
+            PaymentDueDate: ($("#PaymentDueDate").val() || "").toString().trim(),
+            InstructionNote: ($("#InstructionNote").val() || "").toString().trim(),
+            PaymentChannelCode: ($channelSel.val() || "").toString().trim(),
+            PayeeFinancialAccount: ($("#PayeeFinancialAccount").val() || "").toString().trim(),
+            PayeeFinancialCurrencyCode: ($payeeCurSel.val() || "").toString().trim()
         };
 
-        const paymentHasData = Object.values(p).some(v => (v || "").toString().trim() !== "");
-        if (paymentHasData) {
-            const paymentTypeName = $("#PaymentMeansCode option:selected").text() || p.PaymentMeansCode || "Ödeme";
-            const paymentChannelText = $("#PaymentChannelCode option:selected").text() || p.PaymentChannelCode || "";
-            const paymentCurrency = (p.PayeeFinancialCurrencyCode || currency || "TRY").toString().toUpperCase();
-            const paymentDateIso = p.PaymentDueDate ? (p.PaymentDueDate + "T00:00:00") : (invoice.InvoiceDate || nowIso);
+        // defaults
+        if (!p.PaymentMeansCode) p.PaymentMeansCode = safeFirstNonEmptyOptionValue($meansSel, [""]) || "DEFAULT";
+        if (!p.PaymentChannelCode) p.PaymentChannelCode = safeFirstNonEmptyOptionValue($channelSel, [""]) || "";
+        if (!p.PayeeFinancialCurrencyCode) p.PayeeFinancialCurrencyCode = currency || "TRY";
+        if (!p.PaymentDueDate) p.PaymentDueDate = ($("#txtIssueDate").val() || "").toString().trim() || todayYmd();
 
-            const paymentType = { ...baseFor(), Id: 0, Name: paymentTypeName, Desc: paymentChannelText || "Ödeme Şekli", Payments: [] };
-            const bank = { ...baseFor(), Id: 0, Name: "Banka", SwiftCode: "", Country: flatCustomer.CountryName || "TR", City: flatCustomer.CityName || "", PaymentAccounts: [] };
+        const paymentTypeNameRaw = ($meansSel.find("option:selected").text() || "").trim();
+        const paymentTypeName =
+            (paymentTypeNameRaw && paymentTypeNameRaw.toLowerCase() !== "seçiniz")
+                ? paymentTypeNameRaw
+                : (p.PaymentMeansCode || "Ödeme");
 
-            const paymentAccount = {
-                ...baseFor(),
-                Id: 0,
-                Name: p.PayeeFinancialAccount || "Hesap",
-                Desc: paymentChannelText || "",
-                BankId: 0,
-                AccountNo: p.PayeeFinancialAccount || "",
-                Iban: "",
-                Currency: paymentCurrency,
-                Bank: bank,
-                Payments: []
-            };
+        const paymentChannelText = ($channelSel.find("option:selected").text() || "").trim();
+        const paymentCurrency = (p.PayeeFinancialCurrencyCode || currency || "TRY").toString().toUpperCase();
+        const paymentDateIso = p.PaymentDueDate ? (p.PaymentDueDate + "T00:00:00") : (invoice.InvoiceDate || nowIso);
 
-            const paymentEntity = {
-                ...baseFor(),
-                Id: 0,
-                PaymentTypeId: 0,
-                PaymentAccountId: 0,
-                Amount: invoice.Total || 0,
-                Currency: paymentCurrency,
-                Date: paymentDateIso,
-                Note: p.InstructionNote || "",
-                PaymentType: paymentType,
-                PaymentAccount: paymentAccount,
-                InvoicesPayments: []
-            };
+        const paymentType = { ...baseFor(), Id: 0, Name: paymentTypeName, Desc: paymentChannelText || "Ödeme Şekli", Payments: [] };
+        const bank = { ...baseFor(), Id: 0, Name: "Banka", SwiftCode: "", Country: flatCustomer.CountryName || "TR", City: flatCustomer.CityName || "", PaymentAccounts: [] };
 
-            invoice.InvoicesPayments.push({
-                ...baseFor(),
-                Id: 0,
-                InvoiceId: 0,
-                PaymentId: 0,
-                Invoice: null,
-                Payment: paymentEntity
-            });
-        }
+        const paymentAccount = {
+            ...baseFor(),
+            Id: 0,
+            Name: p.PayeeFinancialAccount || "Hesap",
+            Desc: paymentChannelText || "",
+            BankId: 0,
+            AccountNo: p.PayeeFinancialAccount || "",
+            Iban: "",
+            Currency: paymentCurrency,
+            Bank: bank,
+            Payments: []
+        };
+
+        const paymentEntity = {
+            ...baseFor(),
+            Id: 0,
+            PaymentTypeId: 0,
+            PaymentAccountId: 0,
+            Amount: invoice.Total || 0,
+            Currency: paymentCurrency,
+            Date: paymentDateIso,
+            Note: p.InstructionNote || "",
+            PaymentType: paymentType,
+            PaymentAccount: paymentAccount,
+            InvoicesPayments: []
+        };
+
+        invoice.InvoicesPayments.push({
+            ...baseFor(),
+            Id: 0,
+            InvoiceId: 0,
+            PaymentId: 0,
+            Invoice: null,
+            Payment: paymentEntity
+        });
 
         // DESPATCH (irsaliyeler)
         if ((model.irsaliyeler || []).length) {
@@ -1420,7 +1515,7 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
     }
 
     /***********************************************************
-     *  Diğer tablolar (row template'lere class ekledim)
+     *  Diğer tablolar
      ***********************************************************/
     function addNewIrsaliyeRow() {
         const row = `
@@ -1497,7 +1592,8 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
     }
 
     /***********************************************************
-     *  Validation (seninkini korudum)
+     *  Validation
+     *  ✅ (1) Ödeme tabı zorunlulukları kaldırıldı
      ***********************************************************/
     function validateForm() {
         const errors = [];
@@ -1553,9 +1649,10 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
             requireSelect("#ddlIlce", "İlçe seçiniz.", [""]);
         }
 
-        requireSelect("#PaymentMeansCode", "Ödeme şeklini seçiniz.", [""]);
-        requireInput("#PaymentDueDate", "Ödeme tarihini giriniz.");
-        requireSelect("#PayeeFinancialCurrencyCode", "Hesap para birimini seçiniz.", [""]);
+        // ❌ ÖDEME ZORUNLULUKLARI KALDIRILDI
+        // requireSelect("#PaymentMeansCode", "Ödeme şeklini seçiniz.", [""]);
+        // requireInput("#PaymentDueDate", "Ödeme tarihini giriniz.");
+        // requireSelect("#PayeeFinancialCurrencyCode", "Hesap para birimini seçiniz.", [""]);
 
         if ($("#invoiceBody tr").length === 0) {
             errors.push("En az bir fatura kalemi ekleyiniz.");
@@ -1736,7 +1833,8 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
                 return;
             }
 
-            const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+            // ✅ küçük düzeltme: önce earchive base
+            const baseUrl = window.gibPortalEArchiveApiBaseUrl || window.gibPortalApiBaseUrl;
             if (!baseUrl) {
                 const msg = "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).";
                 showAlert("danger", msg);
@@ -1746,7 +1844,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
 
             const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
-            // 🔹 userId'yi oku
             let userId;
             try {
                 userId = getCurrentUserIdForGib();
@@ -1762,10 +1859,9 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
                 standardXslt: "true"
             });
 
-            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/pdf/{uuid}?userId=...&standardXslt=true
             const url =
                 normBase +
-                "TurkcellEFatura/earchive/pdf/" +
+                "api/TurkcellEFatura/earchive/pdf/" +
                 encodeURIComponent(uuid) +
                 "?" + qs.toString();
 
@@ -1786,7 +1882,8 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
                 return;
             }
 
-            const baseUrl = window.gibPortalApiBaseUrl || window.gibPortalApiBaseUrl;
+            // ✅ küçük düzeltme: önce earchive base
+            const baseUrl = window.gibPortalEArchiveApiBaseUrl || window.gibPortalApiBaseUrl;
             if (!baseUrl) {
                 const msg = "GİB Portal API adresi tanımlı değil (gibPortalApiBaseUrl).";
                 showAlert("danger", msg);
@@ -1796,7 +1893,6 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
 
             const normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
-            // 🔹 userId'yi oku
             let userId;
             try {
                 userId = getCurrentUserIdForGib();
@@ -1811,10 +1907,10 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
                 userId: String(userId),
             });
 
-            // https://localhost:7151/api/TurkcellEFatura/einvoice/outbox/ubl/{uuid}?userId=...
+            // ✅ FIX: /ubl/ + uuid (slash eksikti)
             const url =
                 normBase +
-                "TurkcellEFatura/earchive/ubl" +
+                "api/TurkcellEFatura/earchive/ubl/" +
                 encodeURIComponent(uuid) +
                 "?" + qs.toString();
 
@@ -1874,19 +1970,15 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         // Kur default
         if ($("#txtKurBilgisi").length && !$("#txtKurBilgisi").val()) $("#txtKurBilgisi").val("1");
 
-        // Date/time default
-        const now = new Date();
-        if ($("#txtIssueDate").length && !$("#txtIssueDate").val()) {
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, "0");
-            const d = String(now.getDate()).padStart(2, "0");
-            $("#txtIssueDate").val(`${y}-${m}-${d}`);
-        }
-        if ($("#txtIssueTime").length && !$("#txtIssueTime").val()) {
-            const hh = String(now.getHours()).padStart(2, "0");
-            const mm = String(now.getMinutes()).padStart(2, "0");
-            $("#txtIssueTime").val(`${hh}:${mm}`);
-        }
+        // Date/time default (issue)
+        if ($("#txtIssueDate").length && !$("#txtIssueDate").val()) $("#txtIssueDate").val(todayYmd());
+        if ($("#txtIssueTime").length && !$("#txtIssueTime").val()) $("#txtIssueTime").val(nowTimeHm());
+
+        // ✅ (3) Sipariş tarihi: bugünün tarihi seçili
+        if ($("#txtSiparisTarih").length && !$("#txtSiparisTarih").val()) $("#txtSiparisTarih").val(todayYmd());
+
+        // Ödeme tarihi de boşsa today (zorunlu değil ama DB default için iyi)
+        if ($("#PaymentDueDate").length && !$("#PaymentDueDate").val()) $("#PaymentDueDate").val(todayYmd());
 
         invoiceModel.invoiceheader.InvoiceTypeCode = $("#ddlFaturaTipi").val() || null;
         invoiceModel.invoiceheader.Scenario = $("#ddlSenaryo").val() || null;
@@ -1894,9 +1986,13 @@ import { create as createInvoice } from '../entites/EArchiveInvoice.js';
         invoiceModel.invoiceheader.DocumentCurrencyCode = invoiceModel.invoiceheader.Currency;
         invoiceModel.invoiceheader.EArchiveSendType = $("#EArchiveSendType").val() || "KAGIT";
         invoiceModel.invoiceheader.IsInternetSale = $("#IsInternetSale").is(":checked");
+        invoiceModel.invoiceheader.TemplateName = $("#ddlGoruntuDosyasi").val() || null;
 
         // İlk satır
         if ($("#btnLineAdd").length) $("#btnLineAdd").trigger("click");
+
+        // ✅ ilk kurallar
+        applyInvoiceTypeRulesOnLines();
     }
 
     function init() {
