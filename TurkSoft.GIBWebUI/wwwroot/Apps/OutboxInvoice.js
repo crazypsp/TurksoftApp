@@ -1,13 +1,20 @@
-﻿// wwwroot/apps/einvoice/OutboxInvoice.js
-import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
+﻿// wwwroot/apps/OutboxInvoice.js
+// NOT: Bu dosya artık ../Base/turkcellEfaturaApi.js import etmez.
+// İki endpoint’ten (GibInvoice + GibGibInvoiceOperationLog) verileri çekip,
+// Invoice.UserId + InvoiceDate tarih aralığına göre filtreler,
+// OperationLog (OperationName=SendEInvoiceJson, ErrorCode=200) ile Invoice.Id eşleştirip
+// myDataTable’a basar.
 
 (function (global) {
     'use strict';
 
     const $ = global.jQuery;
 
-    function ok(m) { if (global.toastr?.success) toastr.success(m); else alert(m); }
-    function err(m) { if (global.toastr?.error) toastr.error(m); else alert(m); }
+    // ---------------------------
+    // UI helpers
+    // ---------------------------
+    function ok(m) { if (global.toastr?.success) global.toastr.success(m); else alert(m); }
+    function err(m) { if (global.toastr?.error) global.toastr.error(m); else alert(m); }
 
     function num(v) {
         const n = Number(v);
@@ -17,31 +24,145 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
         return (Number(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // dd.mm.yyyy -> yyyy-MM-dd
+    function pad2(x) { return String(x).padStart(2, '0'); }
+
+    // dd.mm.yyyy (veya dd.mm.yy) -> yyyy-MM-dd
     function toIsoDateTR(str) {
         if (!str) return '';
-        const p = String(str).split('.');
+        const p = String(str).trim().split('.');
         if (p.length !== 3) return '';
-        const dd = p[0].padStart(2, '0');
-        const mm = p[1].padStart(2, '0');
-        const yy = p[2]; // hem 2025 hem 25 gelirse çalışır ama 25 ise iso anlamsız olur; datepicker'ı 4 hane ayarlıyoruz
+        const dd = pad2(p[0]);
+        const mm = pad2(p[1]);
+        let yy = String(p[2]).trim();
+        if (yy.length === 2) yy = '20' + yy; // 25 -> 2025 varsayımı
+        if (yy.length !== 4) return '';
         return `${yy}-${mm}-${dd}`;
     }
 
-    // yyyy-MM-dd -> yyyy-MM-dd HH:mm:ss
-    function toDateTimeRange(dateIso, isEnd) {
-        if (!dateIso) return '';
-        return `${dateIso} ${isEnd ? '23:59:59' : '00:00:00'}`;
+    // ISO veya "yyyy-MM-dd HH:mm:ss.fffffff" gibi .NET formatlarını güvenli parse eder.
+    function parseAnyDate(val) {
+        if (!val) return null;
+        const s = String(val).trim();
+
+        // ISO ise
+        let t = Date.parse(s);
+        if (Number.isFinite(t)) return new Date(t);
+
+        // .NET: /Date(1700000000000)/
+        const mDotNet = s.match(/Date\((\d+)\)/i);
+        if (mDotNet) {
+            const ms = parseInt(mDotNet[1], 10);
+            if (!isNaN(ms)) return new Date(ms);
+        }
+
+        // "yyyy-MM-dd HH:mm:ss.fffffff" veya "yyyy-MM-ddTHH:mm:ss"
+        const m = s.match(
+            /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?$/
+        );
+        if (m) {
+            const Y = parseInt(m[1], 10);
+            const M = parseInt(m[2], 10) - 1;
+            const D = parseInt(m[3], 10);
+            const h = parseInt(m[4], 10);
+            const mi = parseInt(m[5], 10);
+            const se = parseInt(m[6] || '0', 10);
+
+            // 7 hane gelebiliyor; ilk 3 haneyi ms olarak al
+            const frac = (m[7] || '');
+            const ms = frac ? parseInt(frac.substring(0, 3).padEnd(3, '0'), 10) : 0;
+
+            return new Date(Y, M, D, h, mi, se, ms);
+        }
+
+        return null;
     }
 
-    function getCurrentUserIdForGib() {
+    function inRange(d, startIso, endIso) {
+        if (!d) return false;
+        if (!startIso && !endIso) return true;
+
+        const s = startIso ? parseAnyDate(`${startIso} 00:00:00`) : null;
+        const e = endIso ? parseAnyDate(`${endIso} 23:59:59.999`) : null;
+
+        if (s && d < s) return false;
+        if (e && d > e) return false;
+        return true;
+    }
+
+    function safeJsonParse(x) {
+        if (!x) return null;
+        if (typeof x === 'object') return x;
+        const s = String(x).trim();
+        if (!s) return null;
+        try { return JSON.parse(s); } catch { return null; }
+    }
+
+    function pick(o, keys, defVal = null) {
+        if (!o) return defVal;
+        for (const k of keys) {
+            if (o[k] !== undefined && o[k] !== null) return o[k];
+        }
+        return defVal;
+    }
+
+    // ---------------------------
+    // API helpers
+    // ---------------------------
+    function normalizeBaseUrl() {
+        let base = String(global.__API_BASE || '').trim();
+        base = base.replace(/\/+$/, ''); // trailing slash temizle
+        return base;
+    }
+
+    // window.__API_BASE:
+    //  - "https://giberp.noxmusavir.com"  -> /api/v1/<resource>
+    //  - "https://giberp.noxmusavir.com/api/v1" -> /<resource>
+    //  - "/api/v1" -> /<resource>
+    function buildApiUrl(resource) {
+        const base = normalizeBaseUrl();
+
+        // base yoksa aynı origin varsay
+        if (!base) return `/api/v1/${resource}`;
+
+        // base zaten /api/v1 ile bitiyorsa tekrar ekleme
+        if (/\/api\/v1$/i.test(base)) return `${base}/${resource}`;
+
+        return `${base}/api/v1/${resource}`;
+    }
+
+    async function fetchJson(url) {
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'include'
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        // bazı ortamlarda boş dönebiliyor
+        const text = await res.text();
+        if (!text) return null;
+
+        try { return JSON.parse(text); } catch { return text; }
+    }
+
+    // ---------------------------
+    // Current user
+    // ---------------------------
+    function getCurrentUserId() {
         let userId = 0;
+
         const hdn = document.getElementById('hdnUserId');
         if (hdn?.value) {
             const p = parseInt(hdn.value, 10);
             if (!isNaN(p) && p > 0) userId = p;
         }
-        if (!userId && typeof global.currentUserId === 'number' && global.currentUserId > 0) userId = global.currentUserId;
+
+        if (!userId && typeof global.currentUserId === 'number' && global.currentUserId > 0) {
+            userId = global.currentUserId;
+        }
 
         if (!userId) {
             try {
@@ -55,168 +176,253 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
                 }
             } catch { }
         }
+
         if (!userId) throw new Error('Kullanıcı Id (userId) bulunamadı.');
         return userId;
     }
 
-    const State = { userId: 0, items: [], dt: null };
+    // ---------------------------
+    // State
+    // ---------------------------
+    const State = {
+        userId: 0,
+        items: [],
+        dt: null,
+        rowByLogId: {}
+    };
 
-    function mapRow(raw) {
-        const r = raw || {};
-        const uuid = r.uuid || r.UUID || r.envelopeId || r.id || '';
-        const invoiceNumber = r.invoiceNumber || r.documentId || r.DocumentId || '';
-        const targetTitle = r.targetTitle || r.receiverTitle || r.TargetTitle || '';
-        const targetId = r.targetIdentifier || r.receiverIdentifier || r.TargetIdentifier || '';
-        const profileId = r.profileId || r.ProfileId || '';
-        const invType = r.invoiceTypeCode || r.InvoiceTypeCode || r.type || '';
-        const tipText = (invType && profileId) ? `${invType} / ${profileId}` : (invType || profileId || '');
+    // ---------------------------
+    // Mapping
+    // ---------------------------
+    function mapInvoice(invRaw) {
+        const inv = invRaw || {};
 
-        const issueDate = r.issueDate || r.IssueDate || r.executionDate || '';
-        const createdDate = r.createdDate || r.CreatedDate || '';
+        const id = num(pick(inv, ['Id', 'id']));
+        const userId = num(pick(inv, ['UserId', 'userId']));                // ✅ Invoice.UserId
+        const customerId = num(pick(inv, ['CustomerId', 'customerId']));
 
-        const payable = num(r.payableAmount ?? r.PayableAmount);
-        const total = num(r.totalAmount ?? r.TotalAmount);
-        const kdv = num(r.kdvAmount ?? r.KdvAmount) || Math.max(0, total - payable);
+        const invoiceNo = String(pick(inv, ['InvoiceNo', 'invoiceNo'], '') || '');
+        const invoiceDate = pick(inv, ['InvoiceDate', 'invoiceDate'], '');
 
-        const isAccount =
-            (r.isAccount === true || r.isAccount === 'YES') ? 'Evet' :
-                (r.isAccount === false || r.isAccount === 'NO') ? 'Hayır' : '-';
+        const total = num(pick(inv, ['Total', 'total'], 0));
+        const currency = String(pick(inv, ['Currency', 'currency'], '') || '');
 
-        const status = r.status || r.Status || r.envelopeStatus || '';
-        const resp = r.applicationResponseCode || r.ApplicationResponseCode || '';
+        const type = pick(inv, ['Type', 'type'], '');
+        const typeText = (type === 0 || type === '0') ? 'SATIŞ' : String(type ?? '');
 
-        return { uuid, invoiceNumber, targetTitle, targetId, tipText, issueDate, createdDate, kdv, payable, isAccount, status, resp, raw: r };
+        // müşteri bilgileri
+        const c = inv.customer || inv.Customer || null;
+        const customerName = c ? `${c.name || ''} ${c.surname || ''}`.trim() : '';
+        const taxNo = c ? (c.taxNo || c.taxno || '') : '';
+
+        // KDV (InvoicesTaxes)
+        let kdv = 0;
+        const taxes = inv.invoicesTaxes || inv.InvoicesTaxes || [];
+        if (Array.isArray(taxes)) {
+            for (const tx of taxes) kdv += num(tx.amount ?? tx.Amount ?? 0);
+        }
+
+        return {
+            id,
+            userId,
+            customerId,
+            invoiceNo,
+            invoiceDate,
+            total,
+            currency,
+            typeText,
+            customerName,
+            taxNo,
+            kdv,
+            raw: inv
+        };
+    }
+
+    function mapLog(logRaw) {
+        const lg = logRaw || {};
+        return {
+            id: num(pick(lg, ['Id', 'id'])),
+            invoiceId: num(pick(lg, ['InvoiceId', 'invoiceId'])),
+            operationName: String(pick(lg, ['OperationName', 'operationName'], '') || ''),
+            isSuccess: !!pick(lg, ['IsSuccess', 'isSuccess'], false),
+            errorCode: pick(lg, ['ErrorCode', 'errorCode'], ''),
+            errorMessage: String(pick(lg, ['ErrorMessage', 'errorMessage'], '') || ''),
+            rawResponseJson: pick(lg, ['RawResponseJson', 'rawResponseJson'], ''),
+            createdAt: pick(lg, ['CreatedAt', 'createdAt'], ''),
+            raw: lg
+        };
+    }
+
+    // ---------------------------
+    // UI params + default date range (aktif ay)
+    // ---------------------------
+    function setDefaultMonthDatesIfEmpty() {
+        if (!$) return;
+
+        const s = ($('#IssueDateStart').val() || '').trim();
+        const e = ($('#IssueDateStartEnd').val() || '').trim();
+
+        if (s || e) return;
+
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        $('#IssueDateStart').val(`${pad2(start.getDate())}.${pad2(start.getMonth() + 1)}.${start.getFullYear()}`);
+        $('#IssueDateStartEnd').val(`${pad2(endDay.getDate())}.${pad2(endDay.getMonth() + 1)}.${endDay.getFullYear()}`);
     }
 
     function buildParamsFromUI() {
-        const p = {};
-        p.userId = State.userId;
+        setDefaultMonthDatesIfEmpty();
 
-        // Tarih aralığı (datepicker dd.mm.yyyy)
-        const sIso = toIsoDateTR($('#IssueDateStart').val());
-        const eIso = toIsoDateTR($('#IssueDateStartEnd').val());
-        const start = toDateTimeRange(sIso, false);
-        const end = toDateTimeRange(eIso, true);
-        if (start) p.start = start;
-        if (end) p.end = end;
+        const startIso = toIsoDateTR($('#IssueDateStart').val());
+        const endIso = toIsoDateTR($('#IssueDateStartEnd').val());
 
-        // İşlem tarihi (opsiyonel)
-        const csIso = toIsoDateTR($('#CreatedDateStart').val());
-        const ceIso = toIsoDateTR($('#CreatedDateEnd').val());
-        const cStart = toDateTimeRange(csIso, false);
-        const cEnd = toDateTimeRange(ceIso, true);
-        if (cStart) p.createdStart = cStart;
-        if (cEnd) p.createdEnd = cEnd;
+        return {
+            userId: State.userId,
+            invoiceDateStartIso: startIso,
+            invoiceDateEndIso: endIso,
+            documentId: String($('#DocumentId').val() || '').trim()
+        };
+    }
 
-        // Filtreler
-        const IsArchive = $('#IsArchive').val();
-        if (IsArchive !== '') p.isArchive = IsArchive;
+    // ---------------------------
+    // Load + join
+    // ---------------------------
+    async function loadDataAndJoin(ui) {
+        const invoiceUrl = buildApiUrl('GibInvoice');
+        const logUrl = buildApiUrl('GibGibInvoiceOperationLog');
 
-        const ApplicationResponseCode = $('#ApplicationResponseCode').val();
-        if (ApplicationResponseCode) p.applicationResponseCode = ApplicationResponseCode;
+        const [invRes, logRes] = await Promise.all([
+            fetchJson(invoiceUrl),
+            fetchJson(logUrl)
+        ]);
 
-        const DocumentId = $('#DocumentId').val();
-        if (DocumentId) p.documentId = DocumentId;
+        const invAll = Array.isArray(invRes) ? invRes : (invRes?.items || []);
+        const logAll = Array.isArray(logRes) ? logRes : (logRes?.items || []);
 
-        const UUID = $('#UUID').val();
-        if (UUID) p.uuid = UUID;
+        const invoicesAll = (invAll || []).map(mapInvoice);
 
-        const TargetTitle = $('#TargetTitle').val();
-        if (TargetTitle) p.targetTitle = TargetTitle;
+        // ✅ Invoice filtre: Invoice.UserId + InvoiceDate aralığı
+        const invoices = invoicesAll.filter(inv => {
+            if (num(inv.userId) !== num(ui.userId)) return false;
 
-        const ProfileId = $('#ProfileId').val();
-        if (ProfileId) p.profileId = ProfileId;
+            const d = parseAnyDate(inv.invoiceDate);
+            if (!inRange(d, ui.invoiceDateStartIso, ui.invoiceDateEndIso)) return false;
 
-        const InvoiceTypeCode = $('#InvoiceTypeCode').val();
-        if (InvoiceTypeCode) p.invoiceTypeCode = InvoiceTypeCode;
-
-        const IsPaid = $('#IsPaid').val();
-        if (IsPaid) p.isPaid = IsPaid;
-
-        const CurrencyCode = $('#CurrencyCode').val();
-        if (CurrencyCode) p.currencyCode = CurrencyCode;
-
-        const Status = $('#Status').val();
-        if (Status) p.status = Status;
-
-        const PayableAmount = $('#PayableAmount').val();
-        if (PayableAmount) p.payableAmountMin = PayableAmount;
-
-        const IsCancelled = $('#IsCancelled').val();
-        if (IsCancelled) p.isCancelled = IsCancelled;
-
-        const SourceAlias = $('#SourceAlias').val();
-        if (SourceAlias) p.sourceAlias = SourceAlias;
-
-        const IsPrinted = $('#IsPrinted').val();
-        if (IsPrinted) p.isPrinted = IsPrinted;
-
-        const IsAccount = $('#IsAccount').val();
-        if (IsAccount) p.isAccount = IsAccount;
-
-        const year = $('#IntegrationYear').val();
-        const month = $('#IntegrationMonth').val();
-        if (year) p.integrationYear = year;
-        if (month && month !== '-1') p.integrationMonth = month;
-
-        // Alıcı VKN/TCKN (çoklu)
-        const targetIdentifier = $('#TargetIdentifier').val();
-        if (targetIdentifier) {
-            if ($('#TargetIdentifierChk').is(':checked')) {
-                p.targetIdentifier = targetIdentifier.split(',').map(s => s.trim()).filter(Boolean);
-            } else {
-                p.targetIdentifier = targetIdentifier.trim();
+            if (ui.documentId) {
+                if (!String(inv.invoiceNo || '').toLowerCase().includes(ui.documentId.toLowerCase())) return false;
             }
+
+            return true;
+        });
+
+        const invById = new Map(invoices.map(x => [x.id, x]));
+
+        // Log filtre + aynı InvoiceId için en güncel log’u seç
+        const bestLogByInvoiceId = new Map();
+
+        for (const r of (logAll || [])) {
+            const lg = mapLog(r);
+            if (!lg.invoiceId) continue;
+
+            // ✅ Şartlar: OperationName=SendEInvoiceJson ve ErrorCode=200
+            if (lg.operationName !== 'SendEInvoiceJson') continue;
+            if (String(lg.errorCode ?? '').trim() !== '200') continue;
+
+            // yalnızca filtrelenmiş invoice seti
+            if (!invById.has(lg.invoiceId)) continue;
+
+            const prev = bestLogByInvoiceId.get(lg.invoiceId);
+            if (!prev) {
+                bestLogByInvoiceId.set(lg.invoiceId, lg);
+                continue;
+            }
+
+            const pd = parseAnyDate(prev.createdAt);
+            const nd = parseAnyDate(lg.createdAt);
+            if (nd && (!pd || nd > pd)) bestLogByInvoiceId.set(lg.invoiceId, lg);
         }
 
-        const branches = $('#subeler').val();
-        if (branches && branches.length) p.branchIds = branches;
+        // Join: sadece başarılı log’u olan invoice’ları listele
+        State.rowByLogId = {};
+        const rows = [];
 
-        // sayfalama (client-side tablo basacağız)
-        p.pageIndex = 1;
-        p.pageSize = 200;
+        for (const inv of invoices) {
+            const lg = bestLogByInvoiceId.get(inv.id);
+            if (!lg) continue;
 
-        return p;
-    }
+            const parsed = safeJsonParse(lg.rawResponseJson) || {};
+            const gibInvoiceNumber = parsed.invoiceNumber || parsed.InvoiceNumber || '';
+            const gibId = parsed.id || parsed.Id || '';
 
-    function selectedUuids() {
-        const ids = [];
-        $('#myDataTable .rowchk:checked').each(function () {
-            ids.push($(this).data('uuid'));
+            const statusText = `200 / ${lg.isSuccess ? 'Başarılı' : 'Başarısız'}`;
+
+            const row = {
+                logId: lg.id,
+                invoiceId: inv.id,
+
+                invoiceNumber: inv.invoiceNo,
+                gibInvoiceNumber,
+                gibId,
+
+                targetTitle: inv.customerName,
+                targetId: inv.taxNo,
+
+                tipText: inv.typeText,
+                issueDate: inv.invoiceDate,
+                createdDate: lg.createdAt,
+
+                kdv: inv.kdv,
+                payable: inv.total,
+
+                isAccount: '-',
+                status: statusText,
+                resp: '',
+
+                rawResponseJson: lg.rawResponseJson,
+                rawInvoice: inv.raw,
+                rawLog: lg.raw
+            };
+
+            State.rowByLogId[String(lg.id)] = row;
+            rows.push(row);
+        }
+
+        rows.sort((a, b) => {
+            const da = parseAnyDate(a.createdDate);
+            const db = parseAnyDate(b.createdDate);
+            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
         });
-        return ids;
+
+        return rows;
     }
 
+    // ---------------------------
+    // Table render
+    // ---------------------------
     function setTotals(items) {
-        let kdvTop = 0, payTop = 0;
+        let kdvTop = 0;
+        let payTop = 0;
+
         for (const x of items) {
             kdvTop += num(x.kdv);
             payTop += num(x.payable);
         }
+
         $('#totalKDVTaxableAmount').text('0,00 TL');
         $('#totalKDVAmount').text(fmt(kdvTop) + ' TL');
         $('#totalPayableAmount').text(fmt(payTop) + ' TL');
     }
 
     function actionsHtml(r) {
-        const u = r.uuid;
-        const doc = (r.invoiceNumber || '').replace(/'/g, '');
         return `
-      <div class="btn-group btn-group-xs">
-        <button class="btn btn-info" title="Önizle (PDF)" onclick="window.invoicePreview('${u}')">
-          <i class="fa fa-eye"></i>
-        </button>
-        <button class="btn btn-default" title="UBL(XML)" onclick="window.outboxOpenUbl('${u}')">
-          <i class="fa fa-file-code-o"></i>
-        </button>
-        <button class="btn btn-primary" title="Mail" onclick="window.invoiceSendMailModal('${u}')">
-          <i class="fa fa-envelope"></i>
-        </button>
-        <button class="btn btn-danger" title="GİB İptal/İtiraz" onclick="window.openGibCancel('${doc}','${u}')">
-          <i class="fa fa-times"></i>
-        </button>
-      </div>
-    `;
+          <div class="btn-group btn-group-xs">
+            <button class="btn btn-default" title="RawResponseJson" onclick="window.outboxShowRaw(${r.logId})">
+              <i class="fa fa-code"></i>
+            </button>
+          </div>
+        `;
     }
 
     function renderTable(items) {
@@ -238,27 +444,48 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
                 destroy: true,
                 paging: true,
                 searching: true,
-                order: [[6, 'desc']],
+                order: [[6, 'desc']], // İşlem Tarihi
                 columns: [
                     {
-                        data: 'uuid',
+                        data: 'logId',
                         orderable: false,
-                        render: (d) => `<input type="checkbox" class="rowchk" data-uuid="${d}">`
+                        render: (d) => `<input type="checkbox" class="rowchk" data-logid="${d}">`
                     },
                     {
                         data: null,
-                        render: (r) => `${r.invoiceNumber || ''}${r.uuid ? `<br><small>${r.uuid}</small>` : ''}`
+                        render: (r) => {
+                            const invNo = r.invoiceNumber || '';
+                            const gibNo = r.gibInvoiceNumber || '';
+                            const gibId = r.gibId || '';
+                            const sub = [gibNo ? `GİB No: ${gibNo}` : '', gibId ? `GİB Id: ${gibId}` : ''].filter(Boolean).join(' | ');
+                            return `${invNo}${sub ? `<br><small>${sub}</small>` : ''}`;
+                        }
                     },
                     { data: 'targetTitle' },
                     { data: 'targetId' },
                     { data: 'tipText' },
-                    { data: 'issueDate', render: (d) => (d ? String(d).substring(0, 10) : '') },
-                    { data: 'createdDate', render: (d) => (d ? String(d).replace('T', ' ').substring(0, 16) : '') },
+                    {
+                        data: 'issueDate',
+                        render: (d) => {
+                            const dt = parseAnyDate(d);
+                            if (!dt) return '';
+                            return `${pad2(dt.getDate())}.${pad2(dt.getMonth() + 1)}.${dt.getFullYear()}`;
+                        }
+                    },
+                    {
+                        data: 'createdDate',
+                        render: (d) => {
+                            const dt = parseAnyDate(d);
+                            if (!dt) return (d ? String(d).replace('T', ' ').substring(0, 16) : '');
+                            return `${pad2(dt.getDate())}.${pad2(dt.getMonth() + 1)}.${dt.getFullYear()} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+                        }
+                    },
                     { data: 'kdv', className: 'text-right', render: (d) => fmt(d) },
                     { data: 'payable', className: 'text-right', render: (d) => fmt(d) },
                     { data: 'isAccount', className: 'text-center' },
                     {
-                        data: null, className: 'text-center',
+                        data: null,
+                        className: 'text-center',
                         render: (r) => {
                             const s = r.status || '';
                             const a = r.resp || '';
@@ -278,26 +505,38 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
             return;
         }
 
-        // DataTables yoksa düz bas
+        // DataTables yoksa düz render
         const $tb = $('#myDataTable tbody');
         $tb.empty();
+
         for (const r of items) {
+            const dtInv = parseAnyDate(r.issueDate);
+            const dtLog = parseAnyDate(r.createdDate);
+
+            const invDateTxt = dtInv ? `${pad2(dtInv.getDate())}.${pad2(dtInv.getMonth() + 1)}.${dtInv.getFullYear()}` : '';
+            const logDateTxt = dtLog ? `${pad2(dtLog.getDate())}.${pad2(dtLog.getMonth() + 1)}.${dtLog.getFullYear()} ${pad2(dtLog.getHours())}:${pad2(dtLog.getMinutes())}` : '';
+
+            const sub = [
+                r.gibInvoiceNumber ? `GİB No: ${r.gibInvoiceNumber}` : '',
+                r.gibId ? `GİB Id: ${r.gibId}` : ''
+            ].filter(Boolean).join(' | ');
+
             $tb.append(`
-        <tr>
-          <td><input type="checkbox" class="rowchk" data-uuid="${r.uuid}"></td>
-          <td>${r.invoiceNumber || ''}${r.uuid ? `<br><small>${r.uuid}</small>` : ''}</td>
-          <td>${r.targetTitle || ''}</td>
-          <td>${r.targetId || ''}</td>
-          <td>${r.tipText || ''}</td>
-          <td>${r.issueDate ? String(r.issueDate).substring(0, 10) : ''}</td>
-          <td>${r.createdDate ? String(r.createdDate).replace('T', ' ').substring(0, 16) : ''}</td>
-          <td class="text-right">${fmt(r.kdv)}</td>
-          <td class="text-right">${fmt(r.payable)}</td>
-          <td class="text-center">${r.isAccount}</td>
-          <td class="text-center">${(r.status || '') + (r.resp ? ` / ${r.resp}` : '')}</td>
-          <td class="text-center">${actionsHtml(r)}</td>
-        </tr>
-      `);
+                <tr>
+                    <td><input type="checkbox" class="rowchk" data-logid="${r.logId}"></td>
+                    <td>${r.invoiceNumber || ''}${sub ? `<br><small>${sub}</small>` : ''}</td>
+                    <td>${r.targetTitle || ''}</td>
+                    <td>${r.targetId || ''}</td>
+                    <td>${r.tipText || ''}</td>
+                    <td>${invDateTxt}</td>
+                    <td>${logDateTxt}</td>
+                    <td class="text-right">${fmt(r.kdv)}</td>
+                    <td class="text-right">${fmt(r.payable)}</td>
+                    <td class="text-center">${r.isAccount}</td>
+                    <td class="text-center">${(r.status || '')}</td>
+                    <td class="text-center">${actionsHtml(r)}</td>
+                </tr>
+            `);
         }
 
         $('#chkAll').off('change').on('change', function () {
@@ -306,145 +545,26 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
         });
     }
 
+    // ---------------------------
+    // Main load
+    // ---------------------------
     async function loadList() {
         try {
-            const params = buildParamsFromUI();
-            const res = await EinvoiceOutboxApi.list(params);
+            const ui = buildParamsFromUI();
+            const rows = await loadDataAndJoin(ui);
 
-            const arr = Array.isArray(res) ? res : (res?.items ? res.items : []);
-            State.items = (arr || []).map(mapRow).filter(x => x.uuid);
-
+            State.items = rows;
             renderTable(State.items);
         } catch (e) {
-            console.error('[OutboxInvoice] list error:', e);
-            err(e?.message || 'Giden faturalar alınamadı.');
+            console.error('[OutboxInvoice] loadList error:', e);
+            err((e && e.message) ? e.message : 'Liste alınamadı.');
             renderTable([]);
         }
     }
 
-    // ===== PDF / UBL =====
-    function openPdf(uuid, inModal) {
-        const url = EinvoiceOutboxApi.pdfUrl(uuid, { userId: State.userId, standardXslt: true });
-
-        // Önizleme modal’ı varsa kullan, yoksa yeni sekme
-        const $frame = $('#invoicePreviewFrame');
-        const $modal = $('#invoicePreviewModal');
-        if (inModal && $frame.length && $modal.length) {
-            $frame.attr('src', url);
-            $modal.modal('show');
-        } else {
-            global.open(url, '_blank');
-        }
-    }
-
-    function openUbl(uuid) {
-        const url = EinvoiceOutboxApi.ublUrl(uuid, { userId: State.userId });
-        global.open(url, '_blank');
-    }
-
-    // ===== Toplu işlemler =====
-    async function bulkArchive(flag) {
-        const uuids = selectedUuids();
-        if (!uuids.length) return err('Lütfen en az bir kayıt seçin.');
-
-        try {
-            await EinvoiceOutboxApi.bulkArchive({ userId: State.userId }, { uuids, isArchive: !!flag });
-            ok(flag ? 'Arşive alındı.' : 'Arşivden çıkarıldı.');
-            await loadList();
-        } catch (e) {
-            console.error(e);
-            err(e?.message || 'Toplu arşiv işlemi başarısız. (PATH.OUTBOX_BULK_ARCHIVE kontrol edin)');
-        }
-    }
-
-    async function bulkPaid(flag) {
-        const uuids = selectedUuids();
-        if (!uuids.length) return err('Lütfen en az bir kayıt seçin.');
-
-        try {
-            await EinvoiceOutboxApi.bulkPaid({ userId: State.userId }, { uuids, isPaid: !!flag });
-            ok(flag ? 'Ödendi işaretlendi.' : 'Ödenmedi işaretlendi.');
-            await loadList();
-        } catch (e) {
-            console.error(e);
-            err(e?.message || 'Toplu ödendi işlemi başarısız. (PATH.OUTBOX_BULK_PAID kontrol edin)');
-        }
-    }
-
-    function downloadAll(type) {
-        const uuids = selectedUuids();
-        if (!uuids.length) return err('Lütfen en az bir kayıt seçin.');
-
-        // Zip/toplu endpoint’in yoksa basit fallback: her birini ayrı aç
-        for (const u of uuids) {
-            if (type === 'PDF') openPdf(u, false);
-            else if (type === 'XML') openUbl(u);
-            else openPdf(u, false);
-        }
-    }
-
-    // ===== Mail =====
-    async function sendMail(dto) {
-        // dto: { uuids, receiverMail, title, receiverName, attachXml, attachPdf }
-        try {
-            await EinvoiceOutboxApi.sendMail(
-                { userId: State.userId },
-                dto
-            );
-            ok('E-posta gönderildi.');
-        } catch (e) {
-            console.error(e);
-            err(e?.message || 'E-posta gönderilemedi. (PATH.OUTBOX_SEND_MAIL kontrol edin)');
-        }
-    }
-
-    // ===== GİB iptal/itiraz flag =====
-    async function gibCancelFlag(uuid, flag) {
-        try {
-            await EinvoiceOutboxApi.gibCancelFlag({ userId: State.userId }, { uuid, value: !!flag });
-            ok('GİB iptal/itiraz işareti güncellendi.');
-            await loadList();
-        } catch (e) {
-            console.error(e);
-            err(e?.message || 'GİB iptal/itiraz güncellenemedi. (PATH.OUTBOX_GIB_CANCEL_FLAG kontrol edin)');
-        }
-    }
-
-    // ===== VKN çoklu toggle (view onclick kullanıyor) =====
-    function vknAyracChk() {
-        const multi = $('#TargetIdentifierChk').is(':checked');
-        const $inp = $('#TargetIdentifier');
-        $inp.val('');
-        if (multi) $inp.attr('maxlength', '400').attr('placeholder', '111...,222...,333...');
-        else $inp.attr('maxlength', '11').attr('placeholder', '11 hane');
-    }
-
-    function clearSearchInputs() {
-        $('#IsArchive,#ApplicationResponseCode,#Status,#ProfileId,#InvoiceTypeCode,#IsPaid,#CurrencyCode,#IsCancelled,#SourceAlias,#IsPrinted,#IsAccount').val('');
-        $('#IssueDateStart,#IssueDateStartEnd,#CreatedDateStart,#CreatedDateEnd').val('');
-        $('#DocumentId,#UUID,#TargetIdentifier,#TargetTitle').val('');
-        $('#TargetIdentifierChk').prop('checked', false);
-        vknAyracChk();
-
-        $('#IntegrationMonth').val('-1');
-        yearChange();
-
-        if ($.fn.select2) {
-            $('#CurrencyCode').trigger('change');
-            $('#subeler').val(null).trigger('change');
-        }
-
-        loadList();
-    }
-
-    function yearChange() {
-        const now = new Date();
-        const selY = Number($('#IntegrationYear').val());
-        if (selY === now.getFullYear()) $('#IntegrationMonth').val(String(now.getMonth() + 1));
-        else $('#IntegrationMonth').val('-1');
-    }
-
-    // ✅ FIX: jQuery UI Datepicker + Bootstrap Datepicker uyumlu init
+    // ---------------------------
+    // Datepicker init (jQuery UI / bootstrap-datepicker uyumlu)
+    // ---------------------------
     function initDatepicker() {
         if (!$ || !$.fn) return;
 
@@ -454,16 +574,15 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
         const daysShort = ["Paz", "Pts", "Sal", "Çar", "Per", "Cum", "Cts"];
         const daysMin = ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"];
 
-        // 1) jQuery UI Datepicker varsa
+        // 1) jQuery UI Datepicker
         if ($.datepicker && typeof $.datepicker.setDefaults === "function") {
-            const TR_UI = {
+            $.datepicker.setDefaults({
                 closeText: "Kapat", prevText: "Önceki", nextText: "Sonraki", currentText: "Bugün",
                 monthNames: months, monthNamesShort: monthsShort,
                 dayNames: days, dayNamesShort: daysShort, dayNamesMin: daysMin,
                 dateFormat: "dd.mm.yy", firstDay: 1, isRTL: false
-            };
+            });
 
-            $.datepicker.setDefaults(TR_UI);
             $('.datepicker').datepicker({
                 changeMonth: true,
                 changeYear: true,
@@ -473,7 +592,7 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
             return;
         }
 
-        // 2) bootstrap-datepicker varsa ($.fn.datepicker var ama $.datepicker yok)
+        // 2) bootstrap-datepicker
         if ($.fn.datepicker && $.fn.datepicker.dates) {
             $.fn.datepicker.dates.tr = {
                 days, daysShort, daysMin,
@@ -496,6 +615,40 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
         console.warn("[OutboxInvoice] Datepicker bulunamadı. (jQuery UI veya bootstrap-datepicker yüklenmeli)");
     }
 
+    function clearSearchInputs() {
+        // Bu ekranda sadece tarih + documentId filtreleniyor (diğer alanlar şimdilik pasif)
+        $('#IssueDateStart,#IssueDateStartEnd').val('');
+        $('#DocumentId').val('');
+
+        // tekrar default ayı set edip yükle
+        setDefaultMonthDatesIfEmpty();
+        loadList();
+    }
+
+    // ---------------------------
+    // Exposed actions
+    // ---------------------------
+    global.outboxShowRaw = (logId) => {
+        const row = State.rowByLogId[String(logId)];
+        if (!row) return err('Kayıt bulunamadı.');
+
+        const parsed = safeJsonParse(row.rawResponseJson);
+        const content = parsed ? JSON.stringify(parsed, null, 2) : String(row.rawResponseJson || '');
+
+        // modal varsa onu kullan, yoksa alert
+        const $m = $('#modal-raw');
+        const $ta = $('#rawJsonText');
+        if ($m.length && $ta.length) {
+            $ta.val(content);
+            $m.modal('show');
+        } else {
+            alert(content);
+        }
+    };
+
+    // ---------------------------
+    // Init
+    // ---------------------------
     function init() {
         if (!$) {
             console.error('[OutboxInvoice] jQuery yok.');
@@ -503,7 +656,7 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
         }
 
         try {
-            State.userId = getCurrentUserIdForGib();
+            State.userId = getCurrentUserId();
         } catch (e) {
             console.error(e);
             err(e.message);
@@ -511,115 +664,30 @@ import { EinvoiceOutboxApi } from '../Base/turkcellEfaturaApi.js';
         }
 
         initDatepicker();
+        setDefaultMonthDatesIfEmpty();
 
-        if ($.fn.select2) {
-            $('#CurrencyCode,#subeler').select2({ width: '100%' });
-        }
+        // Search / Clear
+        $('#btnSearch').off('click').on('click', loadList);
+        $('#btnClear').off('click').on('click', clearSearchInputs);
+
+        // Enter ile arama (IssueDateStart/End ve DocumentId gibi inputlar)
+        $('#btnAramaYapEnter').off('keypress').on('keypress', 'input', function (e) {
+            if (e.which === 13) { e.preventDefault(); loadList(); }
+        });
 
         // Detaylı Arama ikon
-        $('#btnDetayliArama').on('click', function () {
+        $('#btnDetayliArama').off('click').on('click', function () {
             const $i = $(this).find('.myCollapseIcon');
             setTimeout(() => $i.toggleClass('fa-plus fa-minus'), 150);
         });
 
-        $('#IntegrationYear').on('change', yearChange);
-        yearChange();
-
-        // View onclick
-        global.vknAyracChk = () => vknAyracChk();
-
-        // Search / Clear
-        $('#btnSearch').on('click', loadList);
-        $('#btnClear').on('click', clearSearchInputs);
-        $('#btnAramaYapEnter').on('keypress', 'input', function (e) {
-            if (e.which === 13) { e.preventDefault(); loadList(); }
-        });
-
-        // Bulk menü
-        $('.dropdown-menu').on('click', 'a.bulk', function (e) {
+        // Bulk menü tıklanırsa şimdilik pasif (hata vermesin)
+        $('.dropdown-menu').off('click.outbox').on('click.outbox', 'a.bulk', function (e) {
             e.preventDefault();
-            const action = String($(this).data('action') || '');
-
-            if (action === 'archive-1') return bulkArchive(true);
-            if (action === 'archive-0') return bulkArchive(false);
-            if (action === 'paid-1') return bulkPaid(true);
-            if (action === 'paid-0') return bulkPaid(false);
-
-            if (action === 'envelope') return err('Zarf sorgulama bu entegrasyonda kullanılmıyor.');
-
-            if (action === 'dl-XML') return downloadAll('XML');
-            if (action === 'dl-PDF') return downloadAll('PDF');
-            if (action === 'dl-TPDF') return downloadAll('TPDF');
-            if (action === 'dl-HTML') return downloadAll('HTML');
-            if (action === 'dl-JPG') return downloadAll('JPG');
-
-            if (action === 'mail') return err('Toplu mail için modal/endpoint bağlanacak.');
-            if (action === 'excel-selected' || action === 'excel-all') return err('Excel aktarım endpoint’i bağlanacak.');
-            if (action === 'luca') return err('Luca aktarım endpoint’i bağlanacak.');
-            if (action === 'erp') return err('ERP fiş aktarım endpoint’i bağlanacak.');
-            if (action === 'print') return err('Toplu yazdır endpoint’i bağlanacak.');
+            err('Bu ekranda toplu işlem/senkron aksiyonları kullanılmıyor.');
         });
 
-        // Row aksiyon fonksiyonları (render HTML çağırıyor)
-        global.invoicePreview = (uuid) => openPdf(uuid, true);
-        global.outboxOpenUbl = (uuid) => openUbl(uuid);
-
-        global.invoiceSendMailModal = (uuid) => {
-            const $m = $('#modal-mail');
-            if ($m.length) {
-                $m.data('uuid', uuid).modal('show');
-                return;
-            }
-
-            const receiverMail = prompt('Alıcı e-posta:');
-            if (!receiverMail) return;
-            sendMail({
-                uuids: [uuid],
-                receiverMail,
-                title: 'Fatura',
-                receiverName: 'Alıcı',
-                attachXml: true,
-                attachPdf: true
-            });
-        };
-
-        global.openGibCancel = (docNo, uuid) => {
-            const $modal = $('#modal-cancel');
-            if ($modal.length) {
-                $('#modalGibIptal').text(docNo || '');
-                $modal.data('uuid', uuid).modal('show');
-                return;
-            }
-
-            const yes = confirm('GİB iptal/itiraz işaretini AKTİF etmek istiyor musun?');
-            gibCancelFlag(uuid, yes);
-        };
-
-        // modal-mail send butonu varsa
-        $(document).on('click', '#sendMailBtn', async function (e) {
-            e.preventDefault();
-            const $m = $('#modal-mail');
-            if (!$m.length) return;
-
-            const uuid = $m.data('uuid');
-            const uuids = $m.data('uuids') || (uuid ? [uuid] : []);
-            if (!uuids.length) return err('Seçim yok.');
-
-            const dto = {
-                uuids,
-                receiverMail: $('#ReceiverMail').val(),
-                title: $('#Title').val(),
-                receiverName: $('#ReceiverFirstnameLastname').val(),
-                attachXml: $('#sendXml').is(':checked'),
-                attachPdf: $('#sendPdf').is(':checked'),
-            };
-
-            if (!dto.receiverMail || !dto.title || !dto.receiverName) return err('E-posta, konu ve alıcı adı zorunlu.');
-            await sendMail(dto);
-            $m.modal('hide');
-        });
-
-        // ilk liste
+        // İlk liste
         loadList();
     }
 
