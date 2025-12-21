@@ -38,7 +38,7 @@ namespace TurkSoft.Service.Manager
         private sealed class OutboxInvoiceCreateRequest
         {
             [JsonPropertyName("recordType")] public int RecordType { get; set; } = 1; // 1: e-Fatura
-            [JsonPropertyName("status")] public int Status { get; set; } = 0;//20 Gönder, 0 Taslak
+            [JsonPropertyName("status")] public int Status { get; set; } = 20;//20 Gönder, 0 Taslak
             [JsonPropertyName("xsltCode")] public string? XsltCode { get; set; }
             [JsonPropertyName("localReferenceId")] public string? LocalReferenceId { get; set; }
             [JsonPropertyName("useManualInvoiceId")] public bool UseManualInvoiceId { get; set; }
@@ -141,7 +141,7 @@ namespace TurkSoft.Service.Manager
             public string? TargetAlias { get; set; }
             public bool? UseManualDespatchAdviceId { get; set; }
             public bool? CheckLocalReferenceId { get; set; }
-            public int Status { get; set; } = 0;
+            public int Status { get; set; } = 20;
         }
 
         // ---- E-Arşiv JSON DTO'ları (Post_Earchive_Invoice_Json'a birebir uyumlu) ----
@@ -149,7 +149,7 @@ namespace TurkSoft.Service.Manager
         private sealed class EArchiveInvoiceCreateRequest
         {
             [JsonPropertyName("recordType")] public int RecordType { get; set; } = 0;  // 0: e-Arşiv
-            [JsonPropertyName("status")] public int Status { get; set; } = 0;
+            [JsonPropertyName("status")] public int Status { get; set; } = 20;
             [JsonPropertyName("isNew")] public bool IsNew { get; set; } = true;
             [JsonPropertyName("localReferenceId")] public string? LocalReferenceId { get; set; }
             [JsonPropertyName("useManualInvoiceId")] public bool UseManualInvoiceId { get; set; } = false;
@@ -459,7 +459,7 @@ namespace TurkSoft.Service.Manager
             return new OutboxInvoiceCreateRequest
             {
                 RecordType = 1,
-                Status = 0,
+                Status = 20,
                 XsltCode = null,
                 LocalReferenceId = !string.IsNullOrWhiteSpace(inv.InvoiceNo)
                                     ? inv.InvoiceNo
@@ -585,7 +585,7 @@ namespace TurkSoft.Service.Manager
             return new EArchiveInvoiceCreateRequest
             {
                 RecordType = 0,
-                Status = 0,
+                Status = 20,
                 IsNew = true,
                 LocalReferenceId = !string.IsNullOrWhiteSpace(inv.InvoiceNo)
                     ? inv.InvoiceNo
@@ -713,7 +713,7 @@ namespace TurkSoft.Service.Manager
                 DespatchAdviceZip = Convert.ToBase64String(zipBytes),
                 LocalReferenceId = inv.InvoiceNo ?? inv.Id.ToString(),
                 TargetAlias = string.IsNullOrWhiteSpace(targetAlias) ? null : targetAlias,
-                Status = 0
+                Status = 20
             };
         }
 
