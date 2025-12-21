@@ -1,109 +1,768 @@
-﻿// wwwroot/apps/earchive/OutboxEarchiveInvoice.js
-import { EarchiveOutboxApi } from '../Base/turkcellEfaturaApi.js';
+﻿// wwwroot/apps/OutboxEarchiveInvoice.js
+// Bu dosya server-side DataTable ajax/search kullanmaz.
+// ERP: GibInvoice + (GibInvoiceOperationLog || GibGibInvoiceOperationLog)
+// Log: OperationName=SendEArchiveJson, ErrorCode=200
+// Portal: /api/TurkcellEFatura/earchive/status/{id}?userId=..  -> Durum (Gib/Cevap)
+// Portal: /api/TurkcellEFatura/earchive/pdf/{id}?userId=..&standardXslt=true -> PDF indir
 
-(function () {
+(function (global) {
     'use strict';
 
-    // ===== Helpers =====
-    const TR_DATE = {
-        closeText: "Kapat", prevText: "Önceki", nextText: "Sonraki", currentText: "Bugün",
-        monthNames: ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"],
-        monthNamesShort: ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"],
-        dayNames: ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
-        dayNamesShort: ["Paz", "Pts", "Sal", "Çar", "Per", "Cum", "Cts"],
-        dayNamesMin: ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"],
-        dateFormat: "dd.mm.yy", firstDay: 1, isRTL: false
+    const $ = global.jQuery;
+
+    // ---------------------------
+    // UI helpers
+    // ---------------------------
+    function err(m) { if (global.toastr?.error) global.toastr.error(m); else alert(m); }
+
+    function num(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+    }
+    function fmt(n) {
+        return (Number(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function pad2(x) { return String(x).padStart(2, '0'); }
+
+    // dd.mm.yyyy (veya dd.mm.yy) -> yyyy-MM-dd
+    function toIsoDateTR(str) {
+        if (!str) return '';
+        const p = String(str).trim().split('.');
+        if (p.length !== 3) return '';
+        const dd = pad2(p[0]);
+        const mm = pad2(p[1]);
+        let yy = String(p[2]).trim();
+        if (yy.length === 2) yy = '20' + yy;
+        if (yy.length !== 4) return '';
+        return `${yy}-${mm}-${dd}`;
+    }
+
+    // ISO veya "yyyy-MM-dd HH:mm:ss.fffffff" gibi .NET formatlarını güvenli parse eder.
+    function parseAnyDate(val) {
+        if (!val) return null;
+        const s = String(val).trim();
+
+        let t = Date.parse(s);
+        if (Number.isFinite(t)) return new Date(t);
+
+        const mDotNet = s.match(/Date\((\d+)\)/i);
+        if (mDotNet) {
+            const ms = parseInt(mDotNet[1], 10);
+            if (!isNaN(ms)) return new Date(ms);
+        }
+
+        const m = s.match(
+            /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?$/
+        );
+        if (m) {
+            const Y = parseInt(m[1], 10);
+            const M = parseInt(m[2], 10) - 1;
+            const D = parseInt(m[3], 10);
+            const h = parseInt(m[4], 10);
+            const mi = parseInt(m[5], 10);
+            const se = parseInt(m[6] || '0', 10);
+            const frac = (m[7] || '');
+            const ms = frac ? parseInt(frac.substring(0, 3).padEnd(3, '0'), 10) : 0;
+            return new Date(Y, M, D, h, mi, se, ms);
+        }
+
+        return null;
+    }
+
+    function inRange(d, startIso, endIso) {
+        if (!d) return false;
+        if (!startIso && !endIso) return true;
+
+        const s = startIso ? parseAnyDate(`${startIso} 00:00:00`) : null;
+        const e = endIso ? parseAnyDate(`${endIso} 23:59:59.999`) : null;
+
+        if (s && d < s) return false;
+        if (e && d > e) return false;
+        return true;
+    }
+
+    function safeJsonParse(x) {
+        if (!x) return null;
+        if (typeof x === 'object') return x;
+        const s = String(x).trim();
+        if (!s) return null;
+        try { return JSON.parse(s); } catch { return null; }
+    }
+
+    function pick(o, keys, defVal = null) {
+        if (!o) return defVal;
+        for (const k of keys) {
+            if (o[k] !== undefined && o[k] !== null) return o[k];
+        }
+        return defVal;
+    }
+
+    // ---------------------------
+    // API helpers (ERP: window.__API_BASE)
+    // ---------------------------
+    function normalizeBaseUrl() {
+        let base = String(global.__API_BASE || '').trim();
+        base = base.replace(/\/+$/, '');
+        return base;
+    }
+
+    function buildApiUrl(resource) {
+        const base = normalizeBaseUrl();
+        if (!base) return `/api/v1/${resource}`;
+        if (/\/api\/v1$/i.test(base)) return `${base}/${resource}`;
+        return `${base}/api/v1/${resource}`;
+    }
+
+    async function fetchJson(url, opts) {
+        const o = opts || {};
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            credentials: o.credentials || 'include',
+            mode: o.mode || 'cors'
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status} (${url})`);
+
+        const text = await res.text();
+        if (!text) return null;
+
+        try { return JSON.parse(text); } catch { return text; }
+    }
+
+    // ---------------------------
+    // Gib Portal helpers (window.gibPortalApiBaseUrl)
+    // ---------------------------
+    function normalizeGibPortalBaseUrl() {
+        // Beklenen: https://localhost:7151/api  veya prod'da .../api
+        let base = String(global.gibPortalApiBaseUrl || '').trim();
+        if (!base) base = `${global.location.origin}/api`;
+
+        base = base.replace(/\/+$/, '');
+
+        // base zaten /api ile bitiyorsa dokunma; değilse /api ekle
+        if (!/\/api$/i.test(base)) base = `${base}/api`;
+
+        return base;
+    }
+
+    function buildGibPortalUrl(pathAfterApi) {
+        const base = normalizeGibPortalBaseUrl();
+        let p = String(pathAfterApi || '').trim();
+        p = p.replace(/^\/+/, '');
+        p = p.replace(/^api\//i, '');
+        return `${base}/${p}`;
+    }
+
+    async function fetchJsonPortal(url) {
+        try {
+            // Cross-origin CORS sorunlarında include patlatır; omit daha güvenli
+            return await fetchJson(url, { credentials: 'omit', mode: 'cors' });
+        } catch (e) {
+            if (e && String(e).includes('TypeError')) {
+                throw new Error(`İstek atılamadı (Failed to fetch). URL: ${url}. Muhtemel sebep: CORS/SSL/Network.`);
+            }
+            throw e;
+        }
+    }
+
+    // ---------------------------
+    // Status mappings (e-Arşiv)
+    // ---------------------------
+    const EArchiveStatusText = {
+        0: 'Taslak',
+        20: 'Kuyruk',
+        30: "Gib'e Gönderiliyor",
+        40: 'Hata',
+        50: "Gib'e İletildi",
+        60: 'Onaylandı',
+        100: 'e-Arşiv İptal'
     };
 
-    function toApiDate(str) { // dd.MM.yyyy -> yyyy-MM-dd
-        if (!str) return "";
-        const p = String(str).split(".");
-        if (p.length !== 3) return "";
-        return `${p[2]}-${String(p[1]).padStart(2, "0")}-${String(p[0]).padStart(2, "0")}`;
+    function formatStatusResponse(r) {
+        if (!r || typeof r !== 'object') return '';
+
+        const st = (r.status !== undefined && r.status !== null) ? num(r.status) : null;
+
+        // İstek: status=0 -> sadece Taslak
+        if (st === 0) return 'Taslak';
+
+        const stTxt = (st !== null) ? (EArchiveStatusText[st] || 'Bilinmeyen') : '—';
+        const m = String(r.message || '').trim();
+
+        const left = `${st !== null ? st : '—'}(${stTxt})`;
+        return m ? `${left} - ${m}` : left;
     }
 
-    function num(v) { const n = +((v == null) ? 0 : v); return isNaN(n) ? 0 : n; }
+    // ---------------------------
+    // Current user
+    // ---------------------------
+    function getCurrentUserId() {
+        let userId = 0;
 
-    function fmtMoney(n, c = 2, d = ",", t = ".") {
-        c = isNaN(c = Math.abs(c)) ? 2 : c;
-        const s = n < 0 ? "-" : "";
-        let i = String(parseInt(n = Math.abs(Number(n) || 0).toFixed(c)));
-        const j = (j => (j = i.length) > 3 ? j % 3 : 0)();
-        return s +
-            (j ? i.substr(0, j) + t : "") +
-            i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) +
-            (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
+        const hdn = document.getElementById('hdnUserId');
+        if (hdn?.value) {
+            const p = parseInt(hdn.value, 10);
+            if (!isNaN(p) && p > 0) userId = p;
+        }
+
+        if (!userId && typeof global.currentUserId === 'number' && global.currentUserId > 0) {
+            userId = global.currentUserId;
+        }
+
+        if (!userId) {
+            try {
+                const stored =
+                    sessionStorage.getItem('CurrentUserId') ||
+                    sessionStorage.getItem('currentUserId') ||
+                    sessionStorage.getItem('UserId');
+                if (stored) {
+                    const p = parseInt(stored, 10);
+                    if (!isNaN(p) && p > 0) userId = p;
+                }
+            } catch { }
+        }
+
+        if (!userId) throw new Error('Kullanıcı Id (userId) bulunamadı.');
+        return userId;
     }
 
-    function notifyOk(m) { window.toastr?.success ? toastr.success(m) : alert(m); }
-    function notifyErr(m) { window.toastr?.error ? toastr.error(m) : alert(m); }
+    // ---------------------------
+    // State
+    // ---------------------------
+    const State = {
+        userId: 0,
+        items: [],
+        dt: null,
+        rowByLogId: {}
+    };
 
-    // meta api-base -> window.open için
-    function getApiBase() {
-        const meta = document.querySelector('meta[name="api-base"]');
-        if (meta?.content) return meta.content.replace(/\/+$/, '');
-        if (window.__API_BASE) return String(window.__API_BASE).replace(/\/+$/, '');
-        const body = document.getElementById('MainBody');
-        if (body?.dataset?.apiBase) return String(body.dataset.apiBase).replace(/\/+$/, '');
-        return '';
+    // ---------------------------
+    // Mapping
+    // ---------------------------
+    function mapInvoice(invRaw) {
+        const inv = invRaw || {};
+
+        const id = num(pick(inv, ['Id', 'id']));
+        const userId = num(pick(inv, ['UserId', 'userId']));
+
+        const invoiceNo = String(pick(inv, ['InvoiceNo', 'invoiceNo'], '') || '');
+        const invoiceDate = pick(inv, ['InvoiceDate', 'invoiceDate'], '');
+
+        const total = num(pick(inv, ['Total', 'total'], 0));
+
+        const type = pick(inv, ['Type', 'type'], '');
+        const typeText = (type === 0 || type === '0') ? 'SATIŞ' : String(type ?? '');
+
+        const c = inv.customer || inv.Customer || null;
+        const customerName = c ? `${c.name || ''} ${c.surname || ''}`.trim() : '';
+        const taxNo = c ? (c.taxNo || c.taxno || '') : '';
+
+        let kdv = 0;
+        const taxes = inv.invoicesTaxes || inv.InvoicesTaxes || [];
+        if (Array.isArray(taxes)) {
+            for (const tx of taxes) kdv += num(tx.amount ?? tx.Amount ?? 0);
+        }
+
+        // E-Posta Durumu (varsa)
+        const hasEmail = pick(inv, ['HasEMail', 'hasEMail', 'HasEmail', 'hasEmail'], null);
+        let emailStatus = '-';
+        if (hasEmail === true || String(hasEmail).toUpperCase() === 'YES') emailStatus = 'Mail Gönderildi';
+        else if (hasEmail === false || String(hasEmail).toUpperCase() === 'NO') emailStatus = 'Mail Gönderilmedi';
+
+        // Muhasebeleştirme (varsa)
+        const isAcc = pick(inv, ['IsAccount', 'isAccount'], null);
+        let isAccountText = '-';
+        if (isAcc === true || String(isAcc).toUpperCase() === 'YES') isAccountText = 'Evet';
+        else if (isAcc === false || String(isAcc).toUpperCase() === 'NO') isAccountText = 'Hayır';
+
+        return {
+            id,
+            userId,
+            invoiceNo,
+            invoiceDate,
+            total,
+            typeText,
+            customerName,
+            taxNo,
+            kdv,
+            emailStatus,
+            isAccountText,
+            raw: inv
+        };
     }
 
-    function qs(params) {
-        const usp = new URLSearchParams();
-        Object.entries(params || {}).forEach(([k, v]) => {
-            if (v == null || v === '') return;
-            if (Array.isArray(v)) v.forEach(x => usp.append(k, x));
-            else usp.append(k, String(v));
+    function mapLog(logRaw) {
+        const lg = logRaw || {};
+        return {
+            id: num(pick(lg, ['Id', 'id'])),
+            invoiceId: num(pick(lg, ['InvoiceId', 'invoiceId'])),
+            operationName: String(pick(lg, ['OperationName', 'operationName'], '') || ''),
+            errorCode: pick(lg, ['ErrorCode', 'errorCode'], ''),
+            rawResponseJson: pick(lg, ['RawResponseJson', 'rawResponseJson'], ''),
+            createdAt: pick(lg, ['CreatedAt', 'createdAt'], ''),
+            raw: lg
+        };
+    }
+
+    // ---------------------------
+    // UI params + default date range
+    // ---------------------------
+    function setDefaultMonthDatesIfEmpty() {
+        if (!$) return;
+
+        const s = ($('#IssueDateStart').val() || '').trim();
+        const e = ($('#IssueDateStartEnd').val() || '').trim();
+        if (s || e) return;
+
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        $('#IssueDateStart').val(`${pad2(start.getDate())}.${pad2(start.getMonth() + 1)}.${start.getFullYear()}`);
+        $('#IssueDateStartEnd').val(`${pad2(endDay.getDate())}.${pad2(endDay.getMonth() + 1)}.${endDay.getFullYear()}`);
+    }
+
+    function splitMultiId(str) {
+        const s = String(str || '').trim();
+        if (!s) return [];
+        return s.split(',').map(x => x.trim()).filter(Boolean);
+    }
+
+    function buildParamsFromUI() {
+        setDefaultMonthDatesIfEmpty();
+
+        return {
+            userId: State.userId,
+            invoiceDateStartIso: toIsoDateTR($('#IssueDateStart').val()),
+            invoiceDateEndIso: toIsoDateTR($('#IssueDateStartEnd').val()),
+
+            documentId: String($('#DocumentId').val() || '').trim(),
+            uuid: String($('#UUID').val() || '').trim(),
+
+            targetIdentifier: String($('#TargetIdentifier').val() || '').trim(),
+            targetIdentifierMulti: !!$('#TargetIdentifierChk').is(':checked'),
+            targetTitle: String($('#TargetTitle').val() || '').trim(),
+
+            // “Hata / Hatasız” filtre: status hydrate edildikten sonra uygulanır
+            statusFilter: String($('#Status').val() || '').trim()
+        };
+    }
+
+    // ---------------------------
+    // Load + join (ERP)
+    // ---------------------------
+    async function loadDataAndJoin(ui) {
+        const invoiceUrl = buildApiUrl('GibInvoice');
+
+        async function fetchLogsWithFallback() {
+            try {
+                return await fetchJson(buildApiUrl('GibInvoiceOperationLog'), { credentials: 'include' });
+            } catch {
+                return await fetchJson(buildApiUrl('GibGibInvoiceOperationLog'), { credentials: 'include' });
+            }
+        }
+
+        const [invRes, logRes] = await Promise.all([
+            fetchJson(invoiceUrl, { credentials: 'include' }),
+            fetchLogsWithFallback()
+        ]);
+
+        const invAll = Array.isArray(invRes) ? invRes : (invRes?.items || []);
+        const logAll = Array.isArray(logRes) ? logRes : (logRes?.items || []);
+
+        const invoicesAll = (invAll || []).map(mapInvoice);
+
+        // ✅ Invoice filtre: UserId + date + faturaNo + firma/vkn
+        const invoices = invoicesAll.filter(inv => {
+            if (num(inv.userId) !== num(ui.userId)) return false;
+
+            const d = parseAnyDate(inv.invoiceDate);
+            if (!inRange(d, ui.invoiceDateStartIso, ui.invoiceDateEndIso)) return false;
+
+            if (ui.documentId) {
+                if (!String(inv.invoiceNo || '').toLowerCase().includes(ui.documentId.toLowerCase())) return false;
+            }
+
+            if (ui.targetTitle) {
+                if (!String(inv.customerName || '').toLowerCase().includes(ui.targetTitle.toLowerCase())) return false;
+            }
+
+            if (ui.targetIdentifier) {
+                const tax = String(inv.taxNo || '').trim();
+                if (!tax) return false;
+
+                if (ui.targetIdentifierMulti) {
+                    const list = splitMultiId(ui.targetIdentifier);
+                    if (!list.length) return false;
+                    if (!list.includes(tax)) return false;
+                } else {
+                    if (tax !== String(ui.targetIdentifier).trim()) return false;
+                }
+            }
+
+            return true;
         });
-        const s = usp.toString();
-        return s ? `?${s}` : '';
+
+        const invById = new Map(invoices.map(x => [x.id, x]));
+
+        // ✅ Log: SendEArchiveJson + ErrorCode=200 + en güncel
+        const bestLogByInvoiceId = new Map();
+
+        for (const r of (logAll || [])) {
+            const lg = mapLog(r);
+            if (!lg.invoiceId) continue;
+
+            if (lg.operationName !== 'SendEArchiveJson') continue;
+            if (String(lg.errorCode ?? '').trim() !== '200') continue;
+            if (!invById.has(lg.invoiceId)) continue;
+
+            const prev = bestLogByInvoiceId.get(lg.invoiceId);
+            if (!prev) {
+                bestLogByInvoiceId.set(lg.invoiceId, lg);
+                continue;
+            }
+
+            const pd = parseAnyDate(prev.createdAt);
+            const nd = parseAnyDate(lg.createdAt);
+            if (nd && (!pd || nd > pd)) bestLogByInvoiceId.set(lg.invoiceId, lg);
+        }
+
+        // Join
+        State.rowByLogId = {};
+        const rows = [];
+
+        for (const inv of invoices) {
+            const lg = bestLogByInvoiceId.get(inv.id);
+            if (!lg) continue;
+
+            const parsed = safeJsonParse(lg.rawResponseJson) || {};
+            const gibInvoiceNumber = parsed.invoiceNumber || parsed.InvoiceNumber || '';
+            const gibId = parsed.id || parsed.Id || ''; // ETTN
+
+            // UUID filtre (ETTN)
+            if (ui.uuid) {
+                if (!String(gibId || '').toLowerCase().includes(ui.uuid.toLowerCase())) continue;
+            }
+
+            const row = {
+                logId: lg.id,
+                invoiceId: inv.id,
+
+                invoiceNumber: inv.invoiceNo,
+                gibInvoiceNumber,
+                gibId,
+
+                targetTitle: inv.customerName,
+                targetId: inv.taxNo,
+
+                tipText: inv.typeText,
+                issueDate: inv.invoiceDate,
+                createdDate: lg.createdAt,
+
+                kdv: inv.kdv,
+                payable: inv.total,
+
+                isAccount: inv.isAccountText || '-',
+                emailStatus: inv.emailStatus || '-',
+
+                resp: '',
+
+                // status filtre için saklayalım
+                portalStatus: null
+            };
+
+            State.rowByLogId[String(lg.id)] = row;
+            rows.push(row);
+        }
+
+        rows.sort((a, b) => {
+            const da = parseAnyDate(a.createdDate);
+            const db = parseAnyDate(b.createdDate);
+            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+        });
+
+        return rows;
     }
 
-    function openApi(resourcePath, params) {
-        const base = getApiBase();
-        if (!base) return notifyErr('API base bulunamadı (meta api-base).');
-        const url = `${base}/TurkcellEFatura/${resourcePath}${qs(params)}`;
-        window.open(url, '_blank');
+    // ---------------------------
+    // Portal status hydrate
+    // ---------------------------
+    async function runPool(items, limit, worker) {
+        let i = 0;
+        const workers = Array.from({ length: Math.max(1, limit) }, () => (async () => {
+            while (i < items.length) {
+                const idx = i++;
+                await worker(items[idx]);
+            }
+        })());
+        await Promise.all(workers);
     }
 
-    // ===== jQuery required =====
-    if (!window.jQuery) {
-        console.error('[OutboxEarchiveInvoice] jQuery yok.');
-        return;
+    async function hydrateStatuses(items) {
+        const rows = (items || []).filter(r => String(r.gibId || '').trim());
+        if (!rows.length) return;
+
+        await runPool(rows, 6, async (r) => {
+            const ettN = String(r.gibId || '').trim();
+
+            const url = buildGibPortalUrl(
+                `TurkcellEFatura/earchive/status/${encodeURIComponent(ettN)}?userId=${encodeURIComponent(State.userId)}`
+            );
+
+            try {
+                const res = await fetchJsonPortal(url);
+
+                if (!String(r.gibInvoiceNumber || '').trim() && res && res.invoiceNumber) {
+                    r.gibInvoiceNumber = String(res.invoiceNumber || '');
+                }
+
+                r.portalStatus = (res && res.status !== undefined && res.status !== null) ? num(res.status) : null;
+                r.resp = formatStatusResponse(res) || '';
+            } catch (e) {
+                r.portalStatus = null;
+                r.resp = 'Durum alınamadı';
+                console.error('[OutboxEarchiveInvoice] hydrateStatuses error:', e);
+            }
+
+            State.rowByLogId[String(r.logId)] = r;
+        });
     }
-    const $ = window.jQuery;
 
-    // ===== UI Init: datepicker/select2/year/month =====
-    // ✅ FIX: Hem jQuery UI datepicker hem bootstrap-datepicker ile uyumlu + patlamaz
-    function initDatepicker($els) {
-        if (!$els || !$els.length) return;
+    // ---------------------------
+    // Table render
+    // ---------------------------
+    function setTotals(items) {
+        let kdvTop = 0;
+        let payTop = 0;
 
-        if (!$.fn.datepicker) { // hiç datepicker yok
-            $els.attr('placeholder', 'gg.aa.yyyy');
+        for (const x of items) {
+            kdvTop += num(x.kdv);
+            payTop += num(x.payable);
+        }
+
+        $('#totalKDVTaxableAmount').text('0,00 TL');
+        $('#totalKDVAmount').text(fmt(kdvTop) + ' TL');
+        $('#totalPayableAmount').text(fmt(payTop) + ' TL');
+    }
+
+    function actionsHtml(r) {
+        return `
+          <div class="btn-group btn-group-xs">
+            <button class="btn btn-default" title="PDF İndir" onclick="window.outboxDownloadPdf(${r.logId})">
+              <i class="fa fa-download"></i>
+            </button>
+            <button class="btn btn-default" title="Durum Sorgula" onclick="window.outboxCheckStatus(${r.logId})">
+              <i class="fa fa-info-circle"></i>
+            </button>
+          </div>
+        `;
+    }
+
+    function renderTable(items) {
+        setTotals(items);
+
+        const hasDT = !!($.fn && $.fn.DataTable);
+
+        if (hasDT) {
+            if (State.dt) {
+                State.dt.clear();
+                State.dt.rows.add(items);
+                State.dt.draw();
+                $('#chkAll').prop('checked', false);
+                return;
+            }
+
+            State.dt = $('#myDataTable').DataTable({
+                data: items,
+                destroy: true,
+                paging: true,
+                searching: true,
+                order: [[6, 'desc']], // İşlem Tarihi
+                columns: [
+                    {
+                        data: 'logId',
+                        orderable: false,
+                        render: (d) => `<input type="checkbox" class="rowchk" data-logid="${d}">`
+                    },
+                    {
+                        // Fatura No/ETTN
+                        data: null,
+                        render: (r) => {
+                            const gibNo = (r.gibInvoiceNumber || '').trim();
+                            const gibId = (r.gibId || '').trim();
+                            const fallback = (r.invoiceNumber || '').trim();
+
+                            const main = gibNo || fallback || '';
+                            const sub = gibId ? `ETTN: ${gibId}` : '';
+
+                            return `${main}${sub ? `<br><small>${sub}</small>` : ''}`;
+                        }
+                    },
+                    { data: 'targetTitle' },
+                    { data: 'targetId' },
+                    { data: 'tipText' },
+                    {
+                        data: 'issueDate',
+                        render: (d) => {
+                            const dt = parseAnyDate(d);
+                            if (!dt) return '';
+                            return `${pad2(dt.getDate())}.${pad2(dt.getMonth() + 1)}.${dt.getFullYear()}`;
+                        }
+                    },
+                    {
+                        data: 'createdDate',
+                        render: (d) => {
+                            const dt = parseAnyDate(d);
+                            if (!dt) return (d ? String(d).replace('T', ' ').substring(0, 16) : '');
+                            return `${pad2(dt.getDate())}.${pad2(dt.getMonth() + 1)}.${dt.getFullYear()} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+                        }
+                    },
+                    { data: 'kdv', className: 'text-right', render: (d) => fmt(d) },
+                    { data: 'payable', className: 'text-right', render: (d) => fmt(d) },
+                    { data: 'isAccount', className: 'text-center', render: (d) => (d || '-') },
+                    { data: 'resp', className: 'text-center', render: (d) => (d || '') },      // Durum (Gib/Cevap)
+                    { data: 'emailStatus', className: 'text-center', render: (d) => (d || '-') }, // E-Posta Durumu
+                    { data: null, orderable: false, className: 'text-center', render: (r) => actionsHtml(r) }
+                ],
+                drawCallback: function () { $('#chkAll').prop('checked', false); }
+            });
+
+            $('#chkAll').off('change').on('change', function () {
+                const c = $(this).is(':checked');
+                $('#myDataTable .rowchk').prop('checked', c);
+            });
+
             return;
         }
 
-        // Önce bootstrap-datepicker kontrolü (ikisinin aynı anda yüklü olduğu projelerde çakışmayı engeller)
-        const isBs = !!($.fn.datepicker && $.fn.datepicker.dates);
-        const isJqui = !!($.ui && $.ui.datepicker);
+        // DataTables yoksa
+        const $tb = $('#myDataTable tbody');
+        $tb.empty();
 
-        if (isBs) {
-            // TR lokalizasyonu yoksa ekle
-            if (!$.fn.datepicker.dates.tr) {
-                $.fn.datepicker.dates.tr = {
-                    days: TR_DATE.dayNames,
-                    daysShort: TR_DATE.dayNamesShort,
-                    daysMin: TR_DATE.dayNamesMin,
-                    months: TR_DATE.monthNames,
-                    monthsShort: TR_DATE.monthNamesShort,
-                    today: TR_DATE.currentText || "Bugün",
-                    clear: TR_DATE.closeText || "Kapat",
-                    format: "dd.mm.yyyy",
-                    weekStart: TR_DATE.firstDay ?? 1
-                };
-            }
+        for (const r of items) {
+            const dtInv = parseAnyDate(r.issueDate);
+            const dtLog = parseAnyDate(r.createdDate);
 
-            $els.datepicker({
+            const invDateTxt = dtInv ? `${pad2(dtInv.getDate())}.${pad2(dtInv.getMonth() + 1)}.${dtInv.getFullYear()}` : '';
+            const logDateTxt = dtLog ? `${pad2(dtLog.getDate())}.${pad2(dtLog.getMonth() + 1)}.${dtLog.getFullYear()} ${pad2(dtLog.getHours())}:${pad2(dtLog.getMinutes())}` : '';
+
+            const main = (r.gibInvoiceNumber || '').trim() || (r.invoiceNumber || '').trim();
+            const sub = r.gibId ? `ETTN: ${r.gibId}` : '';
+
+            $tb.append(`
+                <tr>
+                    <td><input type="checkbox" class="rowchk" data-logid="${r.logId}"></td>
+                    <td>${main || ''}${sub ? `<br><small>${sub}</small>` : ''}</td>
+                    <td>${r.targetTitle || ''}</td>
+                    <td>${r.targetId || ''}</td>
+                    <td>${r.tipText || ''}</td>
+                    <td>${invDateTxt}</td>
+                    <td>${logDateTxt}</td>
+                    <td class="text-right">${fmt(r.kdv)}</td>
+                    <td class="text-right">${fmt(r.payable)}</td>
+                    <td class="text-center">${r.isAccount || '-'}</td>
+                    <td class="text-center">${r.resp || ''}</td>
+                    <td class="text-center">${r.emailStatus || '-'}</td>
+                    <td class="text-center">${actionsHtml(r)}</td>
+                </tr>
+            `);
+        }
+
+        $('#chkAll').off('change').on('change', function () {
+            const c = $(this).is(':checked');
+            $('#myDataTable .rowchk').prop('checked', c);
+        });
+    }
+
+    function applyStatusFilter(items, statusFilter) {
+        const f = String(statusFilter || '').trim();
+        if (!f) return items;
+
+        if (f === 'Hata') {
+            // Hata = portalStatus 40 veya metinde "Hata"
+            return (items || []).filter(x =>
+                num(x.portalStatus) === 40 || String(x.resp || '').toLowerCase().includes('hata')
+            );
+        }
+        if (f === 'Hatasiz') {
+            // Hatasız = portalStatus var ve 40 değil (taslak dahil)
+            return (items || []).filter(x =>
+                x.portalStatus !== null && num(x.portalStatus) !== 40
+            );
+        }
+
+        return items;
+    }
+
+    // ---------------------------
+    // Main load
+    // ---------------------------
+    async function loadList() {
+        try {
+            const ui = buildParamsFromUI();
+
+            // 1) ERP’den çek + join
+            let rows = await loadDataAndJoin(ui);
+
+            // 2) Portal status ile doldur (Durum kolonu için şart)
+            await hydrateStatuses(rows);
+
+            // 3) Status filtresi varsa uygula
+            rows = applyStatusFilter(rows, ui.statusFilter);
+
+            // 4) State + render
+            State.items = rows;
+            renderTable(State.items);
+
+        } catch (e) {
+            console.error('[OutboxEarchiveInvoice] loadList error:', e);
+            err((e && e.message) ? e.message : 'Liste alınamadı.');
+            State.items = [];
+            renderTable([]);
+        }
+    }
+
+    // ---------------------------
+    // Datepicker init
+    // ---------------------------
+    function initDatepicker() {
+        if (!$ || !$.fn) return;
+
+        const months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+        const monthsShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+        const days = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+        const daysShort = ["Paz", "Pts", "Sal", "Çar", "Per", "Cum", "Cts"];
+        const daysMin = ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"];
+
+        if ($.datepicker && typeof $.datepicker.setDefaults === "function") {
+            $.datepicker.setDefaults({
+                closeText: "Kapat", prevText: "Önceki", nextText: "Sonraki", currentText: "Bugün",
+                monthNames: months, monthNamesShort: monthsShort,
+                dayNames: days, dayNamesShort: daysShort, dayNamesMin: daysMin,
+                dateFormat: "dd.mm.yy", firstDay: 1, isRTL: false
+            });
+
+            $('.datepicker').datepicker({
+                changeMonth: true,
+                changeYear: true,
+                showAnim: "fadeIn",
+                dateFormat: "dd.mm.yy"
+            });
+            return;
+        }
+
+        if ($.fn.datepicker && $.fn.datepicker.dates) {
+            $.fn.datepicker.dates.tr = {
+                days, daysShort, daysMin,
+                months, monthsShort,
+                today: "Bugün",
+                clear: "Temizle",
+                weekStart: 1,
+                format: "dd.mm.yyyy"
+            };
+
+            $('.datepicker').datepicker({
                 language: 'tr',
                 format: 'dd.mm.yyyy',
                 autoclose: true,
@@ -112,437 +771,112 @@ import { EarchiveOutboxApi } from '../Base/turkcellEfaturaApi.js';
             return;
         }
 
-        if (isJqui) {
-            // jQuery UI setDefaults varsa uygula
-            if ($.datepicker && typeof $.datepicker.setDefaults === 'function') {
-                $.datepicker.setDefaults(TR_DATE);
-            }
-            $els.datepicker({ changeMonth: true, changeYear: true, showAnim: "fadeIn" });
-            return;
-        }
-
-        // bilinmeyen datepicker -> en azından çalıştır
-        try { $els.datepicker(); } catch (_) { /* ignore */ }
+        console.warn("[OutboxEarchiveInvoice] Datepicker bulunamadı.");
     }
-
-    function linkRange($s, $e) {
-        if (!$.fn.datepicker) return;
-
-        const isBs = !!($.fn.datepicker && $.fn.datepicker.dates);
-        const isJqui = !!($.ui && $.ui.datepicker);
-
-        if (isBs) {
-            // bootstrap-datepicker
-            $s.on("changeDate change", () => {
-                const v = $s.val();
-                if (v) $e.datepicker("setStartDate", v);
-            });
-            $e.on("changeDate change", () => {
-                const v = $e.val();
-                if (v) $s.datepicker("setEndDate", v);
-            });
-            return;
-        }
-
-        if (isJqui) {
-            // jQuery UI datepicker
-            $s.on("change", () => {
-                const d = $s.datepicker("getDate");
-                if (d) $e.datepicker("option", "minDate", d);
-            });
-            $e.on("change", () => {
-                const d = $e.datepicker("getDate");
-                if (d) $s.datepicker("option", "maxDate", d);
-            });
-        }
-    }
-
-    function yearChange() {
-        const now = new Date();
-        const selY = +$('#IntegrationYear').val();
-        if (selY === now.getFullYear()) $('#IntegrationMonth').val(String(now.getMonth() + 1));
-        else $('#IntegrationMonth').val('-1');
-    }
-
-    // VKN çoklu
-    window.vknAyracChk = function () {
-        const multi = $('#TargetIdentifierChk').is(':checked');
-        const $inp = $('#TargetIdentifier');
-        $inp.val('');
-        if (multi) $inp.attr('maxlength', '400').attr('placeholder', '111...,222...,333...');
-        else $inp.attr('maxlength', '11').attr('placeholder', '11 hane');
-    };
-
-    // Detaylı arama ikon
-    $('#btnDetayliArama').on('click', function () {
-        const $i = $(this).find('.myCollapseIcon');
-        setTimeout(() => $i.toggleClass('fa-plus fa-minus'), 150);
-    });
-
-    initDatepicker($('.datepicker'));
-    linkRange($('#IssueDateStart'), $('#IssueDateStartEnd'));
-    linkRange($('#CreatedDateStart'), $('#CreatedDateEnd'));
-
-    if ($.fn.select2) {
-        $('#CurrencyCode,#subeler').select2({ width: '100%' });
-    }
-
-    $('#IntegrationYear').on('change', yearChange);
-    yearChange();
-
-    $('#TargetIdentifierChk').on('change', window.vknAyracChk);
-
-    // ===== Filters =====
-    function buildFilters() {
-        let ids = $('#TargetIdentifier').val() || "";
-        if ($('#TargetIdentifierChk').is(':checked')) {
-            ids = ids.split(',').map(s => $.trim(s)).filter(Boolean);
-        }
-        return {
-            IsArchive: $('#IsArchive').val(),
-            Status: $('#Status').val(),
-            IssueDateStart: toApiDate($('#IssueDateStart').val()),
-            IssueDateEnd: toApiDate($('#IssueDateStartEnd').val()),
-            DocumentId: $('#DocumentId').val(),
-            UUID: $('#UUID').val(),
-            TargetIdentifier: ids,
-            TargetTitle: $('#TargetTitle').val(),
-
-            CreatedDateStart: toApiDate($('#CreatedDateStart').val()),
-            CreatedDateEnd: toApiDate($('#CreatedDateEnd').val()),
-
-            IsObjected: $('#IsObjected').val(),
-            InvoiceTypeCode: $('#InvoiceTypeCode').val(),
-            IsPaid: $('#IsPaid').val(),
-            HasEMail: $('#HasEMail').val(),
-            PayableAmountMin: $('#PayableAmount').val(),
-            CurrencyCode: $('#CurrencyCode').val(),
-            IsCanceled: $('#IsCanceled').val(),
-            IsPrinted: $('#IsPrinted').val(),
-            IsAccount: $('#IsAccount').val(),
-
-            Year: $('#IntegrationYear').val(),
-            Month: $('#IntegrationMonth').val(),
-            BranchIds: $('#subeler').val() || []
-        };
-    }
-
-    // ===== Footer totals =====
-    let table = null;
-    function updateFooters(tot) {
-        if (tot) {
-            $('#totalKDVTaxableAmount').text(fmtMoney(num(tot.totalKdvTaxable), 2, ",", ".") + " TL");
-            $('#totalKDVAmount').text(fmtMoney(num(tot.totalKdv), 2, ",", ".") + " TL");
-            $('#totalPayableAmount').text(fmtMoney(num(tot.totalPayable), 2, ",", ".") + " TL");
-            return;
-        }
-        if (!table) return;
-        let kdv = 0, pay = 0, matrah = 0;
-        table.rows({ page: 'current' }).every(function () {
-            const d = this.data() || {};
-            kdv += num(d.KdvAmount ?? d.kdvAmount ?? d.KDV);
-            pay += num(d.PayableAmount ?? d.payableAmount ?? d.OdenecekTutar);
-            matrah += num(d.KdvTaxable ?? d.kdvTaxable ?? d.KDVMatrah);
-        });
-        $('#totalKDVTaxableAmount').text(fmtMoney(matrah, 2, ",", ".") + " TL");
-        $('#totalKDVAmount').text(fmtMoney(kdv, 2, ",", ".") + " TL");
-        $('#totalPayableAmount').text(fmtMoney(pay, 2, ",", ".") + " TL");
-    }
-
-    // ===== DataTables init =====
-    function initTable() {
-        if (!$.fn.DataTable) {
-            notifyErr('DataTables yüklü değil.');
-            return;
-        }
-
-        table = $('#myDataTable').DataTable({
-            processing: true,
-            serverSide: true,
-            deferRender: true,
-            order: [[6, 'desc']],
-            pageLength: 25,
-            lengthMenu: [[25, 50, 75, 100, 250, 500, 1000], [25, 50, 75, 100, 250, 500, "1.000"]],
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
-
-            ajax: async function (dt, callback) {
-                try {
-                    const res = await EarchiveOutboxApi.search({ dt, filters: buildFilters() });
-
-                    // Backend zaten dt formatında döndürüyorsa direkt kullan
-                    const draw = res?.draw ?? dt.draw;
-                    const recordsTotal = res?.recordsTotal ?? res?.total ?? 0;
-                    const recordsFiltered = res?.recordsFiltered ?? res?.filtered ?? recordsTotal;
-                    const data = res?.data ?? res?.items ?? [];
-
-                    if (res?.totals) updateFooters(res.totals);
-                    else updateFooters(null);
-
-                    callback({ draw, recordsTotal, recordsFiltered, data });
-                } catch (ex) {
-                    console.error('[OutboxEarchiveInvoice] search error:', ex);
-                    notifyErr(ex?.message || 'Liste alınamadı.');
-                    updateFooters(null);
-                    callback({ draw: dt.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-                }
-            },
-
-            columns: [
-                {
-                    data: null, orderable: false, searchable: false,
-                    render: (d, t, r) => `<input type="checkbox" class="rowchk" data-id="${(r.UUID || r.uuid || '')}">`
-                },
-                {
-                    data: null,
-                    render: (d) => `${d.DocumentId || d.documentId || ''}${(d.UUID || d.uuid) ? `<br><small>${d.UUID || d.uuid}</small>` : ''}`
-                },
-                { data: 'TargetTitle', defaultContent: '' },
-                { data: 'TargetIdentifier', defaultContent: '' },
-                {
-                    data: null,
-                    render: (d) => `${d.InvoiceTypeCode || ''}${d.Scenario ? '/' + d.Scenario : ''}`
-                },
-                { data: 'IssueDate', render: (v) => v ? String(v).substr(0, 10) : '' },
-                { data: 'CreatedDate', render: (v) => v ? String(v).replace('T', ' ').substr(0, 16) : '' },
-                { data: 'KdvAmount', className: 'text-right', render: (v) => fmtMoney(num(v), 2, ",", ".") },
-                { data: 'PayableAmount', className: 'text-right', render: (v) => fmtMoney(num(v), 2, ",", ".") },
-                { data: 'IsAccount', className: 'text-center', render: (v) => (v === 'YES' || v === true) ? 'Evet' : 'Hayır' },
-                { data: 'Status', className: 'text-center', defaultContent: '' },
-                { data: 'HasEMail', className: 'text-center', render: (v) => (v === 'YES' || v === true) ? 'Gönderildi' : 'Gönderilmedi' },
-                {
-                    data: null, orderable: false, searchable: false, className: 'text-center',
-                    render: (d) => {
-                        const uid = d.UUID || '';
-                        const doc = d.DocumentId || '';
-                        return `
-              <div class="btn-group btn-group-xs">
-                <button class="btn btn-info" title="Önizle" onclick="invoicePreview('${uid}')"><i class="fa fa-eye"></i></button>
-                <button class="btn btn-primary" title="Mail" onclick="invoiceSendMailModal('${uid}')"><i class="fa fa-envelope"></i></button>
-                <button class="btn btn-warning" title="İtiraz" onclick="openItiraz('${doc}','${uid}')"><i class="fa fa-exclamation"></i></button>
-                <button class="btn btn-danger" title="İptal" onclick="openIptal('${doc}','${uid}')"><i class="fa fa-times"></i></button>
-              </div>`;
-                    }
-                }
-            ],
-
-            drawCallback: function () {
-                $('#chkAll').prop('checked', false);
-            }
-        });
-
-        $('#myDataTable').on('change', '#chkAll', function () {
-            const c = $(this).is(':checked');
-            $('#myDataTable .rowchk').prop('checked', c);
-        });
-    }
-
-    initTable();
-
-    // ===== Search/Clear/Enter =====
-    function gridSearch() { table?.ajax?.reload?.(); }
-    window.gridSearch = gridSearch;
 
     function clearSearchInputs() {
-        $('#IsArchive,#Status,#IsObjected,#InvoiceTypeCode,#IsPaid,#HasEMail,#CurrencyCode,#IsCanceled,#IsPrinted,#IsAccount').val('');
-        $('#IssueDateStart,#IssueDateStartEnd,#CreatedDateStart,#CreatedDateEnd').val('');
-        $('#DocumentId,#UUID,#TargetIdentifier,#TargetTitle,#PayableAmount').val('');
+        $('#IssueDateStart,#IssueDateStartEnd').val('');
+        $('#DocumentId,#UUID,#TargetIdentifier,#TargetTitle').val('');
+        $('#Status').val('');
         $('#TargetIdentifierChk').prop('checked', false);
-        window.vknAyracChk();
-        $('#IntegrationMonth').val('-1'); yearChange();
 
-        if ($.fn.select2) {
-            $('#CurrencyCode').trigger('change');
-            $('#subeler').val(null).trigger('change');
-        }
-        gridSearch();
+        setDefaultMonthDatesIfEmpty();
+        loadList();
     }
 
-    $('#btnSearch').on('click', gridSearch);
-    $('#btnClear').on('click', clearSearchInputs);
+    // ---------------------------
+    // Exposed actions
+    // ---------------------------
 
-    $('#btnAramaYapEnter').on('keypress', 'input', function (e) {
-        if (e.which === 13) { e.preventDefault(); gridSearch(); }
-    });
+    // PDF indir: Durum alanına dokunmaz
+    global.outboxDownloadPdf = (logId) => {
+        const row = State.rowByLogId[String(logId)];
+        if (!row) return err('Kayıt bulunamadı.');
 
-    // ===== Seçili UUID =====
-    function getSelectedUUIDs() {
-        const ids = [];
-        $('#myDataTable .rowchk:checked').each(function () { ids.push($(this).data('id')); });
-        return ids;
-    }
+        const ettN = String(row.gibId || '').trim();
+        if (!ettN) return err('ETTN (rawResponseJson.id) bulunamadı.');
 
-    // ===== Bulk menu =====
-    $('.dropdown-menu').on('click', 'a.bulk', async function (e) {
-        e.preventDefault();
-        const action = $(this).data('action');
-        const uuids = getSelectedUUIDs();
+        const url = buildGibPortalUrl(
+            `TurkcellEFatura/earchive/pdf/${encodeURIComponent(ettN)}?userId=${encodeURIComponent(State.userId)}&standardXslt=true`
+        );
 
-        if (action !== 'excel-all' && !uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
+        global.open(url, '_blank', 'noopener');
+    };
+
+    global.outboxCheckStatus = async (logId) => {
+        const row = State.rowByLogId[String(logId)];
+        if (!row) return err('Kayıt bulunamadı.');
+
+        const ettN = String(row.gibId || '').trim();
+        if (!ettN) return err('ETTN (rawResponseJson.id) bulunamadı.');
+
+        const url = buildGibPortalUrl(
+            `TurkcellEFatura/earchive/status/${encodeURIComponent(ettN)}?userId=${encodeURIComponent(State.userId)}`
+        );
 
         try {
-            switch (action) {
-                case 'archive-1': await EarchiveOutboxApi.setArchive({ uuids, value: true }); notifyOk('Arşive alındı.'); return gridSearch();
-                case 'archive-0': await EarchiveOutboxApi.setArchive({ uuids, value: false }); notifyOk('Arşivden çıkarıldı.'); return gridSearch();
-                case 'paid-1': await EarchiveOutboxApi.setPaid({ uuids, value: true }); notifyOk('Ödendi işaretlendi.'); return gridSearch();
-                case 'paid-0': await EarchiveOutboxApi.setPaid({ uuids, value: false }); notifyOk('Ödenmedi işaretlendi.'); return gridSearch();
+            const res = await fetchJsonPortal(url);
 
-                case 'mail': return window.invoiceSendMailModalCol?.(uuids, true);
-                case 'excel-selected': return window.excelAktarModal?.(false, uuids);
-                case 'excel-all': return window.excelAktarModal?.(true, []);
-                case 'luca': return window.sendLucaToplu?.(uuids);
-                case 'erp': return window.muhasebeyeTopluAktar?.(uuids);
-                case 'print': return window.topluPrint?.(uuids);
-
-                case 'dl-XML': return window.getDownloadFileAll?.('XML', uuids);
-                case 'dl-PDF': return window.getDownloadFileAll?.('PDF', uuids);
-                case 'dl-TPDF': return window.getDownloadFileAll?.('TPDF', uuids);
-                case 'dl-HTML': return window.getDownloadFileAll?.('HTML', uuids);
-                case 'dl-JPG': return window.getDownloadFileAll?.('JPG', uuids);
+            if (!String(row.gibInvoiceNumber || '').trim() && res && res.invoiceNumber) {
+                row.gibInvoiceNumber = String(res.invoiceNumber || '');
             }
-        } catch (ex) {
-            console.error('[OutboxEarchiveInvoice] bulk error:', ex);
-            notifyErr(ex?.message || 'İşlem başarısız.');
-        }
-    });
 
-    // ===== Global (View onclick’leri bozulmasın) =====
-    window.invoicePreview = function (uuid) {
-        if (!uuid) return;
-        openApi('earchive/outbox/preview', { uuid });
-    };
+            row.portalStatus = (res && res.status !== undefined && res.status !== null) ? num(res.status) : null;
+            row.resp = formatStatusResponse(res) || '';
 
-    window.topluPrint = function (uuids) {
-        uuids = uuids || getSelectedUUIDs();
-        if (!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
-        openApi('earchive/outbox/print', { uuids: uuids.join(',') });
-    };
+            State.rowByLogId[String(row.logId)] = row;
 
-    window.getDownloadFileAll = function (type, uuids) {
-        uuids = uuids || getSelectedUUIDs();
-        if (!uuids.length) return notifyErr('Lütfen en az bir kayıt seçin.');
-        openApi('earchive/outbox/download', { type, uuids: uuids.join(',') });
-    };
+            const idx = State.items.findIndex(x => String(x.logId) === String(row.logId));
+            if (idx >= 0) State.items[idx] = row;
 
-    // Modal açıcılar (modallar sayfada/partial’da varsa çalışır)
-    window.openIptal = function (docNo, uuid) {
-        $('#modalFaturaNoIptal').text(docNo || '');
-        $('#modal-cancel').data('uuid', uuid).modal?.('show');
-        $('#iptalEtBtn').off('click').on('click', () => window.sendCancelDocument(uuid));
-    };
-
-    window.openItiraz = function (docNo, uuid) {
-        $('#modalFaturaNoItiraz').text(docNo || '');
-        $('#modal-object').data('uuid', uuid).modal?.('show');
-        $('#itirazEtBtn').off('click').on('click', () => window.sendObjectDocument(uuid));
-    };
-
-    window.sendCancelDocument = async function (uuid) {
-        const dto = {
-            UUID: uuid,
-            CancelDate: toApiDate($('#CancelDate').val()),
-            CancelReason: $('#CancelReason').val(),
-            CancelMail: $('#CancelMail').val()
-        };
-        if (!dto.CancelDate || !dto.CancelReason) return notifyErr('Zorunlu alanları doldurunuz.');
-
-        try {
-            await EarchiveOutboxApi.cancel(dto);
-            notifyOk('İptal talebi gönderildi.');
-            $('#modal-cancel').modal?.('hide');
-            gridSearch();
-        } catch (ex) {
-            notifyErr(ex?.message || 'İptal başarısız.');
+            renderTable(State.items);
+        } catch (e) {
+            console.error('[OutboxEarchiveInvoice] outboxCheckStatus error:', e);
+            err((e && e.message) ? e.message : 'Durum alınamadı.');
         }
     };
 
-    window.sendObjectDocument = async function (uuid) {
-        const dto = {
-            UUID: uuid,
-            ObjectDocumentDate: toApiDate($('#ObjectDocumentDate').val()),
-            ObjectDocumentNo: $('#ObjectDocumentNo').val(),
-            ObjectType: $('#ObjectType').val(),
-            ObjectReason: $('#ObjectReason').val()
-        };
-        if (!dto.ObjectDocumentDate || !dto.ObjectDocumentNo || !dto.ObjectType || !dto.ObjectReason) {
-            return notifyErr('Zorunlu alanları doldurunuz.');
+    // ---------------------------
+    // Init
+    // ---------------------------
+    function init() {
+        if (!$) {
+            console.error('[OutboxEarchiveInvoice] jQuery yok.');
+            return;
         }
 
         try {
-            await EarchiveOutboxApi.object(dto);
-            notifyOk('İtiraz talebi oluşturuldu.');
-            $('#modal-object').modal?.('hide');
-            gridSearch();
-        } catch (ex) {
-            notifyErr(ex?.message || 'İtiraz başarısız.');
+            State.userId = getCurrentUserId();
+        } catch (e) {
+            console.error(e);
+            err(e.message);
+            return;
         }
-    };
 
-    // Mail modal
-    window.invoiceSendMailModal = function (uuid) {
-        $('#modal-mail').data('uuid', uuid).modal?.('show');
-    };
-    window.invoiceSendMailModalCol = function (uuids) {
-        $('#modal-mail').data('uuids', uuids || []).modal?.('show');
-    };
+        initDatepicker();
+        setDefaultMonthDatesIfEmpty();
 
-    $('#sendMailBtn').on('click', async function () {
-        const uuid = $('#modal-mail').data('uuid') || null;
-        const uuids = $('#modal-mail').data('uuids') || (uuid ? [uuid] : []);
-        const dto = {
-            Uuids: uuids,
-            ReceiverMail: $('#ReceiverMail').val(),
-            Title: $('#Title').val(),
-            ReceiverFirstnameLastname: $('#ReceiverFirstnameLastname').val(),
-            AttachXml: $('#sendXml').is(':checked'),
-            AttachPdf: $('#sendPdf').is(':checked')
-        };
-        if (!dto.ReceiverMail || !dto.Title || !dto.ReceiverFirstnameLastname) return notifyErr('E-posta, konu ve alıcı adı zorunlu.');
+        $('#btnSearch').off('click').on('click', loadList);
+        $('#btnClear').off('click').on('click', clearSearchInputs);
 
-        try {
-            await EarchiveOutboxApi.sendMail(dto);
-            notifyOk('E-posta gönderildi.');
-            $('#modal-mail').modal?.('hide');
-        } catch (ex) {
-            notifyErr(ex?.message || 'E-posta gönderilemedi.');
-        }
-    });
+        $('#btnAramaYapEnter').off('keypress').on('keypress', 'input', function (e) {
+            if (e.which === 13) { e.preventDefault(); loadList(); }
+        });
 
-    // Excel modal
-    window.excelAktarModal = function (all, uuids) {
-        $('#modal-exceleaktar').data('all', !!all).data('uuids', uuids || []).modal?.('show');
-    };
+        $('#btnDetayliArama').off('click').on('click', function () {
+            const $i = $(this).find('.myCollapseIcon');
+            setTimeout(() => $i.toggleClass('fa-plus fa-minus'), 150);
+        });
 
-    $('#exceleAktar').on('click', async function () {
-        const all = $('#modal-exceleaktar').data('all');
-        const uuids = $('#modal-exceleaktar').data('uuids') || [];
+        $('.dropdown-menu').off('click.outbox').on('click.outbox', 'a.bulk', function (e) {
+            e.preventDefault();
+            err('Bu ekranda toplu işlem/senkron aksiyonları kullanılmıyor.');
+        });
 
-        const dto = {
-            All: !!all,
-            Uuids: uuids,
-            IssueStart: toApiDate($('#faturaBaslangicTarihi').val()),
-            IssueEnd: toApiDate($('#faturaBitisTarihi').val()),
-            ProcStart: toApiDate($('#faturaIslemeBaslamaTarihi').val()),
-            ProcEnd: toApiDate($('#faturaIslemBitisTarihi').val()),
-            IsArchive: $('#isArchive').val(),
-            ReceiverIdentifier: $('#receiverIdentifier').val(),
-            ReceiverTitle: $('#receiverTitle').val(),
-            IsCancel: $('#isCancel').val(),
-            Year: $('#IntegrationYearExcel').val(),
-            SumKdv: $('#sumKdv').val()
-        };
+        loadList();
+    }
 
-        try {
-            const resp = await EarchiveOutboxApi.exportExcel(dto);
-            notifyOk(resp?.message || 'Excel işlemi başlatıldı.');
-            if (resp?.fileUrl) window.location = resp.fileUrl;
-            $('#modal-exceleaktar').modal?.('hide');
-        } catch (ex) {
-            notifyErr(ex?.message || 'Excel aktarım hatası.');
-        }
-    });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
 
-    // Stub’lar (projedeki mevcut modallar/akışlar varsa burada değiştirirsin)
-    window.sendLucaToplu = function (uuids) { notifyOk(`Luca aktarım isteği gönderildi (${uuids?.length || 0} kayıt).`); };
-    window.muhasebeyeTopluAktar = function () { $('#muhasebeFisiModal').modal?.('show'); };
-
-})();
+})(window);
