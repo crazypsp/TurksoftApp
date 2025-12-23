@@ -63,6 +63,34 @@ function injectVknIntoParagraphs(vkn) {
     target.textContent = 'Vkn: ' + vkn;
 }
 
+// ====== EK: Name split helper (TCKN ise) ======
+
+function _splitFullName(fullName) {
+    var s = (fullName || '').toString().trim().replace(/\s+/g, ' ');
+    if (!s) return { firstName: '', lastName: '' };
+
+    var parts = s.split(' ');
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+
+    var lastName = parts[parts.length - 1];
+    var firstName = parts.slice(0, parts.length - 1).join(' ');
+    return { firstName: firstName, lastName: lastName };
+}
+
+function _uniqStrings(arr) {
+    var out = [];
+    var seen = Object.create(null);
+    (arr || []).forEach(function (x) {
+        var s = (x || '').toString().trim();
+        if (!s) return;
+        var key = s.toLowerCase();
+        if (seen[key]) return;
+        seen[key] = true;
+        out.push(s);
+    });
+    return out;
+}
+
 /* ============================================
  *  MÜKELLEF LİSTESİ (HomeController üzerinden)
  * ==========================================*/
@@ -91,13 +119,22 @@ function normalizeMukellefRecord(raw, idx) {
         raw.gibAlias ||
         '';
 
+    // EK: Aliases array desteği (GetMukellefByIdentifier ile gelir)
+    var aliases = raw.Aliases || raw.aliases || raw.AliasList || raw.aliasList || null;
+    if (Array.isArray(aliases)) {
+        aliases = _uniqStrings(aliases);
+    } else {
+        aliases = null;
+    }
+
     var id = raw.id || raw.Id || identifier || (idx + 1);
 
     return {
         id: id,
         Identifier: (identifier || '').toString().trim(),
         Title: (title || '').toString().trim(),
-        Alias: (alias || '').toString().trim()
+        Alias: (alias || '').toString().trim(),
+        Aliases: aliases
     };
 }
 
@@ -139,9 +176,6 @@ async function loadMukellefListFromJson() {
 
 /**
  *  Sunucudan mükellef arama (isteğe bağlı sayfalama ile)
- *  - query: arama metni
- *  - page/pageSize verilirse: SearchMukellef bize { total, items[] } dönecek
- *  - verilmezse: eski davranış (max 100 dizi)
  */
 async function searchMukellefOnServer(query, page, pageSize) {
     try {
@@ -178,13 +212,10 @@ async function searchMukellefOnServer(query, page, pageSize) {
 
 // ============================================
 //  Fatura Oluştur modalı için Mükellef arama
-//  (artık sadece VKN/TCKN ile çalışıyor)
 // ============================================
 
-// Aynı anda birden fazla istek olursa, en son isteğin sonucu kullanılsın diye
 var _mukellefDatalistRequestId = 0;
 
-// İstersen ileride tekrar text arama için kullanırsın, şu an modalda otomatik çağırmıyoruz
 async function fillMusteriCariDatalistFromServer(filterText) {
     var dataList = document.getElementById('MusteriCariList');
     if (!dataList) {
@@ -194,7 +225,6 @@ async function fillMusteriCariDatalistFromServer(filterText) {
     var term = (filterText || '').toString().trim();
     console.log('[Mükellef] Datalist doldurma, term =', term);
 
-    // Yazmaya yeni başlamışsa (1 karakter), gereksiz sorgu atmayalım
     if (term.length > 0 && term.length < 2) {
         console.log('[Mükellef] Arama için en az 2 karakter bekleniyor.');
         return;
@@ -202,18 +232,15 @@ async function fillMusteriCariDatalistFromServer(filterText) {
 
     var thisRequestId = ++_mukellefDatalistRequestId;
 
-    // İlk açılışta boş kelime ile 20 kayıt getir, aramada da yine 20 kayıt
     var pageSize = 20;
     var page = 1;
 
     var results = await searchMukellefOnServer(term, page, pageSize);
 
-    // Bu arada yeni bir istek atılmışsa, bu sonucu çöpe at
     if (thisRequestId !== _mukellefDatalistRequestId) {
         return;
     }
 
-    // Eski seçenekleri temizle
     while (dataList.options.length > 0) {
         dataList.remove(0);
     }
@@ -244,8 +271,6 @@ async function fillMusteriCariDatalistFromServer(filterText) {
 
 /**
  * Girilen Identifier'a göre E-Fatura / E-Arşiv'e yönlendirme
- * - JSON'da varsa => E-Fatura, alias & title set
- * - JSON'da yoksa => E-Arşiv, sadece identifier set
  */
 async function routeByIdentifier(identifierInput) {
     var vkn = (identifierInput || '').replace(/\D/g, '').slice(0, 11);
@@ -255,6 +280,7 @@ async function routeByIdentifier(identifierInput) {
     }
 
     try {
+        // (performans için includeAliases kullanmıyoruz)
         var url = '/Home/GetMukellefByIdentifier?identifier=' + encodeURIComponent(vkn);
         console.log('[Mükellef] GetMukellefByIdentifier istek:', url);
 
@@ -291,7 +317,6 @@ async function routeByIdentifier(identifierInput) {
             return;
         }
 
-        // found:false => E-Arşiv
         var eaPayload = { Identifier: vkn };
         try {
             sessionStorage.setItem('SelectedMukellefForEArchive', JSON.stringify(eaPayload));
@@ -307,10 +332,6 @@ async function routeByIdentifier(identifierInput) {
     }
 }
 
-
-/**
- * checkInput içindeki sayıya göre E-Fatura / E-Arşiv'e git
- */
 async function openCreateInvoiceWithSelectedMukellef(e) {
     if (e && e.preventDefault) e.preventDefault();
 
@@ -320,7 +341,6 @@ async function openCreateInvoiceWithSelectedMukellef(e) {
         return;
     }
 
-    // Sadece rakamları al, 11 haneye kadar
     var digits = (input.value || '').replace(/\D/g, '').slice(0, 11);
     input.value = digits;
 
@@ -332,11 +352,10 @@ async function openCreateInvoiceWithSelectedMukellef(e) {
     await routeByIdentifier(digits);
 }
 
-// Eski inline kullanım için global export
 window.checkFatura = openCreateInvoiceWithSelectedMukellef;
 
 /* ============================================
- *  TANIMLAMALAR MENÜSÜ (sadece Admin + Bayi)
+ *  TANIMLAMALAR MENÜSÜ
  * ==========================================*/
 
 function setupUserFirmMenuVisibility() {
@@ -352,7 +371,6 @@ function setupUserFirmMenuVisibility() {
         console.warn('[Sidebar] UserRolId okunamadı:', e);
     }
 
-    // 1 = Admin, 2 = Bayi, 3 = MM, 4 = Firma
     var showForAdminOrBayi = (roleId === '1' || roleId === '2');
 
     if (showForAdminOrBayi) {
@@ -483,12 +501,8 @@ function applyCreditFromSession() {
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    // 0) İlk mükellef datası (isteğe bağlı preload)
     loadMukellefListFromJson();
 
-    // =========================
-    // 1) Session'dan Email & Firma oku
-    // =========================
     var email = (sessionStorage.getItem('lastLoginEmail') || '').trim().toLowerCase();
     console.log('lastLoginEmail:', email);
 
@@ -504,9 +518,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // =========================
-    // 2) RoleId – default 4 (Firma)
-    // =========================
     var userRoleKey = 'UserRolId';
     var userRoleId = sessionStorage.getItem(userRoleKey) || sessionStorage.getItem('UserRoleId');
 
@@ -517,12 +528,8 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('UserRol boş, 4 (Firma) olarak set edildi.');
     }
 
-    // Menü görünürlüğü
     setupUserFirmMenuVisibility();
 
-    // =========================
-    // 3) GİB config + DOM
-    // =========================
     if (firma) {
         var apiKey = firma.ApiKey || firma.apiKey || '';
         var senderVkn = firma.TaxNo || firma.taxNo || '';
@@ -549,9 +556,6 @@ document.addEventListener('DOMContentLoaded', function () {
         injectVknIntoParagraphs(senderVkn);
     }
 
-    // =========================
-    // 4) Logolar
-    // =========================
     var logo = document.getElementById('userLogo');
     var mainOne = document.getElementById('mainOne');
     var maintwo = document.getElementById('maintwo');
@@ -619,9 +623,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // =========================
-    // 5) Kredi bilgisi DOM'a bas
-    // =========================
     applyCreditFromSession();
 });
 
@@ -642,10 +643,8 @@ $(function () {
 
     $('[data-toggle="tooltip"]').tooltip();
 
-    // Fatura Oluştur modalındaki VKN / TCKN alanı
     var $checkInput = $('#checkInput');
     if ($checkInput.length) {
-        // input sadece rakam, max 11 hane
         $checkInput.on('input', function (e) {
             var val = (e.target.value || '').replace(/\D/g, '');
             if (val.length > 11) {
@@ -653,40 +652,106 @@ $(function () {
             }
             e.target.value = val;
 
-            // 10 veya 11 hane olunca otomatik kontrol et
             if (val.length === 10 || val.length === 11) {
-                // Aynı değere tekrar tekrar istek atmayalım
                 if (e.target.dataset.lastChecked === val) {
                     return;
                 }
                 e.target.dataset.lastChecked = val;
                 routeByIdentifier(val);
             } else {
-                // Uzunluk değiştiyse önceki kontrolü sıfırla
                 e.target.dataset.lastChecked = '';
             }
         });
     }
 
-    // Fatura Oluştur butonu (yedek – kullanıcı isterse butona basarak da tetikleyebilir)
     $('#checkFatura, #btnCreateInvoiceFromModal').on('click', openCreateInvoiceWithSelectedMukellef);
 });
-
 
 // ============================================
 //  CreateNewInvoice – Alıcı Select2 (EK KOD)
 // ============================================
 
+// ====== EK: Alias select'i komple rebuild eden fonksiyon ======
+function _applyAliasesToAliciEtiketi(aliasSelectId, aliases, selectedAlias) {
+    var sel = document.getElementById(aliasSelectId);
+    if (!sel) return;
+
+    // Default HTML option dahil HEPSİNİ SİL (madde 2)
+    while (sel.options.length > 0) {
+        sel.remove(0);
+    }
+
+    var list = _uniqStrings(aliases || []);
+    if (!list.length) {
+        // Boş kalmasın diye tek empty option bırak
+        sel.appendChild(new Option('', '', true, true));
+    } else {
+        list.forEach(function (a, idx) {
+            var opt = new Option(a, a, false, false);
+            sel.appendChild(opt);
+        });
+
+        // seçilecek alias
+        var pick = (selectedAlias || '').toString().trim();
+        if (pick) {
+            var found = false;
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === pick) {
+                    sel.selectedIndex = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                sel.selectedIndex = 0;
+            }
+        } else {
+            sel.selectedIndex = 0;
+        }
+    }
+
+    if (typeof $ !== 'undefined' && $.fn && $.fn.select2 && $(sel).hasClass('select2-hidden-accessible')) {
+        $(sel).trigger('change');
+    } else {
+        // normal select change
+        try { sel.dispatchEvent(new Event('change', { bubbles: true })); } catch { }
+    }
+}
+
+// ====== EK: Detay çekme (Alias listesi için) ======
+var _getMukellefDetailsReqId = 0;
+
+async function _getMukellefDetailsByIdentifier(identifier) {
+    var vkn = (identifier || '').toString().replace(/\D/g, '').slice(0, 11);
+    if (vkn.length !== 10 && vkn.length !== 11) return { found: false };
+
+    var myId = ++_getMukellefDetailsReqId;
+
+    var url = '/Home/GetMukellefByIdentifier?identifier=' + encodeURIComponent(vkn) + '&includeAliases=true';
+    try {
+        var resp = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-cache'
+        });
+
+        if (myId !== _getMukellefDetailsReqId) return { found: false, cancelled: true };
+
+        if (!resp.ok) {
+            console.error('[CreateInvoice] GetMukellefByIdentifier(detail) hata:', resp.status, resp.statusText);
+            return { found: false };
+        }
+
+        var data = await resp.json();
+        return data || { found: false };
+    } catch (e) {
+        console.error('[CreateInvoice] GetMukellefByIdentifier(detail) exception:', e);
+        return { found: false };
+    }
+}
+
 /**
- * Seçilen mükellefi CreateNewInvoice.cshtml içindeki
- * alıcı alanlarına uygular.
- *
- * - AliciVknTckn       : Arama alanı
- * - txtIdentificationID: VKN/TCKN
- * - ddlAliciEtiketi    : Alias
- * - txtPartyName       : Firma Adı
- * - txtPersonFirstName : Adı (şimdilik boş bırakıyoruz)
- * - txtPersonLastName  : Soyadı (şimdilik boş bırakıyoruz)
+ * Seçilen mükellefi CreateNewInvoice.cshtml içindeki alıcı alanlarına uygular.
  */
 function _fillAliciFromMukellefForCreateInvoice(m) {
     var vknSearchId = 'AliciVknTckn';
@@ -697,84 +762,51 @@ function _fillAliciFromMukellefForCreateInvoice(m) {
     var personLastId = 'txtPersonLastName';
 
     if (!m) {
-        // Temizle
         setValueOrTextById(vknSearchId, '');
         setValueOrTextById(vknTargetId, '');
         setValueOrTextById(partyNameId, '');
         setValueOrTextById(personFirstId, '');
         setValueOrTextById(personLastId, '');
 
-        var selClear = document.getElementById(aliasSelectId);
-        if (selClear) {
-            selClear.value = '';
-            if (typeof $ !== 'undefined' && $.fn && $.fn.select2 && $(selClear).hasClass('select2-hidden-accessible')) {
-                $(selClear).val('').trigger('change');
-            }
-        }
+        _applyAliasesToAliciEtiketi(aliasSelectId, [], '');
         return;
     }
 
-    var identifier = (m.Identifier || '').toString().trim();
-    var title = (m.Title || '').toString().trim();
-    var alias = (m.Alias || '').toString().trim();
+    var identifier = (m.Identifier || m.identifier || '').toString().trim();
+    var title = (m.Title || m.title || '').toString().trim();
+    var alias = (m.Alias || m.alias || '').toString().trim();
 
-    // Ara + VKN/TCKN alanlarını doldur
+    // Alias listesi (madde 2)
+    var aliases = m.Aliases || m.aliases || null;
+    if (Array.isArray(aliases)) {
+        aliases = _uniqStrings(aliases);
+    } else {
+        aliases = alias ? [alias] : [];
+    }
+
     setValueOrTextById(vknSearchId, identifier);
     setValueOrTextById(vknTargetId, identifier);
 
-    // Firma adı
     setValueOrTextById(partyNameId, title);
 
-    // Ad / Soyad şimdilik boş
-    setValueOrTextById(personFirstId, '');
-    setValueOrTextById(personLastId, '');
-
-    // === Alıcı Etiketi (ddlAliciEtiketi) ===
-    var sel = document.getElementById(aliasSelectId);
-    if (sel) {
-        if (alias) {
-            var aliasLower = alias.toLowerCase();
-            var foundIndex = -1;
-
-            // Mevcut option'lar içinde ara
-            for (var i = 0; i < sel.options.length; i++) {
-                var opt = sel.options[i];
-                if (!opt) continue;
-
-                var optText = (opt.text || '').toLowerCase();
-                if (opt.value === alias || optText === aliasLower) {
-                    foundIndex = i;
-                    break;
-                }
-            }
-
-            if (foundIndex >= 0) {
-                // Bulduysak onu seç
-                sel.selectedIndex = foundIndex;
-            } else {
-                // Bulamadıysak yeni option ekle ve seçili yap
-                var newOpt = new Option(alias, alias, true, true); // text, value, defaultSelected, selected
-                sel.appendChild(newOpt);
-            }
-        } else {
-            // Alias yoksa "Seçiniz"e çek
-            sel.value = '';
-        }
-
-        // Select2 ile kullanılıyorsa senkronize et
-        if (typeof $ !== 'undefined' && $.fn && $.fn.select2 && $(sel).hasClass('select2-hidden-accessible')) {
-            $(sel).trigger('change');
-        }
+    // (madde 3) TCKN ise kişi adı/soyadı anlamlı doldur
+    var digits = identifier.replace(/\D/g, '');
+    if (digits.length === 11) {
+        var split = _splitFullName(title);
+        setValueOrTextById(personFirstId, split.firstName);
+        setValueOrTextById(personLastId, split.lastName);
+    } else {
+        setValueOrTextById(personFirstId, '');
+        setValueOrTextById(personLastId, '');
     }
+
+    _applyAliasesToAliciEtiketi(aliasSelectId, aliases, alias);
 }
 
-
 /**
- * CreateNewInvoice.cshtml'de yer alan ddlMusteriAra select'i için
- * Select2 + server-side mükellef arama.
+ * CreateNewInvoice.cshtml'de yer alan ddlMusteriAra select'i için Select2 + server-side mükellef arama.
  */
 function initCreateNewInvoiceAliciSelect2() {
-    // jQuery ve Select2 var mı?
     if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) {
         console.warn('[CreateInvoice] jQuery veya Select2 yüklü değil, initCreateNewInvoiceAliciSelect2 atlandı.');
         return;
@@ -782,11 +814,9 @@ function initCreateNewInvoiceAliciSelect2() {
 
     var $ddl = $('#ddlMusteriAra');
     if (!$ddl.length) {
-        // Bu sayfada yoksa hiçbir şey yapma
         return;
     }
 
-    // Keen veya başka bir kod daha önce init ettiyse destroy et
     try {
         if ($ddl.hasClass('select2-hidden-accessible')) {
             $ddl.select2('destroy');
@@ -813,8 +843,6 @@ function initCreateNewInvoiceAliciSelect2() {
                 return 'Aranıyor...';
             }
         },
-        // dropdownParent: $('#faturaOlustur'), // modal içindeyse açmak için kullanabilirsin
-
         ajax: {
             url: '/Home/SearchMukellef',
             dataType: 'json',
@@ -823,7 +851,7 @@ function initCreateNewInvoiceAliciSelect2() {
             data: function (params) {
                 var page = params.page || 1;
                 return {
-                    term: params.term || '', // VKN veya Ünvan
+                    term: params.term || '',
                     page: page,
                     pageSize: pageSize
                 };
@@ -835,44 +863,63 @@ function initCreateNewInvoiceAliciSelect2() {
                     ? data
                     : (data && Array.isArray(data.items) ? data.items : []);
 
-                var results = arr.map(function (raw, idx) {
+                // EK: Client-side dedupe (madde 1’i garantiye almak için)
+                var seen = Object.create(null);
+                var results = [];
+
+                arr.forEach(function (raw, idx) {
                     var m = (typeof normalizeMukellefRecord === 'function')
                         ? normalizeMukellefRecord(raw, idx)
                         : (raw || {});
+
+                    var key = (m.Identifier || '').toString().trim();
+                    if (!key) return;
+
+                    if (seen[key]) return;
+                    seen[key] = true;
 
                     var text = (m.Identifier && m.Title)
                         ? (m.Identifier + ' - ' + m.Title)
                         : (m.Identifier || m.Title || '');
 
-                    return {
-                        id: m.id || m.Identifier || (idx + 1),
+                    results.push({
+                        id: m.Identifier, // EK: stabil id
                         text: text,
                         mukellef: m
-                    };
+                    });
                 });
 
-                var total = (data && (data.total || data.Total)) || results.length;
+                var total = (data && (data.total || data.Total)) || (params.page * pageSize + 1);
                 var more = (params.page * pageSize) < total;
 
                 return {
                     results: results,
-                    pagination: {
-                        more: more
-                    }
+                    pagination: { more: more }
                 };
             }
         }
     });
 
-    // Seçim yapılınca alıcı alanlarını doldur
-    $ddl.on('select2:select', function (e) {
+    // Seçim yapılınca: detay çek (alias listesi) ve doldur
+    $ddl.on('select2:select', async function (e) {
         var data = e.params.data;
-        if (data && data.mukellef) {
-            _fillAliciFromMukellefForCreateInvoice(data.mukellef);
+        if (!data || !data.mukellef) return;
+
+        var picked = data.mukellef;
+        var idDigits = (picked.Identifier || '').toString();
+
+        // Önce hızlı doldur
+        _fillAliciFromMukellefForCreateInvoice(picked);
+
+        // Sonra detay (tüm alias) çek ve yeniden uygula
+        var detail = await _getMukellefDetailsByIdentifier(idDigits);
+        if (detail && detail.found) {
+            var merged = normalizeMukellefRecord(detail, 0);
+            // normalize; Identifier/Title/Alias/Aliases gelir
+            _fillAliciFromMukellefForCreateInvoice(merged);
         }
     });
 
-    // Temizlenince alıcı alanlarını da temizle
     $ddl.on('select2:clear', function () {
         _fillAliciFromMukellefForCreateInvoice(null);
     });
@@ -889,33 +936,23 @@ async function _searchAndFillAliciByVknFromInput() {
     if (!input) return;
 
     var raw = (input.value || '').toString().trim();
-    // Sadece rakam, 11 haneye kadar
     var digits = raw.replace(/\D/g, '').slice(0, 11);
 
-    // Input'u normalize edelim
     input.value = digits;
 
-    // 10 veya 11 hane değilse arama yapma
     if (digits.length !== 10 && digits.length !== 11) {
         return;
     }
 
-    if (typeof searchMukellefOnServer !== 'function') {
-        console.warn('[CreateInvoice] searchMukellefOnServer bulunamadı.');
-        return;
-    }
-
     try {
-        // VKN'e göre ilk sayfadan 1 kayıt getir
-        var results = await searchMukellefOnServer(digits, 1, 1);
+        // EK: direkt detay çek (alias listesi için)
+        var detail = await _getMukellefDetailsByIdentifier(digits);
 
-        if (results && results.length > 0) {
-            var m = results[0];
-
-            // Alıcı alanlarını doldur
+        if (detail && detail.found) {
+            var m = normalizeMukellefRecord(detail, 0);
             _fillAliciFromMukellefForCreateInvoice(m);
 
-            // ddlMusteriAra Select2 varsa onu da aynı kayda set edelim
+            // ddlMusteriAra Select2 varsa set edelim
             if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
                 var $ddl = $('#ddlMusteriAra');
                 if ($ddl.length) {
@@ -923,7 +960,7 @@ async function _searchAndFillAliciByVknFromInput() {
                         ? (m.Identifier + ' - ' + m.Title)
                         : (m.Identifier || m.Title || '');
 
-                    var optVal = m.id || m.Identifier;
+                    var optVal = m.Identifier;
                     var $existing = $ddl.find('option[value="' + optVal + '"]');
 
                     if (!$existing.length) {
@@ -935,11 +972,11 @@ async function _searchAndFillAliciByVknFromInput() {
                 }
             }
         } else {
-            // Kayıt bulunamadı: sadece VKN'i txtIdentificationID'e yaz, diğerlerini temizle
             _fillAliciFromMukellefForCreateInvoice({
                 Identifier: digits,
                 Title: '',
-                Alias: ''
+                Alias: '',
+                Aliases: []
             });
         }
     } catch (err) {
@@ -947,10 +984,6 @@ async function _searchAndFillAliciByVknFromInput() {
     }
 }
 
-/**
- * AliciVknTckn input'unu aramaya bağlayan init fonksiyonu.
- * Kullanıcı 10 veya 11 hane yazdığında arama yapar.
- */
 function initAliciVknTcknSearchBinding() {
     var input = document.getElementById('AliciVknTckn');
     if (!input) return;
@@ -974,14 +1007,9 @@ function initAliciVknTcknSearchBinding() {
     });
 }
 
-// Mevcut DOMContentLoaded yapısına DOKUNMADAN,
-// ekstra bir tane daha event listener ekliyoruz.
 document.addEventListener('DOMContentLoaded', function () {
     try {
-        // ddlMusteriAra için Select2 + server-side arama
         initCreateNewInvoiceAliciSelect2();
-
-        // AliciVknTckn input'una yazılana göre arama
         initAliciVknTcknSearchBinding();
     } catch (e) {
         console.error('[CreateInvoice] CreateInvoice init hata:', e);

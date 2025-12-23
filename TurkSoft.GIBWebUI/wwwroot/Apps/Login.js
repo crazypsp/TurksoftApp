@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             storeFirmaToSession(res, byFirma);
 
             // 5) Mükellef yenileme isteğini backend'e at (arka planda)
-            //await triggerMukellefRefreshOnServer(currentUserId);
+            await triggerMukellefRefreshOnServer(currentUserId);
 
             // 6) Son e-posta'yı sakla
             try { sessionStorage.setItem('lastLoginEmail', email); } catch { }
