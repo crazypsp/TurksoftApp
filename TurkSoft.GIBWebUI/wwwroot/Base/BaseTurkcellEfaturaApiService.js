@@ -113,6 +113,26 @@ function tryParseJson(text) {
     try { return JSON.parse(text); } catch { return null; }
 }
 
+// EK: ASP.NET Validation ProblemDetails -> errors to message
+function extractValidationErrors(j) {
+    if (!j || typeof j !== "object") return "";
+    const errs = j.errors;
+    if (!errs || typeof errs !== "object") return "";
+
+    const msgs = [];
+    Object.keys(errs).forEach((k) => {
+        const arr = errs[k];
+        if (Array.isArray(arr)) {
+            arr.forEach(m => {
+                const s = String(m || "").trim();
+                if (s) msgs.push(s);
+            });
+        }
+    });
+
+    return msgs.length ? msgs.join("\n") : "";
+}
+
 export class BaseTurkcellEfaturaApiService {
     /**
      * @param {object} options
@@ -226,10 +246,14 @@ export class BaseTurkcellEfaturaApiService {
             });
 
             if (!resp.ok) {
-                // hata mesajı üret
                 const text = await readAsText(resp);
                 const j = tryParseJson(text);
+
+                // EK: Validation errors varsa daha iyi mesaj üret
+                const validationMsg = extractValidationErrors(j);
+
                 const msg =
+                    validationMsg ||
                     (j && (j.message || j.error || j.detail || j.title)) ||
                     text ||
                     `HTTP ${resp.status} ${resp.statusText}`;
