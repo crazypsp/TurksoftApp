@@ -60,6 +60,42 @@ import { EinvoiceInboxApi } from '../Base/turkcellEfaturaApi.js';
         return userId;
     }
 
+    // ===== EK: UI code -> integer status (API uyumu) =====
+    function mapUiResponseCodeToStatusInt(code) {
+        if (code === undefined || code === null) return null;
+        const s = String(code).trim();
+        if (!s) return null;
+
+        // "0", "1" gibi numeric ise direkt int
+        if (/^\d+$/.test(s)) return parseInt(s, 10);
+
+        const u = s.toUpperCase();
+        if (u === 'KABUL' || u === 'ACCEPT' || u === 'APPROVE') return 1;
+        if (u === 'RED' || u === 'REJECT' || u === 'DECLINE') return 2;
+
+        return null;
+    }
+
+    // ===== EK: Base service error.response içinden validation messages çıkar =====
+    function extractApiErrorMessage(e) {
+        const r = e?.response;
+        if (r && typeof r === 'object') {
+            if (r.errors && typeof r.errors === 'object') {
+                const msgs = [];
+                Object.keys(r.errors).forEach(k => {
+                    const arr = r.errors[k];
+                    if (Array.isArray(arr)) arr.forEach(m => {
+                        const s = String(m || '').trim();
+                        if (s) msgs.push(s);
+                    });
+                });
+                if (msgs.length) return msgs.join('\n');
+            }
+            return r.detail || r.title || r.message || e?.message;
+        }
+        return e?.message || 'Uygulama yanıtı gönderilemedi.';
+    }
+
     // View’deki onclick’ler bozulmasın diye global fonksiyonları sağlayacağız
     const State = {
         userId: 0,
@@ -71,7 +107,7 @@ import { EinvoiceInboxApi } from '../Base/turkcellEfaturaApi.js';
         const r = raw || {};
 
         const uuid =
-            r.uuid || r.UUID || r.envelopeId || r.envelopeUUID || r.id || r.Id || '';
+            r.uuid || r.UUID ||  r.id || r.Id || '';
 
         const invoiceNumber = r.invoiceNumber || r.documentId || r.DocumentId || r.invoiceNo || '';
         const senderTitle = r.targetTitle || r.senderTitle || r.companyTitle || '';
@@ -369,6 +405,7 @@ import { EinvoiceInboxApi } from '../Base/turkcellEfaturaApi.js';
         $('#responseModal').modal('show');
     }
 
+    // ✅ GÜNCELLENDİ: API'ye invoiceId/status(int)/reason gönder
     async function sendApplicationResponse() {
         const uuid = $('#respUuid').val();
         const code = $('#ddlResponseCode').val();
@@ -377,19 +414,37 @@ import { EinvoiceInboxApi } from '../Base/turkcellEfaturaApi.js';
         if (!uuid) return toastErr('UUID bulunamadı.');
         if (!code) return toastErr('Cevap tipi seçiniz.');
 
+        const statusInt = mapUiResponseCodeToStatusInt(code);
+        if (statusInt === null || Number.isNaN(statusInt)) {
+            return toastErr('Cevap tipi (status) geçersiz. (KABUL/RED veya 0/1 bekleniyor)');
+        }
+
+        // İsteğe bağlı: Red ise sebep zorunlu (API validation bunu istiyor olabilir)
+        if (statusInt !== 0 && !(note || '').trim()) {
+            return toastErr('Red işlemi için açıklama (sebep) giriniz.');
+        }
+
+        // Curl ile birebir uyumlu body
+        const body = {
+            invoiceId: String(uuid),
+            status: statusInt,                // ✅ integer
+            reason: (note || '').trim()
+        };
+
         try {
+            // Yapıyı bozmadan: aynı imza, sadece query/body düzeltildi
             await EinvoiceInboxApi.sendApplicationResponse(
                 uuid,
-                { userId: State.userId, responseCode: code },
-                { note: note || '' }
+                { userId: State.userId },       // ✅ sadece userId query
+                body                             // ✅ doğru body
             );
 
-            toastOk(`Uygulama yanıtı gönderildi: ${code}`);
+            toastOk(`Uygulama yanıtı gönderildi. (status=${statusInt})`);
             $('#responseModal').modal('hide');
             await loadList();
         } catch (e) {
             console.error('[InboxInvoice] send response error:', e);
-            toastErr(e?.message || 'Uygulama yanıtı gönderilemedi.');
+            toastErr(extractApiErrorMessage(e));
         }
     }
 
