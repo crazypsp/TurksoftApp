@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\data\" />
     <Folder Include="wwwroot\downloads\" />
     <Folder Include="wwwroot\js\" />
     <Folder Include="wwwroot\lib\" />
