@@ -21,7 +21,9 @@ namespace TurkSoft.Business.DependencyInjection
             services.AddScoped<IBankStatementProvider, AlbarakaStatementProvider>();
             services.AddScoped<IBankStatementProvider, KuveytTurkStatementProvider>();
             services.AddScoped<IBankStatementProvider, VakifBankStatementProvider>();
-
+            services.AddScoped<IBankStatementProvider, ZiraatKatilimStatementProvider>();
+            services.AddScoped<IBankStatementProvider, QnbMaestroStatementProvider>();
+            services.AddScoped<IBankStatementProvider, EmlakbankStatementProvider>();
             services.AddMemoryCache();
             services.AddHttpClient();
 

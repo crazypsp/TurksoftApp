@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using TurkSoft.Business.Base;
 using TurkSoft.Business.Interface;
 using TurkSoft.Entities.BankService.Models;
@@ -36,6 +32,8 @@ namespace TurkSoft.Business.Managers
 
             var rows = raw.ToList();
             Normalize(rows, provider.BankCode, request.AccountNumber);
+
+            // ✅ burada 1’e düşme problemini çözdük
             rows = Deduplicate(rows);
 
             return rows
@@ -90,9 +88,8 @@ namespace TurkSoft.Business.Managers
 
             foreach (var r in rows)
             {
-                var key = !string.IsNullOrWhiteSpace(r.PROCESSID)
-                    ? $"PID:{r.PROCESSID}"
-                    : $"H:{HashRow(r)}";
+                // ✅ ARTIK PROCESSID tek başına belirleyici değil
+                var key = HashRow(r);
 
                 if (seen.Add(key))
                     result.Add(r);
@@ -103,7 +100,27 @@ namespace TurkSoft.Business.Managers
 
         private static string HashRow(BNKHAR r)
         {
-            var raw = $"{r.BNKCODE}|{r.HESAPNO}|{r.PROCESSTIMESTR}|{r.PROCESSAMAOUNT}|{r.PROCESSDESC}|{r.PROCESSREFNO}";
+            // PROCESSTIME varsa ISO ile ekle => unique artar
+            var isoTime = r.PROCESSTIME?.ToString("O") ?? "";
+
+            // Dedupe için daha “zengin” fingerprint:
+            var raw = string.Join("|", new[]
+            {
+                r.BNKCODE ?? "",
+                r.HESAPNO ?? "",
+                r.PROCESSID ?? "",
+                r.PROCESSREFNO ?? "",
+                r.PROCESSTIMESTR ?? "",
+                r.PROCESSTIMESTR2 ?? "",
+                isoTime,
+                r.PROCESSAMAOUNT ?? "",
+                r.PROCESSBALANCE ?? "",
+                (r.PROCESSDESC ?? "").Trim(),
+                r.PROCESSTYPECODE ?? "",
+                r.TYPECODE ?? "",
+                r.REFNO ?? ""
+            });
+
             using var sha = SHA256.Create();
             return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(raw)));
         }

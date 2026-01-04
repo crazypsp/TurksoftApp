@@ -1,0 +1,116 @@
+﻿@{
+    ViewData["Title"] = "Banka Hareketleri";
+}
+
+@section VendorStyles {
+    <link rel="stylesheet" href="//cdn.datatables.net/2.3.5/css/dataTables.dataTables.min.css">
+}
+
+@section VendorScripts {
+    <script src="//cdn.datatables.net/2.3.5/js/dataTables.min.js"></script>
+}
+
+@section PageScripts {
+    <script type="module" src="~/ApiJS/Apps/BankStatement.js"></script>
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h4 class="mb-1">Banka Hareketleri</h4>
+        <div class="text-muted">Banka / hesap seçip tarih aralığına göre hareketleri getir.</div>
+    </div>
+    <button class="btn btn-outline-primary" id="btnCred">Banka Giriş / Ayarlar</button>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Banka</label>
+                <select id="selBank" class="form-select"></select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Hesap</label>
+                <select id="selAccount" class="form-select"></select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Başlangıç</label>
+                <input id="dtBegin" type="date" class="form-control" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Bitiş</label>
+                <input id="dtEnd" type="date" class="form-control" />
+            </div>
+
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" id="btnFetch">Listele</button>
+                <button class="btn btn-outline-secondary" id="btnClear">Temizle</button>
+                <div class="ms-auto text-muted" id="lblStatus"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table id="tblStatements" class="display" style="width:100%"></table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Banka kullanıcı/parola + link/tlink + extras -->
+<div class="modal fade" id="mdlCred" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form class="modal-content" id="frmCred">
+            <div class="modal-header">
+                <h5 class="modal-title">Banka Giriş / Ayarlar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Banka</label>
+                        <select id="credBank" class="form-select"></select>
+                        <div class="form-text">Kayıtlar localStorage’da saklanır.</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Kullanıcı Adı</label>
+                        <input id="credUser" class="form-control" autocomplete="off" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Parola</label>
+                        <input id="credPass" type="password" class="form-control" autocomplete="off" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Link (opsiyonel / bazı bankalar zorunlu)</label>
+                        <input id="credLink" class="form-control" placeholder="örn: İşBank LoginPanel.html veya ZiraatKatılım host" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">TLink (opsiyonel)</label>
+                        <input id="credTLink" class="form-control" placeholder="örn: İşBank Authenticate.aspx" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Extras (JSON)</label>
+                        <textarea id="credExtras" class="form-control" rows="5"
+                                  placeholder='örn: {"urf":"5325038"} veya {"associationCode":"...","authorization":"Basic ..."}'></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="submit" class="btn btn-primary">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>

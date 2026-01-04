@@ -1,4 +1,6 @@
-﻿function getApiBaseFromMeta() {
+﻿// Base/BaseAPIService.js
+
+function getApiBaseFromMeta() {
     const meta = document.querySelector('meta[name="api-base"]');
     return meta && meta.content ? meta.content.replace(/\/+$/, '') : '';
 }
@@ -22,18 +24,23 @@ const defaultGetToken = () => null;
 function safeStringify(obj) {
     try {
         const clone = JSON.parse(JSON.stringify(obj ?? {}));
+        // yaygın gizli alanları maskele
         ['password', 'pwd', 'sifre', 'parola'].forEach(k => {
             Object.keys(clone).forEach(kk => {
                 if (kk.toLowerCase().includes(k)) clone[kk] = '********';
             });
         });
         return JSON.stringify(clone);
-    } catch { return '[unserializable]'; }
+    } catch {
+        return '[unserializable]';
+    }
 }
 
 function extractAspNetError(payload) {
+    // ASP.NET Core ProblemDetails için okunabilir mesaj üret
     if (!payload || typeof payload !== 'object') return null;
 
+    // { errors: { Field: ["msg1","msg2"] }, title, detail }
     if (payload.errors && typeof payload.errors === 'object') {
         const parts = [];
         for (const [field, arr] of Object.entries(payload.errors)) {
@@ -56,8 +63,12 @@ export default class BaseApiService {
         this.resource = String(resource).replace(/^\/+/, '');
         this.getToken = getToken;
         this.timeoutMs = timeoutMs;
+
         this.baseUrl = getApiBaseFromMeta();
         if (!this.baseUrl) throw new Error('API kök adresi bulunamadı (meta api-base).');
+
+        // API Key meta/storage (BankServiceAPI için)
+        this.apiKeyHeaderName = getApiKeyHeaderNameFromMeta();
     }
 
     _url(path = '') {
@@ -83,17 +94,18 @@ export default class BaseApiService {
         const h = { Accept: 'application/json', ...headers };
         if (body != null) h['Content-Type'] = 'application/json';
 
-        // Bearer token (senin standart)
+        // Bearer token (varsa)
         const token = this.getToken ? this.getToken() : null;
         if (token) h['Authorization'] = `Bearer ${token}`;
 
         // ✅ API KEY (BankServiceAPI için)
         const apiKey = getApiKeyFromMetaOrStorage();
         if (apiKey) {
-            const headerName = getApiKeyHeaderNameFromMeta() || 'X-API-KEY';
+            const headerName = this.apiKeyHeaderName || 'X-API-KEY';
             h[headerName] = apiKey;
         }
 
+        // Giriş logu (kısaltılmış)
         console.debug('[API] →', method, input, body ? safeStringify(body) : '');
 
         try {
@@ -105,11 +117,16 @@ export default class BaseApiService {
                 credentials: 'omit'
             });
 
-            if (res.status === 204) { console.debug('[API] ← 204 NoContent'); return null; }
+            if (res.status === 204) {
+                console.debug('[API] ← 204 NoContent');
+                return null;
+            }
 
             const ct = res.headers.get('content-type') || '';
             const isJson = ct.includes('application/json');
-            const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null);
+            const data = isJson
+                ? await res.json().catch(() => null)
+                : await res.text().catch(() => null);
 
             if (!res.ok) {
                 const errMsg = extractAspNetError(data);
@@ -123,8 +140,10 @@ export default class BaseApiService {
             console.debug('[API] ←', res.status, isJson ? data : '[text]');
             return data;
         } catch (e) {
-            if (e.name === 'AbortError') {
-                const err = new Error('İstek zaman aşımı'); err.status = 408; throw err;
+            if (e?.name === 'AbortError') {
+                const err = new Error('İstek zaman aşımı');
+                err.status = 408;
+                throw err;
             }
             throw e;
         } finally {
@@ -132,12 +151,26 @@ export default class BaseApiService {
         }
     }
 
+    // özel path yardımcıları
     postPath(path, data) { return this._request(this._url(path), { method: 'POST', body: data }); }
     deletePath(path) { return this._request(this._url(path), { method: 'DELETE' }); }
 
+    // CRUD
     list(params = null) { return this._request(this._url() + this._qs(params), { method: 'GET' }); }
-    get(id) { if (!id) throw new Error('get(id): id zorunlu'); return this._request(this._url(id), { method: 'GET' }); }
-    create(data) { if (!data) throw new Error('create(data): data zorunlu'); return this._request(this._url(), { method: 'POST', body: data }); }
-    update(id, data) { if (!id || !data) throw new Error('update: id ve data zorunlu'); return this._request(this._url(id), { method: 'PUT', body: data }); }
-    remove(id) { if (!id) throw new Error('remove(id): id zorunlu'); return this._request(this._url(id), { method: 'DELETE' }); }
+    get(id) {
+        if (!id) throw new Error('get(id): id zorunlu');
+        return this._request(this._url(id), { method: 'GET' });
+    }
+    create(data) {
+        if (!data) throw new Error('create(data): data zorunlu');
+        return this._request(this._url(), { method: 'POST', body: data });
+    }
+    update(id, data) {
+        if (!id || !data) throw new Error('update: id ve data zorunlu');
+        return this._request(this._url(id), { method: 'PUT', body: data });
+    }
+    remove(id) {
+        if (!id) throw new Error('remove(id): id zorunlu');
+        return this._request(this._url(id), { method: 'DELETE' });
+    }
 }

@@ -20,5 +20,7 @@ namespace TurkSoft.Entities.BankService.Contracts
         public const int VakifKatilim = 9;
         public const int YapiKredi = 10;
         public const int ZiraatKatilim = 11;
+        public const int Emlakbank = 12;
+        public const int TurkiyeFinans = 13;
     }
 }

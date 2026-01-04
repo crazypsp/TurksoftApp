@@ -1,0 +1,375 @@
+[
+  {
+    "bankId": 3,
+    "bankName": "Akbank",
+    "provider": "AkbankStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "5325038",
+      "passwordLabel": "J1wTegck"
+    },
+    "defaults": {
+      "link": null,
+      "tLink": null,
+      "extras": {}
+    },
+    "limits": {},
+    "accounts": [
+      {
+        "accountNumber": "43697",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "61268",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "52839",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "43698",
+        "currency": "USD"
+      },
+      {
+        "accountNumber": "67203",
+        "currency": "USD"
+      },
+      {
+        "accountNumber": "43699",
+        "currency": "EUR"
+      },
+      {
+        "accountNumber": "66783",
+        "currency": "EUR"
+      }
+    ]
+  },
+  {
+    "bankId": 2,
+    "bankName": "Türkiye İş Bankası",
+    "provider": "IsBankStatementProvider",
+    "required": {
+      "link": true,
+      "tLink": true,
+      "accountNumber": false,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "U18450518a",
+      "passwordLabel": "Nk6Ro2Pm4w"
+    },
+    "defaults": {
+      "link": "https://posmatik2.isbank.com.tr/LoginPanel.html",
+      "tLink": "https://posmatik2.isbank.com.tr/Authenticate.aspx",
+      "extras": {}
+    },
+    "limits": {},
+    "accounts": [
+      {
+        "accountNumber": "3402",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "2326",
+        "currency": "USD"
+      },
+      {
+        "accountNumber": "2312",
+        "currency": "EUR"
+      },
+      {
+        "accountNumber": "2806",
+        "currency": "GBP"
+      },
+      {
+        "accountNumber": "9720",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "2187",
+        "currency": "USD"
+      },
+      {
+        "accountNumber": "2012",
+        "currency": "EUR"
+      }
+    ]
+  },
+  {
+    "bankId": 8,
+    "bankName": "VakıfBank",
+    "provider": "VakifBankStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": [ "444004895563" ]
+    },
+    "credentialFields": {
+      "usernameLabel": "FUNDA YILDIRIM",
+      "passwordLabel": "AJKOTTIU"
+    },
+    "defaults": {
+      "link": null,
+      "tLink": null,
+      "extras": {
+        "MusteriNo": "444004895563"
+      }
+    },
+    "limits": {},
+    "accounts": [
+      {
+        "accountNumber": "158007300107405",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "158007303700730",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "158007315885912",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "158048013581068",
+        "currency": "USD"
+      },
+      {
+        "accountNumber": "158048013743131",
+        "currency": "EUR"
+      }
+    ]
+  },
+  {
+    "bankId": 7,
+    "bankName": "Kuveyt Türk",
+    "provider": "KuveytTurkStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "kt_teknikb",
+      "passwordLabel": "4ek8PiJR4B"
+    },
+    "defaults": {
+      "link": null,
+      "tLink": null,
+      "extras": {}
+    },
+    "limits": {},
+    "accounts": [
+      {
+        "accountNumber": "98886207-1",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "98886207-101",
+        "currency": "USD"
+      },
+      {
+        "accountNumber": "98886207-102",
+        "currency": "EUR"
+      }
+    ]
+  },
+  {
+    "bankId": 5,
+    "bankName": "Albaraka Türk",
+    "provider": "AlbarakaStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "2604665",
+      "passwordLabel": "n!FdLac3jZ"
+    },
+    "defaults": {
+      "link": null,
+      "tLink": null,
+      "extras": {}
+    },
+    "limits": {},
+    "accounts": [
+      {
+        "accountNumber": "2604665-1",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "2604665-11",
+        "currency": "TRY"
+      },
+      {
+        "accountNumber": "2604665-2",
+        "currency": "USD"
+      },
+      {
+        "accountNumber": "2604665-3",
+        "currency": "EUR"
+      }
+    ]
+  },
+  {
+    "bankId": 11,
+    "bankName": "Ziraat Katılım",
+    "provider": "ZiraatKatilimStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": [ "282355_TEKNIK_BAGLANTI" ]
+    },
+    "credentialFields": {
+      "usernameLabel": "prod_tknkbesc_user",
+      "passwordLabel": "256+sSSwew1"
+    },
+    "defaults": {
+      "link": "https://zkapigw.ziraatkatilim.com.tr:8443",
+      "tLink": null,
+      "extras": {
+        "associationCode": "282355_TEKNIK_BAGLANTI",
+        "authorization": ""
+      }
+    },
+    "limits": {
+      "maxDateRangeDays": 7,
+      "bankDateFormat": "yyyy-MM-ddTHH:mm:ss"
+    },
+    "accounts": [
+      {
+        "accountNumber": "126-282355-2",
+        "currency": "TRY",
+        "iban": "TR440020900000282355000002",
+        "subeNo": "126",
+        "musteriNo": "282355"
+      },
+      {
+        "accountNumber": "126-282355-3",
+        "currency": "TRY",
+        "iban": "TR170020900000282355000003",
+        "subeNo": "126",
+        "musteriNo": "282355"
+      }
+    ]
+  },
+  {
+    "bankId": 13,
+    "bankName": "Türkiye Finans",
+    "provider": "TurkiyeFinansStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "TeknikbaglantiExtractUser",
+      "passwordLabel": "Şifre"
+    },
+    "defaults": {
+      "link": "https://appgateway.turkiyefinans.com.tr/TurkiyeFinans.Accounting/IBankExtractIntegrationService.svc/basic",
+      "tLink": null,
+      "extras": {
+        "dateFormat": "yyyy-MM-dd",
+        "refNo": ""
+      }
+    },
+    "limits": {},
+    "accounts": []
+  },
+  {
+    "bankId": 9,
+    "bankName": "Vakıf Katılım",
+    "provider": "VakifKatilimStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "ExtUName",
+      "passwordLabel": "ExtUPassword"
+    },
+    "defaults": {
+      "link": "https://boa.vakifkatilim.com.tr/BOA.Integration.WCFService/BOA.Integration.CustomerTransaction/CustomerTransactionService.svc/Basic",
+      "tLink": null,
+      "extras": {
+        "debitCreditCode": "All",
+        "languageId": "1",
+        "customerNo": ""
+      }
+    },
+    "limits": {},
+    "accounts": []
+  },
+  {
+    "bankId": 1,
+    "bankName": "QNB Finansbank (Maestro)",
+    "provider": "QnbMaestroStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "TEKNIKBAGLANTIWS",
+      "passwordLabel": "Z'i8TdSb"
+    },
+    "defaults": {
+      "link": "http://fbmaestro.qnb.com.tr:9086/MaestroCoreEkstre/services/TeknikBaglantiService.TeknikBaglantiServiceHttpSoap11Endpoint/",
+      "tLink": null,
+      "extras": {
+        "iban": ""
+      }
+    },
+    "limits": {},
+    "accounts": []
+  },
+  {
+    "bankId": 12,
+    "bankName": "Emlakbank",
+    "provider": "EmlakbankStatementProvider",
+    "required": {
+      "link": false,
+      "tLink": false,
+      "accountNumber": true,
+      "extras": []
+    },
+    "credentialFields": {
+      "usernameLabel": "WS4144",
+      "passwordLabel": "7HqaPNzMvehSdV"
+    },
+    "defaults": {
+      "link": "https://boa.emlakbank.com.tr/BOA.Integration.WCFService/BOA.Integration.AccountStatement/AccountStatementService.svc/Basic",
+      "tLink": null,
+      "extras": {
+        "suffix": "",
+        "appName": "TurkSoft.BankService",
+        "deviceId": "SERVER01",
+        "deviceModel": "Server",
+        "deviceOSName": "Windows",
+        "deviceOSVersion": "10.0",
+        "version": "1.0",
+        "methodName": "GetAccountStatement",
+        "mainResourceCode": "",
+        "languageId": "1",
+        "mainResourceId": "0"
+      }
+    },
+    "limits": {},
+    "accounts": []
+  }
+]

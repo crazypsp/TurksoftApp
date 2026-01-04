@@ -16,6 +16,21 @@ namespace Turksoft.BankServiceAPI.Security
 
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
+            // ✅ CORS preflight: OPTIONS isteklerini engelleme
+            if (HttpMethods.IsOptions(context.Request.Method))
+            {
+                await next(context);
+                return;
+            }
+
+            // ✅ Swagger UI / swagger.json çağrıları API key istemesin (UI düzgün açılsın)
+            var path = context.Request.Path.Value ?? "";
+            if (path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase))
+            {
+                await next(context);
+                return;
+            }
+
             // Key config edilmemişse server hatası
             if (string.IsNullOrWhiteSpace(_options.Key))
             {

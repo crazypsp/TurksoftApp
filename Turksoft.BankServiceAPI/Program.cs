@@ -1,4 +1,4 @@
-using Microsoft.OpenApi.Models;
+ï»¿using Microsoft.OpenApi.Models;
 using Turksoft.BankServiceAPI.Security;
 using TurkSoft.Service;
 
@@ -7,12 +7,31 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger + ApiKey header desteði
+// âœ… CORS (AllowedOrigins: appsettings.json -> Cors:AllowedOrigins)
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("TS_CORS", p =>
+    {
+        // Origin bazlÄ± izin (localhost dev)
+        if (allowedOrigins.Length > 0)
+            p.WithOrigins(allowedOrigins);
+        else
+            p.SetIsOriginAllowed(_ => true); // fallback (tavsiye edilmez)
+
+        p.AllowAnyHeader()
+         .AllowAnyMethod();
+    });
+});
+
+// Swagger + ApiKey header desteÄŸi
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Turksoft.BankServiceAPI", Version = "v1" });
 
-    // X-API-KEY için Swagger Security
     var headerName = builder.Configuration["ApiKey:HeaderName"] ?? "X-API-KEY";
 
     c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
@@ -40,10 +59,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.Configure<ApiKeyOptions>(builder.Configuration.GetSection("ApiKey"));
 builder.Services.AddScoped<ApiKeyMiddleware>();
 
-// Service katmaný (içeride Business kayýtlarýný da yapýyor)
+// Service katmanÄ±
 builder.Services.AddTurkSoftServices();
 
-// Ýstersen ileride [Authorize] kullanýrsýn diye kalsýn
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -54,10 +72,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// ApiKey kontrolü (Authorization gibi)
-app.UseMiddleware<ApiKeyMiddleware>();
-
 app.UseHttpsRedirection();
+
+// âœ… Routing + CORS sÄ±rasÄ± Ã¶nemli
+app.UseRouting();
+app.UseCors("TS_CORS");
+
+// âœ… ApiKey kontrolÃ¼ CORSâ€™tan sonra olmalÄ± (preflight iÃ§in)
+app.UseMiddleware<ApiKeyMiddleware>();
 
 app.UseAuthorization();
 
