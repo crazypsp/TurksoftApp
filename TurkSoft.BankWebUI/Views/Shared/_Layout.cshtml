@@ -14,12 +14,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    @using Microsoft.Extensions.Options
-    @inject IOptions<TurkSoft.BankWebUI.AppSettings.ApiSettings> ApiOpt
-    @await RenderSectionAsync("VendorStyles", required: false)
-    <meta name="api-base" content="@ApiOpt.Value.BaseUrl" />
-    <meta name="api-key-header" content="@ApiOpt.Value.ApiKeyHeaderName" />
-    <meta name="api-key" content="@ApiOpt.Value.ApiKey" />
 </head>
 <body class="app-body">
     <div class="app-shell">
@@ -76,7 +70,5 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await Html.PartialAsync("_ValidationScriptsPartial")
     @RenderSection("Scripts", required: false)
-    @await RenderSectionAsync("VendorScripts", required: false)
-    @await RenderSectionAsync("PageScripts", required: false)
 </body>
 </html>

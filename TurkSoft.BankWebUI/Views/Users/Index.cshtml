@@ -1,0 +1,33 @@
+﻿@model TurkSoft.BankWebUI.ViewModels.UsersIndexVm
+@{
+    ViewData["Title"] = "Kullanıcılar";
+}
+
+@section PageActions {
+    <a class="btn btn-sm btn-primary" asp-action="Create"><i class="fa-solid fa-user-plus me-2"></i>Yeni Kullanıcı</a>
+}
+
+<div class="panel">
+    <div class="panel-header d-flex justify-content-between">
+        <div class="fw-semibold"><i class="fa-solid fa-users-gear me-2"></i>Liste</div>
+        <span class="badge badge-soft">Admin only</span>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
+                <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Durum</th></tr></thead>
+                <tbody>
+                    @foreach (var u in Model.Users)
+                    {
+                        <tr>
+                            <td>@u.FullName</td>
+                            <td>@u.Email</td>
+                            <td><span class="badge text-bg-secondary">@u.Role</span></td>
+                            <td>@(u.IsActive ? "Aktif" : "Pasif")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

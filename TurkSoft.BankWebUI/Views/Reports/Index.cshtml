@@ -1,0 +1,128 @@
+﻿@model TurkSoft.BankWebUI.ViewModels.ReportsIndexVm
+@{
+    ViewData["Title"] = "Raporlar";
+}
+
+<div class="panel mb-3">
+    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-filter me-2"></i>Filtre</div></div>
+    <div class="panel-body">
+        <form asp-action="Index" method="post" class="row g-3 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-lg-4">
+                <label asp-for="Filter.DateRange" class="form-label"></label>
+                <input asp-for="Filter.DateRange" class="form-control" data-flatpickr="daterange" />
+            </div>
+            <div class="col-lg-3">
+                <label asp-for="Filter.Bank" class="form-label"></label>
+                <select asp-for="Filter.Bank" class="form-select">
+                    <option value="">Tümü</option>
+                    @foreach (var b in Model.Filter.Banks)
+                    {
+                        <option value="@b">@b</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label asp-for="Filter.AccountType" class="form-label"></label>
+                <select asp-for="Filter.AccountType" class="form-select">
+                    <option value="">Tümü</option>
+                    @foreach (var t in Model.Filter.AccountTypes)
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2 d-grid">
+                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass me-2"></i>Uygula</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-chart-column me-2"></i>Hesap Tipi Net</div>
+                <span class="badge badge-soft">Demo</span>
+            </div>
+            <div class="panel-body"><canvas id="acctTypeBar" height="120"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-chart-simple me-2"></i>Günlük Net</div>
+                <span class="badge badge-soft">Demo</span>
+            </div>
+            <div class="panel-body"><canvas id="dailyNet" height="120"></canvas></div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-table me-2"></i>Sonuçlar</div>
+                <span class="text-muted small">Test verisi</span>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0" data-dt="true">
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Banka</th>
+                                <th>Tip</th>
+                                <th>Referans</th>
+                                <th>Açıklama</th>
+                                <th class="text-end">Borç</th>
+                                <th class="text-end">Alacak</th>
+                                <th class="text-end">Net</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.Rows)
+                            {
+                                <tr>
+                                    <td>@r.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>@r.BankName</td>
+                                    <td>@r.AccountType</td>
+                                    <td>@r.ReferenceNo</td>
+                                    <td>@r.Description</td>
+                                    <td class="text-end">@r.Debit.ToString("N2")</td>
+                                    <td class="text-end text-success">@r.Credit.ToString("N2")</td>
+                                    <td class="text-end @(r.Net >= 0 ? "text-success" : "text-warning")">@r.Net.ToString("+#,##0.00;-#,##0.00;0.00")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const typeLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByAccountType.Keys.ToList()));
+        const typeValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByAccountType.Values.ToList()));
+        const dayLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByDay.Keys.ToList()));
+        const dayValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByDay.Values.ToList()));
+
+        const acct = document.getElementById('acctTypeBar');
+        if (acct) new Chart(acct, { type:'bar',
+          data:{ labels:typeLabels, datasets:[{ label:'Net (₺)', data:typeValues, backgroundColor:'#3b82f6' }] },
+          options:{ plugins:{ legend:{ labels:{ color:'rgba(255,255,255,.8)' } } },
+            scales:{ x:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } },
+                    y:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } } } }
+        });
+
+        const daily = document.getElementById('dailyNet');
+        if (daily) new Chart(daily, { type:'line',
+          data:{ labels:dayLabels, datasets:[{ label:'Net (₺)', data:dayValues, borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.14)', tension:.35, fill:true }] },
+          options:{ plugins:{ legend:{ labels:{ color:'rgba(255,255,255,.8)' } } },
+            scales:{ x:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } },
+                    y:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } } } }
+        });
+    </script>
+}

@@ -1,0 +1,326 @@
+﻿@model TurkSoft.BankWebUI.ViewModels.AccountingVm
+@using TurkSoft.BankWebUI.Models
+@{
+    ViewData["Title"] = "Aktarım / Muhasebe";
+    string exportCsvUrl = Url.Action("ExportCsv", new { dateRange = Model.DateRange, bank = Model.Bank, status = Model.Status })!;
+    string exportJsonUrl = Url.Action("ExportJson", new { dateRange = Model.DateRange, bank = Model.Bank, status = Model.Status })!;
+}
+
+@section PageActions {
+    <div class="d-flex gap-2">
+        <a class="btn btn-sm btn-outline-light" href="@exportCsvUrl"><i class="fa-solid fa-file-csv me-2"></i>CSV</a>
+        <a class="btn btn-sm btn-outline-light" href="@exportJsonUrl"><i class="fa-solid fa-code me-2"></i>JSON</a>
+    </div>
+}
+
+<div class="panel mb-3">
+    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-filter me-2"></i>Filtre</div></div>
+    <div class="panel-body">
+        <form asp-action="Index" method="get" class="row g-3 align-items-end">
+            <div class="col-lg-4">
+                <label class="form-label">Tarih Aralığı</label>
+                <input name="dateRange" value="@Model.DateRange" class="form-control" data-flatpickr="daterange" />
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">Banka</label>
+                <select class="form-select" name="bank">
+                    <option value="">Tümü</option>
+                    @foreach (var b in Model.Banks)
+                    {
+                        <option value="@b" selected="@(Model.Bank == b)">@b</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">Durum</label>
+                <select class="form-select" name="status">
+                    <option value="">Tümü</option>
+                    <option value="Draft" selected="@(Model.Status == "Draft")">Draft</option>
+                    <option value="Ready" selected="@(Model.Status == "Ready")">Ready</option>
+                    <option value="Queued" selected="@(Model.Status == "Queued")">Queued</option>
+                    <option value="Exported" selected="@(Model.Status == "Exported")">Exported</option>
+                </select>
+            </div>
+            <div class="col-lg-2 d-grid">
+                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass me-2"></i>Uygula</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-list" type="button">Aktarım Listesi</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-map" type="button">Eşleştirme</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-queue" type="button">Kuyruk</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-errors" type="button">Hatalar</button></li>
+</ul>
+
+<div class="tab-content">
+
+    <div class="tab-pane fade show active" id="tab-list">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-file-arrow-up me-2"></i>Aktarılacak Kayıtlar</div>
+                <span class="badge badge-soft">Demo</span>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0" data-dt="true">
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Banka</th>
+                                <th>Tip</th>
+                                <th>Ref</th>
+                                <th>Açıklama</th>
+                                <th>GL</th>
+                                <th>Cari</th>
+                                <th>Durum</th>
+                                <th class="text-end">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.TransferRecords)
+                            {
+                                string statusBadge = r.Status switch
+                                {
+                                    TransferRecordStatus.Draft => "text-bg-warning",
+                                    TransferRecordStatus.Ready => "text-bg-info",
+                                    TransferRecordStatus.Queued => "text-bg-secondary",
+                                    TransferRecordStatus.Exported => "text-bg-success",
+                                    _ => "text-bg-secondary"
+                                };
+
+                                <tr>
+                                    <td>@r.Date.ToString("dd.MM.yyyy")</td>
+                                    <td>@r.BankName</td>
+                                    <td>@r.AccountType</td>
+                                    <td>@r.ReferenceNo</td>
+                                    <td>@r.Description</td>
+                                    <td>@(r.GlAccountCode ?? "—")</td>
+                                    <td>@(r.VendorCode ?? "—")</td>
+                                    <td><span class="badge @statusBadge">@r.Status</span></td>
+                                    <td class="text-end">
+                                        @if (r.Status == TransferRecordStatus.Ready)
+                                        {
+                                            <form asp-action="Enqueue" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="transferId" value="@r.Id" />
+                                                <button class="btn btn-sm btn-primary" type="submit" title="Kuyruğa al"><i class="fa-solid fa-list-ol"></i></button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-light" disabled><i class="fa-solid fa-list-ol"></i></button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-map">
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="panel">
+                    <div class="panel-header d-flex justify-content-between">
+                        <div class="fw-semibold"><i class="fa-solid fa-diagram-project me-2"></i>Draft Kayıtları Eşleştir</div>
+                        <span class="badge badge-soft">Hesap Planı + Cari</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
+                                <thead>
+                                    <tr><th>Kayıt</th><th>Banka/Tip</th><th>GL</th><th>Cost</th><th>Cari</th><th class="text-end">Kaydet</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in Model.TransferRecords.Where(x => x.Status == TransferRecordStatus.Draft).Take(60))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@r.ReferenceNo</div>
+                                                <div class="text-muted small">@r.Date:dd.MM.yyyy · Net: @((r.Credit - r.Debit).ToString("+#,##0.00;-#,##0.00;0.00"))</div>
+                                            </td>
+                                            <td><div>@r.BankName</div><div class="text-muted small">@r.AccountType</div></td>
+                                            <td colspan="3">
+                                                <form asp-action="ApplyMapping" method="post" class="row g-2">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="transferId" value="@r.Id" />
+
+                                                    <div class="col-md-4">
+                                                        <select class="form-select form-select-sm" name="glCode" required>
+                                                            <option value="">GL seç</option>
+                                                            @foreach (var gl in Model.GlAccounts)
+                                                            {
+                                                                <option value="@gl.Code">@gl.Code - @gl.Name</option>
+                                                            }
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="col-md-3">
+                                                        <input class="form-control form-control-sm" name="costCenter" placeholder="FIN" />
+                                                    </div>
+
+                                                    <div class="col-md-5">
+                                                        <select class="form-select form-select-sm" name="vendorCode">
+                                                            <option value="">Cari (opsiyonel)</option>
+                                                            @foreach (var v in Model.Vendors)
+                                                            {
+                                                                <option value="@v.Code">@v.Code - @v.Name</option>
+                                                            }
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="col-12 text-end">
+                                                        <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i>Kaydet</button>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                            <td class="text-end"></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-muted small mt-2">Eşleştirme sonrası Draft → Ready olur.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="panel">
+                    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-book me-2"></i>Varsayılan Mapping</div></div>
+                    <div class="panel-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover align-middle mb-0" data-dt="true">
+                                <thead><tr><th>Banka</th><th>Tip</th><th>GL</th></tr></thead>
+                                <tbody>
+                                    @foreach (var m in Model.Mappings.Take(100))
+                                    {
+                                        <tr>
+                                            <td>@m.BankName</td>
+                                            <td>@m.AccountType</td>
+                                            <td><span class="badge text-bg-secondary">@m.GlAccountCode</span> <span class="text-muted small">@m.GlAccountName</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel mt-3">
+                    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-address-book me-2"></i>Cari Listesi</div></div>
+                    <div class="panel-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
+                                <thead><tr><th>Kod</th><th>Ad</th></tr></thead>
+                                <tbody>
+                                    @foreach (var v in Model.Vendors)
+                                    {
+                                        <tr><td>@v.Code</td><td>@v.Name</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-queue">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-list-ol me-2"></i>Aktarım Kuyruğu</div>
+                <span class="badge badge-soft">Demo</span>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
+                        <thead><tr><th>ID</th><th>Transfer</th><th>Durum</th><th>Deneme</th><th>Oluşturma</th><th>Güncelleme</th><th class="text-end">İşlem</th></tr></thead>
+                        <tbody>
+                            @foreach (var q in Model.Queue)
+                            {
+                                var badge = q.Status switch
+                                {
+                                    QueueStatus.Pending => "text-bg-info",
+                                    QueueStatus.Processing => "text-bg-warning",
+                                    QueueStatus.Success => "text-bg-success",
+                                    QueueStatus.Failed => "text-bg-danger",
+                                    _ => "text-bg-secondary"
+                                };
+
+                                <tr>
+                                    <td>@q.Id</td>
+                                    <td>#@q.TransferRecordId</td>
+                                    <td><span class="badge @badge">@q.Status</span></td>
+                                    <td>@q.AttemptCount</td>
+                                    <td>@q.CreatedAt:dd.MM HH:mm</td>
+                                    <td>@(q.UpdatedAt?.ToString("dd.MM HH:mm") ?? "—")</td>
+                                    <td class="text-end">
+                                        <form asp-action="Export" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="queueId" value="@q.Id" />
+                                            <button class="btn btn-sm btn-primary" type="submit" title="Muhasebeye gönder"><i class="fa-solid fa-paper-plane"></i></button>
+                                        </form>
+                                        @if (q.Status == QueueStatus.Failed)
+                                        {
+                                            <form asp-action="Retry" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="queueId" value="@q.Id" />
+                                                <button class="btn btn-sm btn-outline-light" type="submit" title="Tekrar dene"><i class="fa-solid fa-rotate-right"></i></button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted small mt-2">“Muhasebeye gönder” demo olarak Success/Failed üretebilir.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-errors">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-bug me-2"></i>Hata Logları</div>
+                <span class="badge badge-soft">Demo</span>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0" data-dt="true">
+                        <thead><tr><th>Zaman</th><th>Banka</th><th>Referans</th><th>Queue</th><th>Mesaj</th><th class="text-end">Temizle</th></tr></thead>
+                        <tbody>
+                            @foreach (var e in Model.Errors)
+                            {
+                                <tr>
+                                    <td>@e.CreatedAt:dd.MM.yyyy HH:mm</td>
+                                    <td>@e.BankName</td>
+                                    <td>@e.ReferenceNo</td>
+                                    <td>#@e.QueueItemId</td>
+                                    <td class="text-warning">@e.Message</td>
+                                    <td class="text-end">
+                                        <form asp-action="ClearError" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="errorId" value="@e.Id" />
+                                            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="fa-solid fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

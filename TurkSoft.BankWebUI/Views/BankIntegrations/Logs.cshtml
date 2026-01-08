@@ -1,0 +1,66 @@
+﻿@model TurkSoft.BankWebUI.ViewModels.BankPullLogsVm
+@using TurkSoft.BankWebUI.Models
+@{
+    ViewData["Title"] = "Çekim Logları";
+}
+
+<div class="panel mb-3">
+    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-filter me-2"></i>Filtre</div></div>
+    <div class="panel-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-lg-4">
+                <label class="form-label">Banka</label>
+                <select class="form-select" name="bank">
+                    <option value="">Tümü</option>
+                    @foreach (var b in Model.Banks)
+                    {
+                        <option value="@b" selected="@(Model.Bank == b)">@b</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2 d-grid">
+                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass me-2"></i>Uygula</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-header d-flex justify-content-between">
+        <div class="fw-semibold"><i class="fa-solid fa-clipboard-list me-2"></i>Loglar</div>
+        <span class="badge badge-soft">Demo</span>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
+                <thead>
+                    <tr><th>ID</th><th>Banka</th><th>Aralık</th><th>Durum</th><th>Mesaj</th><th>Yeni</th><th class="text-end">Detay</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in Model.Logs)
+                    {
+                        var badge = l.Status switch
+                        {
+                            BankPullStatus.Ok => "text-bg-success",
+                            BankPullStatus.Warning => "text-bg-warning",
+                            _ => "text-bg-danger"
+                        };
+                        <tr>
+                            <td>@l.Id</td>
+                            <td>@l.BankName</td>
+                            <td class="text-muted small">@l.FromAt.ToString("dd.MM HH:mm") → @l.ToAt.ToString("dd.MM HH:mm")</td>
+                            <td><span class="badge @badge">@l.Status</span></td>
+                            <td>@l.Message</td>
+                            <td><span class="badge text-bg-info">@l.NewTransactionCount</span></td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-light" asp-action="Delta" asp-route-logId="@l.Id" title="Son çekimden beri gelenler">
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

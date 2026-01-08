@@ -1,0 +1,50 @@
+﻿@model TurkSoft.BankWebUI.ViewModels.CreateUserVm
+@{
+    ViewData["Title"] = "Kullanıcı Oluştur";
+}
+
+@section PageActions {
+    <a class="btn btn-sm btn-outline-light" asp-action="Index"><i class="fa-solid fa-arrow-left me-2"></i>Geri</a>
+}
+
+<div class="panel">
+    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-user-plus me-2"></i>Yeni Kullanıcı</div></div>
+    <div class="panel-body">
+        <form asp-action="Create" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="col-md-6">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" />
+                <span asp-validation-for="FullName" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Role" class="form-label"></label>
+                <select asp-for="Role" class="form-select">
+                    @foreach (var r in Model.Roles)
+                    {
+                        <option value="@r">@r</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="TempPassword" class="form-label"></label>
+                <input asp-for="TempPassword" class="form-control" />
+                <span asp-validation-for="TempPassword" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-2"></i>Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>

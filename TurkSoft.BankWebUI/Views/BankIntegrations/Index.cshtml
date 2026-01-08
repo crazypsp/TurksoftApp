@@ -1,0 +1,89 @@
+﻿@model TurkSoft.BankWebUI.ViewModels.BankIntegrationsVm
+@using TurkSoft.BankWebUI.Models
+@{
+    ViewData["Title"] = "Banka Entegrasyonları";
+}
+
+@section PageActions {
+    <a class="btn btn-sm btn-outline-light" asp-action="Logs"><i class="fa-solid fa-clipboard-list me-2"></i>Çekim Logları</a>
+}
+
+<div class="panel">
+    <div class="panel-header d-flex justify-content-between align-items-center">
+        <div class="fw-semibold"><i class="fa-solid fa-building-columns me-2"></i>Entegrasyon Durumu</div>
+        <span class="badge badge-soft">Demo</span>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
+                <thead>
+                    <tr>
+                        <th>Banka</th>
+                        <th>Bağlantı</th>
+                        <th>Kimlik</th>
+                        <th>Plan</th>
+                        <th>Son Çekim</th>
+                        <th>Son Durum</th>
+                        <th class="text-end">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in Model.Items)
+                    {
+                        var statusClass = i.LastStatus switch
+                        {
+                            BankPullStatus.Ok => "text-bg-success",
+                            BankPullStatus.Warning => "text-bg-warning",
+                            _ => "text-bg-danger"
+                        };
+
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">@i.BankName</div>
+                                <div class="text-muted small">@(i.IsActive ? "Aktif" : "Pasif")</div>
+                            </td>
+                            <td><span class="badge text-bg-secondary">@i.ConnectionType</span></td>
+                            <td>
+                                @if (i.CredentialsConfigured)
+                                {
+                                    <span class="badge text-bg-success">Var</span>
+                                }
+                                else
+                                {
+
+                                    <span class="badge text-bg-danger">Eksik</span>
+                                }
+                            </td>
+                            <td>
+                                <div>@i.PullSchedule</div>
+                                <div class="text-muted small">Next: @(i.NextPullAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</div>
+                            </td>
+                            <td>@(i.LastPullAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</td>
+                            <td>
+                                <span class="badge @statusClass">@i.LastStatus</span>
+                                <div class="text-muted small">@i.LastMessage</div>
+                            </td>
+                            <td class="text-end">
+                                <form asp-action="PullNow" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@i.Id" />
+                                    <button class="btn btn-sm btn-primary" type="submit" @(i.IsActive ? "" : "disabled") title="Şimdi çek">
+                                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                                    </button>
+                                </form>
+                                <form asp-action="Toggle" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@i.Id" />
+                                    <button class="btn btn-sm btn-outline-light" type="submit" title="Aktif/Pasif">
+                                        <i class="fa-solid @(i.IsActive ? "fa-toggle-on" : "fa-toggle-off")"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="text-muted small mt-2">“Şimdi çek” demo olarak yeni hareket + transfer kaydı üretir.</div>
+    </div>
+</div>

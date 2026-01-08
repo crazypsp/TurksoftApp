@@ -1,0 +1,168 @@
+﻿@model TurkSoft.BankWebUI.ViewModels.DashboardVm
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+@section PageActions {
+    <div class="d-flex gap-2">
+        <a class="btn btn-sm btn-outline-light" asp-controller="Reports" asp-action="Index">
+            <i class="fa-solid fa-file-lines me-2"></i>Raporlar
+        </a>
+        <a class="btn btn-sm btn-primary" asp-controller="Accounting" asp-action="Index">
+            <i class="fa-solid fa-right-left me-2"></i>Aktarım
+        </a>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-3 col-md-6">
+        <div class="panel">
+            <div class="panel-body">
+                <div class="kpi">
+                    <div>
+                        <div class="label">Toplam Bakiye</div>
+                        <div class="value">₺ @Model.TotalBalance.ToString("N0")</div>
+                        <div class="trend text-muted">Bankalar toplamı</div>
+                    </div>
+                    <span class="badge badge-soft"><i class="fa-solid fa-wallet me-1"></i> Güncel</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="panel">
+            <div class="panel-body">
+                <div class="kpi">
+                    <div>
+                        <div class="label">Günlük Giriş</div>
+                        <div class="value text-success">₺ @Model.DailyIn.ToString("N0")</div>
+                        <div class="trend text-muted">Tahsilatlar</div>
+                    </div>
+                    <span class="badge badge-soft"><i class="fa-solid fa-arrow-down-to-line me-1"></i> In</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="panel">
+            <div class="panel-body">
+                <div class="kpi">
+                    <div>
+                        <div class="label">Günlük Çıkış</div>
+                        <div class="value text-warning">₺ @Model.DailyOut.ToString("N0")</div>
+                        <div class="trend text-muted">Ödemeler</div>
+                    </div>
+                    <span class="badge badge-soft"><i class="fa-solid fa-arrow-up-from-line me-1"></i> Out</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="panel">
+            <div class="panel-body">
+                <div class="kpi">
+                    <div>
+                        <div class="label">Eşleştirme Eksik</div>
+                        <div class="value text-danger">@Model.ReconcileAlerts</div>
+                        <div class="trend text-muted">Draft kayıt</div>
+                    </div>
+                    <span class="badge badge-soft"><i class="fa-solid fa-triangle-exclamation me-1"></i> Risk</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-chart-area me-2"></i>7 Günlük Net</div>
+                <span class="text-muted small">Demo</span>
+            </div>
+            <div class="panel-body">
+                <canvas id="cashflowChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-building-columns me-2"></i>Banka Bakiyeleri</div>
+                <span class="text-muted small">Top</span>
+            </div>
+            <div class="panel-body">
+                @foreach (var b in Model.BankBalances.Take(7))
+                {
+                    <div class="d-flex justify-content-between align-items-center py-1">
+                        <span class="text-muted">@b.BankName</span>
+                        <span class="fw-semibold">₺ @b.BalanceTry.ToString("N0")</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="panel">
+            <div class="panel-header d-flex justify-content-between">
+                <div class="fw-semibold"><i class="fa-solid fa-list-check me-2"></i>Son Hareketler</div>
+                <span class="text-muted small">Test verisi</span>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Banka</th>
+                                <th>Tip</th>
+                                <th>Referans</th>
+                                <th>Açıklama</th>
+                                <th class="text-end">Net</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model.LatestTransactions)
+                            {
+                                <tr>
+                                    <td>@t.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>@t.BankName</td>
+                                    <td>@t.AccountType</td>
+                                    <td>@t.ReferenceNo</td>
+                                    <td>@t.Description</td>
+                                    <td class="text-end @(t.Net >= 0 ? "text-success" : "text-warning")">
+                                        @t.Net.ToString("+#,##0.00;-#,##0.00;0.00") ₺
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CashflowLabels));
+        const series = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CashflowNet));
+        const ctx = document.getElementById('cashflowChart');
+        if (ctx) {
+          new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ label: 'Net (₺)', data: series, borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.14)', tension:.35, fill:true, pointRadius:3 }] },
+            options: {
+              plugins: { legend: { labels: { color: 'rgba(255,255,255,.8)' } } },
+              scales: {
+                x: { ticks: { color:'rgba(255,255,255,.7)' }, grid: { color:'rgba(255,255,255,.06)' } },
+                y: { ticks: { color:'rgba(255,255,255,.7)' }, grid: { color:'rgba(255,255,255,.06)' } }
+              }
+            }
+          });
+        }
+    </script>
+}
