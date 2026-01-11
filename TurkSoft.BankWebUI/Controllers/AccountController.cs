@@ -2,15 +2,20 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using TurkSoft.BankWebUI.Services;
+using TurkSoft.Services.Interfaces;
 using TurkSoft.BankWebUI.ViewModels;
+using System.Threading.Tasks;
 
 namespace TurkSoft.BankWebUI.Controllers
 {
     public sealed class AccountController : Controller
     {
-        private readonly IDemoDataService _demo;
-        public AccountController(IDemoDataService demo) => _demo = demo;
+        private readonly IUserService _userService;
+
+        public AccountController(IUserService userService)
+        {
+            _userService = userService;
+        }
 
         [HttpGet]
         public IActionResult Login()
@@ -26,19 +31,27 @@ namespace TurkSoft.BankWebUI.Controllers
             ViewData["Title"] = "Giriş";
             if (!ModelState.IsValid) return View(vm);
 
-            var user = _demo.ValidateUser(vm.Email, vm.Password);
-            if (user is null)
+            var isAuthenticated = await _userService.AuthenticateAsync(vm.Email, vm.Password);
+            if (!isAuthenticated)
             {
-                vm.Error = "E-posta veya şifre hatalı. (Demo: admin@firma.com / 123456)";
+                vm.Error = "E-posta veya şifre hatalı.";
+                return View(vm);
+            }
+
+            var user = await _userService.GetUserByEmailAsync(vm.Email);
+            if (user == null || !user.IsActive)
+            {
+                vm.Error = "Kullanıcı bulunamadı veya pasif durumda.";
                 return View(vm);
             }
 
             var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.Name, user.FullName),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role)
-        };
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim("UserName", user.UserName)
+            };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             await HttpContext.SignInAsync(

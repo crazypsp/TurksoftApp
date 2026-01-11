@@ -7,6 +7,7 @@ using TurkSoft.Data.Context;
 using TurkSoft.Services;
 using TurkSoft.Services.Implementations;
 using TurkSoft.Services.Interfaces;
+using TurkSoft.Services.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,7 +42,7 @@ builder.Services.AddScoped<ITransactionImportService, TransactionImportService>(
 builder.Services.AddScoped<ITransferLogService, TransferLogService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
-builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Demo servis (mevcut)
 builder.Services.AddScoped<IDemoDataService, DemoDataService>();
