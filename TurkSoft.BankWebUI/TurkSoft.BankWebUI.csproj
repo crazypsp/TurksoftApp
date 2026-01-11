@@ -6,4 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TurkSoft.Data\TurkSoft.Data.csproj" />
+    <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
+    <ProjectReference Include="..\TurkSoft.Service\TurkSoft.Service.csproj" />
+  </ItemGroup>
+
 </Project>

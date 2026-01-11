@@ -19,14 +19,18 @@ namespace TurkSoft.Data.EntityData
                 .IsRequired()
                 .HasMaxLength(3);
 
+            // ✅ BU ÜÇ SATIRI DEĞİŞTİRİN: IsRequired(false) ekleyin
             builder.Property(ba => ba.IBAN)
-                .HasMaxLength(34);
+                .HasMaxLength(34)
+                .IsRequired(false);
 
             builder.Property(ba => ba.SubeNo)
-                .HasMaxLength(20);
+                .HasMaxLength(20)
+                .IsRequired(false);
 
             builder.Property(ba => ba.MusteriNo)
-                .HasMaxLength(20);
+                .HasMaxLength(20)
+                .IsRequired(false);
 
             builder.Property(ba => ba.IsActive)
                 .HasDefaultValue(true);

@@ -15,9 +15,6 @@ namespace TurkSoft.Data.EntityData
                 .IsRequired()
                 .HasMaxLength(50);
 
-            builder.Property(ml => ml.Status)
-                .HasMaxLength(20);
-
             builder.Property(ml => ml.ErrorMessage)
                 .HasMaxLength(1000);
 

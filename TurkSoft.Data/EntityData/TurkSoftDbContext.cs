@@ -47,6 +47,9 @@ namespace TurkSoft.Data.EntityData
             modelBuilder.ApplyConfiguration(new TransferLogConfiguration());
             modelBuilder.ApplyConfiguration(new ExportLogConfiguration());
             modelBuilder.ApplyConfiguration(new SystemLogConfiguration());
+
+            // Seed test data
+            //EntityData.Seeding.TestSeedData.Apply(modelBuilder);
         }
     }
 }

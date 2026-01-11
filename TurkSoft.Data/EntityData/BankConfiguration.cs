@@ -31,10 +31,12 @@ namespace TurkSoft.Data.EntityData
                 .HasMaxLength(100);
 
             builder.Property(b => b.DefaultLink)
-                .HasMaxLength(500);
+                .HasMaxLength(500)
+                .IsRequired(false);
 
             builder.Property(b => b.DefaultTLink)
-                .HasMaxLength(500);
+                .HasMaxLength(500)
+                .IsRequired(false);
 
             builder.Property(b => b.IsActive)
                 .HasDefaultValue(true);

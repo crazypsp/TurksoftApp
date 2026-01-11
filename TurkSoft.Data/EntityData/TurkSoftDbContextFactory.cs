@@ -1,34 +1,27 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
-using System.IO;
+using System;
 using TurkSoft.Data.EntityData;
 
-namespace TurkSoft.Data.EntityData
+namespace TurkSoft.Data
 {
-    public class TurkSoftDbContextFactory : IDesignTimeDbContextFactory<TurkSoftDbContext>
+    public sealed class TurkSoftDbContextFactory : IDesignTimeDbContextFactory<TurkSoftDbContext>
     {
         public TurkSoftDbContext CreateDbContext(string[] args)
         {
-            // Get environment
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+            var options = new DbContextOptionsBuilder<TurkSoftDbContext>();
 
-            // Build config
-            IConfiguration config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{environment}.json", optional: true)
-                .AddEnvironmentVariables()
-                .Build();
+            // DESKTOP-54QF28R\ZRV2014EXP için connection string
+            var cs = Environment.GetEnvironmentVariable("TURKSOFT_CONNECTION_STRING")
+                    ?? @"Server=DESKTOP-54QF28R\ZRV2014EXP;Database=TigerBankDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
 
-            // Get connection string
-            var connectionString = config.GetConnectionString("DefaultConnection");
+            options.UseSqlServer(cs, sqlOptions =>
+            {
+                sqlOptions.MigrationsAssembly("TurkSoft.Data");
+                sqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+            });
 
-            // Configure DbContext
-            var optionsBuilder = new DbContextOptionsBuilder<TurkSoftDbContext>();
-            optionsBuilder.UseSqlServer(connectionString);
-
-            return new TurkSoftDbContext(optionsBuilder.Options);
+            return new TurkSoftDbContext(options.Options);
         }
     }
 }

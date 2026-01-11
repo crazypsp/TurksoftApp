@@ -15,8 +15,8 @@ namespace TurkSoft.Entities.Entities
         public bool RequiresLink { get; set; }
         public bool RequiresTLink { get; set; }
         public bool RequiresAccountNumber { get; set; }
-        public string DefaultLink { get; set; }
-        public string DefaultTLink { get; set; }
+        public string? DefaultLink { get; set; }
+        public string? DefaultTLink { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? ModifiedDate { get; set; }
