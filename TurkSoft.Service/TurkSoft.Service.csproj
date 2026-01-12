@@ -31,6 +31,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Interop.UnityObjects">
+      <HintPath>..\..\Interop.UnityObjects.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="CodeGen\Generated.Gib.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Generated.Gib.cs</LastGenOutput>
