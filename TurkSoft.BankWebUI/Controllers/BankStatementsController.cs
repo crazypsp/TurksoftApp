@@ -9,7 +9,7 @@ using System.IdentityModel.Claims;
 
 namespace TurkSoft.BankWebUI.Controllers
 {
-    [Authorize(Roles = "Admin,Finance")]
+    [Authorize]
     public class BankStatementsController : Controller
     {
         private readonly IBankTransactionService _transactionService;

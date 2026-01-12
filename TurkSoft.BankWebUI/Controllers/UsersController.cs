@@ -9,7 +9,7 @@ using System;
 
 namespace TurkSoft.BankWebUI.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public sealed class UsersController : Controller
     {
         private readonly IUserService _userService;

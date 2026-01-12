@@ -10,7 +10,7 @@ using TurkSoft.Services.Interfaces;
 
 namespace TurkSoft.BankWebUI.Controllers
 {
-    [Authorize(Roles = "Admin,Integrator,Finance")]
+    [Authorize]
     public sealed class BankIntegrationsController : Controller
     {
         private readonly IBankService _bankService;

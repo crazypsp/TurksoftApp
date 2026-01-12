@@ -11,7 +11,7 @@ using System.IdentityModel.Claims;
 
 namespace TurkSoft.BankWebUI.Controllers
 {
-    [Authorize(Roles = "Admin,Integrator,Finance")]
+    [Authorize]
     public sealed class AccountingController : Controller
     {
         private readonly IBankTransactionService _transactionService;
