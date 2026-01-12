@@ -1,89 +1,279 @@
 ﻿@model TurkSoft.BankWebUI.ViewModels.BankIntegrationsVm
-@using TurkSoft.BankWebUI.Models
 @{
     ViewData["Title"] = "Banka Entegrasyonları";
+    ViewData["Subtitle"] = "Bağlantı ayarları, çekim planı, son çekim ve durum";
 }
 
 @section PageActions {
-    <a class="btn btn-sm btn-outline-light" asp-action="Logs"><i class="fa-solid fa-clipboard-list me-2"></i>Çekim Logları</a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addIntegrationModal">
+        <i class="fa-solid fa-plus me-2"></i>Yeni Entegrasyon
+    </button>
 }
 
-<div class="panel">
-    <div class="panel-header d-flex justify-content-between align-items-center">
-        <div class="fw-semibold"><i class="fa-solid fa-building-columns me-2"></i>Entegrasyon Durumu</div>
-        <span class="badge badge-soft">Demo</span>
-    </div>
-    <div class="panel-body">
-        <div class="table-responsive">
-            <table class="table table-dark table-striped align-middle mb-0" data-dt="true">
-                <thead>
-                    <tr>
-                        <th>Banka</th>
-                        <th>Bağlantı</th>
-                        <th>Kimlik</th>
-                        <th>Plan</th>
-                        <th>Son Çekim</th>
-                        <th>Son Durum</th>
-                        <th class="text-end">İşlem</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var i in Model.Items)
-                    {
-                        var statusClass = i.LastStatus switch
-                        {
-                            BankPullStatus.Ok => "text-bg-success",
-                            BankPullStatus.Warning => "text-bg-warning",
-                            _ => "text-bg-danger"
-                        };
+<div class="row">
+    @foreach (var integration in Model.Items)
+    {
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-building-columns me-2 text-primary"></i>
+                        <h6 class="mb-0">@integration.BankName</h6>
+                    </div>
+                    <div class="form-check form-switch">
+                        <form method="post" asp-action="Toggle" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@integration.Id" />
+                            <input class="form-check-input" type="checkbox"
+                                   role="switch" @(integration.IsActive ? "checked" : "")
+                                   onchange="this.form.submit()">
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Bağlantı Tipi</small>
+                        <div>
+                            <span class="badge @GetConnectionTypeBadge(integration.ConnectionType)">
+                                @integration.ConnectionType
+                            </span>
+                        </div>
+                    </div>
 
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">@i.BankName</div>
-                                <div class="text-muted small">@(i.IsActive ? "Aktif" : "Pasif")</div>
-                            </td>
-                            <td><span class="badge text-bg-secondary">@i.ConnectionType</span></td>
-                            <td>
-                                @if (i.CredentialsConfigured)
-                                {
-                                    <span class="badge text-bg-success">Var</span>
-                                }
-                                else
-                                {
+                    <div class="mb-3">
+                        <small class="text-muted">Çekim Planı</small>
+                        <div class="d-flex justify-content-between">
+                            <span>@integration.PullSchedule</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="tooltip" title="Hemen Çek"
+                                    onclick="pullNow('@integration.Id')">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
 
-                                    <span class="badge text-bg-danger">Eksik</span>
+                    <div class="mb-3">
+                        <small class="text-muted">Son Çekim</small>
+                        <div>
+                            @if (integration.LastPullAt.HasValue)
+                            {
+                                <span>@integration.LastPullAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Henüz yapılmadı</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted">Sonraki Çekim</small>
+                        <div>
+                            @if (integration.NextPullAt.HasValue)
+                            {
+                                <span>@integration.NextPullAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Planlanmadı</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted">Durum</small>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge @GetStatusBadge(integration.LastStatus)">
+                                    @integration.LastStatus
+                                </span>
+                                @if (!string.IsNullOrEmpty(integration.LastMessage))
+                                {
+                                    <small class="text-muted d-block mt-1">@integration.LastMessage</small>
                                 }
-                            </td>
-                            <td>
-                                <div>@i.PullSchedule</div>
-                                <div class="text-muted small">Next: @(i.NextPullAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</div>
-                            </td>
-                            <td>@(i.LastPullAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</td>
-                            <td>
-                                <span class="badge @statusClass">@i.LastStatus</span>
-                                <div class="text-muted small">@i.LastMessage</div>
-                            </td>
-                            <td class="text-end">
-                                <form asp-action="PullNow" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@i.Id" />
-                                    <button class="btn btn-sm btn-primary" type="submit" @(i.IsActive ? "" : "disabled") title="Şimdi çek">
-                                        <i class="fa-solid fa-cloud-arrow-down"></i>
-                                    </button>
-                                </form>
-                                <form asp-action="Toggle" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@i.Id" />
-                                    <button class="btn btn-sm btn-outline-light" type="submit" title="Aktif/Pasif">
-                                        <i class="fa-solid @(i.IsActive ? "fa-toggle-on" : "fa-toggle-off")"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       @(integration.CredentialsConfigured ? "checked" : "") disabled>
+                                <label class="form-check-label small">Kimlik</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a href="@Url.Action("Logs", new { bank = integration.BankName })"
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="fa-solid fa-list me-1"></i>Logları Gör
+                        </a>
+                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#editIntegrationModal"
+                                data-id="@integration.Id"
+                                data-name="@integration.BankName"
+                                data-type="@integration.ConnectionType"
+                                data-schedule="@integration.PullSchedule">
+                            <i class="fa-solid fa-pen-to-square me-1"></i>Düzenle
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="text-muted small mt-2">“Şimdi çek” demo olarak yeni hareket + transfer kaydı üretir.</div>
+    }
+</div>
+
+<!-- Yeni Entegrasyon Modal -->
+<div class="modal fade" id="addIntegrationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Banka Entegrasyonu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-action="Create">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Banka Adı *</label>
+                        <select class="form-select" name="bankName" required>
+                            <option value="">Seçiniz</option>
+                            <option value="Akbank">Akbank</option>
+                            <option value="Türkiye İş Bankası">Türkiye İş Bankası</option>
+                            <option value="VakıfBank">VakıfBank</option>
+                            <option value="Kuveyt Türk">Kuveyt Türk</option>
+                            <option value="Albaraka Türk">Albaraka Türk</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Bağlantı Tipi *</label>
+                        <select class="form-select" name="connectionType" required>
+                            <option value="Api">API</option>
+                            <option value="HostToHost">Host to Host</option>
+                            <option value="File">Dosya</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Çekim Planı</label>
+                        <select class="form-select" name="pullSchedule">
+                            <option value="Her gün 06:00">Her gün 06:00</option>
+                            <option value="Haftalık (Pazartesi 08:00)">Haftalık (Pazartesi 08:00)</option>
+                            <option value="Günde 2 kez (06:00, 18:00)">Günde 2 kez (06:00, 18:00)</option>
+                            <option value="Manuel">Manuel</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<!-- Düzenleme Modal -->
+<div class="modal fade" id="editIntegrationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Entegrasyon Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editIntegrationForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="editId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Banka Adı</label>
+                        <input type="text" class="form-control" id="editName" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Bağlantı Tipi</label>
+                        <select class="form-select" name="connectionType" id="editType">
+                            <option value="Api">API</option>
+                            <option value="HostToHost">Host to Host</option>
+                            <option value="File">Dosya</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Çekim Planı</label>
+                        <select class="form-select" name="pullSchedule" id="editSchedule">
+                            <option value="Her gün 06:00">Her gün 06:00</option>
+                            <option value="Haftalık (Pazartesi 08:00)">Haftalık (Pazartesi 08:00)</option>
+                            <option value="Günde 2 kez (06:00, 18:00)">Günde 2 kez (06:00, 18:00)</option>
+                            <option value="Manuel">Manuel</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Tooltip
+            $('[data-bs-toggle="tooltip"]').tooltip();
+
+            // Edit modal event
+            $('#editIntegrationModal').on('show.bs.modal', function(event) {
+                var button = $(event.relatedTarget);
+                $('#editId').val(button.data('id'));
+                $('#editName').val(button.data('name'));
+                $('#editType').val(button.data('type'));
+                $('#editSchedule').val(button.data('schedule'));
+            });
+
+            // Edit form submit
+            $('#editIntegrationForm').submit(function(e) {
+                e.preventDefault();
+                // Burada AJAX ile güncelleme yapılacak
+                alert('Entegrasyon güncellendi (demo)');
+                $('#editIntegrationModal').modal('hide');
+            });
+        });
+
+        function pullNow(integrationId) {
+            if (confirm('Bu bankadan hemen veri çekmek istediğinize emin misiniz?')) {
+                $.post('@Url.Action("PullNow", "BankIntegrations")', {
+                    id: integrationId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                }, function() {
+                    location.reload();
+                });
+            }
+        }
+    </script>
+}
+
+@functions {
+    string GetConnectionTypeBadge(TurkSoft.BankWebUI.Models.ConnectionType type)
+    {
+        return type switch
+        {
+            TurkSoft.BankWebUI.Models.ConnectionType.Api => "bg-primary",
+            TurkSoft.BankWebUI.Models.ConnectionType.HostToHost => "bg-success",
+            TurkSoft.BankWebUI.Models.ConnectionType.File => "bg-warning text-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    string GetStatusBadge(TurkSoft.BankWebUI.Models.BankPullStatus status)
+    {
+        return status switch
+        {
+            TurkSoft.BankWebUI.Models.BankPullStatus.Ok => "bg-success",
+            TurkSoft.BankWebUI.Models.BankPullStatus.Warning => "bg-warning text-dark",
+            TurkSoft.BankWebUI.Models.BankPullStatus.Error => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

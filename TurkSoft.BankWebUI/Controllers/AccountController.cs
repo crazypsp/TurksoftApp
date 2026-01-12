@@ -30,7 +30,7 @@ namespace TurkSoft.BankWebUI.Controllers
         {
             ViewData["Title"] = "Giriş";
             if (!ModelState.IsValid) return View(vm);
-
+            //TurkSoft2024!
             var isAuthenticated = await _userService.AuthenticateAsync(vm.Email, vm.Password);
             if (!isAuthenticated)
             {

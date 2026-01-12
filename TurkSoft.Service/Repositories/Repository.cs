@@ -4,18 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using TurkSoft.Data;
-using TurkSoft.Data.Context;
+using TurkSoft.Data.EntityData; // TurkSoftDbContext burada
 using TurkSoft.Services.Interfaces;
 
 namespace TurkSoft.Services.Repositories
 {
     public class Repository<T> : IRepository<T> where T : class
     {
-        protected readonly AppDbContext _context;
+        protected readonly TurkSoftDbContext _context;
         protected readonly DbSet<T> _dbSet;
 
-        public Repository(AppDbContext context)
+        public Repository(TurkSoftDbContext context)
         {
             _context = context;
             _dbSet = context.Set<T>();

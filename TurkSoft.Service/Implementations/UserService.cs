@@ -28,7 +28,7 @@ namespace TurkSoft.Services.Implementations
 
         public async Task<User> GetUserByUsernameAsync(string username)
         {
-            var users = await _unitOfWork.UserRepository.FindAsync(u => u.UserName == username);
+            var users = await _unitOfWork.UserRepository.FindAsync(u => u.Email == username);
             return users.FirstOrDefault();
         }
 

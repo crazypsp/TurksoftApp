@@ -2,8 +2,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using TurkSoft.BankWebUI.Services;
-using TurkSoft.Data;
-using TurkSoft.Data.Context;
+using TurkSoft.Data.EntityData; // TurkSoftDbContext burada
 using TurkSoft.Services;
 using TurkSoft.Services.Implementations;
 using TurkSoft.Services.Interfaces;
@@ -24,8 +23,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
     });
 
-// Database Context
-builder.Services.AddDbContext<AppDbContext>(options =>
+// Database Context - TurkSoftDbContext kullan
+builder.Services.AddDbContext<TurkSoftDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Service Registrations

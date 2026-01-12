@@ -1,50 +1,100 @@
 ﻿@model TurkSoft.BankWebUI.ViewModels.CreateUserVm
 @{
     ViewData["Title"] = "Kullanıcı Oluştur";
+    ViewData["Subtitle"] = "Yeni kullanıcı ekleme";
 }
 
-@section PageActions {
-    <a class="btn btn-sm btn-outline-light" asp-action="Index"><i class="fa-solid fa-arrow-left me-2"></i>Geri</a>
-}
-
-<div class="panel">
-    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-user-plus me-2"></i>Yeni Kullanıcı</div></div>
-    <div class="panel-body">
-        <form asp-action="Create" method="post" class="row g-3">
-            @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-
-            <div class="col-md-6">
-                <label asp-for="FullName" class="form-label"></label>
-                <input asp-for="FullName" class="form-control" />
-                <span asp-validation-for="FullName" class="text-danger small"></span>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fa-solid fa-user-plus me-2"></i>Yeni Kullanıcı</h5>
             </div>
-
-            <div class="col-md-6">
-                <label asp-for="Email" class="form-label"></label>
-                <input asp-for="Email" class="form-control" />
-                <span asp-validation-for="Email" class="text-danger small"></span>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="FullName" class="form-label">Ad Soyad *</label>
+                            <input asp-for="FullName" class="form-control" placeholder="Ad Soyad" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Email" class="form-label">E-posta *</label>
+                            <input asp-for="Email" type="email" class="form-control" placeholder="ornek@firma.com" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Role" class="form-label">Rol *</label>
+                            <select asp-for="Role" class="form-select">
+                                @if (Model.Roles != null)
+                                {
+                                    foreach (var role in Model.Roles)
+                                    {
+                                        <option value="@role">@role</option>
+                                    }
+                                }
+                            </select>
+                            <span asp-validation-for="Role" class="text-danger small"></span>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="TempPassword" class="form-label">Geçici Şifre *</label>
+                            <div class="input-group">
+                                <input asp-for="TempPassword" type="password" class="form-control" 
+                                       placeholder="En az 6 karakter" id="passwordInput" />
+                                <button type="button" class="btn btn-outline-secondary" 
+                                        onclick="generatePassword()">
+                                    <i class="fa-solid fa-key"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" 
+                                        onclick="togglePassword()">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="TempPassword" class="text-danger small"></span>
+                            <div class="form-text">Şifre hash'lenerek kaydedilecektir.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fa-solid fa-info-circle me-2"></i>
+                        <strong>Hash Güvenliği:</strong> Kullanıcı şifresi güvenli bir şekilde hash'lenerek saklanacaktır.
+                        Hash için SHA256 + Salt algoritması kullanılmaktadır.
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fa-solid fa-arrow-left me-2"></i>Listeye Dön
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save me-2"></i>Kullanıcı Oluştur
+                        </button>
+                    </div>
+                </form>
             </div>
-
-            <div class="col-md-6">
-                <label asp-for="Role" class="form-label"></label>
-                <select asp-for="Role" class="form-select">
-                    @foreach (var r in Model.Roles)
-                    {
-                        <option value="@r">@r</option>
-                    }
-                </select>
-            </div>
-
-            <div class="col-md-6">
-                <label asp-for="TempPassword" class="form-label"></label>
-                <input asp-for="TempPassword" class="form-control" />
-                <span asp-validation-for="TempPassword" class="text-danger small"></span>
-            </div>
-
-            <div class="col-12">
-                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-2"></i>Kaydet</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
+
+<script>
+        function generatePassword() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\u0040#$%^&*';
+        let password = '';
+        for (let i = 0; i < 10; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        $('#passwordInput').val(password);
+    }
+    
+    function togglePassword() {
+        const input = document.getElementById('passwordInput');
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+    }
+</script>

@@ -1,100 +1,181 @@
 ﻿@model TurkSoft.BankWebUI.ViewModels.ReportsIndexVm
 @{
     ViewData["Title"] = "Raporlar";
+    ViewData["Subtitle"] = "Tarih aralığı ve hesap tipine göre filtreleyin";
 }
 
-<div class="panel mb-3">
-    <div class="panel-header"><div class="fw-semibold"><i class="fa-solid fa-filter me-2"></i>Filtre</div></div>
-    <div class="panel-body">
-        <form asp-action="Index" method="post" class="row g-3 align-items-end">
-            @Html.AntiForgeryToken()
-            <div class="col-lg-4">
-                <label asp-for="Filter.DateRange" class="form-label"></label>
-                <input asp-for="Filter.DateRange" class="form-control" data-flatpickr="daterange" />
+@section PageActions {
+    <button type="button" class="btn btn-success" onclick="exportToExcel()">
+        <i class="fa-solid fa-file-excel me-2"></i>Excel'e Aktar
+    </button>
+    <button type="button" class="btn btn-danger" onclick="exportToPdf()">
+        <i class="fa-solid fa-file-pdf me-2"></i>PDF Oluştur
+    </button>
+}
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow">
+            <div class="card-body">
+                <form method="post" class="row g-3">
+                    <div class="col-md-3">
+                        <label asp-for="Filter.DateRange" class="form-label">Tarih Aralığı</label>
+                        <input asp-for="Filter.DateRange" class="form-control date-range-picker"
+                               placeholder="Tarih seçin" />
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="Filter.AccountType" class="form-label">Hesap Tipi</label>
+                        <select asp-for="Filter.AccountType" class="form-select">
+                            <option value="">Tümü</option>
+                            @foreach (var type in Model.Filter.AccountTypes)
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="Filter.Bank" class="form-label">Banka</label>
+                        <select asp-for="Filter.Bank" class="form-select">
+                            <option value="">Tüm Bankalar</option>
+                            @foreach (var bank in Model.Filter.Banks)
+                            {
+                                <option value="@bank">@bank</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100 me-2">
+                            <i class="fa-solid fa-magnifying-glass me-2"></i>Raporla
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary w-100">
+                            <i class="fa-solid fa-rotate me-2"></i>Temizle
+                        </a>
+                    </div>
+                </form>
             </div>
-            <div class="col-lg-3">
-                <label asp-for="Filter.Bank" class="form-label"></label>
-                <select asp-for="Filter.Bank" class="form-select">
-                    <option value="">Tümü</option>
-                    @foreach (var b in Model.Filter.Banks)
-                    {
-                        <option value="@b">@b</option>
-                    }
-                </select>
-            </div>
-            <div class="col-lg-3">
-                <label asp-for="Filter.AccountType" class="form-label"></label>
-                <select asp-for="Filter.AccountType" class="form-select">
-                    <option value="">Tümü</option>
-                    @foreach (var t in Model.Filter.AccountTypes)
-                    {
-                        <option value="@t">@t</option>
-                    }
-                </select>
-            </div>
-            <div class="col-lg-2 d-grid">
-                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass me-2"></i>Uygula</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-lg-6">
-        <div class="panel">
-            <div class="panel-header d-flex justify-content-between">
-                <div class="fw-semibold"><i class="fa-solid fa-chart-column me-2"></i>Hesap Tipi Net</div>
-                <span class="badge badge-soft">Demo</span>
+<div class="row">
+    <!-- Özet Kartlar -->
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Toplam İşlem Sayısı</h6>
+                <h3 class="mb-3">@Model.Rows.Count</h3>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                </div>
             </div>
-            <div class="panel-body"><canvas id="acctTypeBar" height="120"></canvas></div>
-        </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="panel">
-            <div class="panel-header d-flex justify-content-between">
-                <div class="fw-semibold"><i class="fa-solid fa-chart-simple me-2"></i>Günlük Net</div>
-                <span class="badge badge-soft">Demo</span>
-            </div>
-            <div class="panel-body"><canvas id="dailyNet" height="120"></canvas></div>
         </div>
     </div>
 
-    <div class="col-12">
-        <div class="panel">
-            <div class="panel-header d-flex justify-content-between">
-                <div class="fw-semibold"><i class="fa-solid fa-table me-2"></i>Sonuçlar</div>
-                <span class="text-muted small">Test verisi</span>
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Toplam Alacak</h6>
+                <h3 class="mb-3 text-success">@Model.Rows.Sum(x => x.Credit).ToString("N2") ₺</h3>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" style="width: @(GetPercentage(Model.Rows.Sum(x => x.Credit), Model.Rows.Sum(x => x.Debit) + Model.Rows.Sum(x => x.Credit)) ?? 0)%"></div>
+                </div>
             </div>
-            <div class="panel-body">
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Toplam Borç</h6>
+                <h3 class="mb-3 text-danger">@Model.Rows.Sum(x => x.Debit).ToString("N2") ₺</h3>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-danger" style="width: @(GetPercentage(Model.Rows.Sum(x => x.Debit), Model.Rows.Sum(x => x.Debit) + Model.Rows.Sum(x => x.Credit)) ?? 0)%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Grafikler -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fa-solid fa-chart-pie me-2"></i>Hesap Tipine Göre Dağılım</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="accountTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fa-solid fa-chart-bar me-2"></i>Günlere Göre Net Akış</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyFlowChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detaylı Tablo -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fa-solid fa-table me-2"></i>Detaylı İşlem Listesi</h6>
+            </div>
+            <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-dark table-hover align-middle mb-0" data-dt="true">
+                    <table id="reportsTable" class="table table-hover">
                         <thead>
                             <tr>
                                 <th>Tarih</th>
                                 <th>Banka</th>
-                                <th>Tip</th>
-                                <th>Referans</th>
+                                <th>Hesap Tipi</th>
+                                <th>Referans No</th>
                                 <th>Açıklama</th>
                                 <th class="text-end">Borç</th>
                                 <th class="text-end">Alacak</th>
                                 <th class="text-end">Net</th>
+                                <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var r in Model.Rows)
+                            @foreach (var row in Model.Rows)
                             {
                                 <tr>
-                                    <td>@r.Date.ToString("dd.MM.yyyy HH:mm")</td>
-                                    <td>@r.BankName</td>
-                                    <td>@r.AccountType</td>
-                                    <td>@r.ReferenceNo</td>
-                                    <td>@r.Description</td>
-                                    <td class="text-end">@r.Debit.ToString("N2")</td>
-                                    <td class="text-end text-success">@r.Credit.ToString("N2")</td>
-                                    <td class="text-end @(r.Net >= 0 ? "text-success" : "text-warning")">@r.Net.ToString("+#,##0.00;-#,##0.00;0.00")</td>
+                                    <td>@row.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>@row.BankName</td>
+                                    <td>@row.AccountType</td>
+                                    <td>@row.ReferenceNo</td>
+                                    <td>@row.Description</td>
+                                    <td class="text-end">@row.Debit.ToString("N2")</td>
+                                    <td class="text-end">@row.Credit.ToString("N2")</td>
+                                    <td class="text-end @(row.Net < 0 ? "text-danger" : "text-success")">
+                                        @row.Net.ToString("N2")
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-info"
+                                                onclick="showTransactionDetails(@row.Id)">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="5" class="text-end"><strong>TOPLAM</strong></td>
+                                <td class="text-end"><strong>@Model.Rows.Sum(x => x.Debit).ToString("N2")</strong></td>
+                                <td class="text-end"><strong>@Model.Rows.Sum(x => x.Credit).ToString("N2")</strong></td>
+                                <td class="text-end"><strong>@Model.Rows.Sum(x => x.Net).ToString("N2")</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -102,27 +183,160 @@
     </div>
 </div>
 
+<!-- Detay Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">İşlem Detayları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailContent">
+                <!-- Detaylar buraya yüklenecek -->
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        const typeLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByAccountType.Keys.ToList()));
-        const typeValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByAccountType.Values.ToList()));
-        const dayLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByDay.Keys.ToList()));
-        const dayValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetByDay.Values.ToList()));
+        $(document).ready(function() {
+            $('#reportsTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
+                },
+                order: [[0, 'desc']],
+                pageLength: 25,
+                dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
+            });
 
-        const acct = document.getElementById('acctTypeBar');
-        if (acct) new Chart(acct, { type:'bar',
-          data:{ labels:typeLabels, datasets:[{ label:'Net (₺)', data:typeValues, backgroundColor:'#3b82f6' }] },
-          options:{ plugins:{ legend:{ labels:{ color:'rgba(255,255,255,.8)' } } },
-            scales:{ x:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } },
-                    y:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } } } }
+            // Date range picker
+            flatpickr(".date-range-picker", {
+                mode: "range",
+                locale: "tr",
+                dateFormat: "d.m.Y",
+                altInput: true,
+                altFormat: "d.m.Y"
+            });
+
+            // Account Type Chart
+            const accountTypeCtx = document.getElementById('accountTypeChart').getContext('2d');
+            const accountTypeChart = new Chart(accountTypeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.NetByAccountType.Keys)),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(Model.NetByAccountType.Values)),
+                        backgroundColor: [
+                            'rgb(255, 99, 132)',
+                            'rgb(54, 162, 235)',
+                            'rgb(255, 205, 86)',
+                            'rgb(75, 192, 192)',
+                            'rgb(153, 102, 255)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+
+            // Daily Flow Chart
+            const dailyFlowCtx = document.getElementById('dailyFlowChart').getContext('2d');
+            const dailyFlowChart = new Chart(dailyFlowCtx, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.NetByDay.Keys)),
+                    datasets: [{
+                        label: 'Net Akış (₺)',
+                        data: @Html.Raw(Json.Serialize(Model.NetByDay.Values)),
+                        backgroundColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 0 ? 'rgba(75, 192, 192, 0.7)' : 'rgba(255, 99, 132, 0.7)';
+                        },
+                        borderColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 0 ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
+                        },
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('tr-TR') + ' ₺';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         });
 
-        const daily = document.getElementById('dailyNet');
-        if (daily) new Chart(daily, { type:'line',
-          data:{ labels:dayLabels, datasets:[{ label:'Net (₺)', data:dayValues, borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.14)', tension:.35, fill:true }] },
-          options:{ plugins:{ legend:{ labels:{ color:'rgba(255,255,255,.8)' } } },
-            scales:{ x:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } },
-                    y:{ ticks:{ color:'rgba(255,255,255,.7)' }, grid:{ color:'rgba(255,255,255,.06)' } } } }
-        });
+        function exportToExcel() {
+            // Excel export işlemi
+            alert('Excel export işlemi başlatılıyor...');
+        }
+
+        function exportToPdf() {
+            // PDF export işlemi
+            alert('PDF oluşturma işlemi başlatılıyor...');
+        }
+
+        function showTransactionDetails(id) {
+            // AJAX ile detayları getir
+            $('#detailContent').html('<div class="text-center"><div class="spinner-border"></div></div>');
+            $('#detailModal').modal('show');
+
+            // Simüle edilmiş detay verisi
+            setTimeout(function() {
+                $('#detailContent').html(`
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>İşlem Bilgileri</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>İşlem ID:</strong></td><td>${id}</td></tr>
+                                <tr><td><strong>Tarih:</strong></td><td>01.01.2024 10:30</td></tr>
+                                <tr><td><strong>Banka:</strong></td><td>Akbank</td></tr>
+                                <tr><td><strong>Hesap Tipi:</strong></td><td>Vadesiz TL</td></tr>
+                                <tr><td><strong>Referans No:</strong></td><td>REF${id}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Mali Bilgiler</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Borç:</strong></td><td class="text-end">1.000,00 ₺</td></tr>
+                                <tr><td><strong>Alacak:</strong></td><td class="text-end">0,00 ₺</td></tr>
+                                <tr><td><strong>Net Tutar:</strong></td><td class="text-end text-danger">-1.000,00 ₺</td></tr>
+                                <tr><td><strong>Bakiye:</strong></td><td class="text-end">50.000,00 ₺</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <h6>Açıklama</h6>
+                            <p>Örnek işlem açıklaması burada yer alacaktır.</p>
+                        </div>
+                    </div>
+                `);
+            }, 500);
+        }
     </script>
+}
+
+@functions {
+    double? GetPercentage(decimal part, decimal total)
+    {
+        if (total == 0) return null;
+        return (double)(part / total * 100);
+    }
 }

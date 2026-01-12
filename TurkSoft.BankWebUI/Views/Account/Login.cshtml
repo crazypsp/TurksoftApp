@@ -1,68 +1,63 @@
 ﻿@model TurkSoft.BankWebUI.ViewModels.LoginVm
 @{
     Layout = "_LoginLayout";
-    ViewData["Title"] = "Giriş";
 }
 
-<div class="auth-card panel">
-    <div class="row g-0">
-        <div class="col-lg-6 auth-left">
-            <div class="d-flex align-items-center gap-2 mb-4">
-                <div class="brand-badge"><i class="fa-solid fa-chart-line"></i></div>
-                <div>
-                    <div class="h5 m-0 fw-bold">Finans Yönetimi</div>
-                    <div class="text-muted">Demo giriş: admin@firma.com / 123456</div>
-                </div>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header text-center mb-4">
+            <div class="auth-icon mb-3">
+                <i class="fa-solid fa-chart-line fa-3x text-primary"></i>
             </div>
-
-            <div class="panel p-3" style="background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08);">
-                <div class="fw-semibold mb-2"><i class="fa-solid fa-flask me-2"></i>Demo Kullanıcılar</div>
-                <ul class="mb-0 text-muted">
-                    <li>admin@firma.com / 123456 (Admin)</li>
-                    <li>finans@firma.com / 123456 (Finance)</li>
-                    <li>integrator@firma.com / 123456 (Integrator)</li>
-                    <li>viewer@firma.com / 123456 (Viewer)</li>
-                </ul>
-            </div>
+            <h2 class="mb-1">Finans Yönetimi</h2>
+            <p class="text-muted small">Banka & Raporlama Sistemi</p>
         </div>
 
-        <div class="col-lg-6 auth-right">
-            <h2 class="h4 fw-bold mb-1">Hoş geldiniz</h2>
-            <div class="text-muted mb-3">Devam etmek için giriş yapın.</div>
+        @if (!string.IsNullOrEmpty(Model.Error))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fa-solid fa-circle-exclamation me-2"></i>@Model.Error
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
 
-            @if (!string.IsNullOrWhiteSpace(Model.Error))
-            {
-                <div class="alert alert-danger">
-                    <i class="fa-solid fa-triangle-exclamation me-2"></i>@Model.Error
+        <form asp-action="Login" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">E-posta</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                    <input asp-for="Email" class="form-control" placeholder="ornek@firma.com" />
                 </div>
-            }
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
 
-            <form asp-action="Login" method="post">
-                @Html.AntiForgeryToken()
-
-                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-
-                <div class="mb-3">
-                    <label asp-for="Email" class="form-label"></label>
-                    <input asp-for="Email" class="form-control" placeholder="admin@firma.com" />
-                    <span asp-validation-for="Email" class="text-danger small"></span>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Şifre</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                    <input asp-for="Password" type="password" class="form-control" placeholder="••••••" />
                 </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
 
-                <div class="mb-3">
-                    <label asp-for="Password" class="form-label"></label>
-                    <input asp-for="Password" class="form-control" placeholder="123456" />
-                    <span asp-validation-for="Password" class="text-danger small"></span>
-                </div>
+            <div class="mb-3 form-check">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label">Beni Hatırla</label>
+            </div>
 
-                <div class="form-check mb-3">
-                    <input asp-for="RememberMe" class="form-check-input" />
-                    <label asp-for="RememberMe" class="form-check-label">Beni hatırla</label>
-                </div>
-
-                <button class="btn btn-primary w-100" type="submit">
+            <div class="d-grid gap-2 mb-3">
+                <button type="submit" class="btn btn-primary btn-lg">
                     <i class="fa-solid fa-right-to-bracket me-2"></i>Giriş Yap
                 </button>
-            </form>
-        </div>
+            </div>
+
+            <div class="text-center small text-muted">
+                <div class="mb-2">Demo Kullanıcı Bilgileri:</div>
+                <div><strong>admin@firma.com</strong> / <strong>123456</strong></div>
+                <div class="mt-1">(Admin, Finance, Integrator, Viewer rolleri)</div>
+            </div>
+        </form>
     </div>
 </div>
