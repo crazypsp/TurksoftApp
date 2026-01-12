@@ -13,6 +13,7 @@ namespace TurkSoft.Service.Implementations
     public class LogoTigerIntegrationService : ILogoTigerIntegrationService
     {
         private readonly ILogger<LogoTigerIntegrationService> _logger;
+        public static UnityApplication UnityApp = new UnityApplication();
 
         public LogoTigerIntegrationService(ILogger<LogoTigerIntegrationService> logger)
         {
@@ -761,7 +762,7 @@ namespace TurkSoft.Service.Implementations
             return true;
         }
 
-        private ServiceResult<T> HandleLogoErrors<T>(Data bankvo, string islemKodu) where T : BankaFisSonuc, new()
+        private ServiceResult<T> HandleLogoErrors<T>(Interop.UnityObjects.Data bankvo, string islemKodu) where T : BankaFisSonuc, new()
         {
             List<string> hatalar = new List<string>();
 
@@ -798,7 +799,7 @@ namespace TurkSoft.Service.Implementations
             return ServiceResult<T>.ErrorResult("Logo Tiger entegrasyon hatası", hatalar);
         }
 
-        private ServiceResult<KrediTaksitSonuc> HandleKrediTaksitErrors(Data bankvo, string islemKodu)
+        private ServiceResult<KrediTaksitSonuc> HandleKrediTaksitErrors(Interop.UnityObjects.Data bankvo, string islemKodu)
         {
             var result = HandleLogoErrors<KrediTaksitSonuc>(bankvo, islemKodu);
 
@@ -840,12 +841,10 @@ namespace TurkSoft.Service.Implementations
             return new ServiceResult<T>
             {
                 Success = false,
-                Data = default(T),
+                Data = default,
                 Message = message,
                 Errors = errors ?? new List<string>()
             };
         }
-
-
     }
 }
