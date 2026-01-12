@@ -2,9 +2,14 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using TurkSoft.BankWebUI.Services;
+using TurkSoft.Business.Interface;
+using TurkSoft.Business.Managers;
 using TurkSoft.Data.EntityData; // TurkSoftDbContext burada
+using TurkSoft.Service;
 using TurkSoft.Service.Implementations;
 using TurkSoft.Service.Inferfaces;
+using TurkSoft.Service.Interface;
+using TurkSoft.Service.Manager;
 using TurkSoft.Services;
 using TurkSoft.Services.Implementations;
 using TurkSoft.Services.Interfaces;
@@ -44,7 +49,7 @@ builder.Services.AddScoped<ITransferLogService, TransferLogService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-
+builder.Services.AddTurkSoftServices();
 // Demo servis (mevcut)
 builder.Services.AddScoped<IDemoDataService, DemoDataService>();
 
@@ -63,6 +68,7 @@ var tigerConnectionString = builder.Configuration.GetConnectionString("TigerConn
 
 // Tiger veritabaný için Dapper veya ADO.NET kullanacaksanýz:
 builder.Services.AddSingleton(new TigerDbConnection(tigerConnectionString));
+
 
 var app = builder.Build();
 

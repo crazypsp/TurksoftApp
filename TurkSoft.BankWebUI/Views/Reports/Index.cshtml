@@ -1,7 +1,7 @@
 ﻿@model TurkSoft.BankWebUI.ViewModels.ReportsIndexVm
 @{
     ViewData["Title"] = "Raporlar";
-    ViewData["Subtitle"] = "Tarih aralığı ve hesap tipine göre filtreleyin";
+    ViewData["Subtitle"] = "Tarih aralığı, banka ve hesaba göre filtreleyin";
 }
 
 @section PageActions {
@@ -13,169 +13,156 @@
     </button>
 }
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-exclamation me-2"></i>@TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="card border-0 shadow">
             <div class="card-body">
-                <form method="post" class="row g-3">
+                <form method="post" asp-action="Index" id="reportForm" class="row g-3">
+                    @Html.AntiForgeryToken()
+
                     <div class="col-md-3">
                         <label asp-for="Filter.DateRange" class="form-label">Tarih Aralığı</label>
                         <input asp-for="Filter.DateRange" class="form-control date-range-picker"
                                placeholder="Tarih seçin" />
                     </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="Filter.Bank" class="form-label">Banka</label>
+                        <select asp-for="Filter.Bank" id="bankSelect" class="form-select" onchange="loadAccounts()">
+                            <option value="">Tüm Bankalar</option>
+                            @if (Model.Filter?.Banks != null)
+                            {
+                                foreach (var bank in Model.Filter.Banks)
+                                {
+                                    if (bank.Selected)
+                                    {
+                                        <option value="@bank.Value" selected>@bank.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@bank.Value">@bank.Text</option>
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="Filter.Account" class="form-label">Hesap</label>
+                        <select asp-for="Filter.Account" id="accountSelect" class="form-select">
+                            <option value="">Tüm Hesaplar</option>
+                            @if (Model.Filter?.Accounts != null)
+                            {
+                                foreach (var account in Model.Filter.Accounts)
+                                {
+                                    if (account.Selected)
+                                    {
+                                        <option value="@account.Value" selected>@account.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@account.Value">@account.Text</option>
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+
                     <div class="col-md-3">
                         <label asp-for="Filter.AccountType" class="form-label">Hesap Tipi</label>
                         <select asp-for="Filter.AccountType" class="form-select">
                             <option value="">Tümü</option>
-                            @foreach (var type in Model.Filter.AccountTypes)
+                            @if (Model.Filter?.AccountTypes != null)
                             {
-                                <option value="@type">@type</option>
+                                foreach (var type in Model.Filter.AccountTypes)
+                                {
+                                    if (type == Model.Filter.AccountType)
+                                    {
+                                        <option value="@type" selected>@type</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@type">@type</option>
+                                    }
+                                }
                             }
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label asp-for="Filter.Bank" class="form-label">Banka</label>
-                        <select asp-for="Filter.Bank" class="form-select">
-                            <option value="">Tüm Bankalar</option>
-                            @foreach (var bank in Model.Filter.Banks)
-                            {
-                                <option value="@bank">@bank</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100 me-2">
+
+                    <div class="col-md-12 mt-3">
+                        <button type="submit" class="btn btn-primary me-2">
                             <i class="fa-solid fa-magnifying-glass me-2"></i>Raporla
                         </button>
-                        <a href="@Url.Action("Index")" class="btn btn-secondary w-100">
+                        <button type="button" class="btn btn-info me-2" onclick="getBankStatementReport()">
+                            <i class="fa-solid fa-bank me-2"></i>Bank Statement Raporu
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
                             <i class="fa-solid fa-rotate me-2"></i>Temizle
                         </a>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row">
-    <!-- Özet Kartlar -->
-    <div class="col-md-4 mb-4">
-        <div class="card border-0 shadow">
-            <div class="card-body text-center">
-                <h6 class="text-muted mb-2">Toplam İşlem Sayısı</h6>
-                <h3 class="mb-3">@Model.Rows.Count</h3>
-                <div class="progress" style="height: 6px;">
-                    <div class="progress-bar bg-success" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4 mb-4">
-        <div class="card border-0 shadow">
-            <div class="card-body text-center">
-                <h6 class="text-muted mb-2">Toplam Alacak</h6>
-                <h3 class="mb-3 text-success">@Model.Rows.Sum(x => x.Credit).ToString("N2") ₺</h3>
-                <div class="progress" style="height: 6px;">
-                    <div class="progress-bar bg-success" style="width: @(GetPercentage(Model.Rows.Sum(x => x.Credit), Model.Rows.Sum(x => x.Debit) + Model.Rows.Sum(x => x.Credit)) ?? 0)%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4 mb-4">
-        <div class="card border-0 shadow">
-            <div class="card-body text-center">
-                <h6 class="text-muted mb-2">Toplam Borç</h6>
-                <h3 class="mb-3 text-danger">@Model.Rows.Sum(x => x.Debit).ToString("N2") ₺</h3>
-                <div class="progress" style="height: 6px;">
-                    <div class="progress-bar bg-danger" style="width: @(GetPercentage(Model.Rows.Sum(x => x.Debit), Model.Rows.Sum(x => x.Debit) + Model.Rows.Sum(x => x.Credit)) ?? 0)%"></div>
+                <!-- Bank Statement için durum mesajı -->
+                <div id="bankStatementStatus" class="mt-3 alert" style="display: none;">
+                    <i class="fa-solid fa-spinner fa-spin me-2"></i>
+                    <span id="bankStatementMessage"></span>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- Grafikler -->
-    <div class="col-md-6 mb-4">
-        <div class="card border-0 shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fa-solid fa-chart-pie me-2"></i>Hesap Tipine Göre Dağılım</h6>
-            </div>
-            <div class="card-body">
-                <canvas id="accountTypeChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 mb-4">
-        <div class="card border-0 shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fa-solid fa-chart-bar me-2"></i>Günlere Göre Net Akış</h6>
-            </div>
-            <div class="card-body">
-                <canvas id="dailyFlowChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Detaylı Tablo -->
-<div class="row">
+<!-- Bank Statement Tablosu Container -->
+<div id="bankStatementContainer" class="row mt-4" style="display: none;">
     <div class="col-md-12">
         <div class="card border-0 shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fa-solid fa-table me-2"></i>Detaylı İşlem Listesi</h6>
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fa-solid fa-bank me-2"></i>Bank Statement Raporu
+                    <small class="text-muted ms-2" id="bankStatementTitle"></small>
+                </h6>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="exportBankStatementExcel()">
+                        <i class="fa-solid fa-file-excel me-1"></i>Excel
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info ms-1" onclick="downloadBankStatementJson()">
+                        <i class="fa-solid fa-download me-1"></i>JSON
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="reportsTable" class="table table-hover">
+                    <table id="bankStatementTable" class="table table-hover table-striped" style="width:100%">
                         <thead>
                             <tr>
                                 <th>Tarih</th>
-                                <th>Banka</th>
-                                <th>Hesap Tipi</th>
+                                <th>Banka Kodu</th>
+                                <th>Hesap No</th>
+                                <th>İşlem Tipi</th>
                                 <th>Referans No</th>
                                 <th>Açıklama</th>
-                                <th class="text-end">Borç</th>
-                                <th class="text-end">Alacak</th>
-                                <th class="text-end">Net</th>
-                                <th>İşlemler</th>
+                                <th class="text-end">Tutar</th>
+                                <th class="text-end">Bakiye</th>
+                                <th>Borç/Alacak</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach (var row in Model.Rows)
-                            {
-                                <tr>
-                                    <td>@row.Date.ToString("dd.MM.yyyy HH:mm")</td>
-                                    <td>@row.BankName</td>
-                                    <td>@row.AccountType</td>
-                                    <td>@row.ReferenceNo</td>
-                                    <td>@row.Description</td>
-                                    <td class="text-end">@row.Debit.ToString("N2")</td>
-                                    <td class="text-end">@row.Credit.ToString("N2")</td>
-                                    <td class="text-end @(row.Net < 0 ? "text-danger" : "text-success")">
-                                        @row.Net.ToString("N2")
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-outline-info"
-                                                onclick="showTransactionDetails(@row.Id)">
-                                            <i class="fa-solid fa-eye"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                        <tfoot>
-                            <tr class="table-light">
-                                <td colspan="5" class="text-end"><strong>TOPLAM</strong></td>
-                                <td class="text-end"><strong>@Model.Rows.Sum(x => x.Debit).ToString("N2")</strong></td>
-                                <td class="text-end"><strong>@Model.Rows.Sum(x => x.Credit).ToString("N2")</strong></td>
-                                <td class="text-end"><strong>@Model.Rows.Sum(x => x.Net).ToString("N2")</strong></td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -183,32 +170,194 @@
     </div>
 </div>
 
-<!-- Detay Modal -->
-<div class="modal fade" id="detailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">İşlem Detayları</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+@if (Model.Rows != null && Model.Rows.Any())
+{
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Toplam İşlem Sayısı</h6>
+                    <h3 class="mb-3">@Model.Rows.Count</h3>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" style="width: 100%"></div>
+                    </div>
+                </div>
             </div>
-            <div class="modal-body" id="detailContent">
-                <!-- Detaylar buraya yüklenecek -->
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Toplam Alacak</h6>
+                    <h3 class="mb-3 text-success">@Model.Rows.Sum(x => x.Credit).ToString("N2") ₺</h3>
+                    <div class="progress" style="height: 6px;">
+                        @{
+                            var total = Model.Rows.Sum(x => x.Debit) + Model.Rows.Sum(x => x.Credit);
+                            var creditPercent = total > 0 ? (Model.Rows.Sum(x => x.Credit) / total * 100) : 0;
+                        }
+                        <div class="progress-bar bg-success" style="width: @creditPercent%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Toplam Borç</h6>
+                    <h3 class="mb-3 text-danger">@Model.Rows.Sum(x => x.Debit).ToString("N2") ₺</h3>
+                    <div class="progress" style="height: 6px;">
+                        @{
+                            var debitPercent = total > 0 ? (Model.Rows.Sum(x => x.Debit) / total * 100) : 0;
+                        }
+                        <div class="progress-bar bg-danger" style="width: @debitPercent%"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    @if (Model.NetByAccountType.Any() || Model.NetByDay.Any())
+    {
+        <div class="row mb-4">
+            @if (Model.NetByAccountType.Any())
+            {
+                <div class="col-md-6">
+                    <div class="card border-0 shadow">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0"><i class="fa-solid fa-chart-pie me-2"></i>Hesap Tipine Göre Dağılım</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="accountTypeChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (Model.NetByDay.Any())
+            {
+                <div class="col-md-6">
+                    <div class="card border-0 shadow">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0"><i class="fa-solid fa-chart-bar me-2"></i>Günlere Göre Net Akış</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="dailyFlowChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fa-solid fa-table me-2"></i>Detaylı İşlem Listesi (@Model.Rows.Count kayıt)</h6>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="exportToExcel()">
+                            <i class="fa-solid fa-file-excel me-1"></i>Excel
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="exportToPdf()">
+                            <i class="fa-solid fa-file-pdf me-1"></i>PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="reportsTable" class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Banka</th>
+                                    <th>Hesap Tipi</th>
+                                    <th>Hesap No</th>
+                                    <th>Referans No</th>
+                                    <th>Açıklama</th>
+                                    <th class="text-end">Borç</th>
+                                    <th class="text-end">Alacak</th>
+                                    <th class="text-end">Net</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Model.Rows)
+                                {
+                                    <tr>
+                                        <td>@row.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@row.BankName</td>
+                                        <td>
+                                            <span class="badge @(row.AccountType == "Vadesiz" ? "bg-primary" : row.AccountType == "Vadeli" ? "bg-info" : row.AccountType == "Kredi" ? "bg-warning" : "bg-secondary")">
+                                                @row.AccountType
+                                            </span>
+                                        </td>
+                                        <td>@row.AccountNumber</td>
+                                        <td>@row.ReferenceNo</td>
+                                        <td>@row.Description</td>
+                                        <td class="text-end">@row.Debit.ToString("N2")</td>
+                                        <td class="text-end">@row.Credit.ToString("N2")</td>
+                                        <td class="text-end @(row.Net < 0 ? "text-danger" : "text-success")">
+                                            @row.Net.ToString("N2")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="6" class="text-end"><strong>TOPLAM</strong></td>
+                                    <td class="text-end"><strong>@Model.Rows.Sum(x => x.Debit).ToString("N2")</strong></td>
+                                    <td class="text-end"><strong>@Model.Rows.Sum(x => x.Credit).ToString("N2")</strong></td>
+                                    <td class="text-end">
+                                        <strong class="@((Model.Rows.Sum(x => x.Credit) - Model.Rows.Sum(x => x.Debit)) < 0 ? "text-danger" : "text-success")">
+                                            @((Model.Rows.Sum(x => x.Credit) - Model.Rows.Sum(x => x.Debit)).ToString("N2"))
+                                        </strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center py-5">
+                    <i class="fa-solid fa-chart-bar fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted mb-3">Henüz işlem kaydı bulunmamaktadır</h5>
+                    <p class="text-muted mb-0">Lütfen filtreleri değiştirerek tekrar deneyin</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/tr.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
     <script>
+        // Bank Statement DataTable değişkeni
+        let bankStatementDataTable = null;
+
         $(document).ready(function() {
-            $('#reportsTable').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
-                },
-                order: [[0, 'desc']],
-                pageLength: 25,
-                dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
-            });
+            // DataTable yapılandırması
+            if ($('#reportsTable').length) {
+                $('#reportsTable').DataTable({
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
+                    },
+                    order: [[0, 'desc']],
+                    pageLength: 25,
+                    dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
+                });
+            }
 
             // Date range picker
             flatpickr(".date-range-picker", {
@@ -216,127 +365,395 @@
                 locale: "tr",
                 dateFormat: "d.m.Y",
                 altInput: true,
-                altFormat: "d.m.Y"
+                altFormat: "d.m.Y",
+                defaultDate: "@(Model.Filter?.DateRange ?? "")"
             });
 
-            // Account Type Chart
-            const accountTypeCtx = document.getElementById('accountTypeChart').getContext('2d');
-            const accountTypeChart = new Chart(accountTypeCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.NetByAccountType.Keys)),
-                    datasets: [{
-                        data: @Html.Raw(Json.Serialize(Model.NetByAccountType.Values)),
-                        backgroundColor: [
-                            'rgb(255, 99, 132)',
-                            'rgb(54, 162, 235)',
-                            'rgb(255, 205, 86)',
-                            'rgb(75, 192, 192)',
-                            'rgb(153, 102, 255)'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                        }
-                    }
-                }
-            });
-
-            // Daily Flow Chart
-            const dailyFlowCtx = document.getElementById('dailyFlowChart').getContext('2d');
-            const dailyFlowChart = new Chart(dailyFlowCtx, {
-                type: 'bar',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.NetByDay.Keys)),
-                    datasets: [{
-                        label: 'Net Akış (₺)',
-                        data: @Html.Raw(Json.Serialize(Model.NetByDay.Values)),
-                        backgroundColor: function(context) {
-                            const value = context.dataset.data[context.dataIndex];
-                            return value >= 0 ? 'rgba(75, 192, 192, 0.7)' : 'rgba(255, 99, 132, 0.7)';
+            // Grafik oluşturma
+            @if (Model.NetByAccountType != null && Model.NetByAccountType.Any())
+            {
+                    <text>
+                    var accountTypeCtx = document.getElementById('accountTypeChart').getContext('2d');
+                    var accountTypeChart = new Chart(accountTypeCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: @Html.Raw(Json.Serialize(Model.NetByAccountType.Keys)),
+                            datasets: [{
+                                data: @Html.Raw(Json.Serialize(Model.NetByAccountType.Values.Select(v => Math.Abs(v)))),
+                                backgroundColor: [
+                                    'rgb(54, 162, 235)',  // Mavi
+                                    'rgb(75, 192, 192)',  // Turkuaz
+                                    'rgb(255, 205, 86)',  // Sarı
+                                    'rgb(255, 99, 132)',  // Kırmızı
+                                    'rgb(153, 102, 255)'  // Mor
+                                ],
+                                borderWidth: 1
+                            }]
                         },
-                        borderColor: function(context) {
-                            const value = context.dataset.data[context.dataIndex];
-                            return value >= 0 ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
-                        },
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString('tr-TR') + ' ₺';
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            var label = context.label || '';
+                                            var value = context.raw || 0;
+                                            var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            var percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                            return label + ': ' + value.toLocaleString('tr-TR') + ' ₺ (' + percentage + '%)';
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-            });
+                    });
+                    </text>
+            }
+
+            @if (Model.NetByDay != null && Model.NetByDay.Any())
+            {
+                    <text>
+                    var dailyFlowCtx = document.getElementById('dailyFlowChart').getContext('2d');
+                    var dailyFlowChart = new Chart(dailyFlowCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: @Html.Raw(Json.Serialize(Model.NetByDay.Keys)),
+                            datasets: [{
+                                label: 'Net Akış (₺)',
+                                data: @Html.Raw(Json.Serialize(Model.NetByDay.Values)),
+                                backgroundColor: function(context) {
+                                    const value = context.dataset.data[context.dataIndex];
+                                    return value >= 0 ? 'rgba(75, 192, 192, 0.7)' : 'rgba(255, 99, 132, 0.7)';
+                                },
+                                borderColor: function(context) {
+                                    const value = context.dataset.data[context.dataIndex];
+                                    return value >= 0 ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
+                                },
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value.toLocaleString('tr-TR') + ' ₺';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    </text>
+            }
+
+            // Sayfa yüklendiğinde banka seçiliyse hesapları yükle
+            var selectedBankId = $('#bankSelect').val();
+            if (selectedBankId) {
+                loadAccounts(selectedBankId);
+            }
         });
 
+        function loadAccounts() {
+            var bankId = $('#bankSelect').val();
+            if (bankId) {
+                $.get('/Reports/GetAccountsByBank', { bankId: bankId }, function(response) {
+                    if (response.success) {
+                        $('#accountSelect').empty();
+                        $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
+                        $.each(response.data, function(index, item) {
+                            $('#accountSelect').append('<option value="' + item.value + '">' + item.text + '</option>');
+                        });
+                    } else {
+                        console.error('Hata:', response.message);
+                        $('#accountSelect').empty();
+                        $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
+                    }
+                }).fail(function(xhr, status, error) {
+                    console.error('Hata:', error);
+                    $('#accountSelect').empty();
+                    $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
+                });
+            } else {
+                $('#accountSelect').empty();
+                $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
+            }
+        }
+
+        // Bank Statement Raporu Alma Fonksiyonu
+        function getBankStatementReport() {
+            const bankId = $('#bankSelect').val();
+            const accountId = $('#accountSelect').val();
+            const dateRange = $('#Filter_DateRange').val();
+
+            if (!bankId) {
+                alert('Lütfen bir banka seçiniz.');
+                return;
+            }
+
+            if (!accountId) {
+                alert('Lütfen bir hesap seçiniz.');
+                return;
+            }
+
+            if (!dateRange) {
+                alert('Lütfen tarih aralığı seçiniz.');
+                return;
+            }
+
+            // Durum mesajını göster
+            $('#bankStatementStatus').show().removeClass('alert-danger alert-success').addClass('alert-info');
+            $('#bankStatementMessage').html('Bank Statement raporu alınıyor...');
+
+            // AntiForgeryToken al
+            const token = $('input[name="__RequestVerificationToken"]').val();
+
+            // AJAX isteği gönder
+            $.ajax({
+                url: '@Url.Action("GetBankStatementReport", "Reports")',
+                type: 'POST',
+                data: {
+                    Bank: bankId,
+                    Account: accountId,
+                    DateRange: dateRange,
+                    AccountType: $('#Filter_AccountType').val(),
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Başarılı durum
+                        $('#bankStatementStatus').removeClass('alert-info').addClass('alert-success');
+                        $('#bankStatementMessage').html(`Bank Statement raporu alındı. ${response.data.length} kayıt bulundu.`);
+
+                        // Tabloyu oluştur
+                        renderBankStatementTable(response.data, response.bankInfo);
+                    } else {
+                        // Hata durumu
+                        $('#bankStatementStatus').removeClass('alert-info').addClass('alert-danger');
+                        $('#bankStatementMessage').html('Hata: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#bankStatementStatus').removeClass('alert-info').addClass('alert-danger');
+                    $('#bankStatementMessage').html('İstek hatası: ' + error);
+                    console.error('Bank Statement hatası:', error);
+                }
+            });
+        }
+
+        // Bank Statement Tablosu Oluşturma
+        function renderBankStatementTable(data, bankInfo) {
+            // Container'ı göster
+            $('#bankStatementContainer').show();
+
+            // Başlık güncelle
+            $('#bankStatementTitle').text(`${bankInfo.bankName} - ${bankInfo.accountNumber}`);
+
+            // Mevcut DataTable varsa yok et
+            if (bankStatementDataTable) {
+                bankStatementDataTable.destroy();
+                $('#bankStatementTable tbody').empty();
+            }
+
+            // Yeni DataTable oluştur
+            bankStatementDataTable = $('#bankStatementTable').DataTable({
+                data: data,
+                columns: [
+                    {
+                        data: 'PROCESSTIMESTR',
+                        render: function(data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'BNKCODE',
+                        render: function(data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'HESAPNO',
+                        render: function(data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'PROCESSTYPECODE',
+                        render: function(data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'PROCESSREFNO',
+                        render: function(data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'PROCESSDESC',
+                        render: function(data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'PROCESSAMAOUNT',
+                        className: 'text-end',
+                        render: function(data) {
+                            if (!data) return '-';
+                            const amount = parseFloat(data) || 0;
+                            return amount.toLocaleString('tr-TR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }) + ' ₺';
+                        }
+                    },
+                    {
+                        data: 'PROCESSBALANCE',
+                        className: 'text-end',
+                        render: function(data) {
+                            if (!data) return '-';
+                            const balance = parseFloat(data) || 0;
+                            return balance.toLocaleString('tr-TR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }) + ' ₺';
+                        }
+                    },
+                    {
+                        data: 'PROCESSDEBORCRED',
+                        render: function(data) {
+                            if (data === 'D') {
+                                return '<span class="badge bg-danger">Borç</span>';
+                            } else if (data === 'C') {
+                                return '<span class="badge bg-success">Alacak</span>';
+                            }
+                            return data || '-';
+                        }
+                    }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
+                },
+                order: [[0, 'desc']],
+                pageLength: 25,
+                dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
+            });
+        }
+
+        // Bank Statement Excel Export
+        function exportBankStatementExcel() {
+            if (bankStatementDataTable) {
+                // DataTable'ın export özelliğini kullan
+                const data = bankStatementDataTable.buttons.exportData();
+                // Basit bir CSV export
+                let csvContent = "data:text/csv;charset=utf-8,";
+
+                // Başlıklar
+                csvContent += "Tarih,Banka Kodu,Hesap No,İşlem Tipi,Referans No,Açıklama,Tutar,Bakiye,Borç/Alacak\n";
+
+                // Veriler
+                bankStatementDataTable.rows().data().each(function(row) {
+                    csvContent += `"${row.PROCESSTIMESTR || ''}","${row.BNKCODE || ''}","${row.HESAPNO || ''}","${row.PROCESSTYPECODE || ''}","${row.PROCESSREFNO || ''}","${row.PROCESSDESC || ''}","${row.PROCESSAMAOUNT || ''}","${row.PROCESSBALANCE || ''}","${row.PROCESSDEBORCRED || ''}"\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "bank_statement.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        // Bank Statement JSON Download
+        function downloadBankStatementJson() {
+            if (bankStatementDataTable) {
+                const data = bankStatementDataTable.rows().data().toArray();
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'bank_statement.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // Mevcut fonksiyonlar
         function exportToExcel() {
-            // Excel export işlemi
-            alert('Excel export işlemi başlatılıyor...');
+            var form = $('form').first();
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'reportType',
+                value: 'Excel'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'DateRange',
+                value: '@Model.Filter?.DateRange'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'Bank',
+                value: '@Model.Filter?.Bank'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'Account',
+                value: '@Model.Filter?.Account'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'AccountType',
+                value: '@Model.Filter?.AccountType'
+            }).appendTo(form);
+
+            form.attr('action', '@Url.Action("GenerateReport")');
+            form.attr('method', 'post');
+            form.submit();
         }
 
         function exportToPdf() {
-            // PDF export işlemi
-            alert('PDF oluşturma işlemi başlatılıyor...');
-        }
+            var form = $('form').first();
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'reportType',
+                value: 'PDF'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'DateRange',
+                value: '@Model.Filter?.DateRange'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'Bank',
+                value: '@Model.Filter?.Bank'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'Account',
+                value: '@Model.Filter?.Account'
+            }).appendTo(form);
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'AccountType',
+                value: '@Model.Filter?.AccountType'
+            }).appendTo(form);
 
-        function showTransactionDetails(id) {
-            // AJAX ile detayları getir
-            $('#detailContent').html('<div class="text-center"><div class="spinner-border"></div></div>');
-            $('#detailModal').modal('show');
-
-            // Simüle edilmiş detay verisi
-            setTimeout(function() {
-                $('#detailContent').html(`
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>İşlem Bilgileri</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>İşlem ID:</strong></td><td>${id}</td></tr>
-                                <tr><td><strong>Tarih:</strong></td><td>01.01.2024 10:30</td></tr>
-                                <tr><td><strong>Banka:</strong></td><td>Akbank</td></tr>
-                                <tr><td><strong>Hesap Tipi:</strong></td><td>Vadesiz TL</td></tr>
-                                <tr><td><strong>Referans No:</strong></td><td>REF${id}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Mali Bilgiler</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Borç:</strong></td><td class="text-end">1.000,00 ₺</td></tr>
-                                <tr><td><strong>Alacak:</strong></td><td class="text-end">0,00 ₺</td></tr>
-                                <tr><td><strong>Net Tutar:</strong></td><td class="text-end text-danger">-1.000,00 ₺</td></tr>
-                                <tr><td><strong>Bakiye:</strong></td><td class="text-end">50.000,00 ₺</td></tr>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <h6>Açıklama</h6>
-                            <p>Örnek işlem açıklaması burada yer alacaktır.</p>
-                        </div>
-                    </div>
-                `);
-            }, 500);
+            form.attr('action', '@Url.Action("GenerateReport")');
+            form.attr('method', 'post');
+            form.submit();
         }
     </script>
-}
-
-@functions {
-    double? GetPercentage(decimal part, decimal total)
-    {
-        if (total == 0) return null;
-        return (double)(part / total * 100);
-    }
 }

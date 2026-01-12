@@ -276,7 +276,7 @@ namespace TurkSoft.BankWebUI.Services
 
         public ReportsIndexVm GetReports(ReportFilterVm filter)
         {
-            filter.Banks = Banks.ToList();
+            
             filter.AccountTypes = AccountTypes.ToList();
 
             DateTime? from = null, to = null;
@@ -303,7 +303,6 @@ namespace TurkSoft.BankWebUI.Services
             return new ReportsIndexVm
             {
                 Filter = filter,
-                Rows = rows,
                 NetByAccountType = rows.GroupBy(x => x.AccountType).ToDictionary(g => g.Key, g => g.Sum(x => x.Net)),
                 NetByDay = rows.GroupBy(x => x.Date.Date).OrderBy(g => g.Key).ToDictionary(g => g.Key.ToString("dd.MM"), g => g.Sum(x => x.Net))
             };

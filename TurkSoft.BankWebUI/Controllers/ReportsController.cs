@@ -1,11 +1,19 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using TurkSoft.BankWebUI.ViewModels;
+using TurkSoft.Business.Base;
+using TurkSoft.Business.Interface;
+using TurkSoft.Entities.BankService.Models;
+using TurkSoft.Entities.Entities;
 using TurkSoft.Entities.Entities.Models;
 using TurkSoft.Service.Inferfaces;
+using TurkSoft.Service.Interface;
 using TurkSoft.Services.Interfaces;
 
 namespace TurkSoft.BankWebUI.Controllers
@@ -15,38 +23,85 @@ namespace TurkSoft.BankWebUI.Controllers
     {
         private readonly IBankTransactionService _transactionService;
         private readonly IBankService _bankService;
+        private readonly IBankAccountService _bankAccountService;
         private readonly IExportLogService _exportLogService;
         private readonly IClCardService _clCardService;
         private readonly ILogoTigerIntegrationService _logoTigerService;
+        private readonly IBankStatementService _bankStatementService;
         private readonly ILogger<ReportsController> _logger;
+
         public ReportsController(
             IBankTransactionService transactionService,
             IBankService bankService,
-            IExportLogService exportLogService, 
+            IBankAccountService bankAccountService,
+            IExportLogService exportLogService,
             IClCardService clCardService,
             ILogoTigerIntegrationService logoTigerService,
+            IBankStatementService bankStatementService,
             ILogger<ReportsController> logger)
         {
             _transactionService = transactionService;
             _bankService = bankService;
+            _bankAccountService = bankAccountService;
             _exportLogService = exportLogService;
             _clCardService = clCardService;
             _logoTigerService = logoTigerService;
+            _bankStatementService = bankStatementService;
             _logger = logger;
         }
 
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            ViewData["Title"] = "Raporlar";
-            ViewData["Subtitle"] = "Tarih aralığı ve hesap tipine göre filtreleyin";
-
-            var filter = new ReportFilterVm
+            try
             {
-                DateRange = $"{DateTime.Today.AddDays(-7):dd.MM.yyyy} - {DateTime.Today:dd.MM.yyyy}"
-            };
+                ViewData["Title"] = "Raporlar";
+                ViewData["Subtitle"] = "Tarih aralığı, banka ve hesaba göre filtreleyin";
 
-            return await GetFilteredReports(filter);
+                // Tüm bankaları getir
+                var banks = await _bankService.GetAllBanksAsync();
+
+                // ViewModel oluştur
+                var model = new ReportsIndexVm
+                {
+                    Filter = new ReportFilterVm
+                    {
+                        DateRange = $"{DateTime.Today.AddDays(-7):dd.MM.yyyy} - {DateTime.Today:dd.MM.yyyy}",
+                        Banks = banks.Select(b => new SelectListItem
+                        {
+                            Value = b.Id.ToString(),
+                            Text = b.BankName
+                        }).ToList(),
+                        Accounts = new List<SelectListItem>(),
+                        AccountTypes = new List<string> { "Vadesiz", "Vadeli", "Kredi", "Diğer" }
+                    },
+                    Rows = new List<BankTransactionVm>(),
+                    NetByAccountType = new Dictionary<string, decimal>(),
+                    NetByDay = new Dictionary<string, decimal>()
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Reports Index GET hatası");
+                TempData["ErrorMessage"] = "Banka listesi yüklenirken hata oluştu.";
+
+                // Hata durumunda boş model döndür
+                return View(new ReportsIndexVm
+                {
+                    Filter = new ReportFilterVm
+                    {
+                        DateRange = $"{DateTime.Today.AddDays(-7):dd.MM.yyyy} - {DateTime.Today:dd.MM.yyyy}",
+                        Banks = new List<SelectListItem>(),
+                        Accounts = new List<SelectListItem>(),
+                        AccountTypes = new List<string> { "Vadesiz", "Vadeli", "Kredi", "Diğer" }
+                    },
+                    Rows = new List<BankTransactionVm>(),
+                    NetByAccountType = new Dictionary<string, decimal>(),
+                    NetByDay = new Dictionary<string, decimal>()
+                });
+            }
         }
 
         [HttpPost]
@@ -54,115 +109,226 @@ namespace TurkSoft.BankWebUI.Controllers
         public async Task<IActionResult> Index(ReportFilterVm filter)
         {
             ViewData["Title"] = "Raporlar";
-            ViewData["Subtitle"] = "Tarih aralığı ve hesap tipine göre filtreleyin";
+            ViewData["Subtitle"] = "Tarih aralığı, banka ve hesaba göre filtreleyin";
             return await GetFilteredReports(filter);
         }
 
         private async Task<IActionResult> GetFilteredReports(ReportFilterVm filter)
         {
-            // Tarih aralığını parse et
-            DateTime startDate = DateTime.Today.AddDays(-7);
-            DateTime endDate = DateTime.Today;
-
-            if (!string.IsNullOrEmpty(filter.DateRange))
+            try
             {
-                var dates = filter.DateRange.Split(" - ");
-                if (dates.Length == 2)
+                // Tüm bankaları getir
+                var allBanks = await _bankService.GetAllBanksAsync();
+
+                // Seçili bankanın hesaplarını getir
+                var accounts = new List<SelectListItem>();
+                if (!string.IsNullOrEmpty(filter.Bank) && int.TryParse(filter.Bank, out int selectedBankId))
                 {
-                    DateTime.TryParse(dates[0], out startDate);
-                    DateTime.TryParse(dates[1], out endDate);
+                    var allAccounts = await _bankAccountService.GetAllBankAccountsAsync();
+                    var bankAccounts = allAccounts.Where(a => a.BankId == selectedBankId).ToList();
+
+                    accounts = bankAccounts.Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = $"{a.AccountNumber} - {a.Currency}",
+                        Selected = filter.Account == a.Id.ToString()
+                    }).ToList();
                 }
+
+                // Filter modelini güncelle
+                filter.Banks = allBanks.Select(b => new SelectListItem
+                {
+                    Value = b.Id.ToString(),
+                    Text = b.BankName,
+                    Selected = filter.Bank == b.Id.ToString()
+                }).ToList();
+
+                filter.Accounts = accounts;
+                filter.AccountTypes = new List<string> { "Vadesiz", "Vadeli", "Kredi", "Diğer" };
+
+                // Tarih aralığını parse et
+                DateTime startDate = DateTime.Today.AddDays(-7);
+                DateTime endDate = DateTime.Today;
+
+                if (!string.IsNullOrEmpty(filter.DateRange))
+                {
+                    var dates = filter.DateRange.Split(" - ");
+                    if (dates.Length == 2)
+                    {
+                        if (DateTime.TryParse(dates[0], out DateTime parsedStartDate))
+                            startDate = parsedStartDate;
+                        if (DateTime.TryParse(dates[1], out DateTime parsedEndDate))
+                            endDate = parsedEndDate;
+                    }
+                }
+
+                // Kullanıcı ID'sini al
+                var userId = GetCurrentUserId();
+
+                // İşlemleri getir
+                var allTransactions = await _transactionService.GetTransactionsByDateRangeAsync(userId, startDate, endDate);
+
+                // Filtreleri uygula
+                var transactions = allTransactions.AsEnumerable();
+
+                // Banka filtresi
+                if (!string.IsNullOrEmpty(filter.Bank) && int.TryParse(filter.Bank, out int bankId))
+                {
+                    transactions = transactions.Where(t => t.BankId == bankId);
+                }
+
+                // Hesap filtresi
+                if (!string.IsNullOrEmpty(filter.Account) && int.TryParse(filter.Account, out int accountId))
+                {
+                    transactions = transactions.Where(t => t.BankId == accountId);
+                }
+
+                // Hesap tipi filtresi
+                if (!string.IsNullOrEmpty(filter.AccountType))
+                {
+                    transactions = transactions.Where(t => GetAccountType(t.AccountNumber) == filter.AccountType);
+                }
+
+                // ViewModel'leri dönüştür
+                var reportRows = transactions.Select(t => new BankTransactionVm
+                {
+                    Id = t.Id,
+                    Date = t.TransactionDate,
+                    BankName = GetBankName(allBanks, t.BankId),
+                    AccountType = GetAccountType(t.AccountNumber),
+                    AccountNumber = t.AccountNumber ?? "Bilinmiyor",
+                    ReferenceNo = t.ReferenceNumber ?? "-",
+                    Description = t.Description ?? "-",
+                    Debit = t.DebitCredit == "D" ? t.Amount : 0,
+                    Credit = t.DebitCredit == "C" ? t.Amount : 0
+                }).ToList();
+
+                // Net değerleri hesapla
+                var netByAccountType = reportRows
+                    .GroupBy(r => r.AccountType)
+                    .ToDictionary(g => g.Key, g => g.Sum(r => r.Net));
+
+                var netByDay = reportRows
+                    .GroupBy(r => r.Date.Date)
+                    .OrderBy(g => g.Key)
+                    .ToDictionary(g => g.Key.ToString("dd.MM.yyyy"), g => g.Sum(r => r.Net));
+
+                // Son model
+                var model = new ReportsIndexVm
+                {
+                    Filter = filter,
+                    Rows = reportRows,
+                    NetByAccountType = netByAccountType,
+                    NetByDay = netByDay
+                };
+
+                return View(model);
             }
-
-            var userId = GetCurrentUserId();
-            var allTransactions = await _transactionService.GetTransactionsByDateRangeAsync(
-                userId, startDate, endDate);
-
-            // Banka filtresi uygula
-            var transactions = allTransactions.AsEnumerable();
-            if (!string.IsNullOrEmpty(filter.Bank) && int.TryParse(filter.Bank, out int bankId))
+            catch (Exception ex)
             {
-                transactions = transactions.Where(t => t.BankId == bankId);
+                _logger.LogError(ex, "GetFilteredReports hatası");
+                TempData["ErrorMessage"] = "Rapor oluşturulurken hata oluştu.";
+
+                // Hata durumunda boş model döndür
+                return View(new ReportsIndexVm
+                {
+                    Filter = filter ?? new ReportFilterVm(),
+                    Rows = new List<BankTransactionVm>(),
+                    NetByAccountType = new Dictionary<string, decimal>(),
+                    NetByDay = new Dictionary<string, decimal>()
+                });
             }
+        }
 
-            var banks = await _bankService.GetAllBanksAsync();
-            var exportLogs = await _exportLogService.GetAllExportLogsAsync();
-
-            // ViewModel'leri dönüştür
-            var reportRows = transactions.Select(t => new Models.BankTransaction
+        [HttpGet]
+        public async Task<JsonResult> GetAccountsByBank(int bankId)
+        {
+            try
             {
-                Id = t.Id,
-                Date = t.TransactionDate,
-                BankName = t.Bank?.BankName ?? "Bilinmeyen",
-                AccountType = GetAccountType(t.AccountNumber),
-                ReferenceNo = t.ReferenceNumber,
-                Description = t.Description,
-                Debit = t.DebitCredit == "D" ? t.Amount : 0,
-                Credit = t.DebitCredit == "C" ? t.Amount : 0
-            }).ToList();
+                var allAccounts = await _bankAccountService.GetAllBankAccountsAsync();
+                var bankAccounts = allAccounts.Where(a => a.BankId == bankId).ToList();
 
-            // Net değerleri hesapla
-            var netByAccountType = reportRows
-                .GroupBy(r => r.AccountType)
-                .ToDictionary(g => g.Key, g => g.Sum(r => r.Net));
+                var accounts = bankAccounts.Select(a => new
+                {
+                    Value = a.Id.ToString(),
+                    Text = $"{a.AccountNumber} - {a.Currency}"
+                }).ToList();
 
-            var netByDay = reportRows
-                .GroupBy(r => r.Date.Date)
-                .ToDictionary(g => g.Key.ToString("dd.MM.yyyy"), g => g.Sum(r => r.Net));
-
-            var model = new ReportsIndexVm
+                return Json(new { success = true, data = accounts });
+            }
+            catch (Exception ex)
             {
-                Filter = filter,
-                Rows = reportRows,
-                NetByAccountType = netByAccountType,
-                NetByDay = netByDay
-            };
-
-            // ViewBag'e banka listesini ekle
-            ViewBag.Banks = banks.Select(b => new { Value = b.Id.ToString(), Text = b.BankName }).ToList();
-
-            return View(model);
+                _logger.LogError(ex, "GetAccountsByBank hatası");
+                return Json(new { success = false, message = "Hesaplar yüklenirken hata oluştu." });
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateReport(ReportFilterVm filter, string reportType)
         {
-            // Tarih aralığını parse et
-            DateTime startDate = DateTime.Today.AddDays(-7);
-            DateTime endDate = DateTime.Today;
-
-            if (!string.IsNullOrEmpty(filter.DateRange))
+            try
             {
-                var dates = filter.DateRange.Split(" - ");
-                if (dates.Length == 2)
+                if (string.IsNullOrEmpty(reportType))
                 {
-                    DateTime.TryParse(dates[0], out startDate);
-                    DateTime.TryParse(dates[1], out endDate);
+                    TempData["ErrorMessage"] = "Rapor tipi seçilmedi.";
+                    return RedirectToAction("Index");
                 }
+
+                // Tarih aralığını parse et
+                DateTime startDate = DateTime.Today.AddDays(-7);
+                DateTime endDate = DateTime.Today;
+
+                if (!string.IsNullOrEmpty(filter.DateRange))
+                {
+                    var dates = filter.DateRange.Split(" - ");
+                    if (dates.Length == 2)
+                    {
+                        DateTime.TryParse(dates[0], out startDate);
+                        DateTime.TryParse(dates[1], out endDate);
+                    }
+                }
+
+                var userId = GetCurrentUserId();
+                var transactions = await _transactionService.GetTransactionsByDateRangeAsync(userId, startDate, endDate);
+
+                // Filtreleri uygula
+                if (!string.IsNullOrEmpty(filter.Bank) && int.TryParse(filter.Bank, out int bankId))
+                {
+                    transactions = transactions.Where(t => t.BankId == bankId);
+                }
+
+                // Rapor oluşturma işlemi
+                var exportLog = new ExportLog
+                {
+                    UserId = userId,
+                    ExportType = reportType,
+                    FileName = $"report_{DateTime.Now:yyyyMMdd_HHmm}.{reportType.ToLower()}",
+                    FilterCriteria = System.Text.Json.JsonSerializer.Serialize(filter),
+                    RecordCount = transactions.Count(),
+                    FilePath = $"/reports/{userId}/{DateTime.Now:yyyyMMdd}",
+                    FileSize = 2048,
+                    CreatedDate = DateTime.UtcNow
+                };
+
+                await _exportLogService.CreateExportLogAsync(exportLog);
+                TempData["SuccessMessage"] = $"{reportType} raporu oluşturuldu ve indirilmeye hazır.";
+
+                return RedirectToAction("Index");
             }
-
-            var userId = GetCurrentUserId();
-            var transactions = await _transactionService.GetTransactionsByDateRangeAsync(
-                userId, startDate, endDate);
-
-            // Rapor oluşturma işlemi
-            var exportLog = new Entities.Entities.ExportLog
+            catch (Exception ex)
             {
-                UserId = userId,
-                ExportType = reportType,
-                FileName = $"report_{DateTime.Now:yyyyMMdd_HHmm}.{reportType.ToLower()}",
-                FilterCriteria = System.Text.Json.JsonSerializer.Serialize(filter),
-                RecordCount = transactions.Count(),
-                FilePath = $"/reports/{userId}/{DateTime.Now:yyyyMMdd}",
-                FileSize = 2048,
-                CreatedDate = DateTime.UtcNow
-            };
+                _logger.LogError(ex, "GenerateReport hatası");
+                TempData["ErrorMessage"] = "Rapor oluşturulurken hata oluştu.";
+                return RedirectToAction("Index");
+            }
+        }
 
-            await _exportLogService.CreateExportLogAsync(exportLog);
-            TempData["Toast"] = $"{reportType} raporu oluşturuldu ve indirilmeye hazır.";
-
-            return RedirectToAction("Index");
+        // Yardımcı metodlar
+        private string GetBankName(IEnumerable<Bank> banks, int bankId)
+        {
+            var bank = banks.FirstOrDefault(b => b.Id == bankId);
+            return bank?.BankName ?? "Bilinmeyen";
         }
 
         private string GetAccountType(string accountNumber)
@@ -173,14 +339,24 @@ namespace TurkSoft.BankWebUI.Controllers
             if (accountNumber.StartsWith("1")) return "Vadesiz";
             if (accountNumber.StartsWith("2")) return "Vadeli";
             if (accountNumber.StartsWith("3")) return "Kredi";
+            if (accountNumber.StartsWith("4")) return "Yatırım";
             return "Diğer";
         }
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                return userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) ? userId : 1;
+            }
+            catch
+            {
+                return 1; // Default user ID
+            }
         }
+
+        // Diğer action'lar aynen kalacak
         #region Gelen Havale İşlemleri
         [HttpGet]
         public IActionResult GelenHavale()
@@ -197,7 +373,7 @@ namespace TurkSoft.BankWebUI.Controllers
                 TRCODE = 3,
                 MODULENR = 7,
                 BANK_PROC_TYPE = 2,
-                OlusturanKullanici = 1, // Örnek kullanıcı ID
+                OlusturanKullanici = 1,
                 GUID = Guid.NewGuid().ToString().ToUpper()
             };
 
@@ -586,6 +762,113 @@ namespace TurkSoft.BankWebUI.Controllers
                 return Json(new { success = false, message = $"İşlem sırasında bir hata oluştu: {ex.Message}" });
             }
         }
+        #endregion
+
+        #region Yardımcı Metodlar
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetBankStatementReport(ReportFilterVm filter)
+        {
+            try
+            {
+                // 1. Banka ve hesap kontrolü
+                if (string.IsNullOrEmpty(filter.Bank) || !int.TryParse(filter.Bank, out int bankId))
+                    return Json(new { success = false, message = "Lütfen bir banka seçiniz." });
+
+                if (string.IsNullOrEmpty(filter.Account) || !int.TryParse(filter.Account, out int accountId))
+                    return Json(new { success = false, message = "Lütfen bir hesap seçiniz." });
+
+                // 2. Banka bilgilerini al
+                var allBanks = await _bankService.GetAllBanksAsync();
+                var selectedBank = allBanks.FirstOrDefault(b => b.Id == bankId);
+                if (selectedBank == null)
+                    return Json(new { success = false, message = "Banka bulunamadı." });
+
+                // 3. Hesap bilgilerini al
+                var allAccounts = await _bankAccountService.GetAllBankAccountsAsync();
+                var selectedAccount = allAccounts.FirstOrDefault(a => a.Id == accountId && a.BankId == bankId);
+                if (selectedAccount == null)
+                    return Json(new { success = false, message = "Hesap bulunamadı." });
+
+                // 4. Tarih aralığını parse et
+                DateTime startDate = DateTime.Today.AddDays(-7);
+                DateTime endDate = DateTime.Today;
+
+                if (!string.IsNullOrEmpty(filter.DateRange))
+                {
+                    var dates = filter.DateRange.Split(" - ");
+                    if (dates.Length == 2)
+                    {
+                        if (DateTime.TryParse(dates[0], out DateTime parsedStartDate))
+                            startDate = parsedStartDate;
+                        if (DateTime.TryParse(dates[1], out DateTime parsedEndDate))
+                            endDate = parsedEndDate;
+                    }
+                }
+
+                // 5. BankStatementRequest oluştur
+                var request = new BankStatementRequest
+                {
+                    BankId = selectedBank.ExternalBankId, // JS kütüphanesindeki bankId
+                    Username = selectedBank.UsernameLabel, // Boş bırak, JS'deki gibi credentials modal'dan alınacak
+                    Password = selectedBank.PasswordLabel, // Boş bırak, JS'deki gibi credentials modal'dan alınacak
+                    AccountNumber = selectedAccount.AccountNumber,
+                    BeginDate = startDate,
+                    EndDate = endDate,
+                    Link = selectedBank.DefaultLink, // Bank tablosundan
+                    TLink = selectedBank.DefaultTLink, // Bank tablosundan
+                    Extras = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "IBAN", selectedAccount.IBAN ?? "" },
+                { "SubeNo", selectedAccount.SubeNo ?? "" },
+                { "MusteriNo", selectedAccount.MusteriNo ?? "" },
+                { "Currency", selectedAccount.Currency }
+            }
+                };
+
+                // 6. Ziraat Katılım (ExternalBankId = 11) özel işlemi
+                if (selectedBank.ExternalBankId == 11)
+                {
+                    // associationCode ekstra parametresini ekle
+                    // Not: Bu bilgiyi Bank tablosunda saklamanız gerekir
+                    request.Extras["associationCode"] = "ZIRAAT_KATILIM_CODE"; // Örnek
+                }
+
+                // 7. Servisi çağır
+                var bnkharList = await _bankStatementService.GetStatementAsync(request);
+
+                // 8. Banka ve hesap bilgilerini ekle
+                var enrichedList = bnkharList.Select(bnkhar =>
+                {
+                    bnkhar.BNKCODE = selectedBank.ExternalBankId.ToString();
+                    bnkhar.HESAPNO = selectedAccount.AccountNumber;
+                    bnkhar.SUBECODE = selectedAccount.SubeNo;
+                    bnkhar.CURRENCYCODE = selectedAccount.Currency;
+                    bnkhar.FRMIBAN = selectedAccount.IBAN;
+                    return bnkhar;
+                }).ToList();
+
+                // 9. JSON olarak döndür
+                return Json(new
+                {
+                    success = true,
+                    data = enrichedList,
+                    bankInfo = new
+                    {
+                        bankId = selectedBank.ExternalBankId,
+                        bankName = selectedBank.BankName,
+                        accountNumber = selectedAccount.AccountNumber,
+                        recordCount = enrichedList.Count
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetBankStatementReport hatası");
+                return Json(new { success = false, message = $"Rapor oluşturulurken hata: {ex.Message}" });
+            }
+        }
+
         #endregion
     }
 }

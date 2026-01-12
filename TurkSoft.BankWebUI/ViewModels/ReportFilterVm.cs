@@ -1,19 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using System.ComponentModel.DataAnnotations;
 
 namespace TurkSoft.BankWebUI.ViewModels
 {
     public sealed class ReportFilterVm
     {
-        [Display(Name = "Tarih Aralığı")]
-        public string? DateRange { get; set; }
+        public string DateRange { get; set; }
+        public string AccountType { get; set; }
+        public string Bank { get; set; }
+        public string Account { get; set; }
 
-        [Display(Name = "Hesap Tipi")]
-        public string? AccountType { get; set; }
-
-        [Display(Name = "Banka")]
-        public string? Bank { get; set; }
-
-        public List<string> Banks { get; set; } = new();
-        public List<string> AccountTypes { get; set; } = new();
+        // Select list'ler için
+        public List<SelectListItem> Banks { get; set; }
+        public List<SelectListItem> Accounts { get; set; }
+        public List<string> AccountTypes { get; set; }
     }
 }
