@@ -10,7 +10,7 @@ public static class BankServiceRegistrationExtensions
     public static IServiceCollection AddTurkSoftServices(this IServiceCollection services)
     {
         services.AddBankingBusiness(); // Business DI
-        services.AddScoped<IBankStatementService, BankStatementService>();
+        services.AddScoped<IBankStatementService, BankStatementService>();        
         return services;
     }
 }

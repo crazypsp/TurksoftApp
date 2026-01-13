@@ -49,6 +49,8 @@ builder.Services.AddScoped<ITransferLogService, TransferLogService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IBankaEkstreAnalyzerService, BankaEkstreAnalyzerManagerSrv>();
+builder.Services.AddScoped<IBankaEkstreAnalyzerBusiness, BankaEkstreAnalyzerManager>(); ;
 builder.Services.AddTurkSoftServices();
 // Demo servis (mevcut)
 builder.Services.AddScoped<IDemoDataService, DemoDataService>();
