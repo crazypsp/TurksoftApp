@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TurkSoft.Entities.Entities.Models;
 using TurkSoft.Service.Inferfaces;
-using Interop.UnityObjects; // Logo Tiger UnityObjects namespace
+using UnityObjects; // Logo Tiger UnityObjects namespace
 
 namespace TurkSoft.Service.Implementations
 {
@@ -762,7 +762,7 @@ namespace TurkSoft.Service.Implementations
             return true;
         }
 
-        private ServiceResult<T> HandleLogoErrors<T>(Interop.UnityObjects.Data bankvo, string islemKodu) where T : BankaFisSonuc, new()
+        private ServiceResult<T> HandleLogoErrors<T>(UnityObjects.Data bankvo, string islemKodu) where T : BankaFisSonuc, new()
         {
             List<string> hatalar = new List<string>();
 
@@ -799,7 +799,7 @@ namespace TurkSoft.Service.Implementations
             return ServiceResult<T>.ErrorResult("Logo Tiger entegrasyon hatası", hatalar);
         }
 
-        private ServiceResult<KrediTaksitSonuc> HandleKrediTaksitErrors(Interop.UnityObjects.Data bankvo, string islemKodu)
+        private ServiceResult<KrediTaksitSonuc> HandleKrediTaksitErrors(UnityObjects.Data bankvo, string islemKodu)
         {
             var result = HandleLogoErrors<KrediTaksitSonuc>(bankvo, islemKodu);
 

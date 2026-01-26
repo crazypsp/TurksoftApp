@@ -6,6 +6,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <COMReference Include="UnityObjects">
+      <WrapperTool>tlbimp</WrapperTool>
+      <VersionMinor>0</VersionMinor>
+      <VersionMajor>1</VersionMajor>
+      <Guid>51f6657d-9972-45fd-8d5d-98849802a9c9</Guid>
+      <Lcid>0</Lcid>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="EPPlus" Version="5.8.0" />
     <PackageReference Include="itext.kernel.core" Version="1.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
@@ -20,11 +31,6 @@
     <ProjectReference Include="..\TurkSoft.Core\TurkSoft.Core.csproj" />
     <ProjectReference Include="..\TurkSoft.Data\TurkSoft.Data.csproj" />
     <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Interop.UnityObjects">
-      <HintPath>..\..\Interop.UnityObjects.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.ServiceModel.Http" Version="8.*" />
