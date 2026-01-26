@@ -13,6 +13,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <COMReference Include="UnityObjects">
+      <WrapperTool>tlbimp</WrapperTool>
+      <VersionMinor>0</VersionMinor>
+      <VersionMajor>1</VersionMajor>
+      <Guid>51f6657d-9972-45fd-8d5d-98849802a9c9</Guid>
+      <Lcid>0</Lcid>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="CodeGen\Generated.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -28,12 +40,6 @@
   <ItemGroup>
     <ProjectReference Include="..\TurkSoft.Business\TurkSoft.Business.csproj" />
     <ProjectReference Include="..\TurkSoft.Entities\TurkSoft.Entities.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Interop.UnityObjects">
-      <HintPath>..\..\Interop.UnityObjects.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
