@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using TurkSoft.Entities.Entities;
 using TurkSoft.Services.Interfaces;
@@ -73,6 +75,7 @@ namespace TurkSoft.Services.Implementations
 
             // Basit şifre kontrolü (gerçek projede hash kullanın)
             return user.PasswordHash == HashPassword(password, user.PasswordSalt);
+
         }
 
         public async Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
@@ -130,15 +133,13 @@ namespace TurkSoft.Services.Implementations
             return true;
         }
 
-        private string HashPassword(string password, string salt)
+        private static string HashPassword(string password, string salt)
         {
-            // Basit hash örneği - gerçek projede BCrypt veya benzeri kullanın
-            using (var sha = System.Security.Cryptography.SHA256.Create())
-            {
-                var saltedPassword = password + salt;
-                var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(saltedPassword));
-                return Convert.ToBase64String(bytes);
-            }
+            // Deterministik: SHA256( password + "|" + salt ) => Base64
+            using var sha = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes($"{password}|{salt}");
+            var hash = sha.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
         }
     }
 }
