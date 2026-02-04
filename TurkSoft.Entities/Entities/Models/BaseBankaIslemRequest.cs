@@ -20,6 +20,22 @@ namespace TurkSoft.Entities.Entities.Models
         public string CariKodu { get; set; }
         public string GLKodu { get; set; }
         public string GUID { get; set; }
+
+        // BaseBankaIslemRequest içine EKLE
+        public string Notes1 { get; set; }          // BANK_VOUCHER/NOTES1
+        public string Description { get; set; }     // TRANSACTION/DESCRIPTION
+        public string GL_CODE1 { get; set; }        // TRANSACTION/GL_CODE1
+        public string GL_CODE2 { get; set; }        // TRANSACTION/GL_CODE2
+        public string BN_COST_GL_CODE { get; set; } // TRANSACTION/BN_COST_GL_CODE
+        public string BN_BSMV_GL_CODE { get; set; } // TRANSACTION/BN_BSMV_GL_CODE
+
+        // Opsiyonel modify alanları istersen:
+        public int? ModifiedBy { get; set; }
+        public DateTime? DateModified { get; set; }
+        public int? HourModified { get; set; }
+        public int? MinModified { get; set; }
+        public int? SecModified { get; set; }
+
     }
     public class GelenHavaleRequest : BaseBankaIslemRequest
     {

@@ -1,117 +1,130 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TurkSoft.Services.Interfaces;
-using System.Threading.Tasks;
-using System.Linq;
-using System;
+using System.Security.Claims;
+using TurkSoft.Business.Base;
 using TurkSoft.Entities.Entities;
-using TurkSoft.BankWebUI.ViewModels;
+using TurkSoft.Service.Interface;          // IBankStatementService
+using TurkSoft.Services.Interfaces;        // IBankService, IBankAccountService, ISystemLogService
 
 namespace TurkSoft.BankWebUI.Controllers
 {
     [Authorize]
     public sealed class DashboardController : Controller
     {
-        private readonly IBankTransactionService _transactionService;
         private readonly IBankService _bankService;
-        private readonly IUserService _userService;
-        private readonly ITransactionImportService _importService;
+        private readonly IBankAccountService _bankAccountService;
+        private readonly IBankStatementService _bankStatementService;
+        private readonly ISystemLogService _systemLogService;
 
         public DashboardController(
-            IBankTransactionService transactionService,
             IBankService bankService,
-            IUserService userService,
-            ITransactionImportService importService)
+            IBankAccountService bankAccountService,
+            IBankStatementService bankStatementService,
+            ISystemLogService systemLogService)
         {
-            _transactionService = transactionService;
             _bankService = bankService;
-            _userService = userService;
-            _importService = importService;
+            _bankAccountService = bankAccountService;
+            _bankStatementService = bankStatementService;
+            _systemLogService = systemLogService;
         }
 
-        public async Task<IActionResult> Index()
+        [HttpGet]
+        public async Task<IActionResult> Index(CancellationToken ct)
         {
-            ViewData["Title"] = "Dashboard";
-            ViewData["Subtitle"] = "Bankalar arası toplam bakiye, günlük hareket ve mutabakat görünümü";
+            var userId = GetUserId();
+            var today = DateTime.Today;
 
-            var userId = GetCurrentUserId();
-            var transactions = await _transactionService.GetAllTransactionsAsync();
-            var banks = await _bankService.GetAllBanksAsync();
-            var users = await _userService.GetAllUsersAsync();
-            var imports = await _importService.GetAllImportsAsync();
+            var banks = (await _bankService.GetAllBanksAsync())?.Where(x => x.IsActive).ToList() ?? new();
+            var accounts = (await _bankAccountService.GetAllBankAccountsAsync())?.Where(x => x.IsActive).ToList() ?? new();
 
-            var today = DateTime.UtcNow.Date;
-            var recentTransactions = transactions
-                .Where(t => t.TransactionDate >= today.AddDays(-7))
-                .ToList();
+            decimal dailyIn = 0m;
+            decimal dailyOut = 0m;
 
-            // Banka bakiyelerini hesapla
-            var bankBalances = banks.Select(b => new Models.BankBalance
+            // Dashboard’a basit özet: bugün toplam giriş/çıkış
+            foreach (var bank in banks)
             {
-                BankName = b.BankName,
-                BalanceTry = transactions
-                    .Where(t => t.BankId == b.Id && t.Currency == "TRY")
-                    .Sum(t => t.Amount * (t.DebitCredit == "C" ? 1 : -1))
-            }).ToList();
+                var bankAccounts = accounts.Where(a => a.BankId == bank.Id).ToList();
 
-            // Son 30 günlük cashflow verisi
-            var cashflowLabels = Enumerable.Range(0, 30)
-                .Select(i => today.AddDays(-29 + i).ToString("dd.MM"))
-                .ToList();
-
-            var cashflowNet = cashflowLabels.Select((label, index) =>
-            {
-                var date = today.AddDays(-29 + index);
-                var dayTransactions = transactions.Where(t => t.TransactionDate.Date == date);
-                return dayTransactions.Sum(t => t.Amount * (t.DebitCredit == "C" ? 1 : -1));
-            }).ToList();
-
-            var model = new DashboardVm
-            {
-                TotalBalance = bankBalances.Sum(b => b.BalanceTry),
-                DailyIn = transactions
-                    .Where(t => t.TransactionDate.Date == today && t.DebitCredit == "C")
-                    .Sum(t => t.Amount),
-                DailyOut = transactions
-                    .Where(t => t.TransactionDate.Date == today && t.DebitCredit == "D")
-                    .Sum(t => t.Amount),
-                ReconcileAlerts = transactions.Count(t => !t.IsMatched),
-                BankBalances = bankBalances,
-                LatestTransactions = recentTransactions
-                    .OrderByDescending(t => t.TransactionDate)
-                    .Take(10)
-                    .Select(t => new Models.BankTransaction
+                foreach (var acc in bankAccounts)
+                {
+                    try
                     {
-                        Id = t.Id,
-                        Date = t.TransactionDate,
-                        BankName = banks.FirstOrDefault(b => b.Id == t.BankId)?.BankName ?? "Bilinmeyen",
-                        AccountType = GetAccountType(t.AccountNumber),
-                        ReferenceNo = t.ReferenceNumber,
-                        Description = t.Description,
-                        Debit = t.DebitCredit == "D" ? t.Amount : 0,
-                        Credit = t.DebitCredit == "C" ? t.Amount : 0
-                    })
-                    .ToList(),
-                CashflowLabels = cashflowLabels,
-                CashflowNet = cashflowNet
-            };
+                        var req = new BankStatementRequest
+                        {
+                            BankId = bank.ExternalBankId,
+                            Username = bank.UsernameLabel,
+                            Password = bank.PasswordLabel,
+                            AccountNumber = acc.AccountNumber,
+                            BeginDate = today,
+                            EndDate = today,
+                            Link = bank.DefaultLink,
+                            TLink = bank.DefaultTLink,
+                            Extras = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                            {
+                                { "IBAN", acc.IBAN ?? "" },
+                                { "SubeNo", acc.SubeNo ?? "" },
+                                { "MusteriNo", acc.MusteriNo ?? "" },
+                                { "Currency", acc.Currency ?? "" }
+                            }
+                        };
 
-            return View(model);
+                        var list = await _bankStatementService.GetStatementAsync(req, ct);
+
+                        foreach (var x in list)
+                        {
+                            var amt = ToDecimalSafe(x.PROCESSAMAOUNT);
+                            if (string.Equals(x.PROCESSDEBORCRED, "C", StringComparison.OrdinalIgnoreCase))
+                                dailyIn += amt;
+                            else if (string.Equals(x.PROCESSDEBORCRED, "D", StringComparison.OrdinalIgnoreCase))
+                                dailyOut += amt;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        await _systemLogService.CreateSystemLogAsync(new TurkSoft.Entities.Entities.SystemLog
+                        {
+                            LogLevel = "ERROR",
+                            Message = $"Dashboard WS hata: {ex.Message}",
+                            Source = "DashboardController",
+                            ActionName = "Index",
+                            UserId = userId,
+                            CreatedDate = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
+            ViewBag.DailyIn = dailyIn;
+            ViewBag.DailyOut = dailyOut;
+
+            return View(); // mevcut Dashboard view’ı bozma
         }
 
-        private string GetAccountType(string accountNumber)
+        private int GetUserId()
         {
-            if (string.IsNullOrEmpty(accountNumber)) return "Diğer";
-            if (accountNumber.StartsWith("1")) return "Vadesiz";
-            if (accountNumber.StartsWith("2")) return "Vadeli";
-            if (accountNumber.StartsWith("3")) return "Kredi";
-            return "Diğer";
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+            return claim != null && int.TryParse(claim.Value, out var id) ? id : 1;
         }
 
-        private int GetCurrentUserId()
+        private static decimal ToDecimalSafe(string? s)
         {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+            if (string.IsNullOrWhiteSpace(s)) return 0m;
+            s = s.Trim();
+
+            // TR parse
+            if (decimal.TryParse(s, System.Globalization.NumberStyles.Any, new System.Globalization.CultureInfo("tr-TR"), out var tr))
+                return tr;
+
+            // Invariant
+            if (decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var inv))
+                return inv;
+
+            // normalize
+            var norm = s.Replace(".", "").Replace(",", ".");
+            if (decimal.TryParse(norm, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var n2))
+                return n2;
+
+            return 0m;
         }
     }
 }

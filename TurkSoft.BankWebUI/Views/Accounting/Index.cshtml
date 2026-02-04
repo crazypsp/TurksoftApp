@@ -1,332 +1,254 @@
-﻿@model TurkSoft.BankWebUI.ViewModels.AccountingVm
-@{
-    ViewData["Title"] = "Aktarım / Muhasebe";
-    ViewData["Subtitle"] = "Aktarım listesi, eşleştirme, kuyruk/durum, hata logları";
+﻿@{
+    ViewData["Title"] = "Aktarım";
 }
 
-@section PageActions {
-    <div class="d-flex gap-2">
-        <a href="@Url.Action("ExportCsv", new { dateRange = Model.DateRange, bank = Model.Bank, status = Model.Status })"
-           class="btn btn-success">
-            <i class="fa-solid fa-file-csv me-2"></i>CSV İndir
-        </a>
-        <a href="@Url.Action("ExportJson", new { dateRange = Model.DateRange, bank = Model.Bank, status = Model.Status })"
-           class="btn btn-info text-white">
-            <i class="fa-solid fa-file-code me-2"></i>JSON İndir
-        </a>
-    </div>
-}
+@Html.AntiForgeryToken()
 
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card border-0 shadow">
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card shadow border-0">
             <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
                         <label class="form-label">Tarih Aralığı</label>
-                        <input type="text" name="dateRange" class="form-control date-range-picker"
-                               value="@Model.DateRange" placeholder="Tarih seçin" />
+                        <input id="dateRange" class="form-control" value="29.01.2026 - 02.02.2026" />
                     </div>
+
                     <div class="col-md-3">
                         <label class="form-label">Banka</label>
-                        <select name="bank" class="form-select">
-                            <option value="">Tüm Bankalar</option>
-                            @foreach (var bank in Model.Banks)
+                        <select id="bankSelect" class="form-select">
+                            <option value="">Seçiniz</option>
+                            @foreach (var b in (IEnumerable<TurkSoft.Entities.Entities.Bank>)ViewBag.Banks)
                             {
-                                <option value="@bank" selected="@(Model.Bank == bank)">@bank</option>
+                                <option value="@b.Id">@b.BankName</option>
                             }
                         </select>
                     </div>
+
                     <div class="col-md-3">
-                        <label class="form-label">Durum</label>
-                        <select name="status" class="form-select">
-                            <option value="">Tümü</option>
-                            <option value="Draft" selected="@(Model.Status == "Draft")">Taslak</option>
-                            <option value="Ready" selected="@(Model.Status == "Ready")">Hazır</option>
-                            <option value="Queued" selected="@(Model.Status == "Queued")">Kuyrukta</option>
-                            <option value="Exported" selected="@(Model.Status == "Exported")">Aktarılmış</option>
+                        <label class="form-label">Hesap</label>
+                        <select id="accountSelect" class="form-select">
+                            <option value="">Seçiniz</option>
+                            @foreach (var a in (IEnumerable<TurkSoft.Entities.Entities.BankAccount>)ViewBag.Accounts)
+                            {
+                                <option value="@a.Id" data-bank="@a.BankId">@a.AccountNumber (@a.AccountType)</option>
+                            }
                         </select>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fa-solid fa-filter me-2"></i>Filtrele
+
+                    <div class="col-md-3 d-flex gap-2">
+                        <button class="btn btn-primary w-100" type="button" id="btnFetch">
+                            <i class="fa-solid fa-cloud-arrow-down me-2"></i>Veriyi Getir
                         </button>
                     </div>
-                </form>
+                </div>
+
+                <div id="statusBox" class="alert mt-3 d-none"></div>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-8">
-        <div class="card border-0 shadow mb-4">
+    <div class="col-12">
+        <div class="card shadow border-0">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="fa-solid fa-list me-2"></i>Aktarım Kayıtları</h6>
-                <span class="badge bg-primary">@Model.TransferRecords.Count kayıt</span>
+                <div>
+                    <strong>WS Hareketleri</strong>
+                    <div class="text-muted small" id="tableTitle"></div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="btnReload">
+                        <i class="fa-solid fa-rotate me-1"></i>Yenile
+                    </button>
+                </div>
             </div>
+
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="transferTable" class="table table-hover">
+                    <table id="txTable" class="table table-striped table-hover w-100">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Tarih</th>
-                                <th>Banka</th>
+                                <th>RefNo</th>
                                 <th>Açıklama</th>
-                                <th class="text-end">Borç</th>
-                                <th class="text-end">Alacak</th>
+                                <th class="text-end">Tutar</th>
+                                <th>D/C</th>
                                 <th>Durum</th>
-                                <th>İşlemler</th>
+                                <th style="width:140px;">İşlem</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach (var record in Model.TransferRecords)
-                            {
-                                <tr>
-                                    <td>@record.Id</td>
-                                    <td>@record.Date.ToString("dd.MM.yyyy")</td>
-                                    <td>@record.BankName</td>
-                                    <td>@record.Description</td>
-                                    <td class="text-end">@record.Debit.ToString("N2")</td>
-                                    <td class="text-end">@record.Credit.ToString("N2")</td>
-                                    <td>
-                                        <span class="badge @GetStatusBadgeClass(record.Status)">
-                                            @record.Status
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            @if (!record.IsMapped)
-                                            {
-                                                <button type="button" class="btn btn-outline-primary btn-sm"
-                                                        data-bs-toggle="modal" data-bs-target="#mappingModal"
-                                                        data-record-id="@record.Id"
-                                                        data-record-desc="@record.Description">
-                                                    <i class="fa-solid fa-link"></i>
-                                                </button>
-                                            }
-                                            @if (record.Status == TurkSoft.BankWebUI.Models.TransferRecordStatus.Ready)
-                                            {
-                                                <form method="post" asp-action="Enqueue" class="d-inline">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="transferId" value="@record.Id" />
-                                                    <button type="submit" class="btn btn-outline-success btn-sm">
-                                                        <i class="fa-solid fa-play"></i>
-                                                    </button>
-                                                </form>
-                                            }
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="col-md-4">
-        <div class="card border-0 shadow mb-4">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fa-solid fa-gears me-2"></i>Eşleştirme Kuralları</h6>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    @foreach (var mapping in Model.Mappings)
-                    {
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>@mapping.BankName</strong><br />
-                                    <small class="text-muted">@mapping.AccountType → @mapping.GlAccountName</small>
-                                </div>
-                                @if (mapping.IsDefault)
-                                {
-                                    <span class="badge bg-info">Varsayılan</span>
-                                }
-                            </div>
-                        </div>
-                    }
+                <div class="text-muted small mt-2">
+                    Not: Hareket verisi DB’den değil WS’den gelir. DB sadece TransferLog/SystemLog tutar.
                 </div>
             </div>
-        </div>
-
-        <div class="card border-0 shadow">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="fa-solid fa-clock me-2"></i>Kuyruk Durumu</h6>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Durum</th>
-                                <th>Deneme</th>
-                                <th>İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var queue in Model.Queue)
-                            {
-                                <tr>
-                                    <td>@queue.Id</td>
-                                    <td>
-                                        <span class="badge @GetQueueStatusBadgeClass(queue.Status)">
-                                            @queue.Status
-                                        </span>
-                                    </td>
-                                    <td>@queue.AttemptCount</td>
-                                    <td>
-                                        @if (queue.Status == TurkSoft.BankWebUI.Models.QueueStatus.Failed)
-                                        {
-                                            <form method="post" asp-action="Retry" class="d-inline">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="queueId" value="@queue.Id" />
-                                                <button type="submit" class="btn btn-sm btn-warning">
-                                                    <i class="fa-solid fa-rotate"></i>
-                                                </button>
-                                            </form>
-                                        }
-                                        @if (queue.Status == TurkSoft.BankWebUI.Models.QueueStatus.Success)
-                                        {
-                                            <form method="post" asp-action="Export" class="d-inline">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="queueId" value="@queue.Id" />
-                                                <button type="submit" class="btn btn-sm btn-success">
-                                                    <i class="fa-solid fa-check"></i>
-                                                </button>
-                                            </form>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Eşleştirme Modal -->
-<div class="modal fade" id="mappingModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Hesap Eşleştirme</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="mappingForm" method="post" asp-action="ApplyMapping">
-                @Html.AntiForgeryToken()
-                <div class="modal-body">
-                    <input type="hidden" name="transferId" id="transferId" />
-
-                    <div class="mb-3">
-                        <label class="form-label">Açıklama</label>
-                        <input type="text" class="form-control" id="recordDesc" readonly />
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Genel Muhasebe Hesabı *</label>
-                            <select name="glCode" class="form-select" id="glCode" required>
-                                <option value="">Seçiniz</option>
-                                @foreach (var gl in Model.GlAccounts)
-                                {
-                                    <option value="@gl.Code">@gl.Code - @gl.Name</option>
-                                }
-                            </select>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Masraf Merkezi</label>
-                            <select name="costCenter" class="form-select" id="costCenter">
-                                <option value="">Seçiniz</option>
-                                <option value="CC001">CC001 - Genel Giderler</option>
-                                <option value="CC002">CC002 - Satış Giderleri</option>
-                                <option value="CC003">CC003 - Pazarlama</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tedarikçi</label>
-                            <select name="vendorCode" class="form-select" id="vendorCode">
-                                <option value="">Seçiniz</option>
-                                @foreach (var vendor in Model.Vendors)
-                                {
-                                    <option value="@vendor.Code">@vendor.Code - @vendor.Name</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                    <button type="submit" class="btn btn-primary">Eşleştir</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            // DataTables initialization
-            $('#transferTable').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
+        let dt = null;
+        let lastData = [];
+
+        function token() { return $('input[name="__RequestVerificationToken"]').val(); }
+
+        function showStatus(type, msg) {
+            const box = $('#statusBox');
+            box.removeClass('d-none alert-success alert-danger alert-info')
+               .addClass('alert-' + type)
+               .html(msg);
+        }
+
+        function filterAccounts() {
+            const bankId = $('#bankSelect').val();
+            $('#accountSelect option').each(function(){
+                const b = $(this).data('bank');
+                if (!b) return;
+                $(this).toggle(b == bankId);
+            });
+            $('#accountSelect').val('');
+        }
+
+        $('#bankSelect').on('change', filterAccounts);
+
+        function formatAmount(x) {
+            const n = parseFloat(x || 0);
+            return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renderTable(data, bankInfo) {
+            lastData = data || [];
+            $('#tableTitle').text(`${bankInfo.bankName} / ${bankInfo.accountNumber} — ${lastData.length} kayıt`);
+
+            if (dt) {
+                dt.destroy();
+                $('#txTable tbody').empty();
+            }
+
+            dt = $('#txTable').DataTable({
+                data: lastData,
+                columns: [
+                    { data: 'PROCESSTIMESTR', render: d => d || '-' },
+                    { data: 'PROCESSREFNO', render: d => d || '-' },
+                    { data: 'PROCESSDESC', render: d => d || '-' },
+                    { data: 'PROCESSAMAOUNT', className: 'text-end', render: d => formatAmount(d) },
+                    { data: 'PROCESSDEBORCRED', render: d => d == 'D' ? '<span class="badge bg-danger">D</span>' : '<span class="badge bg-success">C</span>' },
+                    {
+                        data: null,
+                        render: row => row.IsTransferred
+                            ? `<span class="badge bg-success">Aktarıldı${row.TigerFicheRef ? ' (#'+row.TigerFicheRef+')' : ''}</span>`
+                            : `<span class="badge bg-secondary">Bekliyor</span>`
+                    },
+                    {
+                        data: null,
+                        render: row => {
+                            if (row.IsTransferred) {
+                                return `<button class="btn btn-sm btn-secondary" disabled>
+                                            <i class="fa-solid fa-check me-1"></i>Aktarıldı
+                                        </button>`;
+                            }
+                            return `<button class="btn btn-sm btn-warning btnTransfer"
+                                            data-key="${row.ExternalUniqueKey}">
+                                        <i class="fa-solid fa-right-to-bracket me-1"></i>Aktar
+                                    </button>`;
+                        }
+                    }
+                ],
+                order: [[0,'desc']],
+                pageLength: 25,
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' }
+            });
+        }
+
+        async function fetchData() {
+            const bankId = $('#bankSelect').val();
+            const accountId = $('#accountSelect').val();
+            const dateRange = $('#dateRange').val();
+
+            if (!bankId) return showStatus('danger', 'Lütfen banka seçiniz.');
+            if (!accountId) return showStatus('danger', 'Lütfen hesap seçiniz.');
+            if (!dateRange) return showStatus('danger', 'Lütfen tarih aralığı seçiniz.');
+
+            showStatus('info', '<i class="fa-solid fa-spinner fa-spin me-2"></i>WS verisi çekiliyor...');
+
+            $.ajax({
+                url: '@Url.Action("GetBankStatement", "Accounting")',
+                type: 'POST',
+                data: {
+                    bankId: bankId,
+                    accountId: accountId,
+                    dateRange: dateRange,
+                    __RequestVerificationToken: token()
                 },
-                order: [[1, 'desc']],
-                pageLength: 25
-            });
+                success: function(resp){
+                    if (!resp.success) return showStatus('danger', resp.message || 'Hata');
 
-            // Date range picker
-            flatpickr(".date-range-picker", {
-                mode: "range",
-                locale: "tr",
-                dateFormat: "d.m.Y",
-                altInput: true,
-                altFormat: "d.m.Y"
+                    showStatus('success', `Veri geldi. ${resp.data.length} kayıt.`);
+                    renderTable(resp.data, resp.bankInfo);
+                },
+                error: function(xhr){
+                    showStatus('danger', xhr.responseText || 'İstek hatası');
+                }
             });
+        }
 
-            // Mapping modal event
-            $('#mappingModal').on('show.bs.modal', function(event) {
-                var button = $(event.relatedTarget);
-                $('#transferId').val(button.data('record-id'));
-                $('#recordDesc').val(button.data('record-desc'));
+        $('#btnFetch').on('click', fetchData);
+        $('#btnReload').on('click', fetchData);
+
+        // Satır aktar
+        $(document).on('click', '.btnTransfer', function(){
+            const key = $(this).data('key');
+            const row = lastData.find(x => x.ExternalUniqueKey === key);
+            if (!row) return;
+
+            const payload = {
+                bankId: parseInt($('#bankSelect').val()),
+                accountNumber: row.HESAPNO,
+                transactionDate: row.PROCESSTIME || new Date().toISOString(),
+                debitCredit: row.PROCESSDEBORCRED,
+                amount: parseFloat(row.PROCESSAMAOUNT || 0),
+                externalUniqueKey: row.ExternalUniqueKey,
+                processRefNo: row.PROCESSREFNO,
+                processDesc: row.PROCESSDESC,
+                processTypeCode: row.PROCESSTYPECODE
+            };
+
+            showStatus('info', '<i class="fa-solid fa-spinner fa-spin me-2"></i>Logo Tiger aktarımı yapılıyor...');
+
+            $.ajax({
+                url: '@Url.Action("TransferToTiger", "Accounting")',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': token() },
+                data: JSON.stringify(payload),
+                success: function(resp){
+                    if (resp.alreadyTransferred) {
+                        showStatus('success', resp.message);
+                        fetchData();
+                        return;
+                    }
+
+                    if (!resp.success) {
+                        showStatus('danger', (resp.message || 'Aktarım hatası') + (resp.errors ? ('<br/>' + resp.errors.join('<br/>')) : ''));
+                        return;
+                    }
+
+                    showStatus('success', `Aktarım başarılı. FişRef: ${resp.ficheRef}`);
+                    fetchData();
+                },
+                error: function(xhr){
+                    showStatus('danger', xhr.responseText || 'Aktarım isteği hatası');
+                }
             });
         });
+
+        // ilk load
+        filterAccounts();
     </script>
-}
-
-@functions {
-    string GetStatusBadgeClass(TurkSoft.BankWebUI.Models.TransferRecordStatus status)
-    {
-        return status switch
-        {
-            TurkSoft.BankWebUI.Models.TransferRecordStatus.Draft => "bg-secondary",
-            TurkSoft.BankWebUI.Models.TransferRecordStatus.Ready => "bg-warning text-dark",
-            TurkSoft.BankWebUI.Models.TransferRecordStatus.Queued => "bg-info",
-            TurkSoft.BankWebUI.Models.TransferRecordStatus.Exported => "bg-success",
-            _ => "bg-light text-dark"
-        };
-    }
-
-    string GetQueueStatusBadgeClass(TurkSoft.BankWebUI.Models.QueueStatus status)
-    {
-        return status switch
-        {
-            TurkSoft.BankWebUI.Models.QueueStatus.Pending => "bg-secondary",
-            TurkSoft.BankWebUI.Models.QueueStatus.Processing => "bg-primary",
-            TurkSoft.BankWebUI.Models.QueueStatus.Success => "bg-success",
-            TurkSoft.BankWebUI.Models.QueueStatus.Failed => "bg-danger",
-            _ => "bg-light text-dark"
-        };
-    }
 }

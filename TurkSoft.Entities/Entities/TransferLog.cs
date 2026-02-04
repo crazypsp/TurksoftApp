@@ -15,7 +15,14 @@ namespace TurkSoft.Entities.Entities
         public string ErrorMessage { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? CompletedDate { get; set; }
-
+        public string ExternalUniqueKey { get; set; }  // BANK+ACC+DATE+REF+AMOUNT+DC hash/key
+        public int? BankId { get; set; }               // internal bank Id (DB)
+        public string AccountNumber { get; set; }
+        public DateTime? TransactionDate { get; set; }
+        public string DebitCredit { get; set; }        // D/C
+        public decimal? Amount { get; set; }
+        public string BankProcessRefNo { get; set; }   // BNKHAR.PROCESSREFNO
+        public int? TigerFicheRef { get; set; }        // LOGICALREF
         // Navigation Properties
         public virtual User User { get; set; }
     }

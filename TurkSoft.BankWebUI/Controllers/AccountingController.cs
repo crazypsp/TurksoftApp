@@ -1,348 +1,356 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using TurkSoft.BankWebUI.Models;
-using TurkSoft.BankWebUI.ViewModels;
-using TurkSoft.Services.Interfaces;
-
-// 🔥 Ambiguity fix: Entity tiplerine alias veriyoruz
-using EntityBankTransaction = TurkSoft.Entities.Entities.BankTransaction;
-using EntityBank = TurkSoft.Entities.Entities.Bank;
-using EntityTransferLog = TurkSoft.Entities.Entities.TransferLog;
+using TurkSoft.Business.Base;
+using TurkSoft.Entities.BankService.Models;
+using TurkSoft.Entities.Entities;
+using TurkSoft.Entities.Entities.Models;
+using TurkSoft.Service.Inferfaces;    // ILogoTigerIntegrationService
+using TurkSoft.Service.Interface;     // IBankStatementService
+using TurkSoft.Services.Interfaces;   // IBankService, IBankAccountService, ITransferLogService, ISystemLogService
 
 namespace TurkSoft.BankWebUI.Controllers
 {
     [Authorize]
     public sealed class AccountingController : Controller
     {
-        private readonly IBankTransactionService _transactionService;
         private readonly IBankService _bankService;
+        private readonly IBankAccountService _bankAccountService;
+        private readonly IBankStatementService _bankStatementService;
+        private readonly ILogoTigerIntegrationService _logoTiger;
         private readonly ITransferLogService _transferLogService;
+        private readonly ISystemLogService _systemLogService;
 
         public AccountingController(
-            IBankTransactionService transactionService,
             IBankService bankService,
-            ITransferLogService transferLogService)
+            IBankAccountService bankAccountService,
+            IBankStatementService bankStatementService,
+            ILogoTigerIntegrationService logoTiger,
+            ITransferLogService transferLogService,
+            ISystemLogService systemLogService)
         {
-            _transactionService = transactionService;
             _bankService = bankService;
+            _bankAccountService = bankAccountService;
+            _bankStatementService = bankStatementService;
+            _logoTiger = logoTiger;
             _transferLogService = transferLogService;
+            _systemLogService = systemLogService;
         }
 
-        // ---------------------------
-        // INDEX
-        // ---------------------------
         [HttpGet]
-        public async Task<IActionResult> Index(string? dateRange, string? bank, string? status)
+        public async Task<IActionResult> Index()
         {
-            var (from, to) = ParseDateRange(dateRange);
+            var banks = (await _bankService.GetAllBanksAsync())?.Where(x => x.IsActive).ToList() ?? new();
+            var accounts = (await _bankAccountService.GetAllBankAccountsAsync())?.Where(x => x.IsActive).ToList() ?? new();
 
-            // Servislerden veri çek
-            var transactions = await _transactionService.GetAllTransactionsAsync();
-            var banks = await _bankService.GetAllBanksAsync();
+            ViewBag.Banks = banks;
+            ViewBag.Accounts = accounts;
+            return View();
+        }
 
-            // Null gelme ihtimaline karşı güvenli hale getir
-            var txList = transactions ?? new List<EntityBankTransaction>();
-            var bankList = banks ?? new List<EntityBank>();
+        // WS’den getir + TransferLog’a göre işaretle (BNKHAR’a dokunmadan DTO döndür)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetBankStatement([FromForm] int bankId, [FromForm] int accountId, [FromForm] string dateRange, CancellationToken ct)
+        {
+            var userId = GetUserId();
 
-            // Filtreleme (transaction seviyesinde)
-            IEnumerable<EntityBankTransaction> filtered = txList;
-
-            if (from.HasValue)
-                filtered = filtered.Where(t => t.TransactionDate.Date >= from.Value.Date);
-
-            if (to.HasValue)
-                filtered = filtered.Where(t => t.TransactionDate.Date <= to.Value.Date);
-
-            if (!string.IsNullOrWhiteSpace(bank))
-                filtered = filtered.Where(t => (t.Bank?.BankName ?? "").Equals(bank, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrWhiteSpace(status))
+            try
             {
-                // View'daki status değerleri: Draft, Ready, Queued, Exported
-                filtered = status switch
+                var bank = await _bankService.GetBankByIdAsync(bankId);
+                var acc = await _bankAccountService.GetBankAccountByIdAsync(accountId);
+
+                if (bank == null || acc == null || acc.BankId != bankId)
+                    return Json(new { success = false, message = "Banka/Hesap bulunamadı." });
+
+                var (start, end) = ParseDateRange(dateRange);
+
+                var req = new BankStatementRequest
                 {
-                    "Draft" => filtered.Where(t => !t.IsMatched && !t.IsTransferred),
-                    "Ready" => filtered.Where(t => t.IsMatched && !t.IsTransferred),
-                    "Exported" => filtered.Where(t => t.IsTransferred),
-                    "Queued" => filtered.Where(_ => false), // Queue altyapısı yoksa boş
-                    _ => filtered
+                    BankId = bank.ExternalBankId,
+                    Username = bank.UsernameLabel,
+                    Password = bank.PasswordLabel,
+                    AccountNumber = acc.AccountNumber,
+                    BeginDate = start,
+                    EndDate = end,
+                    Link = bank.DefaultLink,
+                    TLink = bank.DefaultTLink,
+                    Extras = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "IBAN", acc.IBAN ?? "" },
+                        { "SubeNo", acc.SubeNo ?? "" },
+                        { "MusteriNo", acc.MusteriNo ?? "" },
+                        { "Currency", acc.Currency ?? "" }
+                    }
                 };
+
+                var list = (await _bankStatementService.GetStatementAsync(req, ct))?.ToList() ?? new();
+
+                var logs = (await _transferLogService.GetAllTransferLogsAsync())?.ToList() ?? new();
+                var transferred = new HashSet<string>(
+                    logs.Where(l => l.Status == "SUCCESS" && !string.IsNullOrWhiteSpace(l.ExternalUniqueKey))
+                        .Select(l => l.ExternalUniqueKey),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var dto = new List<BankStatementRowDto>();
+
+                foreach (var x in list)
+                {
+                    var key = BuildUniqueKey(bankId, acc.AccountNumber, x);
+                    var log = logs.FirstOrDefault(l => l.ExternalUniqueKey == key && l.Status == "SUCCESS");
+
+                    dto.Add(new BankStatementRowDto
+                    {
+                        ProcessTimeStr = x.PROCESSTIMESTR,
+                        ProcessTime = x.PROCESSTIME,
+                        RefNo = x.PROCESSREFNO,
+                        Description = x.PROCESSDESC,
+                        AmountStr = x.PROCESSAMAOUNT,
+                        DebitCredit = x.PROCESSDEBORCRED,
+                        TypeCode = x.PROCESSTYPECODE,
+                        ExternalUniqueKey = key,
+                        IsTransferred = transferred.Contains(key),
+                        TigerFicheRef = log?.TigerFicheRef
+                    });
+                }
+
+                return Json(new
+                {
+                    success = true,
+                    data = dto,
+                    bankInfo = new { bankName = bank.BankName, accountNumber = acc.AccountNumber }
+                });
             }
-
-            // EntityBankTransaction -> TransferRecord (UI model)
-            var records = filtered
-                .Select(MapToTransferRecord)
-                .OrderByDescending(x => x.Date)
-                .ToList();
-
-            // Bank isimleri dropdown
-            var bankNames = bankList
-                .Select(b => b.BankName)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(x => x)
-                .ToList();
-
-            var vm = new AccountingVm
+            catch (Exception ex)
             {
-                DateRange = dateRange,
-                Bank = bank,
-                Status = status,
+                await _systemLogService.CreateSystemLogAsync(new SystemLog
+                {
+                    LogLevel = "ERROR",
+                    Message = $"Accounting GetBankStatement hata: {ex.Message}",
+                    Source = "AccountingController",
+                    ActionName = "GetBankStatement",
+                    UserId = userId,
+                    CreatedDate = DateTime.UtcNow
+                });
 
-                Banks = bankNames,
-                TransferRecords = records,
-
-                // Bu alanlar sende var ama servis yoksa boş kalabilir (View patlamaz)
-                Mappings = new List<AccountMapping>(),
-                GlAccounts = new List<GlAccount>(),
-                Vendors = new List<Vendor>(),
-                Queue = new List<TransferQueueItem>(),
-                Errors = new List<TransferErrorLog>()
-            };
-
-            return View(vm);
-        }
-
-        // ---------------------------
-        // EXPORTS
-        // ---------------------------
-        [HttpGet]
-        public async Task<IActionResult> ExportCsv(string? dateRange, string? bank, string? status)
-        {
-            var records = await GetFilteredRecords(dateRange, bank, status);
-
-            var sb = new StringBuilder();
-            sb.AppendLine("Id;Date;Bank;Description;Debit;Credit;Status");
-
-            foreach (var r in records)
-            {
-                sb.AppendLine(string.Join(";",
-                    r.Id,
-                    r.Date.ToString("yyyy-MM-dd"),
-                    SafeCsv(r.BankName),
-                    SafeCsv(r.Description),
-                    r.Debit.ToString("0.00", CultureInfo.InvariantCulture),
-                    r.Credit.ToString("0.00", CultureInfo.InvariantCulture),
-                    r.Status.ToString()
-                ));
+                return Json(new { success = false, message = ex.Message });
             }
-
-            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-            return File(bytes, "text/csv; charset=utf-8", $"accounting_export_{DateTime.Now:yyyyMMdd_HHmm}.csv");
         }
 
-        [HttpGet]
-        public async Task<IActionResult> ExportJson(string? dateRange, string? bank, string? status)
-        {
-            var records = await GetFilteredRecords(dateRange, bank, status);
-            var json = JsonSerializer.Serialize(records, new JsonSerializerOptions { WriteIndented = true });
-
-            return File(Encoding.UTF8.GetBytes(json),
-                "application/json; charset=utf-8",
-                $"accounting_export_{DateTime.Now:yyyyMMdd_HHmm}.json");
-        }
-
-        // ---------------------------
-        // VIEW'DAN GELEN POST ACTIONLAR
-        // ---------------------------
-
-        // View: asp-action="ApplyMapping"
-        // View form field names: transferId, glCode, costCenter, vendorCode
+        // Transfer: sonucu normalize ediyoruz (Kredi/BankaFis dönüş tipi farkını kaldırıyoruz)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ApplyMapping(int transferId, string? glCode, string? costCenter, string? vendorCode)
+        public async Task<IActionResult> TransferToTiger([FromBody] TransferToTigerRequest dto)
         {
-            var userId = GetCurrentUserId();
+            var userId = GetUserId();
 
-            // Senin servisin şu imzayı bekliyor:
-            // MatchTransactionAsync(transactionId, clCardCode, clCardName, userId)
-            // View sadece vendorCode yolluyor, name yok → boş geçiyoruz
-            var clCardCode = (vendorCode ?? "").Trim();
-            var clCardName = ""; // View tarafında name gönderilmiyor
+            var logs = (await _transferLogService.GetAllTransferLogsAsync())?.ToList() ?? new();
+            if (logs.Any(l => l.ExternalUniqueKey == dto.ExternalUniqueKey && l.Status == "SUCCESS"))
+                return Json(new { success = true, alreadyTransferred = true, message = "Bu kayıt daha önce aktarılmış." });
 
-            if (string.IsNullOrWhiteSpace(clCardCode))
+            bool ok;
+            string msg;
+            int? ficheRef = null;
+            List<string>? errors = null;
+
+            try
             {
-                TempData["Toast"] = "Eşleştirme başarısız: Tedarikçi/Cari kodu boş olamaz.";
-                return RedirectToAction(nameof(Index));
-            }
+                if (IsKredi(dto.Description, dto.TypeCode))
+                {
+                    var req = BuildKredi(dto, userId);
+                    var res = await _logoTiger.KrediTaksitOdemeEkleAsync(req);
+                    ok = res.Success; msg = res.Message; ficheRef = res.Data?.FisReferans; errors = res.Errors;
+                }
+                else if (IsVirman(dto.Description, dto.TypeCode))
+                {
+                    var req = BuildVirman(dto, userId);
+                    var res = await _logoTiger.VirmanEkleAsync(req);
+                    ok = res.Success; msg = res.Message; ficheRef = res.Data?.FisReferans; errors = res.Errors;
+                }
+                else if (string.Equals(dto.DebitCredit, "C", StringComparison.OrdinalIgnoreCase))
+                {
+                    var req = BuildGelen(dto, userId);
+                    var res = await _logoTiger.GelenHavaleEkleAsync(req);
+                    ok = res.Success; msg = res.Message; ficheRef = res.Data?.FisReferans; errors = res.Errors;
+                }
+                else
+                {
+                    var req = BuildGiden(dto, userId);
+                    var res = await _logoTiger.GidenHavaleEkleAsync(req);
+                    ok = res.Success; msg = res.Message; ficheRef = res.Data?.FisReferans; errors = res.Errors;
+                }
 
-            var result = await _transactionService.MatchTransactionAsync(transferId, clCardCode, clCardName, userId);
-
-            TempData["Toast"] = result != null
-                ? "Hareket başarıyla eşleştirildi."
-                : "Eşleştirme başarısız.";
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        // View: asp-action="Enqueue"  (Ready olanlarda)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Enqueue(int transferId)
-        {
-            return await DoTransfer(transferId);
-        }
-
-        // View: Retry/Export (Queue paneli)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult Retry(int queueId)
-        {
-            TempData["Toast"] = "Retry: Kuyruk altyapısı aktif değil.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult Export(int queueId)
-        {
-            TempData["Toast"] = "Export: Kuyruk altyapısı aktif değil.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // ---------------------------
-        // INTERNAL
-        // ---------------------------
-
-        private async Task<IActionResult> DoTransfer(int transactionId)
-        {
-            var userId = GetCurrentUserId();
-
-            var transaction = await _transactionService.TransferTransactionAsync(transactionId, userId);
-
-            if (transaction != null)
-            {
-                var log = new EntityTransferLog
+                await _transferLogService.CreateTransferLogAsync(new TransferLog
                 {
                     UserId = userId,
-                    TransactionId = transactionId,
                     TransferType = "SINGLE",
-                    Status = "SUCCESS",
                     TargetSystem = "LOGO_TIGER",
-                    RequestData = JsonSerializer.Serialize(new { TransactionId = transactionId }),
-                    ResponseData = "Transfer başarılı",
+                    Status = ok ? "SUCCESS" : "FAILED",
+                    ExternalUniqueKey = dto.ExternalUniqueKey,
+                    RequestData = JsonSerializer.Serialize(dto),
+                    ResponseData = ok ? (ficheRef?.ToString() ?? "") : (errors != null ? string.Join(" | ", errors) : msg),
+                    ErrorMessage = ok ? null : (errors != null ? string.Join(" | ", errors) : msg),
+                    TigerFicheRef = ficheRef,
                     CreatedDate = DateTime.UtcNow,
                     CompletedDate = DateTime.UtcNow
-                };
+                });
 
-                await _transferLogService.CreateTransferLogAsync(log);
-                TempData["Toast"] = "Hareket başarıyla muhasebeye aktarıldı.";
+                return Json(new { success = ok, message = msg, ficheRef, errors });
             }
-            else
+            catch (Exception ex)
             {
-                TempData["Toast"] = "Aktarım başarısız. Önce eşleştirme yapılmalı.";
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        private static TransferRecord MapToTransferRecord(EntityBankTransaction t)
-        {
-            var amount = t.Amount;
-
-            // Basit debit/credit ayrımı
-            var debit = amount < 0 ? Math.Abs(amount) : 0m;
-            var credit = amount > 0 ? amount : 0m;
-
-            var status =
-                t.IsTransferred ? TransferRecordStatus.Exported
-                : t.IsMatched ? TransferRecordStatus.Ready
-                : TransferRecordStatus.Draft;
-
-            // 🔴 IsMapped read-only olduğu için SET ETMİYORUZ (CS0200 fix)
-            return new TransferRecord
-            {
-                Id = t.Id,
-                Date = t.TransactionDate,
-                BankName = t.Bank?.BankName ?? "N/A",
-                Description = t.Description ?? "",
-                Debit = debit,
-                Credit = credit,
-                Status = status
-            };
-        }
-
-        private async Task<List<TransferRecord>> GetFilteredRecords(string? dateRange, string? bank, string? status)
-        {
-            var (from, to) = ParseDateRange(dateRange);
-
-            var transactions = await _transactionService.GetAllTransactionsAsync();
-            var txList = transactions ?? new List<EntityBankTransaction>();
-
-            IEnumerable<EntityBankTransaction> filtered = txList;
-
-            if (from.HasValue)
-                filtered = filtered.Where(t => t.TransactionDate.Date >= from.Value.Date);
-
-            if (to.HasValue)
-                filtered = filtered.Where(t => t.TransactionDate.Date <= to.Value.Date);
-
-            if (!string.IsNullOrWhiteSpace(bank))
-                filtered = filtered.Where(t => (t.Bank?.BankName ?? "").Equals(bank, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                filtered = status switch
+                await _transferLogService.CreateTransferLogAsync(new TransferLog
                 {
-                    "Draft" => filtered.Where(t => !t.IsMatched && !t.IsTransferred),
-                    "Ready" => filtered.Where(t => t.IsMatched && !t.IsTransferred),
-                    "Exported" => filtered.Where(t => t.IsTransferred),
-                    "Queued" => filtered.Where(_ => false),
-                    _ => filtered
-                };
+                    UserId = userId,
+                    TransferType = "SINGLE",
+                    TargetSystem = "LOGO_TIGER",
+                    Status = "FAILED",
+                    ExternalUniqueKey = dto.ExternalUniqueKey,
+                    RequestData = JsonSerializer.Serialize(dto),
+                    ErrorMessage = ex.Message,
+                    CreatedDate = DateTime.UtcNow,
+                    CompletedDate = DateTime.UtcNow
+                });
+
+                return Json(new { success = false, message = ex.Message });
             }
-
-            return filtered.Select(MapToTransferRecord).OrderByDescending(x => x.Date).ToList();
         }
 
-        private static (DateTime? from, DateTime? to) ParseDateRange(string? dateRange)
+        // -------- DTO / helpers --------
+
+        public sealed class BankStatementRowDto
         {
-            if (string.IsNullOrWhiteSpace(dateRange))
-                return (null, null);
+            public string? ProcessTimeStr { get; set; }
+            public DateTime? ProcessTime { get; set; }
+            public string? RefNo { get; set; }
+            public string? Description { get; set; }
+            public string? AmountStr { get; set; }
+            public string? DebitCredit { get; set; }
+            public string? TypeCode { get; set; }
 
-            // flatpickr range bazen "01.01.2026 to 15.01.2026", bazen "01.01.2026 - 15.01.2026"
-            var s = dateRange.Trim();
-
-            string[] parts = s.Contains(" to ", StringComparison.OrdinalIgnoreCase)
-                ? s.Split(" to ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                : s.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            var tr = new CultureInfo("tr-TR");
-
-            DateTime? from = TryParseTr(parts.ElementAtOrDefault(0), tr);
-            DateTime? to = TryParseTr(parts.ElementAtOrDefault(1), tr);
-
-            return (from, to);
+            public string ExternalUniqueKey { get; set; } = "";
+            public bool IsTransferred { get; set; }
+            public int? TigerFicheRef { get; set; }
         }
 
-        private static DateTime? TryParseTr(string? input, CultureInfo tr)
+        public sealed class TransferToTigerRequest
         {
-            if (string.IsNullOrWhiteSpace(input)) return null;
+            public string ExternalUniqueKey { get; set; } = "";
+            public DateTime TransactionDate { get; set; }
+            public string? DebitCredit { get; set; } // D/C
+            public decimal Amount { get; set; }
 
-            if (DateTime.TryParse(input, tr, DateTimeStyles.AssumeLocal, out var dt))
-                return dt;
+            public string? RefNo { get; set; }
+            public string? Description { get; set; }
+            public string? TypeCode { get; set; }
 
-            if (DateTime.TryParseExact(input, new[] { "d.M.yyyy", "dd.MM.yyyy" }, tr,
-                DateTimeStyles.AssumeLocal, out dt))
-                return dt;
-
-            return null;
+            // tiger mapping (projende dolduracağın alanlar)
+            public string? BankaHesapKodu { get; set; }
+            public string? HedefHesapKodu { get; set; } // virman/kredi
+            public string? ArpCode { get; set; }
+            public string? FisNo { get; set; }
+            public int DataReference { get; set; }
         }
 
-        private static string SafeCsv(string? s)
+        private static (DateTime start, DateTime end) ParseDateRange(string dateRange)
         {
-            if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace(";", ",").Replace("\r", " ").Replace("\n", " ");
+            var start = DateTime.Today.AddDays(-7);
+            var end = DateTime.Today;
+
+            if (!string.IsNullOrWhiteSpace(dateRange))
+            {
+                var parts = dateRange.Split(" - ");
+                if (parts.Length == 2)
+                {
+                    if (DateTime.TryParse(parts[0], out var s)) start = s;
+                    if (DateTime.TryParse(parts[1], out var e)) end = e;
+                }
+            }
+            return (start, end);
         }
 
-        private int GetCurrentUserId()
+        private int GetUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier);
             return claim != null && int.TryParse(claim.Value, out var id) ? id : 1;
         }
+
+        private static string BuildUniqueKey(int bankId, string accountNo, BNKHAR x)
+        {
+            var raw = $"{bankId}|{accountNo}|{x.PROCESSTIMESTR}|{x.PROCESSREFNO}|{x.PROCESSAMAOUNT}|{x.PROCESSDEBORCRED}|{x.PROCESSDESC}";
+            using var sha = SHA256.Create();
+            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw ?? ""));
+            return Convert.ToHexString(bytes);
+        }
+
+        private static bool IsVirman(string? desc, string? typeCode)
+            => (desc ?? "").ToUpper().Contains("VIRMAN") || (typeCode ?? "").ToUpper().Contains("VIR");
+
+        private static bool IsKredi(string? desc, string? typeCode)
+            => (desc ?? "").ToUpper().Contains("KREDI") || (desc ?? "").ToUpper().Contains("TAKSIT") || (typeCode ?? "").ToUpper().Contains("KRD");
+
+        // ---- Build Requests (minimum alanlarla) ----
+        private static string NewGuidUpper() => Guid.NewGuid().ToString().ToUpperInvariant();
+
+        private static GelenHavaleRequest BuildGelen(TransferToTigerRequest dto, int userId) => new()
+        {
+            IslemKodu = dto.ExternalUniqueKey,
+            Tarih = dto.TransactionDate,
+            FisNo = dto.FisNo ?? dto.RefNo ?? "AUTO",
+            Tutar = dto.Amount,
+            BankaHesapKodu = dto.BankaHesapKodu ?? "",
+            OlusturanKullanici = userId,
+            DataReference = dto.DataReference,
+            ARP_CODE = dto.ArpCode ?? "",
+            GUID = NewGuidUpper(),
+            DUE_DATE = dto.TransactionDate
+        };
+
+        private static GidenHavaleRequest BuildGiden(TransferToTigerRequest dto, int userId) => new()
+        {
+            IslemKodu = dto.ExternalUniqueKey,
+            Tarih = dto.TransactionDate,
+            FisNo = dto.FisNo ?? dto.RefNo ?? "AUTO",
+            Tutar = dto.Amount,
+            BankaHesapKodu = dto.BankaHesapKodu ?? "",
+            OlusturanKullanici = userId,
+            DataReference = dto.DataReference,
+            ARP_CODE = dto.ArpCode ?? "",
+            GUID = NewGuidUpper(),
+            DUE_DATE = dto.TransactionDate
+        };
+
+        private static VirmanRequest BuildVirman(TransferToTigerRequest dto, int userId) => new()
+        {
+            IslemKodu = dto.ExternalUniqueKey,
+            Tarih = dto.TransactionDate,
+            FisNo = dto.FisNo ?? dto.RefNo ?? "AUTO",
+            Tutar = dto.Amount,
+            BankaHesapKodu = dto.BankaHesapKodu ?? "",
+            HedefHesapKodu = dto.HedefHesapKodu ?? "",
+            OlusturanKullanici = userId,
+            DataReference = dto.DataReference,
+            GUID = NewGuidUpper()
+        };
+
+        private static KrediTaksitRequest BuildKredi(TransferToTigerRequest dto, int userId) => new()
+        {
+            IslemKodu = dto.ExternalUniqueKey,
+            Tarih = dto.TransactionDate,
+            FisNo = dto.FisNo ?? dto.RefNo ?? "AUTO",
+            BankaHesapKodu = dto.BankaHesapKodu ?? "",
+            KrediHesapKodu = dto.HedefHesapKodu ?? "",
+            OlusturanKullanici = userId,
+            DataReference = dto.DataReference,
+            GUID = NewGuidUpper(),
+            ToplamTutar = dto.Amount,
+            AnaParaTutar = dto.Amount,
+            FaizTutar = 0,
+            BsmvTutar = 0,
+            VadeTarihi = dto.TransactionDate
+        };
     }
 }

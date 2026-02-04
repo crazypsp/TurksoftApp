@@ -34,6 +34,12 @@ namespace TurkSoft.Data.EntityData
             builder.Property(tl => tl.CreatedDate)
                 .HasDefaultValueSql("GETUTCDATE()");
 
+            builder.Property(x => x.ExternalUniqueKey).HasMaxLength(200);
+            builder.HasIndex(x => x.ExternalUniqueKey).IsUnique(false);
+
+            builder.Property(x => x.AccountNumber).HasMaxLength(50);
+            builder.Property(x => x.DebitCredit).HasMaxLength(5);
+            builder.Property(x => x.BankProcessRefNo).HasMaxLength(100);
             // Relationship
             builder.HasOne(tl => tl.User)
                 .WithMany(u => u.TransferLogs)
