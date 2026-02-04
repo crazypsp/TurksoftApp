@@ -12,6 +12,7 @@
                     <div class="col-md-3">
                         <label class="form-label">Tarih Aralığı</label>
                         <input id="dateRange" class="form-control" value="29.01.2026 - 02.02.2026" />
+                        <div class="form-text">Format: gg.aa.yyyy - gg.aa.yyyy</div>
                     </div>
 
                     <div class="col-md-3">
@@ -31,7 +32,8 @@
                             <option value="">Seçiniz</option>
                             @foreach (var a in (IEnumerable<TurkSoft.Entities.Entities.BankAccount>)ViewBag.Accounts)
                             {
-                                <option value="@a.Id" data-bank="@a.BankId">@a.AccountNumber (@a.AccountType)</option>
+                                // AccountType projende yok -> kaldırıldı
+                                <option value="@a.Id" data-bank="@a.BankId">@a.AccountNumber</option>
                             }
                         </select>
                     </div>
@@ -96,20 +98,22 @@
         let dt = null;
         let lastData = [];
 
-        function token() { return $('input[name="__RequestVerificationToken"]').val(); }
+        function token() {
+            return $('input[name="__RequestVerificationToken"]').val();
+        }
 
         function showStatus(type, msg) {
             const box = $('#statusBox');
-            box.removeClass('d-none alert-success alert-danger alert-info')
+            box.removeClass('d-none alert-success alert-danger alert-info alert-warning')
                .addClass('alert-' + type)
                .html(msg);
         }
 
         function filterAccounts() {
             const bankId = $('#bankSelect').val();
-            $('#accountSelect option').each(function(){
+            $('#accountSelect option').each(function () {
                 const b = $(this).data('bank');
-                if (!b) return;
+                if (!b) return; // placeholder
                 $(this).toggle(b == bankId);
             });
             $('#accountSelect').val('');
@@ -118,7 +122,8 @@
         $('#bankSelect').on('change', filterAccounts);
 
         function formatAmount(x) {
-            const n = parseFloat(x || 0);
+            const n = parseFloat((x ?? "0").toString().replace(",", "."));
+            if (isNaN(n)) return "0,00";
             return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
@@ -134,39 +139,43 @@
             dt = $('#txTable').DataTable({
                 data: lastData,
                 columns: [
-                    { data: 'PROCESSTIMESTR', render: d => d || '-' },
-                    { data: 'PROCESSREFNO', render: d => d || '-' },
-                    { data: 'PROCESSDESC', render: d => d || '-' },
-                    { data: 'PROCESSAMAOUNT', className: 'text-end', render: d => formatAmount(d) },
-                    { data: 'PROCESSDEBORCRED', render: d => d == 'D' ? '<span class="badge bg-danger">D</span>' : '<span class="badge bg-success">C</span>' },
+                    { data: 'processTimeStr', render: d => d || '-' },
+                    { data: 'refNo', render: d => d || '-' },
+                    { data: 'description', render: d => d || '-' },
+                    { data: 'amountStr', className: 'text-end', render: d => formatAmount(d) },
+                    {
+                        data: 'debitCredit',
+                        render: d => (d == 'D')
+                            ? '<span class="badge bg-danger">D</span>'
+                            : '<span class="badge bg-success">C</span>'
+                    },
                     {
                         data: null,
-                        render: row => row.IsTransferred
-                            ? `<span class="badge bg-success">Aktarıldı${row.TigerFicheRef ? ' (#'+row.TigerFicheRef+')' : ''}</span>`
+                        render: row => row.isTransferred
+                            ? `<span class="badge bg-success">Aktarıldı${row.tigerFicheRef ? ' (#' + row.tigerFicheRef + ')' : ''}</span>`
                             : `<span class="badge bg-secondary">Bekliyor</span>`
                     },
                     {
                         data: null,
                         render: row => {
-                            if (row.IsTransferred) {
+                            if (row.isTransferred) {
                                 return `<button class="btn btn-sm btn-secondary" disabled>
                                             <i class="fa-solid fa-check me-1"></i>Aktarıldı
                                         </button>`;
                             }
-                            return `<button class="btn btn-sm btn-warning btnTransfer"
-                                            data-key="${row.ExternalUniqueKey}">
+                            return `<button class="btn btn-sm btn-warning btnTransfer" data-key="${row.externalUniqueKey}">
                                         <i class="fa-solid fa-right-to-bracket me-1"></i>Aktar
                                     </button>`;
                         }
                     }
                 ],
-                order: [[0,'desc']],
+                order: [[0, 'desc']],
                 pageLength: 25,
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' }
             });
         }
 
-        async function fetchData() {
+        function fetchData() {
             const bankId = $('#bankSelect').val();
             const accountId = $('#accountSelect').val();
             const dateRange = $('#dateRange').val();
@@ -186,13 +195,13 @@
                     dateRange: dateRange,
                     __RequestVerificationToken: token()
                 },
-                success: function(resp){
-                    if (!resp.success) return showStatus('danger', resp.message || 'Hata');
+                success: function (resp) {
+                    if (!resp || !resp.success) return showStatus('danger', (resp && resp.message) ? resp.message : 'Hata');
 
                     showStatus('success', `Veri geldi. ${resp.data.length} kayıt.`);
                     renderTable(resp.data, resp.bankInfo);
                 },
-                error: function(xhr){
+                error: function (xhr) {
                     showStatus('danger', xhr.responseText || 'İstek hatası');
                 }
             });
@@ -202,21 +211,24 @@
         $('#btnReload').on('click', fetchData);
 
         // Satır aktar
-        $(document).on('click', '.btnTransfer', function(){
+        $(document).on('click', '.btnTransfer', function () {
             const key = $(this).data('key');
-            const row = lastData.find(x => x.ExternalUniqueKey === key);
+            const row = lastData.find(x => x.externalUniqueKey === key);
             if (!row) return;
 
             const payload = {
-                bankId: parseInt($('#bankSelect').val()),
-                accountNumber: row.HESAPNO,
-                transactionDate: row.PROCESSTIME || new Date().toISOString(),
-                debitCredit: row.PROCESSDEBORCRED,
-                amount: parseFloat(row.PROCESSAMAOUNT || 0),
-                externalUniqueKey: row.ExternalUniqueKey,
-                processRefNo: row.PROCESSREFNO,
-                processDesc: row.PROCESSDESC,
-                processTypeCode: row.PROCESSTYPECODE
+                externalUniqueKey: row.externalUniqueKey,
+                transactionDate: row.processTime || new Date().toISOString(),
+                debitCredit: row.debitCredit,
+                amount: parseFloat((row.amountStr ?? "0").toString().replace(",", ".")),
+                refNo: row.refNo,
+                description: row.description,
+                typeCode: row.typeCode,
+
+                // Tiger mapping (minimum) - controller tarafında boş gelirse request validate edebilir.
+                // Projene göre burayı zenginleştirebilirsin.
+                bankaHesapKodu: $('#accountSelect option:selected').text(),
+                dataReference: 0
             };
 
             showStatus('info', '<i class="fa-solid fa-spinner fa-spin me-2"></i>Logo Tiger aktarımı yapılıyor...');
@@ -225,24 +237,26 @@
                 url: '@Url.Action("TransferToTiger", "Accounting")',
                 type: 'POST',
                 contentType: 'application/json',
-                headers: { 'RequestVerificationToken': token() },
                 data: JSON.stringify(payload),
-                success: function(resp){
-                    if (resp.alreadyTransferred) {
+                headers: { '__RequestVerificationToken': token() }, // bazı projelerde bu header adı okunuyor
+                success: function (resp) {
+                    if (resp && resp.alreadyTransferred) {
                         showStatus('success', resp.message);
                         fetchData();
                         return;
                     }
 
-                    if (!resp.success) {
-                        showStatus('danger', (resp.message || 'Aktarım hatası') + (resp.errors ? ('<br/>' + resp.errors.join('<br/>')) : ''));
+                    if (!resp || !resp.success) {
+                        const err = (resp && resp.message) ? resp.message : 'Aktarım hatası';
+                        const details = (resp && resp.errors) ? ('<br/>' + resp.errors.join('<br/>')) : '';
+                        showStatus('danger', err + details);
                         return;
                     }
 
-                    showStatus('success', `Aktarım başarılı. FişRef: ${resp.ficheRef}`);
+                    showStatus('success', `Aktarım başarılı. FişRef: ${resp.ficheRef ?? '-'}`);
                     fetchData();
                 },
-                error: function(xhr){
+                error: function (xhr) {
                     showStatus('danger', xhr.responseText || 'Aktarım isteği hatası');
                 }
             });
