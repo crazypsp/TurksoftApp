@@ -1,7 +1,10 @@
 ﻿@model TurkSoft.BankWebUI.ViewModels.DashboardVm
+@using System.Text.Json
+
 @{
-    ViewData["Title"] = "Dashboard";
-    ViewData["Subtitle"] = "Bankalar arası toplam bakiye, günlük hareket ve mutabakat görünümü";
+    // Chart için güvenli JSON
+    var labelsJson = JsonSerializer.Serialize(Model?.CashflowLabels ?? new List<string>());
+    var netJson = JsonSerializer.Serialize(Model?.CashflowNet ?? new List<decimal>());
 }
 
 <div class="row">
@@ -12,7 +15,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title mb-2">Toplam Bakiye</h6>
-                        <h3 class="mb-0">@Model.TotalBalance.ToString("N2") ₺</h3>
+                        <h3 class="mb-0">@((Model?.TotalBalance ?? 0m).ToString("N2")) ₺</h3>
                     </div>
                     <i class="fa-solid fa-wallet fa-2x opacity-50"></i>
                 </div>
@@ -26,7 +29,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title mb-2">Günlük Giriş</h6>
-                        <h3 class="mb-0">@Model.DailyIn.ToString("N2") ₺</h3>
+                        <h3 class="mb-0">@((Model?.DailyIn ?? 0m).ToString("N2")) ₺</h3>
                     </div>
                     <i class="fa-solid fa-arrow-down-to-line fa-2x opacity-50"></i>
                 </div>
@@ -40,7 +43,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title mb-2">Günlük Çıkış</h6>
-                        <h3 class="mb-0">@Model.DailyOut.ToString("N2") ₺</h3>
+                        <h3 class="mb-0">@((Model?.DailyOut ?? 0m).ToString("N2")) ₺</h3>
                     </div>
                     <i class="fa-solid fa-arrow-up-from-line fa-2x opacity-50"></i>
                 </div>
@@ -54,7 +57,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title mb-2">Mutabakat Uyarısı</h6>
-                        <h3 class="mb-0">@Model.ReconcileAlerts</h3>
+                        <h3 class="mb-0">@((Model?.ReconcileAlerts ?? 0).ToString())</h3>
                     </div>
                     <i class="fa-solid fa-bell fa-2x opacity-50"></i>
                 </div>
@@ -82,13 +85,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var balance in Model.BankBalances)
+                            @foreach (var balance in (Model?.BankBalances ?? Enumerable.Empty<TurkSoft.BankWebUI.Models.BankBalance>()))
                             {
                                 <tr>
                                     <td>@balance.BankName</td>
                                     <td class="text-end">@balance.BalanceTry.ToString("N2") ₺</td>
-                                    <td class="text-end">@((balance.BalanceTry / 32).ToString("N2")) $</td>
-                                    <td class="text-end">@((balance.BalanceTry / 35).ToString("N2")) €</td>
+                                    <td class="text-end">@((balance.BalanceTry / 32m).ToString("N2")) $</td>
+                                    <td class="text-end">@((balance.BalanceTry / 35m).ToString("N2")) €</td>
+                                </tr>
+                            }
+
+                            @if (Model?.BankBalances == null || !Model.BankBalances.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-muted text-center py-3">
+                                        Henüz banka verisi yok (WS veri döndürmedi veya credential eksik).
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -135,7 +147,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var transaction in Model.LatestTransactions)
+                            @foreach (var transaction in (Model?.LatestTransactions ?? Enumerable.Empty<TurkSoft.BankWebUI.Models.BankTransaction>()))
                             {
                                 <tr>
                                     <td>@transaction.Date.ToString("dd.MM.yyyy HH:mm")</td>
@@ -164,6 +176,15 @@
                                     </td>
                                 </tr>
                             }
+
+                            @if (Model?.LatestTransactions == null || !Model.LatestTransactions.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-muted text-center py-3">
+                                        Henüz işlem kaydı yok (WS veri döndürmedi).
+                                    </td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
                 </div>
@@ -174,49 +195,60 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            $('#transactionsTable').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
-                },
-                order: [[0, 'desc']],
-                pageLength: 10
-            });
+        $(document).ready(function () {
 
-            // Cashflow Chart
-            const ctx = document.getElementById('cashflowChart').getContext('2d');
-            const chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.CashflowLabels)),
-                    datasets: [{
-                        label: 'Net Nakit Akışı (₺)',
-                        data: @Html.Raw(Json.Serialize(Model.CashflowNet)),
-                        borderColor: 'rgb(54, 162, 235)',
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        tension: 0.3,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
+            // DataTables
+            if ($.fn.DataTable) {
+                $('#transactionsTable').DataTable({
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString('tr-TR') + ' ₺';
+                    order: [[0, 'desc']],
+                    pageLength: 10
+                });
+            }
+
+            // Chart.js
+            if (typeof Chart !== 'undefined') {
+                const canvas = document.getElementById('cashflowChart');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+
+                    const labels = @Html.Raw(labelsJson);
+                    const netData = @Html.Raw(netJson);
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Net Nakit Akışı (₺)',
+                                data: netData,
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                tension: 0.3,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function (value) {
+                                            return value.toLocaleString('tr-TR') + ' ₺';
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
+                    });
                 }
-            });
+            }
         });
     </script>
 }
