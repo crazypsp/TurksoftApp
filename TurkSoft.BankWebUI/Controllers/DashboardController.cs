@@ -81,15 +81,25 @@ namespace TurkSoft.BankWebUI.Controllers
                     }
                     catch (Exception ex)
                     {
-                        await _systemLogService.CreateSystemLogAsync(new TurkSoft.Entities.Entities.SystemLog
+                        // LOG: IpAddress DB’de NOT NULL -> asla null göndermiyoruz
+                        // Ayrıca log yazımı başarısız olursa sayfayı düşürmemeli
+                        try
                         {
-                            LogLevel = "ERROR",
-                            Message = $"Dashboard WS hata: {ex.Message}",
-                            Source = "DashboardController",
-                            ActionName = "Index",
-                            UserId = userId,
-                            CreatedDate = DateTime.UtcNow
-                        });
+                            await _systemLogService.CreateSystemLogAsync(new TurkSoft.Entities.Entities.SystemLog
+                            {
+                                LogLevel = "ERROR",
+                                Message = $"Dashboard WS hata: {ex.Message}",
+                                Source = "DashboardController",
+                                ActionName = "Index",
+                                UserId = userId,
+                                IpAddress = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                                CreatedDate = DateTime.UtcNow
+                            });
+                        }
+                        catch
+                        {
+                            // Log yazımı hata fırlatmamalı
+                        }
                     }
                 }
             }

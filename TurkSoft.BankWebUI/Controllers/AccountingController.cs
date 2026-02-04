@@ -126,15 +126,25 @@ namespace TurkSoft.BankWebUI.Controllers
             }
             catch (Exception ex)
             {
-                await _systemLogService.CreateSystemLogAsync(new SystemLog
+                // LOG: IpAddress DB’de NOT NULL -> asla null göndermiyoruz
+                // Ayrıca log yazımı başarısız olursa action’ı düşürmemeli
+                try
                 {
-                    LogLevel = "ERROR",
-                    Message = $"Accounting GetBankStatement hata: {ex.Message}",
-                    Source = "AccountingController",
-                    ActionName = "GetBankStatement",
-                    UserId = userId,
-                    CreatedDate = DateTime.UtcNow
-                });
+                    await _systemLogService.CreateSystemLogAsync(new SystemLog
+                    {
+                        LogLevel = "ERROR",
+                        Message = $"Accounting GetBankStatement hata: {ex.Message}",
+                        Source = "AccountingController",
+                        ActionName = "GetBankStatement",
+                        UserId = userId,
+                        IpAddress = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                        CreatedDate = DateTime.UtcNow
+                    });
+                }
+                catch
+                {
+                    // Log yazımı hata fırlatmamalı
+                }
 
                 return Json(new { success = false, message = ex.Message });
             }
