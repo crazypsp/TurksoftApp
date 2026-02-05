@@ -88,8 +88,8 @@ namespace TurkSoft.BankWebUI.Controllers
                         var req = new BankStatementRequest
                         {
                             BankId = bank.ExternalBankId,
-                            Username = cred.Username,
-                            Password = cred.Password,
+                            Username = bank.UsernameLabel,
+                            Password = bank.PasswordLabel,
                             AccountNumber = acc.AccountNumber,
                             BeginDate = from7,
                             EndDate = today,
