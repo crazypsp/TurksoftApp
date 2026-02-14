@@ -47,7 +47,7 @@
                                     <span class="badge bg-danger">Pasif</span>
                                 }
                             </td>
-                            <td>@DateTime.Now.AddDays(-user.Id).ToString("dd.MM.yyyy")</td>
+                            <td>@user.CreatedDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
                                     <button type="button" class="btn btn-outline-primary"
@@ -105,15 +105,24 @@
                     <div class="mb-3">
                         <label class="form-label">Rol</label>
                         <select class="form-select" name="Role" id="editRole">
-                            <option value="Admin">Admin</option>
-                            <option value="Finance">Finance</option>
-                            <option value="Integrator">Integrator</option>
-                            <option value="Viewer">Viewer</option>
+                            @{
+                                var roles = ViewBag.Roles as List<string>;
+                                if (roles == null || roles.Count == 0)
+                                {
+                                    roles = new List<string> { "Admin", "Finance", "Integrator", "Viewer" };
+                                }
+
+                                foreach (var r in roles)
+                                {
+                                    <option value="@r">@r</option>
+                                }
+                            }
                         </select>
                     </div>
 
                     <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" name="IsActive" id="editIsActive" />
+                        <input type="hidden" name="IsActive" value="false" />
+                        <input type="checkbox" class="form-check-input" name="IsActive" value="true" id="editIsActive" />
                         <label class="form-check-label">Aktif Kullanıcı</label>
                     </div>
                 </div>

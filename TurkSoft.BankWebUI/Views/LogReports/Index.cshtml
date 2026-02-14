@@ -1,25 +1,101 @@
-﻿@{
+﻿@model TurkSoft.BankWebUI.ViewModels.LogReportsIndexVm
+@{
     ViewData["Title"] = "Log Raporları";
-    var transfer = (IEnumerable<TurkSoft.Entities.Entities.TransferLog>)ViewBag.TransferLogs;
-    var system = (IEnumerable<TurkSoft.Entities.Entities.SystemLog>)ViewBag.SystemLogs;
+    var f = Model.Filter ?? new TurkSoft.BankWebUI.ViewModels.LogReportFilterVm();
 }
 
 <div class="row mb-3">
-    <div class="col-12 d-flex gap-2 justify-content-end">
-        <a class="btn btn-outline-primary btn-sm" href="@Url.Action("ExportTransferJson")">
-            <i class="fa-solid fa-download me-1"></i>TransferLog JSON
-        </a>
-        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("ExportSystemJson")">
-            <i class="fa-solid fa-download me-1"></i>SystemLog JSON
-        </a>
+    <div class="col-12">
+        <div class="card shadow border-0">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label">Başlangıç</label>
+                        <input type="date" class="form-control" name="From" value="@(f.From?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Bitiş</label>
+                        <input type="date" class="form-control" name="To" value="@(f.To?.ToString("yyyy-MM-dd"))" />
+                    </div>
+
+                    @if (Model.IsAdmin)
+                    {
+                        <div class="col-md-2">
+                            <label class="form-label">UserId</label>
+                            <input type="number" class="form-control" name="UserId" value="@(f.UserId?.ToString() ?? "")" placeholder="Tümü" />
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" name="UserId" value="@Model.CurrentUserId" />
+                    }
+
+                    <div class="col-md-3">
+                        <label class="form-label">Arama</label>
+                        <input type="text" class="form-control" name="Query" value="@(f.Query ?? "")" placeholder="Mesaj / UniqueKey / JSON..." />
+                    </div>
+
+                    <div class="col-md-1">
+                        <label class="form-label">Level</label>
+                        <select class="form-select" name="LogLevel">
+                            <option value="">Tümü</option>
+                            <option value="INFO" selected="@(string.Equals(f.LogLevel, "INFO", StringComparison.OrdinalIgnoreCase))">INFO</option>
+                            <option value="WARNING" selected="@(string.Equals(f.LogLevel, "WARNING", StringComparison.OrdinalIgnoreCase))">WARNING</option>
+                            <option value="ERROR" selected="@(string.Equals(f.LogLevel, "ERROR", StringComparison.OrdinalIgnoreCase))">ERROR</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="Status">
+                            <option value="">Tümü</option>
+                            <option value="SUCCESS" selected="@(string.Equals(f.Status, "SUCCESS", StringComparison.OrdinalIgnoreCase))">SUCCESS</option>
+                            <option value="FAILED" selected="@(string.Equals(f.Status, "FAILED", StringComparison.OrdinalIgnoreCase))">FAILED</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1">
+                        <label class="form-label">Target</label>
+                        <select class="form-select" name="TargetSystem">
+                            <option value="">Tümü</option>
+                            <option value="LOGO_TIGER" selected="@(string.Equals(f.TargetSystem, "LOGO_TIGER", StringComparison.OrdinalIgnoreCase))">LOGO</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 d-flex gap-2 justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-filter me-1"></i>Filtrele
+                        </button>
+
+                        <a class="btn btn-outline-secondary" href="@Url.Action("Index", "LogReports")">
+                            <i class="fa-solid fa-rotate-left me-1"></i>Sıfırla
+                        </a>
+
+                        <a class="btn btn-outline-primary"
+                           href="@Url.Action("ExportTransferJson", "LogReports", new { From = f.From?.ToString("yyyy-MM-dd"), To = f.To?.ToString("yyyy-MM-dd"), UserId = f.UserId, Query = f.Query, Status = f.Status, TargetSystem = f.TargetSystem })">
+                            <i class="fa-solid fa-download me-1"></i>TransferLog JSON
+                        </a>
+
+                        <a class="btn btn-outline-secondary"
+                           href="@Url.Action("ExportSystemJson", "LogReports", new { From = f.From?.ToString("yyyy-MM-dd"), To = f.To?.ToString("yyyy-MM-dd"), UserId = f.UserId, Query = f.Query, LogLevel = f.LogLevel })">
+                            <i class="fa-solid fa-download me-1"></i>SystemLog JSON
+                        </a>
+                    </div>
+                </form>
+                <div class="small text-muted mt-2">
+                    Not: Admin olmayan kullanıcılar sadece kendi loglarını görür.
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row g-3">
     <div class="col-12">
         <div class="card shadow border-0">
-            <div class="card-header bg-white">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <strong>Tiger Aktarım Logları</strong>
+                <span class="text-muted small">@Model.TransferLogs.Count kayıt</span>
             </div>
             <div class="card-body table-responsive">
                 <table id="transferLogTable" class="table table-striped table-hover w-100">
@@ -28,22 +104,24 @@
                             <th>Tarih</th>
                             <th>UserId</th>
                             <th>Status</th>
+                            <th>Target</th>
                             <th>UniqueKey</th>
-                            <th>Amount</th>
+                            <th class="text-end">Tutar</th>
                             <th>D/C</th>
                             <th>FicheRef</th>
                             <th>Error</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var x in transfer)
+                        @foreach (var x in Model.TransferLogs)
                         {
                             <tr>
                                 <td>@x.CreatedDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                                 <td>@x.UserId</td>
                                 <td>@x.Status</td>
+                                <td>@x.TargetSystem</td>
                                 <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;">@x.ExternalUniqueKey</td>
-                                <td class="text-end">@x.Amount</td>
+                                <td class="text-end">@((x.Amount ?? 0).ToString("N2"))</td>
                                 <td>@x.DebitCredit</td>
                                 <td>@x.TigerFicheRef</td>
                                 <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;">@x.ErrorMessage</td>
@@ -57,8 +135,9 @@
 
     <div class="col-12">
         <div class="card shadow border-0">
-            <div class="card-header bg-white">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <strong>Sistem Logları</strong>
+                <span class="text-muted small">@Model.SystemLogs.Count kayıt</span>
             </div>
             <div class="card-body table-responsive">
                 <table id="systemLogTable" class="table table-striped table-hover w-100">
@@ -73,7 +152,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var x in system)
+                        @foreach (var x in Model.SystemLogs)
                         {
                             <tr>
                                 <td>@x.CreatedDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>

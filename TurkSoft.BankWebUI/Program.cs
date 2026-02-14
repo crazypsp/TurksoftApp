@@ -55,20 +55,24 @@ builder.Services.AddTurkSoftServices();
 // Demo servis (mevcut)
 builder.Services.AddScoped<IDemoDataService, DemoDataService>();
 
-// ========== TIGER VERÝTABANI SERVÝSLERÝ ==========
+// ========== TIGER VERTABANI SERVSLER ==========
 
-// Tiger Repository ve Service kayýtlarý
+// Tiger Repository ve Service kaytlar
 builder.Services.AddScoped<IClCardRepository, ClCardRepository>();
 builder.Services.AddScoped<IClCardService, ClCardService>();
-//tiger ile ilgili diðer repository ve service kayýtlarýný buraya ekleyebilirsiniz
+builder.Services.AddScoped<ITigerBankAccountRepository, TigerBankAccountRepository>();
+builder.Services.AddScoped<ITigerBankAccountService, TigerBankAccountService>();
+builder.Services.AddScoped<ITigerGlAccountRepository, TigerGlAccountRepository>();
+builder.Services.AddScoped<ITigerGlAccountService, TigerGlAccountService>();
+//tiger ile ilgili dier repository ve service kaytlarn buraya ekleyebilirsiniz
 builder.Services.AddScoped<ILogoTigerIntegrationService, LogoTigerIntegrationService>();
-// Diðer Tiger servislerini de buraya ekleyebilirsiniz
+// Dier Tiger servislerini de buraya ekleyebilirsiniz
 // builder.Services.AddScoped<IDigerTigerService, DigerTigerService>();
 
-// Tiger veritabaný için connection string'i Configuration'dan al
+// Tiger veritaban iin connection string'i Configuration'dan al
 var tigerConnectionString = builder.Configuration.GetConnectionString("TigerConnection");
 
-// Tiger veritabaný için Dapper veya ADO.NET kullanacaksanýz:
+// Tiger veritaban iin Dapper veya ADO.NET kullanacaksanz:
 builder.Services.AddSingleton(new TigerDbConnection(tigerConnectionString));
 
 
@@ -93,7 +97,7 @@ app.MapControllerRoute(
 
 app.Run();
 
-// Tiger veritabaný için connection string wrapper sýnýfý
+// Tiger veritaban iin connection string wrapper snf
 public class TigerDbConnection
 {
     public string ConnectionString { get; }

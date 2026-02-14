@@ -33,7 +33,7 @@
     <div class="col-md-12">
         <div class="card border-0 shadow">
             <div class="card-body">
-                <form method="post" asp-action="Index" id="reportForm" class="row g-3">
+                <form method="post" asp-action="Index" id="reportForm" class="row g-3" onsubmit="return false;">
                     @Html.AntiForgeryToken()
 
                     <div class="col-md-3">
@@ -106,10 +106,11 @@
                     </div>
 
                     <div class="col-md-12 mt-3">
-                        <button type="submit" class="btn btn-primary me-2">
+                        @* Raporla butonu devre dışı (Madde 2) *@
+                        <button type="button" class="btn btn-secondary me-2" disabled>
                             <i class="fa-solid fa-magnifying-glass me-2"></i>Raporla
                         </button>
-                        <button type="button" class="btn btn-info me-2" onclick="getBankStatementReport()">
+                        <button type="button" class="btn btn-primary me-2" onclick="getBankStatementReport()">
                             <i class="fa-solid fa-bank me-2"></i>Bank Statement Raporu
                         </button>
                         <a href="@Url.Action("Index")" class="btn btn-secondary">
@@ -143,7 +144,7 @@
                         <span class="input-group-text">Hesap Kodu</span>
                         <input type="text" id="bankAccountCodeInput" class="form-control" value="100.01" placeholder="100.01">
                     </div>
-                    
+
                     <div>
                         <button type="button" class="btn btn-sm btn-outline-success" onclick="exportBankStatementExcel()">
                             <i class="fa-solid fa-file-excel me-1"></i>Excel
@@ -197,7 +198,7 @@
                     <i class="fa-solid fa-info-circle me-2"></i>
                     Açıklamada geçen kelimelere göre otomatik hesap kodu eşleştirmesi yapılacaktır.
                 </div>
-                
+
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="input-group">
@@ -460,882 +461,895 @@ else
     <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
 
     <script>
-        // Global değişkenler
-        let bankStatementDataTable = null;
-        let lucaMatchDataTable = null;
-        let keywordMapItems = [];
-        let currentBankStatementData = [];
-        let currentBankName = '';
+                // Global değişkenler
+                let bankStatementDataTable = null;
+                let lucaMatchDataTable = null;
+                let keywordMapItems = [];
+                let currentBankStatementData = [];
+                let currentBankName = '';
 
-        $(document).ready(function() {
-            // DataTable yapılandırması
-            if ($('#reportsTable').length) {
-                $('#reportsTable').DataTable({
-                    language: {
-                        url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
-                    },
-                    order: [[0, 'desc']],
-                    pageLength: 25,
-                    dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
-                });
-            }
-
-            // Date range picker
-            flatpickr(".date-range-picker", {
-                mode: "range",
-                locale: "tr",
-                dateFormat: "d.m.Y",
-                altInput: true,
-                altFormat: "d.m.Y",
-                defaultDate: "@(Model.Filter?.DateRange ?? "")"
-            });
-
-            // Grafik oluşturma
-            @if (Model.NetByAccountType != null && Model.NetByAccountType.Any())
-            {
-                <text>
-                var accountTypeCtx = document.getElementById('accountTypeChart').getContext('2d');
-                
-                // Verileri hazırla
-                var accountTypeLabels = [];
-                var accountTypeData = [];
-                
-                @foreach (var item in Model.NetByAccountType)
-                {
-                    <text>
-                    accountTypeLabels.push('@item.Key');
-                    accountTypeData.push(Math.abs(@item.Value));
-                    </text>
-                }
-                
-                var accountTypeChart = new Chart(accountTypeCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: accountTypeLabels,
-                        datasets: [{
-                            data: accountTypeData,
-                            backgroundColor: [
-                                'rgb(54, 162, 235)',  // Mavi
-                                'rgb(75, 192, 192)',  // Turkuaz
-                                'rgb(255, 205, 86)',  // Sarı
-                                'rgb(255, 99, 132)',  // Kırmızı
-                                'rgb(153, 102, 255)'  // Mor
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'right',
+                $(document).ready(function() {
+                    // DataTable yapılandırması
+                    if ($('#reportsTable').length) {
+                        $('#reportsTable').DataTable({
+                            language: {
+                                url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
                             },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        var label = context.label || '';
-                                        var value = context.raw || 0;
-                                        var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
-                                        var percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                        return label + ': ' + value.toLocaleString('tr-TR') + ' ₺ (' + percentage + '%)';
+                            order: [[0, 'desc']],
+                            pageLength: 25,
+                            dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
+                        });
+                    }
+
+                    // Date range picker
+                    flatpickr(".date-range-picker", {
+                        mode: "range",
+                        locale: "tr",
+                        dateFormat: "d.m.Y",
+                        altInput: true,
+                        altFormat: "d.m.Y",
+                        defaultDate: "@(Model.Filter?.DateRange ?? "")"
+                    });
+
+                    // Grafik oluşturma
+                    @if (Model.NetByAccountType != null && Model.NetByAccountType.Any())
+                    {
+                            <text>
+                            var accountTypeCtx = document.getElementById('accountTypeChart').getContext('2d');
+
+                            // Verileri hazırla
+                            var accountTypeLabels = [];
+                            var accountTypeData = [];
+
+                            @foreach (var item in Model.NetByAccountType)
+                            {
+                                    <text>
+                                    accountTypeLabels.push('@item.Key');
+                                    accountTypeData.push(Math.abs(@item.Value));
+                                    </text>
+                            }
+
+                            var accountTypeChart = new Chart(accountTypeCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: accountTypeLabels,
+                                    datasets: [{
+                                        data: accountTypeData,
+                                        backgroundColor: [
+                                            'rgb(54, 162, 235)',  // Mavi
+                                            'rgb(75, 192, 192)',  // Turkuaz
+                                            'rgb(255, 205, 86)',  // Sarı
+                                            'rgb(255, 99, 132)',  // Kırmızı
+                                            'rgb(153, 102, 255)'  // Mor
+                                        ],
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        legend: {
+                                            position: 'right',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    var label = context.label || '';
+                                                    var value = context.raw || 0;
+                                                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                                    var percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                                    return label + ': ' + value.toLocaleString('tr-TR') + ' ₺ (' + percentage + '%)';
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
+                            });
+                            </text>
                     }
-                });
-                </text>
-            }
 
-            @if (Model.NetByDay != null && Model.NetByDay.Any())
-            {
-                <text>
-                var dailyFlowCtx = document.getElementById('dailyFlowChart').getContext('2d');
-                
-                // Verileri hazırla
-                var dailyFlowLabels = [];
-                var dailyFlowData = [];
-                
-                @foreach (var item in Model.NetByDay)
-                {
-                    <text>
-                    dailyFlowLabels.push('@item.Key');
-                    dailyFlowData.push(@item.Value);
-                    </text>
-                }
-                
-                var dailyFlowChart = new Chart(dailyFlowCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: dailyFlowLabels,
-                        datasets: [{
-                            label: 'Net Akış (₺)',
-                            data: dailyFlowData,
-                            backgroundColor: function(context) {
-                                const value = context.dataset.data[context.dataIndex];
-                                return value >= 0 ? 'rgba(75, 192, 192, 0.7)' : 'rgba(255, 99, 132, 0.7)';
-                            },
-                            borderColor: function(context) {
-                                const value = context.dataset.data[context.dataIndex];
-                                return value >= 0 ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
-                            },
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value.toLocaleString('tr-TR') + ' ₺';
+                    @if (Model.NetByDay != null && Model.NetByDay.Any())
+                    {
+                            <text>
+                            var dailyFlowCtx = document.getElementById('dailyFlowChart').getContext('2d');
+
+                            // Verileri hazırla
+                            var dailyFlowLabels = [];
+                            var dailyFlowData = [];
+
+                            @foreach (var item in Model.NetByDay)
+                            {
+                                    <text>
+                                    dailyFlowLabels.push('@item.Key');
+                                    dailyFlowData.push(@item.Value);
+                                    </text>
+                            }
+
+                            var dailyFlowChart = new Chart(dailyFlowCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: dailyFlowLabels,
+                                    datasets: [{
+                                        label: 'Net Akış (₺)',
+                                        data: dailyFlowData,
+                                        backgroundColor: function(context) {
+                                            const value = context.dataset.data[context.dataIndex];
+                                            return value >= 0 ? 'rgba(75, 192, 192, 0.7)' : 'rgba(255, 99, 132, 0.7)';
+                                        },
+                                        borderColor: function(context) {
+                                            const value = context.dataset.data[context.dataIndex];
+                                            return value >= 0 ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
+                                        },
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: {
+                                                callback: function(value) {
+                                                    return value.toLocaleString('tr-TR') + ' ₺';
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
+                            });
+                            </text>
                     }
+
+                    // Sayfa yüklendiğinde banka seçiliyse hesapları yükle
+                    var selectedBankId = $('#bankSelect').val();
+                    if (selectedBankId) {
+                        loadAccounts(selectedBankId);
+                    }
+
+                    // Örnek keyword map verileri
+                    keywordMapItems = [
+                        { keyword: "masraf", accountCode: "770.01", accountName: "Banka Masrafları" },
+                        { keyword: "kdv", accountCode: "771.01", accountName: "Ödenecek KDV" },
+                        { keyword: "komisyon", accountCode: "772.01", accountName: "Banka Komisyonları" },
+                        { keyword: "harç", accountCode: "773.01", accountName: "Çeşitli Harçlar" },
+                        { keyword: "faiz", accountCode: "780.01", accountName: "Banka Faizleri" }
+                    ];
+                    renderKeywordMapTable();
                 });
-                </text>
-            }
 
-            // Sayfa yüklendiğinde banka seçiliyse hesapları yükle
-            var selectedBankId = $('#bankSelect').val();
-            if (selectedBankId) {
-                loadAccounts(selectedBankId);
-            }
-
-            // Örnek keyword map verileri
-            keywordMapItems = [
-                { keyword: "masraf", accountCode: "770.01", accountName: "Banka Masrafları" },
-                { keyword: "kdv", accountCode: "771.01", accountName: "Ödenecek KDV" },
-                { keyword: "komisyon", accountCode: "772.01", accountName: "Banka Komisyonları" },
-                { keyword: "harç", accountCode: "773.01", accountName: "Çeşitli Harçlar" },
-                { keyword: "faiz", accountCode: "780.01", accountName: "Banka Faizleri" }
-            ];
-            renderKeywordMapTable();
-        });
-
-        function loadAccounts() {
-            var bankId = $('#bankSelect').val();
-            if (bankId) {
-                $.get('/Reports/GetAccountsByBank', { bankId: bankId }, function(response) {
-                    if (response.success) {
-                        $('#accountSelect').empty();
-                        $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
-                        $.each(response.data, function(index, item) {
-                            $('#accountSelect').append('<option value="' + item.value + '">' + item.text + '</option>');
+                function loadAccounts() {
+                    var bankId = $('#bankSelect').val();
+                    if (bankId) {
+                        $.get('/Reports/GetAccountsByBank', { bankId: bankId }, function(response) {
+                            if (response.success) {
+                                $('#accountSelect').empty();
+                                $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
+                                $.each(response.data, function(index, item) {
+                                    $('#accountSelect').append('<option value="' + item.value + '">' + item.text + '</option>');
+                                });
+                            } else {
+                                console.error('Hata:', response.message);
+                                $('#accountSelect').empty();
+                                $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
+                            }
+                        }).fail(function(xhr, status, error) {
+                            console.error('Hata:', error);
+                            $('#accountSelect').empty();
+                            $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
                         });
                     } else {
-                        console.error('Hata:', response.message);
                         $('#accountSelect').empty();
                         $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
                     }
-                }).fail(function(xhr, status, error) {
-                    console.error('Hata:', error);
-                    $('#accountSelect').empty();
-                    $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
-                });
-            } else {
-                $('#accountSelect').empty();
-                $('#accountSelect').append('<option value="">Tüm Hesaplar</option>');
-            }
-        }
-
-        // Bank Statement Raporu Alma Fonksiyonu
-        function getBankStatementReport() {
-            const bankId = $('#bankSelect').val();
-            const accountId = $('#accountSelect').val();
-            const dateRange = $('#Filter_DateRange').val();
-
-            if (!bankId) {
-                alert('Lütfen bir banka seçiniz.');
-                return;
-            }
-
-            if (!accountId) {
-                alert('Lütfen bir hesap seçiniz.');
-                return;
-            }
-
-            if (!dateRange) {
-                alert('Lütfen tarih aralığı seçiniz.');
-                return;
-            }
-
-            // Durum mesajını göster
-            $('#bankStatementStatus').show().removeClass('alert-danger alert-success').addClass('alert-info');
-            $('#bankStatementMessage').html('Bank Statement raporu alınıyor...');
-
-            // AntiForgeryToken al
-            const token = $('input[name="__RequestVerificationToken"]').val();
-
-            // AJAX isteği gönder
-            $.ajax({
-                url: '@Url.Action("GetBankStatementReport", "Reports")',
-                type: 'POST',
-                data: {
-                    Bank: bankId,
-                    Account: accountId,
-                    DateRange: dateRange,
-                    AccountType: $('#Filter_AccountType').val(),
-                    __RequestVerificationToken: token
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Başarılı durum
-                        $('#bankStatementStatus').removeClass('alert-info').addClass('alert-success');
-                        $('#bankStatementMessage').html(`Bank Statement raporu alındı. ${response.data.length} kayıt bulundu.`);
-
-                        // Tabloyu oluştur
-                        renderBankStatementTable(response.data, response.bankInfo);
-                    } else {
-                        // Hata durumu
-                        $('#bankStatementStatus').removeClass('alert-info').addClass('alert-danger');
-                        $('#bankStatementMessage').html('Hata: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    $('#bankStatementStatus').removeClass('alert-info').addClass('alert-danger');
-                    $('#bankStatementMessage').html('İstek hatası: ' + error);
-                    console.error('Bank Statement hatası:', error);
                 }
-            });
-        }
 
-        // Bank Statement Tablosu Oluşturma
-        function renderBankStatementTable(data, bankInfo) {
-            // Container'ı göster
-            $('#bankStatementContainer').show();
+                // Bank Statement Raporu Alma Fonksiyonu
+                function getBankStatementReport() {
+                    const bankId = $('#bankSelect').val();
+                    const accountId = $('#accountSelect').val();
+                    const dateRange = $('#Filter_DateRange').val();
 
-            // Başlık güncelle
-            $('#bankStatementTitle').text(`${bankInfo.bankName} - ${bankInfo.accountNumber}`);
-            currentBankName = bankInfo.bankName;
-
-            // Mevcut DataTable varsa yok et
-            if (bankStatementDataTable) {
-                bankStatementDataTable.destroy();
-                $('#bankStatementTable tbody').empty();
-            }
-
-            // Veriyi sakla
-            currentBankStatementData = data;
-
-            // Yeni DataTable oluştur
-            bankStatementDataTable = $('#bankStatementTable').DataTable({
-                data: data,
-                columns: [
-                    {
-                        data: 'PROCESSTIMESTR',
-                        render: function(data) {
-                            return data || '-';
-                        }
-                    },
-                    {
-                        data: 'BNKCODE',
-                        render: function(data) {
-                            return data || '-';
-                        }
-                    },
-                    {
-                        data: 'HESAPNO',
-                        render: function(data) {
-                            return data || '-';
-                        }
-                    },
-                    {
-                        data: 'PROCESSTYPECODE',
-                        render: function(data) {
-                            return data || '-';
-                        }
-                    },
-                    {
-                        data: 'PROCESSREFNO',
-                        render: function(data) {
-                            return data || '-';
-                        }
-                    },
-                    {
-                        data: 'PROCESSDESC',
-                        render: function(data) {
-                            return data || '-';
-                        }
-                    },
-                    {
-                        data: 'PROCESSAMAOUNT',
-                        className: 'text-end',
-                        render: function(data) {
-                            if (!data) return '-';
-                            const amount = parseFloat(data) || 0;
-                            return amount.toLocaleString('tr-TR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            }) + ' ₺';
-                        }
-                    },
-                    {
-                        data: 'PROCESSBALANCE',
-                        className: 'text-end',
-                        render: function(data) {
-                            if (!data) return '-';
-                            const balance = parseFloat(data) || 0;
-                            return balance.toLocaleString('tr-TR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            }) + ' ₺';
-                        }
-                    },
-                    {
-                        data: 'PROCESSDEBORCRED',
-                        render: function(data) {
-                            if (data === 'D') {
-                                return '<span class="badge bg-danger">Borç</span>';
-                            } else if (data === 'C') {
-                                return '<span class="badge bg-success">Alacak</span>';
-                            }
-                            return data || '-';
-                        }
+                    if (!bankId) {
+                        alert('Lütfen bir banka seçiniz.');
+                        return;
                     }
-                ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
-                },
-                order: [[0, 'desc']],
-                pageLength: 25,
-                dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
-            });
 
-            // Eşleştir butonunu aktif et
-            $('#matchButton').prop('disabled', false);
-        }
-
-        // Keyword Map Tablosunu Render Et
-        function renderKeywordMapTable() {
-            const tableBody = $('#keywordMapTableBody');
-            tableBody.empty();
-            
-            keywordMapItems.forEach(function(item, index) {
-                const row = `
-                    <tr>
-                        <td>${item.keyword}</td>
-                        <td>${item.accountCode}</td>
-                        <td>${item.accountName}</td>
-                        <td>
-                            <button class="btn btn-sm btn-danger" onclick="removeKeywordMapItem(${index})">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                tableBody.append(row);
-            });
-        }
-
-        function addKeywordMapItem() {
-            const keyword = $('#newKeyword').val().trim().toLowerCase();
-            const accountCode = $('#newAccountCode').val().trim();
-            const accountName = $('#newAccountName').val().trim();
-            
-            if (!keyword || !accountCode || !accountName) {
-                alert('Lütfen tüm alanları doldurun.');
-                return;
-            }
-            
-            keywordMapItems.push({
-                keyword: keyword,
-                accountCode: accountCode,
-                accountName: accountName
-            });
-            
-            $('#newKeyword').val('');
-            $('#newAccountCode').val('');
-            $('#newAccountName').val('');
-            
-            renderKeywordMapTable();
-        }
-
-        function removeKeywordMapItem(index) {
-            keywordMapItems.splice(index, 1);
-            renderKeywordMapTable();
-        }
-
-        // Eşleştirme Modal'ını Aç
-        function openMatchingModal() {
-            if (!currentBankStatementData || currentBankStatementData.length === 0) {
-                alert('Önce Bank Statement raporu almalısınız.');
-                return;
-            }
-            
-            $('#keywordMapModal').modal('show');
-        }
-
-        // Eşleştirmeyi Başlat
-        function startMatching() {
-            $('#keywordMapModal').modal('hide');
-            
-            // Banka hareketlerini oluştur
-            const transactions = currentBankStatementData.map(function(item) {
-                const tutar = item.PROCESSAMAOUNT ? parseFloat(item.PROCESSAMAOUNT) : 0;
-                const isBorç = item.PROCESSDEBORCRED === 'D';
-                
-                return {
-                    Tarih: item.PROCESSTIMESTR ? new Date(item.PROCESSTIMESTR) : new Date(),
-                    Aciklama: item.PROCESSDESC || '',
-                    Tutar: tutar,
-                    Bakiye: item.PROCESSBALANCE ? parseFloat(item.PROCESSBALANCE) : null,
-                    BorcAlacak: item.PROCESSDEBORCRED || 'C'
-                };
-            });
-
-            const bankAccountCode = $('#bankAccountCodeInput').val().trim();
-
-            // Loading göster
-            $('#lucaMatchContainer').show();
-            $('#lucaMatchTitle').html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Eşleştirme yapılıyor...');
-
-            // AntiForgeryToken al
-            const token = $('input[name="__RequestVerificationToken"]').val();
-
-            // AJAX isteği gönder
-            $.ajax({
-                url: '@Url.Action("MatchBankStatement", "Reports")',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    Transactions: transactions,
-                    BankName: currentBankName,
-                    BankAccountCode: bankAccountCode,
-                    KeywordMapItems: keywordMapItems
-                }),
-                headers: {
-                    'RequestVerificationToken': token
-                },
-                success: function(response) {
-                    if (response.success) {
-                        renderLucaMatchTable(response.data);
-                    } else {
-                        $('#lucaMatchTitle').text('Eşleştirme Hatası');
-                        alert('Eşleştirme hatası: ' + response.message);
+                    if (!accountId) {
+                        alert('Lütfen bir hesap seçiniz.');
+                        return;
                     }
-                },
-                error: function(xhr, status, error) {
-                    $('#lucaMatchTitle').text('Eşleştirme Hatası');
-                    alert('Eşleştirme servis hatası: ' + error);
-                }
-            });
-        }
 
-        // Luca Eşleştirme Tablosunu Render Et
-        function renderLucaMatchTable(data) {
-            // Container'ı göster
-            $('#lucaMatchContainer').show();
+                    if (!dateRange) {
+                        alert('Lütfen tarih aralığı seçiniz.');
+                        return;
+                    }
 
-            // Başlık güncelle
-            $('#lucaMatchTitle').text(`${data.length} kayıt eşleştirildi`);
+                    // Durum mesajını göster
+                    $('#bankStatementStatus').show().removeClass('alert-danger alert-success').addClass('alert-info');
+                    $('#bankStatementMessage').html('Bank Statement raporu alınıyor...');
 
-            // Mevcut DataTable varsa yok et
-            if (lucaMatchDataTable) {
-                lucaMatchDataTable.destroy();
-                $('#lucaMatchTable tbody').empty();
-            }
+                    // AntiForgeryToken al
+                    const token = $('input[name="__RequestVerificationToken"]').val();
 
-            // Yeni DataTable oluştur
-            lucaMatchDataTable = $('#lucaMatchTable').DataTable({
-                data: data,
-                columns: [
-                    {
-                        data: null,
-                        orderable: false,
-                        className: 'dt-body-center',
-                        render: function(data) {
-                            return `<input type="checkbox" class="row-selector" data-id="${data.EvrakNo || ''}">`;
-                        }
-                    },
-                    {
-                        data: 'Tarih',
-                        render: function(data) {
-                            if (!data) return '-';
-                            const date = new Date(data);
-                            return date.toLocaleDateString('tr-TR');
-                        }
-                    },
-                    {
-                        data: 'Aciklama',
-                        render: function(data) {
-                            return data || '-';
-                        }
-                    },
-                    {
-                        data: 'Borc',
-                        className: 'text-end',
-                        render: function(data) {
-                            if (!data || parseFloat(data) === 0) return '-';
-                            return parseFloat(data).toLocaleString('tr-TR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            }) + ' ₺';
-                        }
-                    },
-                    {
-                        data: 'Alacak',
-                        className: 'text-end',
-                        render: function(data) {
-                            if (!data || parseFloat(data) === 0) return '-';
-                            return parseFloat(data).toLocaleString('tr-TR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            }) + ' ₺';
-                        }
-                    },
-                    {
-                        data: 'HesapKodu',
-                        render: function(data, type, row) {
-                            const inputId = `accountCode_${row.EvrakNo || 'temp_' + Math.random().toString(36).substr(2, 9)}`;
-                            return `
-                                <div class="input-group input-group-sm">
-                                    <input type="text" 
-                                           id="${inputId}" 
-                                           class="form-control account-code-input" 
-                                           value="${data || ''}" 
-                                           data-evrkno="${row.EvrakNo || ''}"
-                                           data-borc="${row.Borc || 0}"
-                                           data-alacak="${row.Alacak || 0}"
-                                           data-aciklama="${row.Aciklama || ''}"
-                                           data-tarih="${row.Tarih ? new Date(row.Tarih).toISOString() : ''}">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="updateAccountCode('${inputId}')">
-                                        <i class="fa-solid fa-check"></i>
-                                    </button>
-                                </div>
-                            `;
-                        }
-                    },
-                    {
-                        data: 'HesapKodu',
-                        render: function(data) {
-                            if (!data || data.trim() === '') {
-                                return '<span class="badge bg-danger">Eşleşmedi</span>';
+                    // AJAX isteği gönder
+                    $.ajax({
+                        url: '@Url.Action("GetBankStatementReport", "Reports")',
+                        type: 'POST',
+                        data: {
+                            Bank: bankId,
+                            Account: accountId,
+                            DateRange: dateRange,
+                            AccountType: $('#Filter_AccountType').val(),
+                            __RequestVerificationToken: token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Başarılı durum
+                                $('#bankStatementStatus').removeClass('alert-info').addClass('alert-success');
+                                $('#bankStatementMessage').html(`Bank Statement raporu alındı. ${response.data.length} kayıt bulundu.`);
+
+                                // Tabloyu oluştur
+                                renderBankStatementTable(response.data, response.bankInfo);
                             } else {
-                                return '<span class="badge bg-success">Eşleşti</span>';
+                                // Hata durumu
+                                $('#bankStatementStatus').removeClass('alert-info').addClass('alert-danger');
+                                $('#bankStatementMessage').html('Hata: ' + response.message);
                             }
+                        },
+                        error: function(xhr, status, error) {
+                            $('#bankStatementStatus').removeClass('alert-info').addClass('alert-danger');
+                            $('#bankStatementMessage').html('İstek hatası: ' + error);
+                            console.error('Bank Statement hatası:', error);
                         }
-                    },
-                    {
-                        data: null,
-                        className: 'text-center',
-                        render: function(data) {
-                            return `
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-primary" onclick="editRow('${data.EvrakNo || ''}')" title="Düzenle">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-success" onclick="transferSingleRow('${data.EvrakNo || ''}')" title="Transfer Et">
-                                        <i class="fa-solid fa-paper-plane"></i>
-                                    </button>
-                                </div>
-                            `;
-                        }
+                    });
+                }
+
+                // Bank Statement Tablosu Oluşturma
+
+                // ---- Bank Statement helpers (case-insensitive field access) ----
+                function ci(row, key) {
+                    if (!row) return '';
+                    if (!row.__ci) {
+                        row.__ci = {};
+                        Object.keys(row).forEach(k => row.__ci[k.toLowerCase()] = row[k]);
                     }
-                ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
-                },
-                order: [[1, 'desc']],
-                pageLength: 25,
-                dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>',
-                select: {
-                    style: 'multi'
+                    const v = row.__ci[key.toLowerCase()];
+                    return (v === undefined || v === null) ? '' : v;
                 }
-            });
-        }
 
-        // Tümünü Seç/Deseç
-        function toggleAllSelection() {
-            const isChecked = $('#selectAllRows').is(':checked');
-            $('.row-selector').prop('checked', isChecked);
-        }
-
-        // Hesap Kodu Güncelle
-        function updateAccountCode(inputId) {
-            const input = $('#' + inputId);
-            const evrakNo = input.data('evrkno');
-            const hesapKodu = input.val().trim();
-            const borc = input.data('borc');
-            const alacak = input.data('alacak');
-            const aciklama = input.data('aciklama');
-            const tarih = input.data('tarih');
-
-            if (!hesapKodu) {
-                alert('Lütfen bir hesap kodu girin.');
-                return;
-            }
-
-            const token = $('input[name="__RequestVerificationToken"]').val();
-
-            $.ajax({
-                url: '@Url.Action("UpdateMatchedAccountCode", "Reports")',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    EvrakNo: evrakNo,
-                    HesapKodu: hesapKodu,
-                    Borc: borc,
-                    Alacak: alacak,
-                    Aciklama: aciklama,
-                    Tarih: tarih
-                }),
-                headers: {
-                    'RequestVerificationToken': token
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Satırı güncelle
-                        const row = input.closest('tr');
-                        const statusCell = row.find('td:eq(6)');
-                        statusCell.html('<span class="badge bg-success">Eşleşti</span>');
-                        
-                        alert('Hesap kodu başarıyla güncellendi.');
-                    } else {
-                        alert('Hata: ' + response.message);
+                function firstNonEmpty(...vals) {
+                    for (const v of vals) {
+                        if (v !== undefined && v !== null && v !== '') return v;
                     }
-                },
-                error: function(xhr, status, error) {
-                    alert('Güncelleme hatası: ' + error);
+                    return '';
                 }
-            });
-        }
 
-        // Satır Düzenle
-        function editRow(evrakNo) {
-            alert('Düzenleme için evrak no: ' + evrakNo);
-        }
-
-        // Tek Satır Transfer
-        function transferSingleRow(evrakNo) {
-            const rowData = lucaMatchDataTable.rows().data().toArray()
-                .find(function(row) { return row.EvrakNo === evrakNo; });
-            
-            if (!rowData) {
-                alert('Satır bulunamadı.');
-                return;
-            }
-
-            transferRowsToLuca([rowData]);
-        }
-
-        // Seçilenleri Transfer Et
-        function transferSelectedToLuca() {
-            const selectedRows = [];
-            $('.row-selector:checked').each(function() {
-                const evrakNo = $(this).data('id');
-                const rowData = lucaMatchDataTable.rows().data().toArray()
-                    .find(function(row) { return row.EvrakNo === evrakNo; });
-                if (rowData) {
-                    selectedRows.push(rowData);
+                function normalizeDc(v) {
+                    v = (v || '').toString().trim().toUpperCase();
+                    // Bazı bankalar A/B döndürüyor: A=Alacak, B=Borç
+                    if (v === 'A') return 'C';
+                    if (v === 'B') return 'D';
+                    return v;
                 }
-            });
 
-            if (selectedRows.length === 0) {
-                alert('Lütfen transfer etmek için satır seçin.');
-                return;
-            }
+                function toNumberTR(x) {
+                    if (x === undefined || x === null) return null;
+                    let s = x.toString().trim();
+                    if (!s) return null;
+                    // Para sembolü vb temizle
+                    s = s.replace(/[^0-9,\.\-]/g, '');
+                    if (s.includes(',') && s.includes('.')) {
+                        // 1.234,56 -> 1234.56
+                        s = s.replace(/\./g, '').replace(',', '.');
+                    } else if (s.includes(',')) {
+                        s = s.replace(',', '.');
+                    }
+                    const n = parseFloat(s);
+                    return isNaN(n) ? null : n;
+                }
 
-            transferRowsToLuca(selectedRows);
-        }
+                function formatMoneyTR(x) {
+                    const n = toNumberTR(x);
+                    if (n === null) return '';
+                    return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+                }
 
-        // Tümünü Transfer Et
-        function transferAllToLuca() {
-            const allRows = lucaMatchDataTable.rows().data().toArray();
-            if (allRows.length === 0) {
-                alert('Transfer edilecek veri bulunamadı.');
-                return;
-            }
+                // Bank Statement Tablosu Oluşturma
+                function renderBankStatementTable(data, bankInfo) {
+                    // Container'ı göster
+                    $('#bankStatementContainer').show();
 
-            if (!confirm(`${allRows.length} kaydın tamamını transfer etmek istediğinize emin misiniz?`)) {
-                return;
-            }
+                    // Başlık güncelle
+                    $('#bankStatementTitle').text(`${bankInfo.bankName} - ${bankInfo.accountNumber}`);
+                    currentBankName = bankInfo.bankName;
 
-            transferRowsToLuca(allRows);
-        }
+                    // Mevcut DataTable varsa yok et
+                    if (bankStatementDataTable) {
+                        bankStatementDataTable.destroy();
+                        $('#bankStatementTable tbody').empty();
+                    }
 
-        // Luca'ya Transfer
-        function transferRowsToLuca(rows) {
-            const token = $('input[name="__RequestVerificationToken"]').val();
+                    // Veriyi sakla
+                    currentBankStatementData = data || [];
 
-            $.ajax({
-                url: '@Url.Action("TransferToLuca", "Reports")',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    Rows: rows
-                }),
-                headers: {
-                    'RequestVerificationToken': token
-                },
-                beforeSend: function() {
+                    // Yeni DataTable oluştur
+                    bankStatementDataTable = $('#bankStatementTable').DataTable({
+                        data: currentBankStatementData,
+                        columns: [
+                            {
+                                data: null,
+                                render: function (_d, _t, row) {
+                                    return firstNonEmpty(
+                                        ci(row, 'PROCESSTIMESTR'),
+                                        ci(row, 'PROCESSTIMESTR2'),
+                                        ci(row, 'PROCESSTIMESTR3'),
+                                        ci(row, 'PROCESSTIME'),
+                                        ci(row, 'PROCESSTIME2')
+                                    );
+                                }
+                            },
+                            { data: null, render: (_d, _t, row) => ci(row, 'BNKCODE') || '' },
+                            { data: null, render: (_d, _t, row) => ci(row, 'HESAPNO') || '' },
+                            { data: null, render: (_d, _t, row) => ci(row, 'PROCESSTYPECODE') || '' },
+                            { data: null, render: (_d, _t, row) => firstNonEmpty(ci(row, 'PROCESSREFNO'), ci(row, 'REFNO')) || '' },
+                            {
+                                data: null,
+                                render: function (_d, _t, row) {
+                                    const d1 = ci(row, 'PROCESSDESC');
+                                    const d2 = ci(row, 'PROCESSDESC2');
+                                    const d3 = ci(row, 'PROCESSDESC3');
+                                    const d4 = ci(row, 'PROCESSDESC4');
+                                    return [d1, d2, d3, d4].filter(x => x && x.toString().trim()).join(' ').trim();
+                                }
+                            },
+                            { data: null, className: 'text-end', render: (_d, _t, row) => formatMoneyTR(ci(row, 'PROCESSAMAOUNT')) },
+                            { data: null, className: 'text-end', render: (_d, _t, row) => formatMoneyTR(ci(row, 'PROCESSBALANCE')) },
+                            {
+                                data: null,
+                                render: function (_d, _t, row) {
+                                    const dc = normalizeDc(ci(row, 'PROCESSDEBORCRED'));
+                                    if (dc === 'D') return '<span class="badge bg-danger">Borç</span>';
+                                    if (dc === 'C') return '<span class="badge bg-success">Alacak</span>';
+                                    return dc || '';
+                                }
+                            }
+                        ],
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' },
+                        order: [[0, 'desc']],
+                        pageLength: 25,
+                        dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>'
+                    });
+
+                    // Eşleştir butonunu aktif et
+                    $('#matchButton').prop('disabled', false);
+                }
+
+        function renderKeywordMapTable() {
+                    const tableBody = $('#keywordMapTableBody');
+                    tableBody.empty();
+
+                    keywordMapItems.forEach(function(item, index) {
+                        const row = `
+                            <tr>
+                                <td>${item.keyword}</td>
+                                <td>${item.accountCode}</td>
+                                <td>${item.accountName}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="removeKeywordMapItem(${index})">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.append(row);
+                    });
+                }
+
+                function addKeywordMapItem() {
+                    const keyword = $('#newKeyword').val().trim().toLowerCase();
+                    const accountCode = $('#newAccountCode').val().trim();
+                    const accountName = $('#newAccountName').val().trim();
+
+                    if (!keyword || !accountCode || !accountName) {
+                        alert('Lütfen tüm alanları doldurun.');
+                        return;
+                    }
+
+                    keywordMapItems.push({
+                        keyword: keyword,
+                        accountCode: accountCode,
+                        accountName: accountName
+                    });
+
+                    $('#newKeyword').val('');
+                    $('#newAccountCode').val('');
+                    $('#newAccountName').val('');
+
+                    renderKeywordMapTable();
+                }
+
+                function removeKeywordMapItem(index) {
+                    keywordMapItems.splice(index, 1);
+                    renderKeywordMapTable();
+                }
+
+                // Eşleştirme Modal'ını Aç
+                function openMatchingModal() {
+                    if (!currentBankStatementData || currentBankStatementData.length === 0) {
+                        alert('Önce Bank Statement raporu almalısınız.');
+                        return;
+                    }
+
+                    $('#keywordMapModal').modal('show');
+                }
+
+                // Eşleştirmeyi Başlat
+                function startMatching() {
+                    $('#keywordMapModal').modal('hide');
+
+                    // Banka hareketlerini oluştur
+                    const transactions = currentBankStatementData.map(function(item) {
+                        const tutar = item.PROCESSAMAOUNT ? parseFloat(item.PROCESSAMAOUNT) : 0;
+                        const isBorç = item.PROCESSDEBORCRED === 'D';
+
+                        return {
+                            Tarih: item.PROCESSTIMESTR ? new Date(item.PROCESSTIMESTR) : new Date(),
+                            Aciklama: item.PROCESSDESC || '',
+                            Tutar: tutar,
+                            Bakiye: item.PROCESSBALANCE ? parseFloat(item.PROCESSBALANCE) : null,
+                            BorcAlacak: item.PROCESSDEBORCRED || 'C'
+                        };
+                    });
+
+                    const bankAccountCode = $('#bankAccountCodeInput').val().trim();
+
                     // Loading göster
-                    $('#lucaMatchTitle').html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Transfer ediliyor...');
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $('#lucaMatchTitle').text(`${response.transferredCount} kayıt transfer edildi`);
-                        alert('Başarı: ' + response.message);
-                    } else {
-                        $('#lucaMatchTitle').text('Transfer Hatası');
-                        alert('Hata: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    $('#lucaMatchTitle').text('Transfer Hatası');
-                    alert('Transfer hatası: ' + error);
+                    $('#lucaMatchContainer').show();
+                    $('#lucaMatchTitle').html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Eşleştirme yapılıyor...');
+
+                    // AntiForgeryToken al
+                    const token = $('input[name="__RequestVerificationToken"]').val();
+
+                    // AJAX isteği gönder
+                    $.ajax({
+                        url: '@Url.Action("MatchBankStatement", "Reports")',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            Transactions: transactions,
+                            BankName: currentBankName,
+                            BankAccountCode: bankAccountCode,
+                            KeywordMapItems: keywordMapItems
+                        }),
+                        headers: {
+                            'RequestVerificationToken': token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                renderLucaMatchTable(response.data);
+                            } else {
+                                $('#lucaMatchTitle').text('Eşleştirme Hatası');
+                                alert('Eşleştirme hatası: ' + response.message);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            $('#lucaMatchTitle').text('Eşleştirme Hatası');
+                            alert('Eşleştirme servis hatası: ' + error);
+                        }
+                    });
                 }
-            });
-        }
 
-        // Export Fonksiyonları
-        function exportLucaMatchExcel() {
-            if (lucaMatchDataTable) {
-                // CSV oluştur
-                let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += "Evrak No,Tarih,Açıklama,Borç,Alacak,Hesap Kodu,Durum\n";
-                
-                lucaMatchDataTable.rows().data().each(function(row) {
-                    csvContent += `"${row.EvrakNo || ''}","${row.Tarih ? new Date(row.Tarih).toLocaleDateString('tr-TR') : ''}","${row.Aciklama || ''}","${row.Borc || 0}","${row.Alacak || 0}","${row.HesapKodu || ''}","${row.HesapKodu ? 'Eşleşti' : 'Eşleşmedi'}"\n`;
-                });
+                // Luca Eşleştirme Tablosunu Render Et
+                function renderLucaMatchTable(data) {
+                    // Container'ı göster
+                    $('#lucaMatchContainer').show();
 
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "luca_eslesme.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        }
+                    // Başlık güncelle
+                    $('#lucaMatchTitle').text(`${data.length} kayıt eşleştirildi`);
 
-        function downloadLucaMatchJson() {
-            if (lucaMatchDataTable) {
-                const data = lucaMatchDataTable.rows().data().toArray();
-                const jsonString = JSON.stringify(data, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
+                    // Mevcut DataTable varsa yok et
+                    if (lucaMatchDataTable) {
+                        lucaMatchDataTable.destroy();
+                        $('#lucaMatchTable tbody').empty();
+                    }
 
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'luca_eslesme.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-        }
+                    // Yeni DataTable oluştur
+                    lucaMatchDataTable = $('#lucaMatchTable').DataTable({
+                        data: data,
+                        columns: [
+                            {
+                                data: null,
+                                orderable: false,
+                                className: 'dt-body-center',
+                                render: function(data) {
+                                    return `<input type="checkbox" class="row-selector" data-id="${data.EvrakNo || ''}">`;
+                                }
+                            },
+                            {
+                                data: 'Tarih',
+                                render: function(data) {
+                                    if (!data) return '-';
+                                    const date = new Date(data);
+                                    return date.toLocaleDateString('tr-TR');
+                                }
+                            },
+                            {
+                                data: 'Aciklama',
+                                render: function(data) {
+                                    return data || '-';
+                                }
+                            },
+                            {
+                                data: 'Borc',
+                                className: 'text-end',
+                                render: function(data) {
+                                    if (!data || parseFloat(data) === 0) return '-';
+                                    return parseFloat(data).toLocaleString('tr-TR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }) + ' ₺';
+                                }
+                            },
+                            {
+                                data: 'Alacak',
+                                className: 'text-end',
+                                render: function(data) {
+                                    if (!data || parseFloat(data) === 0) return '-';
+                                    return parseFloat(data).toLocaleString('tr-TR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }) + ' ₺';
+                                }
+                            },
+                            {
+                                data: 'HesapKodu',
+                                render: function(data, type, row) {
+                                    const inputId = `accountCode_${row.EvrakNo || 'temp_' + Math.random().toString(36).substr(2, 9)}`;
+                                    return `
+                                        <div class="input-group input-group-sm">
+                                            <input type="text"
+                                                   id="${inputId}"
+                                                   class="form-control account-code-input"
+                                                   value="${data || ''}"
+                                                   data-evrkno="${row.EvrakNo || ''}"
+                                                   data-borc="${row.Borc || 0}"
+                                                   data-alacak="${row.Alacak || 0}"
+                                                   data-aciklama="${row.Aciklama || ''}"
+                                                   data-tarih="${row.Tarih ? new Date(row.Tarih).toISOString() : ''}">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="updateAccountCode('${inputId}')">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                        </div>
+                                    `;
+                                }
+                            },
+                            {
+                                data: 'HesapKodu',
+                                render: function(data) {
+                                    if (!data || data.trim() === '') {
+                                        return '<span class="badge bg-danger">Eşleşmedi</span>';
+                                    } else {
+                                        return '<span class="badge bg-success">Eşleşti</span>';
+                                    }
+                                }
+                            },
+                            {
+                                data: null,
+                                className: 'text-center',
+                                render: function(data) {
+                                    return `
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" onclick="editRow('${data.EvrakNo || ''}')" title="Düzenle">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-success" onclick="transferSingleRow('${data.EvrakNo || ''}')" title="Transfer Et">
+                                                <i class="fa-solid fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        ],
+                        language: {
+                            url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
+                        },
+                        order: [[1, 'desc']],
+                        pageLength: 25,
+                        dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>',
+                        select: {
+                            style: 'multi'
+                        }
+                    });
+                }
 
-        // Bank Statement Excel Export
-        function exportBankStatementExcel() {
-            if (bankStatementDataTable) {
-                // Basit bir CSV export
-                let csvContent = "data:text/csv;charset=utf-8,";
+                // Tümünü Seç/Deseç
+                function toggleAllSelection() {
+                    const isChecked = $('#selectAllRows').is(':checked');
+                    $('.row-selector').prop('checked', isChecked);
+                }
 
-                // Başlıklar
-                csvContent += "Tarih,Banka Kodu,Hesap No,İşlem Tipi,Referans No,Açıklama,Tutar,Bakiye,Borç/Alacak\n";
+                // Hesap Kodu Güncelle
+                function updateAccountCode(inputId) {
+                    const input = $('#' + inputId);
+                    const evrakNo = input.data('evrkno');
+                    const hesapKodu = input.val().trim();
+                    const borc = input.data('borc');
+                    const alacak = input.data('alacak');
+                    const aciklama = input.data('aciklama');
+                    const tarih = input.data('tarih');
 
-                // Veriler
-                bankStatementDataTable.rows().data().each(function(row) {
-                    csvContent += `"${row.PROCESSTIMESTR || ''}","${row.BNKCODE || ''}","${row.HESAPNO || ''}","${row.PROCESSTYPECODE || ''}","${row.PROCESSREFNO || ''}","${row.PROCESSDESC || ''}","${row.PROCESSAMAOUNT || ''}","${row.PROCESSBALANCE || ''}","${row.PROCESSDEBORCRED || ''}"\n`;
-                });
+                    if (!hesapKodu) {
+                        alert('Lütfen bir hesap kodu girin.');
+                        return;
+                    }
 
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "bank_statement.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        }
+                    const token = $('input[name="__RequestVerificationToken"]').val();
 
-        // Bank Statement JSON Download
-        function downloadBankStatementJson() {
-            if (bankStatementDataTable) {
-                const data = bankStatementDataTable.rows().data().toArray();
-                const jsonString = JSON.stringify(data, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
+                    $.ajax({
+                        url: '@Url.Action("UpdateMatchedAccountCode", "Reports")',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            EvrakNo: evrakNo,
+                            HesapKodu: hesapKodu,
+                            Borc: borc,
+                            Alacak: alacak,
+                            Aciklama: aciklama,
+                            Tarih: tarih
+                        }),
+                        headers: {
+                            'RequestVerificationToken': token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Satırı güncelle
+                                const row = input.closest('tr');
+                                const statusCell = row.find('td:eq(6)');
+                                statusCell.html('<span class="badge bg-success">Eşleşti</span>');
 
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'bank_statement.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-        }
+                                alert('Hesap kodu başarıyla güncellendi.');
+                            } else {
+                                alert('Hata: ' + response.message);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            alert('Güncelleme hatası: ' + error);
+                        }
+                    });
+                }
 
-        // Mevcut fonksiyonlar
-        function exportToExcel() {
-            var form = $('form').first();
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'reportType',
-                value: 'Excel'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'DateRange',
-                value: '@(Model.Filter?.DateRange)'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'Bank',
-                value: '@(Model.Filter?.Bank)'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'Account',
-                value: '@(Model.Filter?.Account)'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'AccountType',
-                value: '@(Model.Filter?.AccountType)'
-            }).appendTo(form);
+                // Satır Düzenle
+                function editRow(evrakNo) {
+                    alert('Düzenleme için evrak no: ' + evrakNo);
+                }
 
-            form.attr('action', '@Url.Action("GenerateReport")');
-            form.attr('method', 'post');
-            form.submit();
-        }
+                // Tek Satır Transfer
+                function transferSingleRow(evrakNo) {
+                    const rowData = lucaMatchDataTable.rows().data().toArray()
+                        .find(function(row) { return row.EvrakNo === evrakNo; });
 
-        function exportToPdf() {
-            var form = $('form').first();
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'reportType',
-                value: 'PDF'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'DateRange',
-                value: '@(Model.Filter?.DateRange)'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'Bank',
-                value: '@(Model.Filter?.Bank)'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'Account',
-                value: '@(Model.Filter?.Account)'
-            }).appendTo(form);
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'AccountType',
-                value: '@(Model.Filter?.AccountType)'
-            }).appendTo(form);
+                    if (!rowData) {
+                        alert('Satır bulunamadı.');
+                        return;
+                    }
 
-            form.attr('action', '@Url.Action("GenerateReport")');
-            form.attr('method', 'post');
-            form.submit();
-        }
+                    transferRowsToLuca([rowData]);
+                }
+
+                // Seçilenleri Transfer Et
+                function transferSelectedToLuca() {
+                    const selectedRows = [];
+                    $('.row-selector:checked').each(function() {
+                        const evrakNo = $(this).data('id');
+                        const rowData = lucaMatchDataTable.rows().data().toArray()
+                            .find(function(row) { return row.EvrakNo === evrakNo; });
+                        if (rowData) {
+                            selectedRows.push(rowData);
+                        }
+                    });
+
+                    if (selectedRows.length === 0) {
+                        alert('Lütfen transfer etmek için satır seçin.');
+                        return;
+                    }
+
+                    transferRowsToLuca(selectedRows);
+                }
+
+                // Tümünü Transfer Et
+                function transferAllToLuca() {
+                    const allRows = lucaMatchDataTable.rows().data().toArray();
+                    if (allRows.length === 0) {
+                        alert('Transfer edilecek veri bulunamadı.');
+                        return;
+                    }
+
+                    if (!confirm(`${allRows.length} kaydın tamamını transfer etmek istediğinize emin misiniz?`)) {
+                        return;
+                    }
+
+                    transferRowsToLuca(allRows);
+                }
+
+                // Luca'ya Transfer
+                function transferRowsToLuca(rows) {
+                    const token = $('input[name="__RequestVerificationToken"]').val();
+
+                    $.ajax({
+                        url: '@Url.Action("TransferToLuca", "Reports")',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            Rows: rows
+                        }),
+                        headers: {
+                            'RequestVerificationToken': token
+                        },
+                        beforeSend: function() {
+                            // Loading göster
+                            $('#lucaMatchTitle').html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Transfer ediliyor...');
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                $('#lucaMatchTitle').text(`${response.transferredCount} kayıt transfer edildi`);
+                                alert('Başarı: ' + response.message);
+                            } else {
+                                $('#lucaMatchTitle').text('Transfer Hatası');
+                                alert('Hata: ' + response.message);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            $('#lucaMatchTitle').text('Transfer Hatası');
+                            alert('Transfer hatası: ' + error);
+                        }
+                    });
+                }
+
+                // Export Fonksiyonları
+                function exportLucaMatchExcel() {
+                    if (lucaMatchDataTable) {
+                        // CSV oluştur
+                        let csvContent = "data:text/csv;charset=utf-8,";
+                        csvContent += "Evrak No,Tarih,Açıklama,Borç,Alacak,Hesap Kodu,Durum\n";
+
+                        lucaMatchDataTable.rows().data().each(function(row) {
+                            csvContent += `"${row.EvrakNo || ''}","${row.Tarih ? new Date(row.Tarih).toLocaleDateString('tr-TR') : ''}","${row.Aciklama || ''}","${row.Borc || 0}","${row.Alacak || 0}","${row.HesapKodu || ''}","${row.HesapKodu ? 'Eşleşti' : 'Eşleşmedi'}"\n`;
+                        });
+
+                        const encodedUri = encodeURI(csvContent);
+                        const link = document.createElement("a");
+                        link.setAttribute("href", encodedUri);
+                        link.setAttribute("download", "luca_eslesme.csv");
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                }
+
+                function downloadLucaMatchJson() {
+                    if (lucaMatchDataTable) {
+                        const data = lucaMatchDataTable.rows().data().toArray();
+                        const jsonString = JSON.stringify(data, null, 2);
+                        const blob = new Blob([jsonString], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'luca_eslesme.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }
+                }
+
+                // Bank Statement Excel Export
+                function exportBankStatementExcel() {
+                    if (bankStatementDataTable) {
+                        // Basit bir CSV export
+                        let csvContent = "data:text/csv;charset=utf-8,";
+
+                        // Başlıklar
+                        csvContent += "Tarih,Banka Kodu,Hesap No,İşlem Tipi,Referans No,Açıklama,Tutar,Bakiye,Borç/Alacak\n";
+
+                        // Veriler
+                        bankStatementDataTable.rows().data().each(function(row) {
+                            csvContent += `"${row.PROCESSTIMESTR || ''}","${row.BNKCODE || ''}","${row.HESAPNO || ''}","${row.PROCESSTYPECODE || ''}","${row.PROCESSREFNO || ''}","${row.PROCESSDESC || ''}","${row.PROCESSAMAOUNT || ''}","${row.PROCESSBALANCE || ''}","${row.PROCESSDEBORCRED || ''}"\n`;
+                        });
+
+                        const encodedUri = encodeURI(csvContent);
+                        const link = document.createElement("a");
+                        link.setAttribute("href", encodedUri);
+                        link.setAttribute("download", "bank_statement.csv");
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                }
+
+                // Bank Statement JSON Download
+                function downloadBankStatementJson() {
+                    if (bankStatementDataTable) {
+                        const data = bankStatementDataTable.rows().data().toArray();
+                        const jsonString = JSON.stringify(data, null, 2);
+                        const blob = new Blob([jsonString], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'bank_statement.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }
+                }
+
+                // Mevcut fonksiyonlar
+                function exportToExcel() {
+                    var form = $('form').first();
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'reportType',
+                        value: 'Excel'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'DateRange',
+                        value: '@(Model.Filter?.DateRange)'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'Bank',
+                        value: '@(Model.Filter?.Bank)'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'Account',
+                        value: '@(Model.Filter?.Account)'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'AccountType',
+                        value: '@(Model.Filter?.AccountType)'
+                    }).appendTo(form);
+
+                    form.attr('action', '@Url.Action("GenerateReport")');
+                    form.attr('method', 'post');
+                    form.submit();
+                }
+
+                function exportToPdf() {
+                    var form = $('form').first();
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'reportType',
+                        value: 'PDF'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'DateRange',
+                        value: '@(Model.Filter?.DateRange)'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'Bank',
+                        value: '@(Model.Filter?.Bank)'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'Account',
+                        value: '@(Model.Filter?.Account)'
+                    }).appendTo(form);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'AccountType',
+                        value: '@(Model.Filter?.AccountType)'
+                    }).appendTo(form);
+
+                    form.attr('action', '@Url.Action("GenerateReport")');
+                    form.attr('method', 'post');
+                    form.submit();
+                }
     </script>
 }

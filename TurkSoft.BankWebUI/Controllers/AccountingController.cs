@@ -20,6 +20,9 @@ namespace TurkSoft.BankWebUI.Controllers
         private readonly IBankService _bankService;
         private readonly IBankAccountService _bankAccountService;
         private readonly IBankStatementService _bankStatementService;
+        private readonly IClCardService _clCardService;
+        private readonly ITigerBankAccountService _tigerBankAccountService;
+        private readonly ITigerGlAccountService _tigerGlAccountService;
         private readonly ILogoTigerIntegrationService _logoTiger;
         private readonly ITransferLogService _transferLogService;
         private readonly ISystemLogService _systemLogService;
@@ -28,6 +31,9 @@ namespace TurkSoft.BankWebUI.Controllers
             IBankService bankService,
             IBankAccountService bankAccountService,
             IBankStatementService bankStatementService,
+            IClCardService clCardService,
+            ITigerBankAccountService tigerBankAccountService,
+            ITigerGlAccountService tigerGlAccountService,
             ILogoTigerIntegrationService logoTiger,
             ITransferLogService transferLogService,
             ISystemLogService systemLogService)
@@ -35,6 +41,9 @@ namespace TurkSoft.BankWebUI.Controllers
             _bankService = bankService;
             _bankAccountService = bankAccountService;
             _bankStatementService = bankStatementService;
+            _clCardService = clCardService;
+            _tigerBankAccountService = tigerBankAccountService;
+            _tigerGlAccountService = tigerGlAccountService;
             _logoTiger = logoTiger;
             _transferLogService = transferLogService;
             _systemLogService = systemLogService;
@@ -104,12 +113,12 @@ namespace TurkSoft.BankWebUI.Controllers
 
                     dto.Add(new BankStatementRowDto
                     {
-                        ProcessTimeStr = x.PROCESSTIMESTR,
+                        ProcessTimeStr = !string.IsNullOrWhiteSpace(x.PROCESSTIMESTR) ? x.PROCESSTIMESTR : x.PROCESSTIMESTR2,
                         ProcessTime = x.PROCESSTIME,
                         RefNo = x.PROCESSREFNO,
-                        Description = x.PROCESSDESC,
+                        Description = string.Join(" ", new[] { x.PROCESSDESC, x.PROCESSDESC2, x.PROCESSDESC3, x.PROCESSDESC4 }.Where(s => !string.IsNullOrWhiteSpace(s))).Trim(),
                         AmountStr = x.PROCESSAMAOUNT,
-                        DebitCredit = x.PROCESSDEBORCRED,
+                        DebitCredit = NormalizeDebitCredit(x.PROCESSDEBORCRED),
                         TypeCode = x.PROCESSTYPECODE,
                         ExternalUniqueKey = key,
                         IsTransferred = transferred.Contains(key),
@@ -148,8 +157,50 @@ namespace TurkSoft.BankWebUI.Controllers
 
                 return Json(new { success = false, message = ex.Message });
             }
+
+            
+
+        }
+        // Logo Tiger: Cari / Banka Hesap / Diğer Hesap Planı arama (typeahead)
+        [HttpGet]
+        public async Task<IActionResult> SearchTigerCaris([FromQuery] string term, [FromQuery] int take = 30)
+        {
+            term = (term ?? "").Trim();
+            if (term.Length < 2)
+                return Json(new { success = true, items = Array.Empty<object>() });
+
+            var items = await _clCardService.SearchCardsAsync(term);
+            var result = items
+                .Take(take <= 0 ? 30 : take)
+                .Select(x => new { code = x.Code, name = x.Name })
+                .ToList();
+
+            return Json(new { success = true, items = result });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> SearchTigerBankAccounts([FromQuery] string term, [FromQuery] int take = 30)
+        {
+            term = (term ?? "").Trim();
+            if (term.Length < 2)
+                return Json(new { success = true, items = Array.Empty<object>() });
+
+            var items = await _tigerBankAccountService.SearchAsync(term, take <= 0 ? 30 : take);
+            var result = items.Select(x => new { code = x.Code, name = x.Name }).ToList();
+            return Json(new { success = true, items = result });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchTigerOtherAccounts([FromQuery] string term, [FromQuery] int take = 30)
+        {
+            term = (term ?? "").Trim();
+            if (term.Length < 2)
+                return Json(new { success = true, items = Array.Empty<object>() });
+
+            var items = await _tigerGlAccountService.SearchAsync(term, take <= 0 ? 30 : take);
+            var result = items.Select(x => new { code = x.Code, name = x.Name }).ToList();
+            return Json(new { success = true, items = result });
+        }
         // Transfer: sonucu normalize ediyoruz (Kredi/BankaFis dönüş tipi farkını kaldırıyoruz)
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -160,6 +211,29 @@ namespace TurkSoft.BankWebUI.Controllers
             var logs = (await _transferLogService.GetAllTransferLogsAsync())?.ToList() ?? new();
             if (logs.Any(l => l.ExternalUniqueKey == dto.ExternalUniqueKey && l.Status == "SUCCESS"))
                 return Json(new { success = true, alreadyTransferred = true, message = "Bu kayıt daha önce aktarılmış." });
+            // ✅ Minimum alan validasyonu (Madde 3)
+            if (string.IsNullOrWhiteSpace(dto.BankaHesapKodu))
+                return Json(new { success = false, message = "Tiger Banka Hesap Kodu zorunludur." });
+
+            if (IsKredi(dto.Description, dto.TypeCode))
+            {
+                if (string.IsNullOrWhiteSpace(dto.HedefHesapKodu))
+                    return Json(new { success = false, message = "Kredi/Diğer Hesap Kodu (EMUHACC) zorunludur." });
+            }
+            else if (IsVirman(dto.Description, dto.TypeCode))
+            {
+                if (string.IsNullOrWhiteSpace(dto.HedefHesapKodu))
+                    return Json(new { success = false, message = "Virman için hedef banka hesabı zorunludur." });
+                if (string.Equals(dto.BankaHesapKodu?.Trim(), dto.HedefHesapKodu?.Trim(), StringComparison.OrdinalIgnoreCase))
+                    return Json(new { success = false, message = "Virman hedef hesabı, kaynak hesap ile aynı olamaz." });
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(dto.ArpCode))
+                    return Json(new { success = false, message = "Gelen/Giden havale için Cari Kodu (ARP_CODE) zorunludur." });
+            }
+
+
 
             bool ok;
             string msg;

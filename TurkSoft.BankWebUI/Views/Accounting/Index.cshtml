@@ -93,176 +93,392 @@
     </div>
 </div>
 
+
+
+<!-- Transfer Modal (Madde 3) -->
+<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transferModalLabel">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>Logo Tiger Aktarım
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2 mb-3">
+                    <div class="small" id="transferModalInfo"></div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tiger Banka Hesap Kodu (BANKACC)</label>
+                        <input id="tmBankAcc" class="form-control" list="tmBankAccList" placeholder="Örn: 102.01.0001" autocomplete="off" />
+                        <datalist id="tmBankAccList"></datalist>
+                        <div class="form-text">En az 2 karakter yazınca arama yapılır.</div>
+                    </div>
+
+                    <div class="col-md-6" id="tmCariCol">
+                        <label class="form-label">Tiger Cari Kodu (CLCARD / ARP_CODE)</label>
+                        <input id="tmCari" class="form-control" list="tmCariList" placeholder="Örn: 120.01.0001" autocomplete="off" />
+                        <datalist id="tmCariList"></datalist>
+                        <div class="form-text">Gelen/Giden havale için zorunlu.</div>
+                    </div>
+
+                    <div class="col-md-6 d-none" id="tmTargetBankCol">
+                        <label class="form-label">Hedef Tiger Banka Hesap Kodu (Virman)</label>
+                        <input id="tmTargetBank" class="form-control" list="tmTargetBankList" placeholder="Örn: 102.02.0001" autocomplete="off" />
+                        <datalist id="tmTargetBankList"></datalist>
+                        <div class="form-text">Virman işlemi için zorunlu.</div>
+                    </div>
+
+                    <div class="col-md-6 d-none" id="tmOtherAccCol">
+                        <label class="form-label">Kredi/Diğer Hesap Kodu (EMUHACC)</label>
+                        <input id="tmOtherAcc" class="form-control" list="tmOtherAccList" placeholder="Örn: 300.01.0001" autocomplete="off" />
+                        <datalist id="tmOtherAccList"></datalist>
+                        <div class="form-text">Kredi / taksit işlemi için zorunlu.</div>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <div class="small text-muted">
+                    İşlem tipi otomatik algılanır:
+                    <span class="badge bg-secondary">Gelen</span>
+                    <span class="badge bg-secondary">Giden</span>
+                    <span class="badge bg-secondary">Virman</span>
+                    <span class="badge bg-secondary">Kredi</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-warning" id="btnConfirmTransfer">
+                    <i class="fa-solid fa-right-to-bracket me-1"></i>Aktar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        let dt = null;
-        let lastData = [];
+                let dt = null;
+                let lastData = [];
 
-        function token() {
-            return $('input[name="__RequestVerificationToken"]').val();
-        }
+                function token() {
+                    return $('input[name="__RequestVerificationToken"]').val();
+                }
 
-        function showStatus(type, msg) {
-            const box = $('#statusBox');
-            box.removeClass('d-none alert-success alert-danger alert-info alert-warning')
-               .addClass('alert-' + type)
-               .html(msg);
-        }
+                function showStatus(type, msg) {
+                    const box = $('#statusBox');
+                    box.removeClass('d-none alert-success alert-danger alert-info alert-warning')
+                       .addClass('alert-' + type)
+                       .html(msg);
+                }
 
-        function filterAccounts() {
-            const bankId = $('#bankSelect').val();
-            $('#accountSelect option').each(function () {
-                const b = $(this).data('bank');
-                if (!b) return; // placeholder
-                $(this).toggle(b == bankId);
-            });
-            $('#accountSelect').val('');
-        }
+                function filterAccounts() {
+                    const bankId = $('#bankSelect').val();
+                    $('#accountSelect option').each(function () {
+                        const b = $(this).data('bank');
+                        if (!b) return; // placeholder
+                        $(this).toggle(b == bankId);
+                    });
+                    $('#accountSelect').val('');
+                }
 
-        $('#bankSelect').on('change', filterAccounts);
+                $('#bankSelect').on('change', filterAccounts);
 
-        function formatAmount(x) {
-            const n = parseFloat((x ?? "0").toString().replace(",", "."));
-            if (isNaN(n)) return "0,00";
-            return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
+                        function toNumberTR(x) {
+                    if (x === undefined || x === null) return null;
+                    let s = x.toString().trim();
+                    if (!s) return null;
+                    s = s.replace(/[^0-9,\.\-]/g, '');
+                    if (s.includes(',') && s.includes('.')) {
+                        s = s.replace(/\./g, '').replace(',', '.');
+                    } else if (s.includes(',')) {
+                        s = s.replace(',', '.');
+                    }
+                    const n = parseFloat(s);
+                    return isNaN(n) ? null : n;
+                }
 
-        function renderTable(data, bankInfo) {
-            lastData = data || [];
-            $('#tableTitle').text(`${bankInfo.bankName} / ${bankInfo.accountNumber} — ${lastData.length} kayıt`);
+                function formatAmount(x) {
+                    const n = toNumberTR(x);
+                    if (n === null) return "0,00";
+                    return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
 
-            if (dt) {
-                dt.destroy();
-                $('#txTable tbody').empty();
-            }
+                function renderTable(data, bankInfo) {
+                    lastData = data || [];
+                    $('#tableTitle').text(`${bankInfo.bankName} / ${bankInfo.accountNumber} — ${lastData.length} kayıt`);
 
-            dt = $('#txTable').DataTable({
-                data: lastData,
-                columns: [
-                    { data: 'processTimeStr', render: d => d || '-' },
-                    { data: 'refNo', render: d => d || '-' },
-                    { data: 'description', render: d => d || '-' },
-                    { data: 'amountStr', className: 'text-end', render: d => formatAmount(d) },
-                    {
-                        data: 'debitCredit',
-                        render: d => (d == 'D')
-                            ? '<span class="badge bg-danger">D</span>'
-                            : '<span class="badge bg-success">C</span>'
-                    },
-                    {
-                        data: null,
-                        render: row => row.isTransferred
-                            ? `<span class="badge bg-success">Aktarıldı${row.tigerFicheRef ? ' (#' + row.tigerFicheRef + ')' : ''}</span>`
-                            : `<span class="badge bg-secondary">Bekliyor</span>`
-                    },
-                    {
-                        data: null,
-                        render: row => {
-                            if (row.isTransferred) {
-                                return `<button class="btn btn-sm btn-secondary" disabled>
-                                            <i class="fa-solid fa-check me-1"></i>Aktarıldı
-                                        </button>`;
+                    if (dt) {
+                        dt.destroy();
+                        $('#txTable tbody').empty();
+                    }
+
+                    dt = $('#txTable').DataTable({
+                        data: lastData,
+                        columns: [
+                            { data: 'processTimeStr', render: d => d || '-' },
+                            { data: 'refNo', render: d => d || '-' },
+                            { data: 'description', render: d => d || '-' },
+                            { data: 'amountStr', className: 'text-end', render: d => formatAmount(d) },
+                            {
+                                data: 'debitCredit',
+                                render: d => (d == 'D')
+                                    ? '<span class="badge bg-danger">D</span>'
+                                    : '<span class="badge bg-success">C</span>'
+                            },
+                            {
+                                data: null,
+                                render: row => row.isTransferred
+                                    ? `<span class="badge bg-success">Aktarıldı${row.tigerFicheRef ? ' (#' + row.tigerFicheRef + ')' : ''}</span>`
+                                    : `<span class="badge bg-secondary">Bekliyor</span>`
+                            },
+                            {
+                                data: null,
+                                render: row => {
+                                    if (row.isTransferred) {
+                                        return `<button class="btn btn-sm btn-secondary" disabled>
+                                                    <i class="fa-solid fa-check me-1"></i>Aktarıldı
+                                                </button>`;
+                                    }
+                                    return `<button class="btn btn-sm btn-warning btnTransfer" data-key="${row.externalUniqueKey}">
+                                                <i class="fa-solid fa-right-to-bracket me-1"></i>Aktar
+                                            </button>`;
+                                }
                             }
-                            return `<button class="btn btn-sm btn-warning btnTransfer" data-key="${row.externalUniqueKey}">
-                                        <i class="fa-solid fa-right-to-bracket me-1"></i>Aktar
-                                    </button>`;
+                        ],
+                        order: [[0, 'desc']],
+                        pageLength: 25,
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' }
+                    });
+                }
+
+                function fetchData() {
+                    const bankId = $('#bankSelect').val();
+                    const accountId = $('#accountSelect').val();
+                    const dateRange = $('#dateRange').val();
+
+                    if (!bankId) return showStatus('danger', 'Lütfen banka seçiniz.');
+                    if (!accountId) return showStatus('danger', 'Lütfen hesap seçiniz.');
+                    if (!dateRange) return showStatus('danger', 'Lütfen tarih aralığı seçiniz.');
+
+                    showStatus('info', '<i class="fa-solid fa-spinner fa-spin me-2"></i>WS verisi çekiliyor...');
+
+                    $.ajax({
+                        url: '@Url.Action("GetBankStatement", "Accounting")',
+                        type: 'POST',
+                        data: {
+                            bankId: bankId,
+                            accountId: accountId,
+                            dateRange: dateRange,
+                            __RequestVerificationToken: token()
+                        },
+                        success: function (resp) {
+                            if (!resp || !resp.success) return showStatus('danger', (resp && resp.message) ? resp.message : 'Hata');
+
+                            showStatus('success', `Veri geldi. ${resp.data.length} kayıt.`);
+                            renderTable(resp.data, resp.bankInfo);
+                        },
+                        error: function (xhr) {
+                            showStatus('danger', xhr.responseText || 'İstek hatası');
                         }
-                    }
-                ],
-                order: [[0, 'desc']],
-                pageLength: 25,
-                language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json' }
-            });
-        }
-
-        function fetchData() {
-            const bankId = $('#bankSelect').val();
-            const accountId = $('#accountSelect').val();
-            const dateRange = $('#dateRange').val();
-
-            if (!bankId) return showStatus('danger', 'Lütfen banka seçiniz.');
-            if (!accountId) return showStatus('danger', 'Lütfen hesap seçiniz.');
-            if (!dateRange) return showStatus('danger', 'Lütfen tarih aralığı seçiniz.');
-
-            showStatus('info', '<i class="fa-solid fa-spinner fa-spin me-2"></i>WS verisi çekiliyor...');
-
-            $.ajax({
-                url: '@Url.Action("GetBankStatement", "Accounting")',
-                type: 'POST',
-                data: {
-                    bankId: bankId,
-                    accountId: accountId,
-                    dateRange: dateRange,
-                    __RequestVerificationToken: token()
-                },
-                success: function (resp) {
-                    if (!resp || !resp.success) return showStatus('danger', (resp && resp.message) ? resp.message : 'Hata');
-
-                    showStatus('success', `Veri geldi. ${resp.data.length} kayıt.`);
-                    renderTable(resp.data, resp.bankInfo);
-                },
-                error: function (xhr) {
-                    showStatus('danger', xhr.responseText || 'İstek hatası');
+                    });
                 }
-            });
-        }
 
-        $('#btnFetch').on('click', fetchData);
-        $('#btnReload').on('click', fetchData);
+                $('#btnFetch').on('click', fetchData);
+                $('#btnReload').on('click', fetchData);
 
-        // Satır aktar
-        $(document).on('click', '.btnTransfer', function () {
-            const key = $(this).data('key');
-            const row = lastData.find(x => x.externalUniqueKey === key);
-            if (!row) return;
+                        // Satır aktar (Modal ile: Cari / Banka / Diğer Hesap planı seçimi)
+                let currentTransferRow = null;
+                const transferModalEl = document.getElementById('transferModal');
+                const transferModal = transferModalEl ? new bootstrap.Modal(transferModalEl) : null;
 
-            const payload = {
-                externalUniqueKey: row.externalUniqueKey,
-                transactionDate: row.processTime || new Date().toISOString(),
-                debitCredit: row.debitCredit,
-                amount: parseFloat((row.amountStr ?? "0").toString().replace(",", ".")),
-                refNo: row.refNo,
-                description: row.description,
-                typeCode: row.typeCode,
-
-                // Tiger mapping (minimum) - controller tarafında boş gelirse request validate edebilir.
-                // Projene göre burayı zenginleştirebilirsin.
-                bankaHesapKodu: $('#accountSelect option:selected').text(),
-                dataReference: 0
-            };
-
-            showStatus('info', '<i class="fa-solid fa-spinner fa-spin me-2"></i>Logo Tiger aktarımı yapılıyor...');
-
-            $.ajax({
-                url: '@Url.Action("TransferToTiger", "Accounting")',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                headers: { '__RequestVerificationToken': token() }, // bazı projelerde bu header adı okunuyor
-                success: function (resp) {
-                    if (resp && resp.alreadyTransferred) {
-                        showStatus('success', resp.message);
-                        fetchData();
-                        return;
-                    }
-
-                    if (!resp || !resp.success) {
-                        const err = (resp && resp.message) ? resp.message : 'Aktarım hatası';
-                        const details = (resp && resp.errors) ? ('<br/>' + resp.errors.join('<br/>')) : '';
-                        showStatus('danger', err + details);
-                        return;
-                    }
-
-                    showStatus('success', `Aktarım başarılı. FişRef: ${resp.ficheRef ?? '-'}`);
-                    fetchData();
-                },
-                error: function (xhr) {
-                    showStatus('danger', xhr.responseText || 'Aktarım isteği hatası');
+                function isVirman(desc, typeCode) {
+                    const d = (desc || '').toUpperCase();
+                    const t = (typeCode || '').toUpperCase();
+                    return d.includes('VIRMAN') || t.includes('VIR');
                 }
-            });
-        });
+
+                function isKredi(desc, typeCode) {
+                    const d = (desc || '').toUpperCase();
+                    const t = (typeCode || '').toUpperCase();
+                    return d.includes('KREDI') || d.includes('TAKSIT') || t.includes('KRD');
+                }
+
+                function debounce(fn, ms) {
+                    let id = null;
+                    return function (...args) {
+                        clearTimeout(id);
+                        id = setTimeout(() => fn.apply(this, args), ms);
+                    };
+                }
+
+                function fillDatalist(listId, items) {
+                    const el = document.getElementById(listId);
+                    if (!el) return;
+                    el.innerHTML = '';
+                    (items || []).forEach(x => {
+                        const opt = document.createElement('option');
+                        opt.value = x.code;
+                        opt.label = x.name ? (x.code + ' - ' + x.name) : x.code;
+                        el.appendChild(opt);
+                    });
+                }
+
+                const searchCari = debounce(function () {
+                    const term = ($('#tmCari').val() || '').trim();
+                    if (term.length < 2) return fillDatalist('tmCariList', []);
+                    $.get('@Url.Action("SearchTigerCaris", "Accounting")', { term: term, take: 30 })
+                        .done(resp => fillDatalist('tmCariList', (resp && resp.items) ? resp.items : []));
+                }, 250);
+
+                const searchBankAcc = debounce(function () {
+                    const term = ($('#tmBankAcc').val() || '').trim();
+                    if (term.length < 2) return fillDatalist('tmBankAccList', []);
+                    $.get('@Url.Action("SearchTigerBankAccounts", "Accounting")', { term: term, take: 30 })
+                        .done(resp => fillDatalist('tmBankAccList', (resp && resp.items) ? resp.items : []));
+                }, 250);
+
+                const searchTargetBank = debounce(function () {
+                    const term = ($('#tmTargetBank').val() || '').trim();
+                    if (term.length < 2) return fillDatalist('tmTargetBankList', []);
+                    $.get('@Url.Action("SearchTigerBankAccounts", "Accounting")', { term: term, take: 30 })
+                        .done(resp => fillDatalist('tmTargetBankList', (resp && resp.items) ? resp.items : []));
+                }, 250);
+
+                const searchOtherAcc = debounce(function () {
+                    const term = ($('#tmOtherAcc').val() || '').trim();
+                    if (term.length < 2) return fillDatalist('tmOtherAccList', []);
+                    $.get('@Url.Action("SearchTigerOtherAccounts", "Accounting")', { term: term, take: 30 })
+                        .done(resp => fillDatalist('tmOtherAccList', (resp && resp.items) ? resp.items : []));
+                }, 250);
+
+                $('#tmCari').on('input', searchCari);
+                $('#tmBankAcc').on('input', searchBankAcc);
+                $('#tmTargetBank').on('input', searchTargetBank);
+                $('#tmOtherAcc').on('input', searchOtherAcc);
+
+                function resetTransferModal() {
+                    $('#tmBankAcc').val('');
+                    $('#tmCari').val('');
+                    $('#tmTargetBank').val('');
+                    $('#tmOtherAcc').val('');
+                    fillDatalist('tmBankAccList', []);
+                    fillDatalist('tmCariList', []);
+                    fillDatalist('tmTargetBankList', []);
+                    fillDatalist('tmOtherAccList', []);
+                }
+
+                function validateModalInputs(mode) {
+                    const bankAcc = ($('#tmBankAcc').val() || '').trim();
+                    if (!bankAcc) return 'Tiger Banka Hesap Kodu seçmelisiniz.';
+
+                    if (mode === 'VIRMAN') {
+                        const target = ($('#tmTargetBank').val() || '').trim();
+                        if (!target) return 'Virman için hedef banka hesabı seçmelisiniz.';
+                        if (target === bankAcc) return 'Virman hedef hesabı, kaynak hesabı ile aynı olamaz.';
+                    } else if (mode === 'KREDI') {
+                        const other = ($('#tmOtherAcc').val() || '').trim();
+                        if (!other) return 'Kredi/Diğer hesap kodu seçmelisiniz.';
+                    } else {
+                        const cari = ($('#tmCari').val() || '').trim();
+                        if (!cari) return 'Gelen/Giden için cari kodu seçmelisiniz.';
+                    }
+                    return null;
+                }
+
+                $(document).on('click', '.btnTransfer', function () {
+                    const key = $(this).data('key');
+                    const row = lastData.find(x => x.externalUniqueKey === key);
+                    if (!row) return;
+
+                    currentTransferRow = row;
+                    resetTransferModal();
+
+                    const mode = isKredi(row.description, row.typeCode) ? 'KREDI' : (isVirman(row.description, row.typeCode) ? 'VIRMAN' : 'HAVALE');
+                    const dc = (row.debitCredit || '').toUpperCase();
+                    const dcLabel = (dc === 'C') ? 'Gelen (Alacak)' : 'Giden (Borç)';
+
+                    $('#transferModalInfo').html(`
+                        <div><strong>Tarih:</strong> ${row.processTimeStr || ''}</div>
+                        <div><strong>Ref:</strong> ${row.refNo || ''}</div>
+                        <div><strong>Tutar:</strong> ${formatAmount(row.amountStr)} </div>
+                        <div><strong>Tip:</strong> ${mode === 'HAVALE' ? dcLabel : mode}</div>
+                        <div class="mt-1"><strong>Açıklama:</strong> ${row.description || ''}</div>
+                    `);
+
+                    // alanları göster/gizle
+                    $('#tmCariCol').toggleClass('d-none', mode !== 'HAVALE');
+                    $('#tmTargetBankCol').toggleClass('d-none', mode !== 'VIRMAN');
+                    $('#tmOtherAccCol').toggleClass('d-none', mode !== 'KREDI');
+
+                    if (transferModal) transferModal.show();
+                });
+
+                $('#btnConfirmTransfer').on('click', function () {
+                    if (!currentTransferRow) return;
+
+                    const mode = isKredi(currentTransferRow.description, currentTransferRow.typeCode) ? 'KREDI' : (isVirman(currentTransferRow.description, currentTransferRow.typeCode) ? 'VIRMAN' : 'HAVALE');
+                    const err = validateModalInputs(mode);
+                    if (err) return showStatus('danger', err);
+
+                    const payload = {
+                        externalUniqueKey: currentTransferRow.externalUniqueKey,
+                        transactionDate: currentTransferRow.processTime || new Date().toISOString(),
+                        debitCredit: currentTransferRow.debitCredit,
+                        amount: toNumberTR(currentTransferRow.amountStr) || 0,
+                        refNo: currentTransferRow.refNo,
+                        description: currentTransferRow.description,
+                        typeCode: currentTransferRow.typeCode,
+
+                        bankaHesapKodu: ($('#tmBankAcc').val() || '').trim(),
+                        arpCode: (mode === 'HAVALE') ? ($('#tmCari').val() || '').trim() : null,
+                        hedefHesapKodu: (mode === 'VIRMAN')
+                            ? ($('#tmTargetBank').val() || '').trim()
+                            : (mode === 'KREDI')
+                                ? ($('#tmOtherAcc').val() || '').trim()
+                                : null,
+
+                        dataReference: 0
+                    };
+
+                    showStatus('info', '<i class="fa-solid fa-spinner fa-spin me-2"></i>Logo Tiger aktarımı yapılıyor...');
+
+                    $.ajax({
+                        url: '@Url.Action("TransferToTiger", "Accounting")',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(payload),
+                        headers: { '__RequestVerificationToken': token() },
+                        success: function (resp) {
+                            if (resp && resp.alreadyTransferred) {
+                                showStatus('success', resp.message);
+                                if (transferModal) transferModal.hide();
+                                fetchData();
+                                return;
+                            }
+
+                            if (!resp || !resp.success) {
+                                const m = (resp && resp.message) ? resp.message : 'Aktarım hatası';
+                                const details = (resp && resp.errors) ? ('<br/>' + resp.errors.join('<br/>')) : '';
+                                showStatus('danger', m + details);
+                                return;
+                            }
+
+                            showStatus('success', `Aktarım başarılı. FişRef: ${resp.ficheRef ?? '-'}`);
+                            if (transferModal) transferModal.hide();
+                            fetchData();
+                        },
+                        error: function (xhr) {
+                            showStatus('danger', xhr.responseText || 'Aktarım isteği hatası');
+                        }
+                    });
+                });
 
         // ilk load
-        filterAccounts();
+                filterAccounts();
     </script>
 }

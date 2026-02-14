@@ -73,9 +73,25 @@ namespace TurkSoft.Services.Implementations
             var user = await GetUserByUsernameAsync(username);
             if (user == null || !user.IsActive) return false;
 
-            // Basit şifre kontrolü (gerçek projede hash kullanın)
-            return user.PasswordHash == HashPassword(password, user.PasswordSalt);
+            var salt = user.PasswordSalt ?? "";
+            var newHash = HashPassword(password, salt);
 
+            // ✅ Geriye dönük uyumluluk: eski kayıtlar (SHA256(password + salt)) ile oluşturulmuş olabilir.
+            var legacyHash = HashPasswordLegacy(password, salt);
+
+            var okNew = string.Equals(user.PasswordHash, newHash, StringComparison.Ordinal);
+            var okLegacy = !okNew && string.Equals(user.PasswordHash, legacyHash, StringComparison.Ordinal);
+
+            // Eski hash ile giriş başarılıysa, yeni formata upgrade et
+            if (okLegacy)
+            {
+                user.PasswordHash = newHash;
+                user.ModifiedDate = DateTime.UtcNow;
+                _unitOfWork.UserRepository.Update(user);
+                await _unitOfWork.CommitAsync();
+            }
+
+            return okNew || okLegacy;
         }
 
         public async Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
@@ -83,10 +99,17 @@ namespace TurkSoft.Services.Implementations
             var user = await GetUserByIdAsync(userId);
             if (user == null) return false;
 
-            if (user.PasswordHash != HashPassword(currentPassword, user.PasswordSalt))
+            if (string.IsNullOrWhiteSpace(user.PasswordSalt))
+                user.PasswordSalt = Guid.NewGuid().ToString("N");
+
+            var salt = user.PasswordSalt ?? "";
+            var okNew = user.PasswordHash == HashPassword(currentPassword, salt);
+            var okLegacy = !okNew && user.PasswordHash == HashPasswordLegacy(currentPassword, salt);
+
+            if (!okNew && !okLegacy)
                 return false;
 
-            user.PasswordHash = HashPassword(newPassword, user.PasswordSalt);
+            user.PasswordHash = HashPassword(newPassword, salt);
             user.ModifiedDate = DateTime.UtcNow;
 
             _unitOfWork.UserRepository.Update(user);
@@ -98,6 +121,9 @@ namespace TurkSoft.Services.Implementations
         {
             var user = await GetUserByIdAsync(userId);
             if (user == null) return false;
+
+            if (string.IsNullOrWhiteSpace(user.PasswordSalt))
+                user.PasswordSalt = Guid.NewGuid().ToString("N");
 
             user.PasswordHash = HashPassword(newPassword, user.PasswordSalt);
             user.ModifiedDate = DateTime.UtcNow;
@@ -138,6 +164,15 @@ namespace TurkSoft.Services.Implementations
             // Deterministik: SHA256( password + "|" + salt ) => Base64
             using var sha = SHA256.Create();
             var bytes = Encoding.UTF8.GetBytes($"{password}|{salt}");
+            var hash = sha.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
+        }
+
+        private static string HashPasswordLegacy(string password, string salt)
+        {
+            // ✅ Eski format (UsersController'da bir dönem kullanılan): SHA256(password + salt)
+            using var sha = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes($"{password}{salt}");
             var hash = sha.ComputeHash(bytes);
             return Convert.ToBase64String(hash);
         }

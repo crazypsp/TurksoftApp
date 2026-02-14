@@ -6,10 +6,14 @@ using System.Threading.Tasks;
 using TurkSoft.BankWebUI.ViewModels;
 using System.Linq;
 using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace TurkSoft.BankWebUI.Controllers
 {
-    [Authorize]
+    // ✅ Sistem kullanıcı yönetimi sadece Admin
+    [Authorize(Roles = "Admin")]
     public sealed class UsersController : Controller
     {
         private readonly IUserService _userService;
@@ -26,24 +30,30 @@ namespace TurkSoft.BankWebUI.Controllers
             _userRoleService = userRoleService;
         }
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             ViewData["Title"] = "Kullanıcılar";
-            ViewData["Subtitle"] = "Sadece Admin rolü erişebilir";
+            ViewData["Subtitle"] = "Sistem kullanıcıları (Admin)";
 
-            var users = await _userService.GetAllUsersAsync();
-            var roles = await _roleService.GetAllRolesAsync();
-            var userRoles = await _userRoleService.GetAllUserRolesAsync();
+            var users = (await _userService.GetAllUsersAsync())?.ToList() ?? new List<User>();
+            var roles = (await _roleService.GetAllRolesAsync())?.ToList() ?? new List<Role>();
+            var userRoles = (await _userRoleService.GetAllUserRolesAsync())?.ToList() ?? new List<UserRole>();
+
+            // Modal dropdown için roller
+            ViewBag.Roles = roles.Select(r => r.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
             // DemoUser formatına dönüştür
             var demoUsers = users.Select(u => new Models.DemoUser
             {
                 Id = u.Id,
-                FullName = $"{u.FirstName} {u.LastName}",
+                FullName = $"{u.FirstName} {u.LastName}".Trim(),
                 Email = u.Email,
                 Role = GetUserRole(u.Id, userRoles, roles),
-                IsActive = u.IsActive
-            }).ToList();
+                IsActive = u.IsActive,
+                CreatedDate = u.CreatedDate,
+                LastLoginDate = u.LastLoginDate
+            }).OrderByDescending(x => x.Id).ToList();
 
             var model = new UsersIndexVm
             {
@@ -59,10 +69,14 @@ namespace TurkSoft.BankWebUI.Controllers
             ViewData["Title"] = "Kullanıcı Oluştur";
             ViewData["Subtitle"] = "Yeni kullanıcı ekleyin";
 
-            var roles = await _roleService.GetAllRolesAsync();
-            ViewBag.Roles = roles.Select(r => r.Name).ToList();
+            var roles = (await _roleService.GetAllRolesAsync())?.ToList() ?? new List<Role>();
+            var vm = new CreateUserVm();
 
-            return View(new CreateUserVm());
+            // DB'de rol yoksa default listeyi kullan, varsa DB listesini göster
+            if (roles.Count > 0)
+                vm.Roles = roles.Select(r => r.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            return View(vm);
         }
 
         [HttpPost]
@@ -72,25 +86,39 @@ namespace TurkSoft.BankWebUI.Controllers
             ViewData["Title"] = "Kullanıcı Oluştur";
             ViewData["Subtitle"] = "Yeni kullanıcı ekleyin";
 
+            var rolesAll = (await _roleService.GetAllRolesAsync())?.ToList() ?? new List<Role>();
+            if (rolesAll.Count > 0)
+                vm.Roles = rolesAll.Select(r => r.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
             if (!ModelState.IsValid)
+                return View(vm);
+
+            if (vm.TempPassword == null || vm.TempPassword.Length < 6)
             {
-                var rolees = await _roleService.GetAllRolesAsync();
-                ViewBag.Roles = rolees.Select(r => r.Name).ToList();
+                ModelState.AddModelError(nameof(vm.TempPassword), "Şifre en az 6 karakter olmalıdır.");
+                return View(vm);
+            }
+
+            // Email tekil olmalı
+            var existing = await _userService.GetUserByEmailAsync(vm.Email);
+            if (existing != null)
+            {
+                ModelState.AddModelError(nameof(vm.Email), "Bu e-posta ile kayıtlı kullanıcı zaten mevcut.");
                 return View(vm);
             }
 
             // FullName'den FirstName ve LastName ayır
-            var nameParts = vm.FullName.Split(' ', 2);
+            var nameParts = (vm.FullName ?? "").Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var firstName = nameParts.Length > 0 ? nameParts[0] : "";
             var lastName = nameParts.Length > 1 ? nameParts[1] : "";
 
             // Şifre hash'leme için salt oluştur
-            var salt = Guid.NewGuid().ToString();
+            var salt = Guid.NewGuid().ToString("N");
 
             var user = new User
             {
-                UserName = vm.Email.Split('@')[0], // Email'in @'den önceki kısmını kullan
-                Email = vm.Email,
+                UserName = (vm.Email ?? "").Split('@')[0],
+                Email = vm.Email?.Trim() ?? "",
                 FirstName = firstName,
                 LastName = lastName,
                 PasswordSalt = salt,
@@ -101,10 +129,22 @@ namespace TurkSoft.BankWebUI.Controllers
 
             var createdUser = await _userService.CreateUserAsync(user);
 
-            // Rol ID'sini bul
-            var roles = await _roleService.GetAllRolesAsync();
-            var role = roles.FirstOrDefault(r => r.Name == vm.Role);
+            // Rol ID'sini bul (yoksa oluştur)
+            var role = rolesAll.FirstOrDefault(r => string.Equals(r.Name, vm.Role, StringComparison.OrdinalIgnoreCase));
+            if (role == null)
+            {
+                role = await _roleService.CreateRoleAsync(new Role
+                {
+                    Name = vm.Role,
+                    Description = $"{vm.Role} rolü",
+                    IsSystemRole = true
+                });
 
+                // Cache güncelle
+                rolesAll.Add(role);
+            }
+
+            // Kullanıcı rolünü ekle
             if (role != null)
             {
                 var userRole = new UserRole
@@ -118,100 +158,55 @@ namespace TurkSoft.BankWebUI.Controllers
             }
 
             TempData["Toast"] = "Kullanıcı başarıyla oluşturuldu.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
 
+        // Index.cshtml'deki modal form buraya post ediyor
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleActive(int id)
-        {
-            var user = await _userService.GetUserByIdAsync(id);
-            if (user == null) return NotFound();
-
-            if (user.IsActive)
-            {
-                await _userService.DeactivateUserAsync(id);
-                TempData["Toast"] = "Kullanıcı pasif hale getirildi.";
-            }
-            else
-            {
-                await _userService.ActivateUserAsync(id);
-                TempData["Toast"] = "Kullanıcı aktif hale getirildi.";
-            }
-
-            return RedirectToAction("Index");
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Edit(int id)
-        {
-            var user = await _userService.GetUserByIdAsync(id);
-            if (user == null) return NotFound();
-
-            ViewData["Title"] = "Kullanıcı Düzenle";
-            ViewData["Subtitle"] = "Kullanıcı bilgilerini güncelleyin";
-
-            var roles = await _roleService.GetAllRolesAsync();
-            ViewBag.Roles = roles.Select(r => r.Name).ToList();
-
-            // Mevcut rolü bul
-            var userRoles = await _userRoleService.GetAllUserRolesAsync();
-            var currentUserRole = userRoles.FirstOrDefault(ur => ur.UserId == id);
-            var currentRole = currentUserRole != null ?
-                roles.FirstOrDefault(r => r.Id == currentUserRole.RoleId)?.Name : "Viewer";
-
-            var vm = new CreateUserVm
-            {
-                FullName = $"{user.FirstName} {user.LastName}",
-                Email = user.Email,
-                Role = currentRole,
-                TempPassword = "" // Şifre gösterilmez
-            };
-
-            return View(vm);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, CreateUserVm vm)
+        public async Task<IActionResult> Edit(EditUserVm vm)
         {
             if (!ModelState.IsValid)
             {
-                var role = await _roleService.GetAllRolesAsync();
-                ViewBag.Roles = role.Select(r => r.Name).ToList();
-                return View(vm);
+                TempData["Toast"] = "Kullanıcı güncellenemedi: Eksik/Hatalı alan.";
+                return RedirectToAction(nameof(Index));
             }
 
-            var user = await _userService.GetUserByIdAsync(id);
+            var user = await _userService.GetUserByIdAsync(vm.Id);
             if (user == null) return NotFound();
 
             // FullName'den FirstName ve LastName ayır
-            var nameParts = vm.FullName.Split(' ', 2);
+            var nameParts = (vm.FullName ?? "").Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var firstName = nameParts.Length > 0 ? nameParts[0] : "";
             var lastName = nameParts.Length > 1 ? nameParts[1] : "";
 
-            user.UserName = vm.Email.Split('@')[0];
-            user.Email = vm.Email;
+            user.UserName = (vm.Email ?? "").Split('@')[0];
+            user.Email = vm.Email?.Trim() ?? "";
             user.FirstName = firstName;
             user.LastName = lastName;
+            user.IsActive = vm.IsActive;
             user.ModifiedDate = DateTime.UtcNow;
-
-            // Şifre değiştirilmişse güncelle
-            if (!string.IsNullOrEmpty(vm.TempPassword))
-            {
-                user.PasswordHash = HashPassword(vm.TempPassword, user.PasswordSalt);
-            }
 
             await _userService.UpdateUserAsync(user);
 
             // Rolü güncelle
-            var roles = await _roleService.GetAllRolesAsync();
-            var newRole = roles.FirstOrDefault(r => r.Name == vm.Role);
+            var roles = (await _roleService.GetAllRolesAsync())?.ToList() ?? new List<Role>();
+            var newRole = roles.FirstOrDefault(r => string.Equals(r.Name, vm.Role, StringComparison.OrdinalIgnoreCase));
+            if (newRole == null)
+            {
+                newRole = await _roleService.CreateRoleAsync(new Role
+                {
+                    Name = vm.Role,
+                    Description = $"{vm.Role} rolü",
+                    IsSystemRole = true
+                });
+                roles.Add(newRole);
+            }
 
             if (newRole != null)
             {
-                var userRoles = await _userRoleService.GetAllUserRolesAsync();
-                var existingUserRole = userRoles.FirstOrDefault(ur => ur.UserId == id);
+                var userRoles = (await _userRoleService.GetAllUserRolesAsync())?.ToList() ?? new List<UserRole>();
+                var existingUserRole = userRoles.FirstOrDefault(ur => ur.UserId == vm.Id);
 
                 if (existingUserRole != null)
                 {
@@ -222,7 +217,7 @@ namespace TurkSoft.BankWebUI.Controllers
                 {
                     var newUserRole = new UserRole
                     {
-                        UserId = id,
+                        UserId = vm.Id,
                         RoleId = newRole.Id,
                         AssignedDate = DateTime.UtcNow
                     };
@@ -231,10 +226,55 @@ namespace TurkSoft.BankWebUI.Controllers
             }
 
             TempData["Toast"] = "Kullanıcı başarıyla güncellendi.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
 
-        private string GetUserRole(int userId, IEnumerable<UserRole> userRoles, IEnumerable<Role> roles)
+        // Index.cshtml'deki sil butonu buraya post ediyor.
+        // İş kuralı: kullanıcı "silinmez", pasife alınır.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null) return NotFound();
+
+            if (!user.IsActive)
+            {
+                TempData["Toast"] = "Kullanıcı zaten pasif.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            await _userService.DeactivateUserAsync(id);
+            TempData["Toast"] = "Kullanıcı pasif hale getirildi.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordVm vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["Toast"] = "Şifre sıfırlanamadı: eksik/hatalı alan.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var user = await _userService.GetUserByIdAsync(vm.Id);
+            if (user == null) return NotFound();
+
+            // Salt boş ise üret (eski kayıtlar için güvenli)
+            if (string.IsNullOrWhiteSpace(user.PasswordSalt))
+            {
+                user.PasswordSalt = Guid.NewGuid().ToString("N");
+                await _userService.UpdateUserAsync(user);
+            }
+
+            await _userService.ResetPasswordAsync(vm.Id, vm.NewPassword);
+            TempData["Toast"] = "Şifre başarıyla sıfırlandı.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        private static string GetUserRole(int userId, IEnumerable<UserRole> userRoles, IEnumerable<Role> roles)
         {
             var userRole = userRoles.FirstOrDefault(ur => ur.UserId == userId);
             if (userRole == null) return "Viewer";
@@ -243,16 +283,13 @@ namespace TurkSoft.BankWebUI.Controllers
             return role?.Name ?? "Viewer";
         }
 
-        private string HashPassword(string password, string salt)
+        // UserService ile aynı hash (SHA256(password|salt))
+        private static string HashPassword(string password, string salt)
         {
-            // UserService'teki hash metodunu kullan
-            // Burada basit bir hash yapıyoruz, gerçek uygulamada BCrypt kullanın
-            using (var sha = System.Security.Cryptography.SHA256.Create())
-            {
-                var saltedPassword = password + salt;
-                var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(saltedPassword));
-                return Convert.ToBase64String(bytes);
-            }
+            using var sha = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes($"{password}|{salt}");
+            var hash = sha.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
         }
     }
 }

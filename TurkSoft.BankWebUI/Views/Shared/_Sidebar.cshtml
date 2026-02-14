@@ -37,6 +37,10 @@
 
     <div class="nav-section">Yönetim</div>
 
+    <a class="nav-item @IsActive("LogReports")" asp-controller="LogReports" asp-action="Index">
+        <i class="fa-solid fa-clipboard-list"></i><span>Log Raporları</span>
+    </a>
+
     <a class="nav-item @IsActive("Users")" asp-controller="Users" asp-action="Index">
         <i class="fa-solid fa-users-gear"></i><span>Kullanıcılar</span>
     </a>

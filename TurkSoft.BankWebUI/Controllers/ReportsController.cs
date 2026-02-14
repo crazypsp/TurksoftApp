@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
+using System.Text.Json;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -1003,7 +1004,7 @@ namespace TurkSoft.BankWebUI.Controllers
                 }).ToList();
 
                 // 9. JSON olarak döndür
-                return Json(new
+                var payload = new
                 {
                     success = true,
                     data = enrichedList,
@@ -1014,7 +1015,17 @@ namespace TurkSoft.BankWebUI.Controllers
                         accountNumber = selectedAccount.AccountNumber,
                         recordCount = enrichedList.Count
                     }
-                });
+                };
+
+                // ✅ JSON alan adlarını modeldeki haliyle (UPPERCASE) döndür (DataTables eşleşmesi için)
+                return new JsonResult(payload)
+                {
+                    SerializerSettings = new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = null,
+                        DictionaryKeyPolicy = null
+                    }
+                };
             }
             catch (Exception ex)
             {

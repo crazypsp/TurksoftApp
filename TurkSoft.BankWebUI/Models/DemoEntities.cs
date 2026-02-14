@@ -8,6 +8,10 @@
         public string Password { get; set; } = "";
         public string Role { get; set; } = "Viewer";
         public bool IsActive { get; set; } = true;
+
+        // UI amaçlı
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+        public DateTime? LastLoginDate { get; set; }
     }
 
     public sealed class BankIntegrationSetting

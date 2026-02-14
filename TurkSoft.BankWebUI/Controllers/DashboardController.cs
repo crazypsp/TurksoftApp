@@ -48,6 +48,9 @@ namespace TurkSoft.BankWebUI.Controllers
             var userId = GetUserId();
             var today = DateTime.Today;
             var from7 = today.AddDays(-6);
+            // ✅ Bakiye için (hareket olmasa bile) daha geniş aralık fallback
+            // 90 gün (bugün dahil) -> -89
+            var from90 = today.AddDays(-89);
 
             var vm = new DashboardVm
             {
@@ -72,6 +75,7 @@ namespace TurkSoft.BankWebUI.Controllers
                     .ToList() ?? new List<BankCredential>();
 
                 var all = new List<(Bank bank, BankAccount acc, BNKHAR row)>();
+                var accountBalanceSnapshots = new List<(Bank bank, BankAccount acc, decimal balanceTry)>();
 
                 foreach (var bank in banks)
                 {
@@ -109,7 +113,7 @@ namespace TurkSoft.BankWebUI.Controllers
                         IReadOnlyList<BNKHAR> rows;
                         try
                         {
-                            rows = await _bankStatementService.GetStatementAsync(req, ct);
+                            rows = await _bankStatementService.GetStatementAsync(req, ct) ?? Array.Empty<BNKHAR>();
                         }
                         catch (Exception ex)
                         {
@@ -118,33 +122,78 @@ namespace TurkSoft.BankWebUI.Controllers
                             continue;
                         }
 
-                        foreach (var r in rows)
-                            all.Add((bank, acc, r));
+                        // ✅ 1) Hareket varsa: son hareketten bakiye (PROCESSBALANCE) al
+                        // ✅ 2) Hareket yoksa: sadece bakiye için 90 gün fallback isteği at
+                        var accBalanceTry = 0m;
+                        if (rows != null && rows.Count > 0)
+                        {
+                            if (TryGetLatestProcessBalance(rows, out var balFromRows))
+                                accBalanceTry = balFromRows;
+                            else
+                                // PROCESSBALANCE gelmezse: mevcut davranış bozulmasın (net hareket)
+                                accBalanceTry = rows.Sum(GetSignedAmount);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var reqBal = new BankStatementRequest
+                                {
+                                    BankId = bank.ExternalBankId,
+                                    Username = bank.UsernameLabel,
+                                    Password = bank.PasswordLabel,
+                                    AccountNumber = acc.AccountNumber,
+                                    BeginDate = from90,
+                                    EndDate = today,
+                                    Link = bank.DefaultLink,
+                                    TLink = bank.DefaultTLink,
+                                    Extras = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                                };
+
+                                reqBal.Extras["IBAN"] = acc.IBAN ?? "";
+                                reqBal.Extras["SubeNo"] = acc.SubeNo ?? "";
+                                reqBal.Extras["MusteriNo"] = acc.MusteriNo ?? "";
+                                reqBal.Extras["Currency"] = acc.Currency ?? "";
+
+                                foreach (var kv in credExtras)
+                                    reqBal.Extras[kv.Key] = kv.Value ?? "";
+
+                                var balRows = await _bankStatementService.GetStatementAsync(reqBal, ct) ?? Array.Empty<BNKHAR>();
+                                if (balRows != null && balRows.Count > 0)
+                                {
+                                    if (TryGetLatestProcessBalance(balRows, out var balFromFallback))
+                                        accBalanceTry = balFromFallback;
+                                    else
+                                        accBalanceTry = balRows.Sum(GetSignedAmount);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                SafeLog(userId, "DashboardController", "Index",
+                                    $"Bakiye fallback hata (90g). Bank={bank.BankName}, Acc={acc.AccountNumber}. {ex.Message}");
+                            }
+                        }
+
+                        accountBalanceSnapshots.Add((bank, acc, accBalanceTry));
+
+                        // Günlük/haftalık analizler (cashflow, günlük giriş/çıkış, son hareketler) için sadece 7 günlük veriyi tut.
+                        if (rows != null && rows.Count > 0)
+                        {
+                            foreach (var r in rows)
+                                all.Add((bank, acc, r));
+                        }
                     }
                 }
 
                 // Banka bakiyeleri
-                var bankBalances = all
+                // ✅ Hareket olmasa bile hesap bakiyeleri (accountBalanceSnapshots) üzerinden hesapla
+                // Not: Aynı bankada birden fazla hesap varsa toplamını gösterir.
+                var bankBalances = accountBalanceSnapshots
                     .GroupBy(x => x.bank.Id)
-                    .Select(g =>
+                    .Select(g => new UiBankBalance
                     {
-                        var bank = g.First().bank;
-
-                        var last = g
-                            .OrderByDescending(x => GetRowDate(x.row) ?? DateTime.MinValue)
-                            .FirstOrDefault();
-
-                        decimal balTry;
-                        if (!string.IsNullOrWhiteSpace(last.row?.PROCESSBALANCE))
-                            balTry = ToDecimalSafe(last.row.PROCESSBALANCE);
-                        else
-                            balTry = g.Sum(x => GetSignedAmount(x.row));
-
-                        return new UiBankBalance
-                        {
-                            BankName = bank.BankName,
-                            BalanceTry = balTry
-                        };
+                        BankName = g.First().bank.BankName,
+                        BalanceTry = g.Sum(x => x.balanceTry)
                     })
                     .OrderByDescending(x => x.BalanceTry)
                     .ToList();
@@ -271,6 +320,26 @@ namespace TurkSoft.BankWebUI.Controllers
             .Select(x => x!.Trim());
 
             return string.Join(" ", parts);
+        }
+
+        /// <summary>
+        /// WS'nin döndürdüğü hareket listesinden "en son bilinen" bakiye bilgisini (PROCESSBALANCE) almaya çalışır.
+        /// Hareketler 7 günlük aralıkta gelmese bile, 90 gün fallback ile gelen hareketten bakiye çekilebilsin diye
+        /// ayrı bir helper olarak tutulur.
+        /// </summary>
+        private static bool TryGetLatestProcessBalance(IReadOnlyList<BNKHAR> rows, out decimal balanceTry)
+        {
+            balanceTry = 0m;
+            if (rows == null || rows.Count == 0) return false;
+
+            var lastWithBalance = rows
+                .OrderByDescending(r => GetRowDate(r) ?? DateTime.MinValue)
+                .FirstOrDefault(r => !string.IsNullOrWhiteSpace(r.PROCESSBALANCE));
+
+            if (lastWithBalance == null) return false;
+
+            balanceTry = ToDecimalSafe(lastWithBalance.PROCESSBALANCE);
+            return true;
         }
 
         // Projende Normalize: A = Credit, B = Debit
