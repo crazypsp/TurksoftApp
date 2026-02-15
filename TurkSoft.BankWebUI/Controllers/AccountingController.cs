@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using TurkSoft.Business.Base;
 using TurkSoft.Entities.BankService.Models;
 using TurkSoft.Entities.Entities;
@@ -11,6 +13,7 @@ using TurkSoft.Entities.Entities.Models;
 using TurkSoft.Service.Inferfaces;    // ILogoTigerIntegrationService
 using TurkSoft.Service.Interface;     // IBankStatementService
 using TurkSoft.Services.Interfaces;   // IBankService, IBankAccountService, ITransferLogService, ISystemLogService
+using System.Linq;
 
 namespace TurkSoft.BankWebUI.Controllers
 {
@@ -109,16 +112,19 @@ namespace TurkSoft.BankWebUI.Controllers
                 foreach (var x in list)
                 {
                     var key = BuildUniqueKey(bankId, acc.AccountNumber, x);
-                    var log = logs.FirstOrDefault(l => l.ExternalUniqueKey == key && l.Status == "SUCCESS");
+                    var log = logs.FirstOrDefault(l => string.Equals(l.ExternalUniqueKey, key, StringComparison.OrdinalIgnoreCase) && l.Status == "SUCCESS");
 
                     dto.Add(new BankStatementRowDto
                     {
                         ProcessTimeStr = !string.IsNullOrWhiteSpace(x.PROCESSTIMESTR) ? x.PROCESSTIMESTR : x.PROCESSTIMESTR2,
                         ProcessTime = x.PROCESSTIME,
                         RefNo = x.PROCESSREFNO,
-                        Description = string.Join(" ", new[] { x.PROCESSDESC, x.PROCESSDESC2, x.PROCESSDESC3, x.PROCESSDESC4 }.Where(s => !string.IsNullOrWhiteSpace(s))).Trim(),
+                        Description = string.Join(" ",
+                            new[] { x.PROCESSDESC, x.PROCESSDESC2, x.PROCESSDESC3, x.PROCESSDESC4 }
+                            .Where(s => !string.IsNullOrWhiteSpace(s)))
+                            .Trim(),
                         AmountStr = x.PROCESSAMAOUNT,
-                        DebitCredit = NormalizeDebitCredit(x.PROCESSDEBORCRED),
+                        DebitCredit = NormalizeDebitCredit(x.PROCESSDEBORCRED), // ✅ HATA BURADAYDI -> helper eklendi
                         TypeCode = x.PROCESSTYPECODE,
                         ExternalUniqueKey = key,
                         IsTransferred = transferred.Contains(key),
@@ -157,10 +163,8 @@ namespace TurkSoft.BankWebUI.Controllers
 
                 return Json(new { success = false, message = ex.Message });
             }
-
-            
-
         }
+
         // Logo Tiger: Cari / Banka Hesap / Diğer Hesap Planı arama (typeahead)
         [HttpGet]
         public async Task<IActionResult> SearchTigerCaris([FromQuery] string term, [FromQuery] int take = 30)
@@ -201,6 +205,7 @@ namespace TurkSoft.BankWebUI.Controllers
             var result = items.Select(x => new { code = x.Code, name = x.Name }).ToList();
             return Json(new { success = true, items = result });
         }
+
         // Transfer: sonucu normalize ediyoruz (Kredi/BankaFis dönüş tipi farkını kaldırıyoruz)
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -209,8 +214,9 @@ namespace TurkSoft.BankWebUI.Controllers
             var userId = GetUserId();
 
             var logs = (await _transferLogService.GetAllTransferLogsAsync())?.ToList() ?? new();
-            if (logs.Any(l => l.ExternalUniqueKey == dto.ExternalUniqueKey && l.Status == "SUCCESS"))
+            if (logs.Any(l => string.Equals(l.ExternalUniqueKey, dto.ExternalUniqueKey, StringComparison.OrdinalIgnoreCase) && l.Status == "SUCCESS"))
                 return Json(new { success = true, alreadyTransferred = true, message = "Bu kayıt daha önce aktarılmış." });
+
             // ✅ Minimum alan validasyonu (Madde 3)
             if (string.IsNullOrWhiteSpace(dto.BankaHesapKodu))
                 return Json(new { success = false, message = "Tiger Banka Hesap Kodu zorunludur." });
@@ -224,6 +230,7 @@ namespace TurkSoft.BankWebUI.Controllers
             {
                 if (string.IsNullOrWhiteSpace(dto.HedefHesapKodu))
                     return Json(new { success = false, message = "Virman için hedef banka hesabı zorunludur." });
+
                 if (string.Equals(dto.BankaHesapKodu?.Trim(), dto.HedefHesapKodu?.Trim(), StringComparison.OrdinalIgnoreCase))
                     return Json(new { success = false, message = "Virman hedef hesabı, kaynak hesap ile aynı olamaz." });
             }
@@ -232,8 +239,6 @@ namespace TurkSoft.BankWebUI.Controllers
                 if (string.IsNullOrWhiteSpace(dto.ArpCode))
                     return Json(new { success = false, message = "Gelen/Giden havale için Cari Kodu (ARP_CODE) zorunludur." });
             }
-
-
 
             bool ok;
             string msg;
@@ -254,8 +259,9 @@ namespace TurkSoft.BankWebUI.Controllers
                     var res = await _logoTiger.VirmanEkleAsync(req);
                     ok = res.Success; msg = res.Message; ficheRef = res.Data?.FisReferans; errors = res.Errors;
                 }
-                else if (string.Equals(dto.DebitCredit, "C", StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(NormalizeDebitCredit(dto.DebitCredit), "C", StringComparison.OrdinalIgnoreCase))
                 {
+                    // ✅ dto.DebitCredit null veya A/B gelirse normalize et
                     var req = BuildGelen(dto, userId);
                     var res = await _logoTiger.GelenHavaleEkleAsync(req);
                     ok = res.Success; msg = res.Message; ficheRef = res.Data?.FisReferans; errors = res.Errors;
@@ -324,7 +330,7 @@ namespace TurkSoft.BankWebUI.Controllers
         {
             public string ExternalUniqueKey { get; set; } = "";
             public DateTime TransactionDate { get; set; }
-            public string? DebitCredit { get; set; } // D/C
+            public string? DebitCredit { get; set; } // D/C (veya A/B gelebilir)
             public decimal Amount { get; set; }
 
             public string? RefNo { get; set; }
@@ -341,19 +347,57 @@ namespace TurkSoft.BankWebUI.Controllers
 
         private static (DateTime start, DateTime end) ParseDateRange(string dateRange)
         {
+            // default: son 7 gün
             var start = DateTime.Today.AddDays(-7);
             var end = DateTime.Today;
 
-            if (!string.IsNullOrWhiteSpace(dateRange))
-            {
-                var parts = dateRange.Split(" - ");
-                if (parts.Length == 2)
-                {
-                    if (DateTime.TryParse(parts[0], out var s)) start = s;
-                    if (DateTime.TryParse(parts[1], out var e)) end = e;
-                }
-            }
+            if (string.IsNullOrWhiteSpace(dateRange))
+                return (start, end);
+
+            // flatpickr bazen "dd.MM.yyyy - dd.MM.yyyy" bazen "dd.MM.yyyy to dd.MM.yyyy" dönebiliyor.
+            // Bu regex iki tarihi yakalar.
+            var m = Regex.Match(dateRange.Trim(), @"(?<d1>\d{1,2}[./-]\d{1,2}[./-]\d{2,4}).*?(?<d2>\d{1,2}[./-]\d{1,2}[./-]\d{2,4})");
+            if (!m.Success)
+                return (start, end);
+
+            var s1 = m.Groups["d1"].Value;
+            var s2 = m.Groups["d2"].Value;
+
+            if (TryParseDate(s1, out var s)) start = s.Date;
+            if (TryParseDate(s2, out var e)) end = e.Date;
+
+            if (end < start)
+                (start, end) = (end, start);
+
             return (start, end);
+        }
+
+        private static bool TryParseDate(string s, out DateTime dt)
+        {
+            var tr = new CultureInfo("tr-TR");
+
+            // en sık gelen formatlar
+            var formats = new[]
+            {
+                "dd.MM.yyyy",
+                "d.M.yyyy",
+                "dd/MM/yyyy",
+                "d/M/yyyy",
+                "dd-MM-yyyy",
+                "d-M-yyyy"
+            };
+
+            if (DateTime.TryParseExact(s, formats, tr, DateTimeStyles.AssumeLocal, out dt))
+                return true;
+
+            if (DateTime.TryParse(s, tr, DateTimeStyles.AssumeLocal, out dt))
+                return true;
+
+            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dt))
+                return true;
+
+            dt = default;
+            return false;
         }
 
         private int GetUserId()
@@ -371,10 +415,36 @@ namespace TurkSoft.BankWebUI.Controllers
         }
 
         private static bool IsVirman(string? desc, string? typeCode)
-            => (desc ?? "").ToUpper().Contains("VIRMAN") || (typeCode ?? "").ToUpper().Contains("VIR");
+            => (desc ?? "").ToUpperInvariant().Contains("VIRMAN") || (typeCode ?? "").ToUpperInvariant().Contains("VIR");
 
         private static bool IsKredi(string? desc, string? typeCode)
-            => (desc ?? "").ToUpper().Contains("KREDI") || (desc ?? "").ToUpper().Contains("TAKSIT") || (typeCode ?? "").ToUpper().Contains("KRD");
+            => (desc ?? "").ToUpperInvariant().Contains("KREDI")
+               || (desc ?? "").ToUpperInvariant().Contains("TAKSIT")
+               || (typeCode ?? "").ToUpperInvariant().Contains("KRD");
+
+        /// <summary>
+        /// WS bazı bankalarda A/B, bazı bankalarda C/D döndürebiliyor.
+        /// UI ve Tiger entegrasyonu için D/C standardına normalize ediyoruz:
+        ///  A (Alacak) -> C
+        ///  B (Borç)   -> D
+        ///  C/D zaten varsa aynen döner.
+        ///  null/boş -> null
+        /// </summary>
+        private static string? NormalizeDebitCredit(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+
+            var v = value.Trim().ToUpperInvariant();
+
+            return v switch
+            {
+                "A" => "C",
+                "B" => "D",
+                "C" => "C",
+                "D" => "D",
+                _ => v
+            };
+        }
 
         // ---- Build Requests (minimum alanlarla) ----
         private static string NewGuidUpper() => Guid.NewGuid().ToString().ToUpperInvariant();
