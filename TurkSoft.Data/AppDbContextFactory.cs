@@ -10,7 +10,7 @@ namespace TurkSoft.Data
         {
             var options = new DbContextOptionsBuilder<AppDbContext>();
             options.UseSqlServer(
-                "Server=localhost;Database=TurksoftDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True;",
+                "Server=DESKTOP-54QF28R\\ZRV2014EXP;Database=OzerDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True",
                 b => b.MigrationsAssembly("TurkSoft.Data")
             );
             return new AppDbContext(options.Options);

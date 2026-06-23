@@ -4,6 +4,14 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!--
+      Logo Tiger (UnityObjects COM) entegrasyonu yalnızca ilgili COM kütüphanesi
+      KAYITLI olan makinelerde derlenebilir. Varsayılan olarak kapalıdır; böylece
+      proje Logo kurulu olmayan geliştirici makinelerinde ve 'dotnet build' ile derlenir.
+      Etkinleştirmek için: VS'de bu property'yi true yapın veya
+      'dotnet build -p:EnableLogoIntegration=true' / 'msbuild -p:EnableLogoIntegration=true'.
+    -->
+    <EnableLogoIntegration Condition="'$(EnableLogoIntegration)' == ''">false</EnableLogoIntegration>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,7 +20,8 @@
     <None Remove="Security\**" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- Logo entegrasyonu AÇIK: gerçek (COM'lu) implementasyon + COM referansı -->
+  <ItemGroup Condition="'$(EnableLogoIntegration)' == 'true'">
     <COMReference Include="UnityObjects">
       <WrapperTool>tlbimp</WrapperTool>
       <VersionMinor>0</VersionMinor>
@@ -22,6 +31,12 @@
       <Isolated>false</Isolated>
       <EmbedInteropTypes>true</EmbedInteropTypes>
     </COMReference>
+    <Compile Remove="Implementations\LogoTigerIntegrationService.Stub.cs" />
+  </ItemGroup>
+
+  <!-- Logo entegrasyonu KAPALI: COM'suz stub implementasyon devrede -->
+  <ItemGroup Condition="'$(EnableLogoIntegration)' != 'true'">
+    <Compile Remove="Implementations\LogoTigerIntegrationService.cs" />
   </ItemGroup>
 
   <ItemGroup>
