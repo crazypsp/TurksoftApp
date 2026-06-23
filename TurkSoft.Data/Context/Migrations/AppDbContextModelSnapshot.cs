@@ -3,20 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TurkSoft.Data.Context;
 
 #nullable disable
 
-namespace TurkSoft.Data.Migrations
+namespace TurkSoft.Data.Context.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250909185211_RemoveUniqueFromBusinessCodes")]
-    partial class RemoveUniqueFromBusinessCodes
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -245,6 +242,19 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("OlusturanKullaniciId");
 
                     b.ToTable("Bayi", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "bayi@demo.local",
+                            IsActive = true,
+                            Kod = "DEMO-BAYI-001",
+                            OlusturanKullaniciId = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Telefon = "+90 212 000 0001",
+                            Unvan = "Demo Bayi A.Ş."
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.BayiCari", b =>
@@ -906,6 +916,22 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("MaliMusavirId");
 
                     b.ToTable("Firmalar");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a0000009-0000-0000-0000-000000000001"),
+                            Adres = "Levent, İstanbul",
+                            BayiId = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "firma@demo.local",
+                            FirmaAdi = "Demo Şirket Ltd. Şti.",
+                            IsActive = true,
+                            MaliMusavirId = new Guid("a0000007-0000-0000-0000-000000000001"),
+                            Telefon = "+90 212 000 0003",
+                            VergiNo = "9876543210",
+                            YetkiliAdSoyad = "Demo Yetkili"
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.FiyatListesi", b =>
@@ -1253,6 +1279,28 @@ namespace TurkSoft.Data.Migrations
                             Rol = "Admin",
                             Sifre = "Admin!12345",
                             Telefon = "+90 555 000 0000"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            AdSoyad = "Demo Bayi Kullanıcı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "bayi@turksoft.local",
+                            IsActive = true,
+                            Rol = "Bayi",
+                            Sifre = "Bayi!12345",
+                            Telefon = "+90 555 000 0001"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            AdSoyad = "Demo MM Kullanıcı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "mm@turksoft.local",
+                            IsActive = true,
+                            Rol = "MaliMusavir",
+                            Sifre = "Mali!12345",
+                            Telefon = "+90 555 000 0002"
                         });
                 });
 
@@ -1317,6 +1365,17 @@ namespace TurkSoft.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Kullanici_Bayi", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("ff000001-0000-0000-0000-000000000001"),
+                            BayiId = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsPrimary = false,
+                            KullaniciId = new Guid("22222222-2222-2222-2222-222222222222")
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciFirma", b =>
@@ -1443,6 +1502,17 @@ namespace TurkSoft.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Kullanici_MaliMusavir", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a0000008-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsPrimary = false,
+                            KullaniciId = new Guid("33333333-3333-3333-3333-333333333333"),
+                            MaliMusavirId = new Guid("a0000007-0000-0000-0000-000000000001")
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Kupon", b =>
@@ -1974,6 +2044,21 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("IsActive");
 
                     b.ToTable("MaliMusavirler");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a0000007-0000-0000-0000-000000000001"),
+                            AdSoyad = "Demo Mali Müşavir",
+                            BayiId = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "mm@demo.local",
+                            IsActive = true,
+                            TCKN = "12345678901",
+                            Telefon = "+90 212 000 0002",
+                            Unvan = "SMMM",
+                            VergiNo = "1234567890"
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Not", b =>
@@ -2243,6 +2328,62 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("Kod");
 
                     b.ToTable("OpportunityAsamalari");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000001"),
+                            Ad = "Yeni Lead",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "NEW",
+                            OlasilikYuzde = 10m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000002"),
+                            Ad = "Nitelendirme",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "QUAL",
+                            OlasilikYuzde = 25m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000003"),
+                            Ad = "Teklif Verildi",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "PROP",
+                            OlasilikYuzde = 50m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000004"),
+                            Ad = "Müzakere",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "NEG",
+                            OlasilikYuzde = 75m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000005"),
+                            Ad = "Kazanıldı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "WON",
+                            OlasilikYuzde = 100m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000006"),
+                            Ad = "Kaybedildi",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "LOST",
+                            OlasilikYuzde = 0m
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.OpportunityAsamaGecis", b =>
@@ -2400,6 +2541,53 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("UrunTipiId");
 
                     b.ToTable("Paketler");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000001"),
+                            Aciklama = "1 kullanıcı, temel muhasebe modülleri",
+                            Ad = "Starter",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000002"),
+                            Aciklama = "5 kullanıcı, tüm ERP modülleri",
+                            Ad = "Professional",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000003"),
+                            Aciklama = "Sınırsız kullanıcı, özel entegrasyonlar",
+                            Ad = "Enterprise",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000004"),
+                            Aciklama = "İş günleri 09-18 telefon/e-posta destek",
+                            Ad = "Destek Temel",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000003")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000005"),
+                            Aciklama = "7/24 öncelikli destek + yerinde servis",
+                            Ad = "Destek Premium",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000003")
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.PaketIskonto", b =>
@@ -3054,6 +3242,32 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("IsActive");
 
                     b.ToTable("UrunTipleri");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("cc000001-0000-0000-0000-000000000001"),
+                            Aciklama = "ERP/Muhasebe yazılım lisansları",
+                            Ad = "Yazılım Lisansı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = new Guid("cc000001-0000-0000-0000-000000000002"),
+                            Aciklama = "Danışmanlık ve uygulama hizmetleri",
+                            Ad = "Hizmet",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = new Guid("cc000001-0000-0000-0000-000000000003"),
+                            Aciklama = "Yıllık teknik destek paketleri",
+                            Ad = "Teknik Destek",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.VergiOrani", b =>
@@ -3099,6 +3313,40 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("Kod");
 
                     b.ToTable("VergiOranlari");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV0",
+                            Oran = 0m
+                        },
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000002"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV1",
+                            Oran = 1m
+                        },
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000003"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV10",
+                            Oran = 10m
+                        },
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000004"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV20",
+                            Oran = 20m
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.WebhookAbonelik", b =>

@@ -10,7 +10,20 @@ builder.Services.AddCors(options =>
 {
   options.AddPolicy("AllowNoxmusavir", policy =>
   {
-    policy.WithOrigins("https://noxmusavir.com")
+    var origins = new List<string>
+    {
+      "https://noxmusavir.com",
+      "https://www.noxmusavir.com",
+      "https://erpapi.noxmusavir.com"
+    };
+    if (builder.Environment.IsDevelopment())
+    {
+      origins.Add("http://localhost:5050");
+      origins.Add("https://localhost:7228");
+      origins.Add("http://localhost:5000");
+      origins.Add("https://localhost:5001");
+    }
+    policy.WithOrigins(origins.ToArray())
           .AllowAnyHeader()
           .AllowAnyMethod();
   });

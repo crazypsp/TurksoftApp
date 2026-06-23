@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Eposta: fmEpo.value
     };
     try {
-      const sess = getSession();
+      const sess = await getSession();
       if (!dto.Id && sess?.userId) dto.OlusturanKullaniciId = sess.userId; // önemli
 
       if (dto.Id) await BayiApi.update(dto.Id, dto);

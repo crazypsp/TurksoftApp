@@ -91,8 +91,10 @@ namespace TurkSoft.Data.Context
         {
             base.OnModelCreating(modelBuilder);
 
-            // Tüm configuration sınıflarını otomatik uygula
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+            // Sadece AppDbContext'e ait config'leri uygula (EntityData namespace'i hariç)
+            modelBuilder.ApplyConfigurationsFromAssembly(
+                typeof(AppDbContext).Assembly,
+                t => t.Namespace == "TurkSoft.Data.Configuration");
 
             // ---- Global soft-delete filtresi (DeleteDate == null olanlar) ----
             foreach (var et in modelBuilder.Model.GetEntityTypes())
@@ -112,24 +114,84 @@ namespace TurkSoft.Data.Context
                 }
             }
 
-            // ---- Seed: Admin Kullanıcı ----
-            var adminId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var seedCreateDateUtc = new DateTime(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
+            var seed = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            modelBuilder.Entity<Kullanici>().HasData(new Kullanici
-            {
-                Id = adminId,
-                IsActive = true,
-                CreateDate = seedCreateDateUtc,
-                UpdateDate = null,
-                DeleteDate = null,
-                AdSoyad = "Sistem Yöneticisi",
-                Eposta = "admin@turksoft.local",
-                Sifre = "Admin!12345", // DEMO, canlıda HASH zorunlu
-                Telefon = "+90 555 000 0000",
-                Rol = "Admin",
-                ProfilResmiUrl = null
-            });
+            // ---- Seed: Kullanıcılar ----
+            var adminId   = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var bayiUsrId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var mmUsrId   = Guid.Parse("33333333-3333-3333-3333-333333333333");
+
+            modelBuilder.Entity<Kullanici>().HasData(
+                new Kullanici { Id = adminId,   IsActive = true, CreateDate = seed, AdSoyad = "Sistem Yöneticisi", Eposta = "admin@turksoft.local",  Sifre = "Admin!12345",  Telefon = "+90 555 000 0000", Rol = "Admin" },
+                new Kullanici { Id = bayiUsrId, IsActive = true, CreateDate = seed, AdSoyad = "Demo Bayi Kullanıcı", Eposta = "bayi@turksoft.local", Sifre = "Bayi!12345",  Telefon = "+90 555 000 0001", Rol = "Bayi" },
+                new Kullanici { Id = mmUsrId,   IsActive = true, CreateDate = seed, AdSoyad = "Demo MM Kullanıcı",  Eposta = "mm@turksoft.local",    Sifre = "Mali!12345",  Telefon = "+90 555 000 0002", Rol = "MaliMusavir" }
+            );
+
+            // ---- Seed: Vergi Oranları ----
+            modelBuilder.Entity<VergiOrani>().HasData(
+                new VergiOrani { Id = Guid.Parse("AA000001-0000-0000-0000-000000000001"), IsActive = true, CreateDate = seed, Kod = "KDV0",  Oran = 0m  },
+                new VergiOrani { Id = Guid.Parse("AA000001-0000-0000-0000-000000000002"), IsActive = true, CreateDate = seed, Kod = "KDV1",  Oran = 1m  },
+                new VergiOrani { Id = Guid.Parse("AA000001-0000-0000-0000-000000000003"), IsActive = true, CreateDate = seed, Kod = "KDV10", Oran = 10m },
+                new VergiOrani { Id = Guid.Parse("AA000001-0000-0000-0000-000000000004"), IsActive = true, CreateDate = seed, Kod = "KDV20", Oran = 20m }
+            );
+
+            // ---- Seed: Opportunity Aşamaları (CRM Pipeline) ----
+            modelBuilder.Entity<OpportunityAsama>().HasData(
+                new OpportunityAsama { Id = Guid.Parse("BB000001-0000-0000-0000-000000000001"), IsActive = true, CreateDate = seed, Kod = "NEW",   Ad = "Yeni Lead",       OlasilikYuzde = 10m  },
+                new OpportunityAsama { Id = Guid.Parse("BB000001-0000-0000-0000-000000000002"), IsActive = true, CreateDate = seed, Kod = "QUAL",  Ad = "Nitelendirme",    OlasilikYuzde = 25m  },
+                new OpportunityAsama { Id = Guid.Parse("BB000001-0000-0000-0000-000000000003"), IsActive = true, CreateDate = seed, Kod = "PROP",  Ad = "Teklif Verildi",  OlasilikYuzde = 50m  },
+                new OpportunityAsama { Id = Guid.Parse("BB000001-0000-0000-0000-000000000004"), IsActive = true, CreateDate = seed, Kod = "NEG",   Ad = "Müzakere",        OlasilikYuzde = 75m  },
+                new OpportunityAsama { Id = Guid.Parse("BB000001-0000-0000-0000-000000000005"), IsActive = true, CreateDate = seed, Kod = "WON",   Ad = "Kazanıldı",       OlasilikYuzde = 100m },
+                new OpportunityAsama { Id = Guid.Parse("BB000001-0000-0000-0000-000000000006"), IsActive = true, CreateDate = seed, Kod = "LOST",  Ad = "Kaybedildi",      OlasilikYuzde = 0m   }
+            );
+
+            // ---- Seed: Ürün Tipleri ----
+            var utYazilimId = Guid.Parse("CC000001-0000-0000-0000-000000000001");
+            var utHizmetId  = Guid.Parse("CC000001-0000-0000-0000-000000000002");
+            var utDestekId  = Guid.Parse("CC000001-0000-0000-0000-000000000003");
+
+            modelBuilder.Entity<UrunTipi>().HasData(
+                new UrunTipi { Id = utYazilimId, IsActive = true, CreateDate = seed, Ad = "Yazılım Lisansı", Aciklama = "ERP/Muhasebe yazılım lisansları" },
+                new UrunTipi { Id = utHizmetId,  IsActive = true, CreateDate = seed, Ad = "Hizmet",          Aciklama = "Danışmanlık ve uygulama hizmetleri" },
+                new UrunTipi { Id = utDestekId,  IsActive = true, CreateDate = seed, Ad = "Teknik Destek",   Aciklama = "Yıllık teknik destek paketleri" }
+            );
+
+            // ---- Seed: Paketler ----
+            modelBuilder.Entity<Paket>().HasData(
+                new Paket { Id = Guid.Parse("DD000001-0000-0000-0000-000000000001"), IsActive = true, CreateDate = seed, UrunTipiId = utYazilimId, Ad = "Starter",    Aciklama = "1 kullanıcı, temel muhasebe modülleri" },
+                new Paket { Id = Guid.Parse("DD000001-0000-0000-0000-000000000002"), IsActive = true, CreateDate = seed, UrunTipiId = utYazilimId, Ad = "Professional", Aciklama = "5 kullanıcı, tüm ERP modülleri" },
+                new Paket { Id = Guid.Parse("DD000001-0000-0000-0000-000000000003"), IsActive = true, CreateDate = seed, UrunTipiId = utYazilimId, Ad = "Enterprise",   Aciklama = "Sınırsız kullanıcı, özel entegrasyonlar" },
+                new Paket { Id = Guid.Parse("DD000001-0000-0000-0000-000000000004"), IsActive = true, CreateDate = seed, UrunTipiId = utDestekId,  Ad = "Destek Temel", Aciklama = "İş günleri 09-18 telefon/e-posta destek" },
+                new Paket { Id = Guid.Parse("DD000001-0000-0000-0000-000000000005"), IsActive = true, CreateDate = seed, UrunTipiId = utDestekId,  Ad = "Destek Premium", Aciklama = "7/24 öncelikli destek + yerinde servis" }
+            );
+
+            // ---- Seed: Bayi ----
+            var demoBayiId = Guid.Parse("EE000001-0000-0000-0000-000000000001");
+            modelBuilder.Entity<Bayi>().HasData(
+                new Bayi { Id = demoBayiId, IsActive = true, CreateDate = seed, Kod = "DEMO-BAYI-001", Unvan = "Demo Bayi A.Ş.", Telefon = "+90 212 000 0001", Eposta = "bayi@demo.local", OlusturanKullaniciId = adminId }
+            );
+
+            // ---- Seed: KullaniciBayi (bayi kullanıcısını bayiye bağla) ----
+            modelBuilder.Entity<KullaniciBayi>().HasData(
+                new KullaniciBayi { Id = Guid.Parse("FF000001-0000-0000-0000-000000000001"), IsActive = true, CreateDate = seed, KullaniciId = bayiUsrId, BayiId = demoBayiId }
+            );
+
+            // ---- Seed: Mali Müşavir ----
+            var demoMmId = Guid.Parse("A0000007-0000-0000-0000-000000000001");
+            modelBuilder.Entity<MaliMusavir>().HasData(
+                new MaliMusavir { Id = demoMmId, IsActive = true, CreateDate = seed, AdSoyad = "Demo Mali Müşavir", Telefon = "+90 212 000 0002", Eposta = "mm@demo.local", Unvan = "SMMM", VergiNo = "1234567890", TCKN = "12345678901", BayiId = demoBayiId }
+            );
+
+            // ---- Seed: KullaniciMaliMusavir ----
+            modelBuilder.Entity<KullaniciMaliMusavir>().HasData(
+                new KullaniciMaliMusavir { Id = Guid.Parse("A0000008-0000-0000-0000-000000000001"), IsActive = true, CreateDate = seed, KullaniciId = mmUsrId, MaliMusavirId = demoMmId }
+            );
+
+            // ---- Seed: Firma ----
+            var demoFirmaId = Guid.Parse("A0000009-0000-0000-0000-000000000001");
+            modelBuilder.Entity<Firma>().HasData(
+                new Firma { Id = demoFirmaId, IsActive = true, CreateDate = seed, FirmaAdi = "Demo Şirket Ltd. Şti.", VergiNo = "9876543210", YetkiliAdSoyad = "Demo Yetkili", Telefon = "+90 212 000 0003", Eposta = "firma@demo.local", Adres = "Levent, İstanbul", MaliMusavirId = demoMmId, BayiId = demoBayiId }
+            );
         }
 
         public override int SaveChanges()

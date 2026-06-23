@@ -9,11 +9,11 @@ using TurkSoft.Data.Context;
 
 #nullable disable
 
-namespace TurkSoft.Data.Migrations
+namespace TurkSoft.Data.Context.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250827103057_AddUserRelationsDomainDB")]
-    partial class AddUserRelationsDomainDB
+    [Migration("20260622165845_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -59,7 +59,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Aciklama")
                         .IsRequired()
@@ -137,7 +138,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("AktiviteId")
                         .HasColumnType("uniqueidentifier");
@@ -187,7 +189,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -237,19 +240,32 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("Kod")
-                        .IsUnique();
+                    b.HasIndex("Kod");
 
                     b.HasIndex("OlusturanKullaniciId");
 
                     b.ToTable("Bayi", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "bayi@demo.local",
+                            IsActive = true,
+                            Kod = "DEMO-BAYI-001",
+                            OlusturanKullaniciId = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Telefon = "+90 212 000 0001",
+                            Unvan = "Demo Bayi A.Ş."
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.BayiCari", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<decimal>("Bakiye")
                         .HasColumnType("decimal(18,2)");
@@ -292,7 +308,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Aciklama")
                         .HasColumnType("nvarchar(max)");
@@ -349,7 +366,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Adres")
                         .IsRequired()
@@ -404,7 +422,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("Baslangic")
                         .HasColumnType("datetime2");
@@ -457,7 +476,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<long>("Boyut")
                         .HasColumnType("bigint");
@@ -518,7 +538,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Aciklama")
                         .IsRequired()
@@ -600,7 +621,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Ad")
                         .IsRequired()
@@ -641,7 +663,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -687,7 +710,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("BayiId")
                         .HasColumnType("uniqueidentifier");
@@ -755,8 +779,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("CreateDate");
 
-                    b.HasIndex("FaturaNo")
-                        .IsUnique();
+                    b.HasIndex("FaturaNo");
 
                     b.HasIndex("FirmaId");
 
@@ -771,7 +794,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<decimal>("BirimFiyat")
                         .HasColumnType("decimal(18,2)");
@@ -826,7 +850,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Adres")
                         .IsRequired()
@@ -894,13 +919,30 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("MaliMusavirId");
 
                     b.ToTable("Firmalar");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a0000009-0000-0000-0000-000000000001"),
+                            Adres = "Levent, İstanbul",
+                            BayiId = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "firma@demo.local",
+                            FirmaAdi = "Demo Şirket Ltd. Şti.",
+                            IsActive = true,
+                            MaliMusavirId = new Guid("a0000007-0000-0000-0000-000000000001"),
+                            Telefon = "+90 212 000 0003",
+                            VergiNo = "9876543210",
+                            YetkiliAdSoyad = "Demo Yetkili"
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.FiyatListesi", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Ad")
                         .IsRequired()
@@ -946,8 +988,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("Kod")
-                        .IsUnique();
+                    b.HasIndex("Kod");
 
                     b.HasIndex("BayiId", "Baslangic", "Bitis");
 
@@ -958,7 +999,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<decimal>("BirimFiyat")
                         .HasColumnType("decimal(18,2)");
@@ -1006,7 +1048,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AdSoyad")
                         .IsRequired()
@@ -1060,7 +1103,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Aciklama")
                         .IsRequired()
@@ -1083,6 +1127,9 @@ namespace TurkSoft.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<Guid?>("MaliMusavirId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -1097,8 +1144,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("Kod")
-                        .IsUnique();
+                    b.HasIndex("Kod");
 
                     b.ToTable("KeyAccount", (string)null);
                 });
@@ -1107,7 +1153,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("BayiId")
                         .HasColumnType("uniqueidentifier");
@@ -1159,7 +1206,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AdSoyad")
                         .IsRequired()
@@ -1181,6 +1229,9 @@ namespace TurkSoft.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<Guid?>("OlusturanKullaniciId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ProfilResmiUrl")
                         .HasMaxLength(500)
@@ -1231,6 +1282,28 @@ namespace TurkSoft.Data.Migrations
                             Rol = "Admin",
                             Sifre = "Admin!12345",
                             Telefon = "+90 555 000 0000"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            AdSoyad = "Demo Bayi Kullanıcı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "bayi@turksoft.local",
+                            IsActive = true,
+                            Rol = "Bayi",
+                            Sifre = "Bayi!12345",
+                            Telefon = "+90 555 000 0001"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            AdSoyad = "Demo MM Kullanıcı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "mm@turksoft.local",
+                            IsActive = true,
+                            Rol = "MaliMusavir",
+                            Sifre = "Mali!12345",
+                            Telefon = "+90 555 000 0002"
                         });
                 });
 
@@ -1238,7 +1311,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AtananRol")
                         .HasMaxLength(50)
@@ -1294,13 +1368,25 @@ namespace TurkSoft.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Kullanici_Bayi", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("ff000001-0000-0000-0000-000000000001"),
+                            BayiId = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsPrimary = false,
+                            KullaniciId = new Guid("22222222-2222-2222-2222-222222222222")
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.KullaniciFirma", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AtananRol")
                         .HasMaxLength(50)
@@ -1362,7 +1448,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AtananRol")
                         .HasMaxLength(50)
@@ -1418,13 +1505,25 @@ namespace TurkSoft.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Kullanici_MaliMusavir", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a0000008-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsPrimary = false,
+                            KullaniciId = new Guid("33333333-3333-3333-3333-333333333333"),
+                            MaliMusavirId = new Guid("a0000007-0000-0000-0000-000000000001")
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Kupon", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("Baslangic")
                         .HasColumnType("datetime2");
@@ -1481,8 +1580,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("Kod")
-                        .IsUnique();
+                    b.HasIndex("Kod");
 
                     b.ToTable("Kuponlar");
                 });
@@ -1491,7 +1589,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("BayiId")
                         .HasColumnType("uniqueidentifier");
@@ -1554,8 +1653,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("LeadNo")
-                        .IsUnique();
+                    b.HasIndex("LeadNo");
 
                     b.HasIndex("SorumluKullaniciId");
 
@@ -1566,7 +1664,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("BaslangicTarihi")
                         .HasColumnType("datetime2");
@@ -1621,7 +1720,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -1666,7 +1766,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -1715,7 +1816,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -1732,6 +1834,9 @@ namespace TurkSoft.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("MaliMusavirId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Parola")
                         .IsRequired()
@@ -1764,7 +1869,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -1825,7 +1931,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Alici")
                         .IsRequired()
@@ -1876,7 +1983,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AdSoyad")
                         .IsRequired()
@@ -1939,13 +2047,29 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("IsActive");
 
                     b.ToTable("MaliMusavirler");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a0000007-0000-0000-0000-000000000001"),
+                            AdSoyad = "Demo Mali Müşavir",
+                            BayiId = new Guid("ee000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Eposta = "mm@demo.local",
+                            IsActive = true,
+                            TCKN = "12345678901",
+                            Telefon = "+90 212 000 0002",
+                            Unvan = "SMMM",
+                            VergiNo = "1234567890"
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.Not", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Baslik")
                         .IsRequired()
@@ -2006,7 +2130,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Aciklama")
                         .IsRequired()
@@ -2085,7 +2210,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("AsamaId")
                         .HasColumnType("uniqueidentifier");
@@ -2146,8 +2272,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("FirmaId");
 
-                    b.HasIndex("FirsatNo")
-                        .IsUnique();
+                    b.HasIndex("FirsatNo");
 
                     b.HasIndex("IsActive");
 
@@ -2162,7 +2287,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Ad")
                         .IsRequired()
@@ -2202,17 +2328,73 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("Kod")
-                        .IsUnique();
+                    b.HasIndex("Kod");
 
                     b.ToTable("OpportunityAsamalari");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000001"),
+                            Ad = "Yeni Lead",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "NEW",
+                            OlasilikYuzde = 10m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000002"),
+                            Ad = "Nitelendirme",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "QUAL",
+                            OlasilikYuzde = 25m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000003"),
+                            Ad = "Teklif Verildi",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "PROP",
+                            OlasilikYuzde = 50m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000004"),
+                            Ad = "Müzakere",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "NEG",
+                            OlasilikYuzde = 75m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000005"),
+                            Ad = "Kazanıldı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "WON",
+                            OlasilikYuzde = 100m
+                        },
+                        new
+                        {
+                            Id = new Guid("bb000001-0000-0000-0000-000000000006"),
+                            Ad = "Kaybedildi",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "LOST",
+                            OlasilikYuzde = 0m
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.OpportunityAsamaGecis", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -2264,7 +2446,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -2317,7 +2500,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Aciklama")
                         .IsRequired()
@@ -2360,13 +2544,61 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("UrunTipiId");
 
                     b.ToTable("Paketler");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000001"),
+                            Aciklama = "1 kullanıcı, temel muhasebe modülleri",
+                            Ad = "Starter",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000002"),
+                            Aciklama = "5 kullanıcı, tüm ERP modülleri",
+                            Ad = "Professional",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000003"),
+                            Aciklama = "Sınırsız kullanıcı, özel entegrasyonlar",
+                            Ad = "Enterprise",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000004"),
+                            Aciklama = "İş günleri 09-18 telefon/e-posta destek",
+                            Ad = "Destek Temel",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000003")
+                        },
+                        new
+                        {
+                            Id = new Guid("dd000001-0000-0000-0000-000000000005"),
+                            Aciklama = "7/24 öncelikli destek + yerinde servis",
+                            Ad = "Destek Premium",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            UrunTipiId = new Guid("cc000001-0000-0000-0000-000000000003")
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.PaketIskonto", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("Baslangic")
                         .HasColumnType("datetime2");
@@ -2419,7 +2651,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
@@ -2491,7 +2724,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("BayiId")
                         .HasColumnType("uniqueidentifier");
@@ -2562,8 +2796,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("PaketId");
 
-                    b.HasIndex("SatisNo")
-                        .IsUnique();
+                    b.HasIndex("SatisNo");
 
                     b.HasIndex("BayiId", "MaliMusavirId", "SatisTarihi");
 
@@ -2574,7 +2807,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<decimal>("BirimFiyat")
                         .HasColumnType("decimal(18,2)");
@@ -2629,7 +2863,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Baslik")
                         .IsRequired()
@@ -2687,7 +2922,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
@@ -2736,7 +2972,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AliciNumara")
                         .IsRequired()
@@ -2783,7 +3020,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -2849,8 +3087,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("PaketId");
 
-                    b.HasIndex("TeklifNo")
-                        .IsUnique();
+                    b.HasIndex("TeklifNo");
 
                     b.ToTable("Teklifler");
                 });
@@ -2859,7 +3096,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<decimal>("BirimFiyat")
                         .HasColumnType("decimal(18,2)");
@@ -2914,7 +3152,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -2967,7 +3206,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("Aciklama")
                         .IsRequired()
@@ -3005,13 +3245,40 @@ namespace TurkSoft.Data.Migrations
                     b.HasIndex("IsActive");
 
                     b.ToTable("UrunTipleri");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("cc000001-0000-0000-0000-000000000001"),
+                            Aciklama = "ERP/Muhasebe yazılım lisansları",
+                            Ad = "Yazılım Lisansı",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = new Guid("cc000001-0000-0000-0000-000000000002"),
+                            Aciklama = "Danışmanlık ve uygulama hizmetleri",
+                            Ad = "Hizmet",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = new Guid("cc000001-0000-0000-0000-000000000003"),
+                            Aciklama = "Yıllık teknik destek paketleri",
+                            Ad = "Teknik Destek",
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.VergiOrani", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
@@ -3046,17 +3313,51 @@ namespace TurkSoft.Data.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("Kod")
-                        .IsUnique();
+                    b.HasIndex("Kod");
 
                     b.ToTable("VergiOranlari");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000001"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV0",
+                            Oran = 0m
+                        },
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000002"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV1",
+                            Oran = 1m
+                        },
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000003"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV10",
+                            Oran = 10m
+                        },
+                        new
+                        {
+                            Id = new Guid("aa000001-0000-0000-0000-000000000004"),
+                            CreateDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kod = "KDV20",
+                            Oran = 20m
+                        });
                 });
 
             modelBuilder.Entity("TurkSoft.Entities.EntityDB.WebhookAbonelik", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("BayiId")
                         .HasColumnType("uniqueidentifier");
@@ -3111,7 +3412,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("ApiUrl")
                         .IsRequired()
@@ -3160,7 +3462,8 @@ namespace TurkSoft.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<string>("AliciNumara")
                         .IsRequired()
@@ -3462,6 +3765,7 @@ namespace TurkSoft.Data.Migrations
                     b.OwnsOne("TurkSoft.Entities.EntityDB.Adres", "Adres", b1 =>
                         {
                             b1.Property<Guid>("IletisimKisiId")
+                                .ValueGeneratedOnAdd()
                                 .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("AcikAdres")
@@ -3612,6 +3916,7 @@ namespace TurkSoft.Data.Migrations
                     b.OwnsOne("TurkSoft.Entities.EntityDB.Adres", "Adres", b1 =>
                         {
                             b1.Property<Guid>("LeadId")
+                                .ValueGeneratedOnAdd()
                                 .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("AcikAdres")
@@ -3954,8 +4259,7 @@ namespace TurkSoft.Data.Migrations
 
                     b.Navigation("BayiCariler");
 
-                    b.Navigation("BayiFirma")
-                        .IsRequired();
+                    b.Navigation("BayiFirma");
 
                     b.Navigation("Faturalar");
 
