@@ -43,7 +43,8 @@ builder.Services.AddCors(options =>
                 "http://noxmusavir.com",
                 "http://www.noxmusavir.com",
                 "https://localhost:7228",
-                "http://localhost:7228"
+                "http://localhost:7228",
+                "http://localhost:5093"
             )
             .AllowAnyMethod()
             .AllowAnyHeader()

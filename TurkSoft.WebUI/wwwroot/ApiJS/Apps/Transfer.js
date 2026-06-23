@@ -14,10 +14,10 @@ import { getSession } from '../Service/LoginService.js';
   //const LUCA_API = 'https://lucaapi.noxmusavir.com/api/luca';                 // login/companies/select-company/hesap-plani/fis-gonder
   //const MATCHING_API = 'https://matchingapi.noxmusavir.com/api/BankaEkstre';      // eslestir
 
-  // ========= API Bazları =========
-  const BANKA_EKSTRE_API = 'https://localhost:7285/api/bankaekstre'; // excel-oku/pdf-oku/txt-oku
-  const LUCA_API = 'https://localhost:7032/api/luca';                 // login/hesap-plani/fis-gonder
-  const MATCHING_API = 'https://localhost:7018/api/bankaekstre';      // eslestir (Swagger değil, gerçek base!)
+  // ========= API Bazları (Lokal dev: http portları — WebUI ve entity api-base ile aynı şema) =========
+  const BANKA_EKSTRE_API = 'http://localhost:5220/api/bankaekstre'; // DocumentApi  : excel-oku/pdf-oku/txt-oku
+  const LUCA_API = 'http://localhost:5192/api/luca';                 // LucaApi      : login/hesap-plani/fis-gonder
+  const MATCHING_API = 'http://localhost:5234/api/bankaekstre';      // MatchingApi  : eslestir (Swagger değil, gerçek base!)
 
   const USE_SWEETALERT = true;
   const DEFAULT_API_KEY = '1cd8c11693648aa213509c3a12738708'; // PROD’da frontendte tutmayın!
